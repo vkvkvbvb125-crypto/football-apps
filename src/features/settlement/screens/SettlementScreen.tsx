@@ -91,7 +91,10 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
           {error && <Text style={styles.errorText}>{error}</Text>}
           {matchesWithAttendees.map((match) => {
             const settlement = settlements.find((s) => s.match_id === match.id);
-            const attendeeCount = match.votes.filter((v) => v.status === 'attend').length;
+            const attendeeIds = match.votes.filter((v) => v.status === 'attend').map((v) => v.team_member_id);
+            const attendeeCount = attendeeIds.length;
+            const draftAmount = Number(amountDrafts[match.id]) || 0;
+            const perPersonPreview = attendeeCount > 0 ? Math.ceil(draftAmount / attendeeCount) : 0;
 
             return (
               <View key={match.id} style={styles.card}>
@@ -156,6 +159,17 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                       value={amountDrafts[match.id] ?? ''}
                       onChangeText={(t) => setAmountDrafts((prev) => ({ ...prev, [match.id]: t }))}
                     />
+
+                    {draftAmount > 0 && (
+                      <View style={styles.previewList}>
+                        {attendeeIds.map((id) => (
+                          <View key={id} style={styles.previewRow}>
+                            <Text style={styles.previewName}>{nameFor(id)}</Text>
+                            <Text style={styles.previewAmount}>{perPersonPreview.toLocaleString()}원</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
 
                     {latestAccount && (
                       <Pressable style={styles.latestAccountChip} onPress={() => applyLatestAccount(match.id)}>
@@ -270,6 +284,28 @@ const styles = StyleSheet.create({
     color: '#8A9490',
     fontSize: 12,
     fontWeight: '600',
+  },
+  previewList: {
+    marginTop: 4,
+    gap: 6,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#1B231F',
+  },
+  previewName: {
+    color: '#FFFFFF',
+    fontSize: 13,
+  },
+  previewAmount: {
+    color: '#39D98A',
+    fontWeight: '700',
+    fontSize: 13,
   },
   paymentList: {
     marginTop: 12,

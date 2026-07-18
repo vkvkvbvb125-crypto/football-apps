@@ -9,6 +9,7 @@ import { TabHeader } from '../../../components/TabHeader';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../stores/settlementStore';
+import { BankPicker } from '../components/BankPicker';
 import type { SettlementAccount } from '../services/settlementService';
 
 export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
@@ -180,12 +181,9 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                       </Pressable>
                     )}
 
-                    <TextInput
-                      style={styles.amountInput}
-                      placeholder="은행명"
-                      placeholderTextColor="#5A625E"
+                    <BankPicker
                       value={accountFor(match.id).bankName}
-                      onChangeText={(t) => updateAccountField(match.id, 'bankName', t)}
+                      onChange={(name) => updateAccountField(match.id, 'bankName', name)}
                     />
                     <TextInput
                       style={styles.amountInput}

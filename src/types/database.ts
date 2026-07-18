@@ -64,6 +64,10 @@ export interface Database {
           team_id: string;
           match_date: string;
           location: string | null;
+          address: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          place_category: string | null;
           vote_deadline: string | null;
           status: MatchStatus;
           quarter_minutes: number;
@@ -74,6 +78,10 @@ export interface Database {
           team_id: string;
           match_date: string;
           location?: string | null;
+          address?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          place_category?: string | null;
           vote_deadline?: string | null;
           status?: MatchStatus;
           quarter_minutes?: number;

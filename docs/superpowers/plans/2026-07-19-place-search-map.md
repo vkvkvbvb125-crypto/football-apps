@@ -4,16 +4,16 @@
 
 **Goal:** 경기 등록/수정 화면의 장소 입력을 자유 텍스트에서 카카오 로컬 API 검색으로 바꾸고, 등록된 장소를 탭하면 카카오맵 지도 미리보기(탭하면 실제 카카오맵으로 이동)를 보여준다.
 
-**Architecture:** 카카오 로컬 API 호출은 신규 Supabase Edge Function `search-places`가 대신 하고(REST 키는 서버 시크릿, `notify-team` 패턴 재사용), 선택한 장소의 좌표/주소/카테고리는 `matches` 테이블에 새 컬럼 4개로 저장한다. 지도 미리보기는 카카오맵 JavaScript SDK를 웹에서 동적 로드해 `kakao.maps.StaticMap`으로 렌더링하며, 이번 스펙은 **웹 타겟만** 다룬다(네이티브는 범위 밖 — `Platform.OS !== 'web'`이면 지도 없이 텍스트만 표시).
+**Architecture:** 카카오 로컬 API 호출은 신규 Supabase Edge Function `search-places`가 대신 하고(REST 키는 서버 시크릿, `notify-team` 패턴 재사용), 선택한 장소의 좌표/주소/카테고리는 `matches` 테이블에 새 컬럼 4개로 저장한다. 지도 미리보기는 `react-native-webview`의 `WebView`에 카카오맵 JavaScript SDK가 포함된 HTML 문자열을 태워서(`kakao.maps.StaticMap`) 렌더링한다 — 웹/iOS/Android 모두 같은 방식으로 동작한다(앱스토어 출시 대상이 네이티브라서 웹 전용 DOM 직접 조작 방식에서 WebView 방식으로 변경).
 
-**Tech Stack:** React Native(Expo, web 타겟), Supabase(Postgres + Edge Functions/Deno), 카카오 로컬 API(REST), 카카오맵 JavaScript SDK.
+**Tech Stack:** React Native(Expo, iOS/Android/web), Supabase(Postgres + Edge Functions/Deno), 카카오 로컬 API(REST), 카카오맵 JavaScript SDK, `react-native-webview`.
 
 ## Global Constraints
 
 - 테스트 프레임워크 없음 — 각 태스크 검증은 `npx tsc --noEmit`(앱 루트: `c:\dev\football\app`) + 수동 확인(설명 제공)으로 대체한다.
 - Supabase SQL 마이그레이션과 엣지함수 배포/시크릿 설정은 자동화 없음 — 사용자가 대시보드에서 직접 처리하며, 실행 확인 후 다음 태스크로 진행한다.
 - 브랜치: `feature/nav-and-announcements` (이미 체크아웃됨). 커밋은 이 브랜치에 쌓는다.
-- 이번 스펙은 웹 타겟만 다룬다. 네이티브(iOS/Android) 지도 표시는 범위 밖 — `Platform.OS === 'web'`일 때만 지도를 렌더링하고, 그 외엔 텍스트만 표시한다.
+- 지도 미리보기는 `react-native-webview` 기반으로 웹/iOS/Android 공통 동작한다(최초 설계는 웹 전용이었으나, 실제 앱스토어 출시 대상이 네이티브라는 점이 확인되어 WebView 방식으로 변경함).
 - 장소는 검색 결과에서만 선택 가능 — 직접입력(자유텍스트) 없음.
 - 카카오맵 길찾기 URL(`https://map.kakao.com/link/to/{name},{lat},{lng}`)은 공식 문서에서 확정하지 못한 형식이므로, 해당 태스크의 수동 확인 단계에서 실제로 카카오맵이 열리는지 사용자가 테스트한다.
 
@@ -651,7 +651,7 @@ git commit -m "feat: 카카오 장소검색 모달 컴포넌트 추가"
 
 - [ ] **Step 1: 사용자에게 카카오맵 JS 키 발급 + `.env` 설정 요청**
 
-카카오 디벨로퍼스 콘솔 → 해당 앱 → 제품 설정 → 카카오맵 활성화 → 앱 키에서 **JavaScript 키** 확인, 플랫폼 설정에 `http://localhost:8082`(로컬 개발용 포트) 등록. 그 다음 `app/.env` 파일에 아래 줄 추가:
+카카오 디벨로퍼스 콘솔 → 해당 앱 → 제품 설정 → 카카오맵 활성화 → 앱 키에서 **JavaScript 키** 확인, 플랫폼 설정(JavaScript SDK 도메인)에 `http://localhost:8082`(로컬 개발용 포트) 등록. 그 다음 `app/.env` 파일에 아래 줄 추가:
 
 ```
 EXPO_PUBLIC_KAKAO_MAPS_JS_KEY=<발급받은 JavaScript 키>
@@ -659,42 +659,47 @@ EXPO_PUBLIC_KAKAO_MAPS_JS_KEY=<발급받은 JavaScript 키>
 
 완료 확인될 때까지 대기.
 
+- [ ] **Step 1.5: `react-native-webview` 설치**
+
+지도 미리보기는 웹뿐 아니라 iOS/Android 네이티브 앱(실제 출시 대상)에서도 동작해야 해서, DOM을 직접 조작하는 방식 대신 `WebView`에 카카오맵 SDK가 든 HTML을 태우는 방식을 쓴다 — 웹/iOS/Android에서 동일한 코드로 동작한다.
+
+Run: `cd app && npx expo install react-native-webview`
+Expected: `package.json`에 `react-native-webview` 의존성 추가됨
+
 - [ ] **Step 2: 컴포넌트 작성**
 
 `app/src/features/attendance/components/PlaceDetailModal.tsx`:
 
 ```typescript
-import { useEffect, useRef, useState } from 'react';
-import { Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
-
-declare global {
-  interface Window {
-    kakao: any;
-  }
-}
 
 const KAKAO_MAPS_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_MAPS_JS_KEY;
 
-function loadKakaoMapsSdk(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.reject(new Error('웹에서만 지원해요.'));
-  if (window.kakao?.maps) return Promise.resolve();
-
-  return new Promise((resolve, reject) => {
-    const existing = document.getElementById('kakao-maps-sdk') as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', () => window.kakao.maps.load(resolve));
-      existing.addEventListener('error', () => reject(new Error('카카오맵 SDK 로드에 실패했어요.')));
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = 'kakao-maps-sdk';
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_MAPS_JS_KEY}&autoload=false`;
-    script.async = true;
-    script.onload = () => window.kakao.maps.load(resolve);
-    script.onerror = () => reject(new Error('카카오맵 SDK 로드에 실패했어요.'));
-    document.head.appendChild(script);
-  });
+function buildMapHtml(latitude: number, longitude: number) {
+  return `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #0B0F0D; }</style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_MAPS_JS_KEY}&autoload=false"></script>
+    <script>
+      kakao.maps.load(function () {
+        var center = new kakao.maps.LatLng(${latitude}, ${longitude});
+        new kakao.maps.StaticMap(document.getElementById('map'), {
+          center: center,
+          level: 3,
+          marker: { position: center }
+        });
+      });
+    </script>
+  </body>
+</html>`;
 }
 
 interface KakaoMapPreviewProps {
@@ -704,41 +709,23 @@ interface KakaoMapPreviewProps {
 }
 
 function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
-  const containerRef = useRef<View>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadKakaoMapsSdk()
-      .then(() => {
-        if (cancelled) return;
-        const container = containerRef.current as unknown as HTMLElement | null;
-        if (!container) return;
-        const center = new window.kakao.maps.LatLng(latitude, longitude);
-        // eslint-disable-next-line no-new
-        new window.kakao.maps.StaticMap(container, { center, level: 3, marker: { position: center } });
-      })
-      .catch((err) => {
-        if (!cancelled) setMapError(err instanceof Error ? err.message : '지도를 불러오지 못했어요.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [latitude, longitude]);
-
-  if (mapError) {
-    return <Text style={styles.mapErrorText}>{mapError}</Text>;
-  }
+  const openDirections = () => {
+    const url = `https://map.kakao.com/link/to/${encodeURIComponent(name)},${latitude},${longitude}`;
+    Linking.openURL(url);
+  };
 
   return (
-    <Pressable
-      onPress={() => {
-        const url = `https://map.kakao.com/link/to/${encodeURIComponent(name)},${latitude},${longitude}`;
-        Linking.openURL(url);
-      }}
-    >
-      <View ref={containerRef} style={styles.mapPreview} />
-    </Pressable>
+    <View style={styles.mapContainer}>
+      <WebView
+        source={{ html: buildMapHtml(latitude, longitude) }}
+        style={styles.mapWebview}
+        scrollEnabled={false}
+        pointerEvents="none"
+        javaScriptEnabled
+        originWhitelist={['*']}
+      />
+      <Pressable style={StyleSheet.absoluteFill} onPress={openDirections} />
+    </View>
   );
 }
 
@@ -753,7 +740,7 @@ interface PlaceDetailModalProps {
 }
 
 export function PlaceDetailModal({ visible, onClose, name, category, address, latitude, longitude }: PlaceDetailModalProps) {
-  const showMap = Platform.OS === 'web' && latitude != null && longitude != null;
+  const showMap = latitude != null && longitude != null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -829,18 +816,16 @@ const styles = StyleSheet.create({
     color: '#8A9490',
     fontSize: 13,
   },
-  mapPreview: {
+  mapContainer: {
     marginTop: 12,
     height: 180,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#0B0F0D',
   },
-  mapErrorText: {
-    marginTop: 12,
-    color: '#5A625E',
-    fontSize: 12,
-    textAlign: 'center',
+  mapWebview: {
+    flex: 1,
+    backgroundColor: 'transparent',
   },
 });
 ```

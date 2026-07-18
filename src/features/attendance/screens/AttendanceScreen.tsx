@@ -22,7 +22,8 @@ import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../stores/attendanceStore';
 import { MonthNavigator } from '../components/MonthNavigator';
 import { CalendarGrid } from '../components/CalendarGrid';
-import { TimeSlotPicker } from '../components/TimeSlotPicker';
+import { TimeWheelPicker } from '../components/TimeWheelPicker';
+import { DeadlinePicker } from '../components/DeadlinePicker';
 import type { AttendanceStatus } from '../../../types/database';
 import type { MatchWithVotes } from '../services/attendanceService';
 
@@ -306,7 +307,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
             </Text>
 
             <Text style={styles.fieldLabel}>경기 시간</Text>
-            <TimeSlotPicker value={timeText} onChange={setTimeText} />
+            <TimeWheelPicker value={timeText} onChange={setTimeText} />
 
             <TextInput
               style={styles.input}
@@ -323,13 +324,8 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
               onChangeText={setQuarterMinutesText}
               keyboardType="number-pad"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="인원 마감 (예: 2026-07-19 22:00, 선택)"
-              placeholderTextColor="#5A625E"
-              value={deadlineText}
-              onChangeText={setDeadlineText}
-            />
+            <Text style={styles.fieldLabel}>인원 마감 (선택)</Text>
+            <DeadlinePicker value={deadlineText} onChange={setDeadlineText} matchDate={selectedDate} matchTime={timeText} />
 
             <View style={styles.modalButtonRow}>
               <Pressable style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>

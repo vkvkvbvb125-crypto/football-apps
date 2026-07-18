@@ -109,12 +109,33 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                         1인당 {settlement.per_person_amount?.toLocaleString()}원
                       </Text>
                     </View>
+
+                    <View style={styles.accountRow}>
+                      <Text style={styles.accountText}>
+                        {settlement.bank_name} {settlement.account_number} ({settlement.account_holder})
+                      </Text>
+                      <Pressable
+                        hitSlop={8}
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(settlement.account_number);
+                          setCopiedMatchId(match.id);
+                          setTimeout(() => setCopiedMatchId((cur) => (cur === match.id ? null : cur)), 1500);
+                        }}
+                      >
+                        <Ionicons
+                          name={copiedMatchId === match.id ? 'checkmark' : 'copy-outline'}
+                          size={15}
+                          color="#39D98A"
+                        />
+                      </Pressable>
+                    </View>
+
                     <View style={styles.paymentList}>
                       {settlement.payments.map((p) => (
                         <Pressable
                           key={p.id}
                           style={styles.paymentRow}
-                          disabled={!isAdmin}
+                          disabled={!isAdmin && p.team_member_id !== activeTeam.membershipId}
                           onPress={() => togglePayment(p.id, !p.is_paid)}
                         >
                           <Text style={styles.paymentName}>{nameFor(p.team_member_id)}</Text>
@@ -234,6 +255,21 @@ const styles = StyleSheet.create({
     color: '#39D98A',
     fontWeight: '700',
     fontSize: 14,
+  },
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#0F1512',
+  },
+  accountText: {
+    color: '#8A9490',
+    fontSize: 12,
+    fontWeight: '600',
   },
   paymentList: {
     marginTop: 12,

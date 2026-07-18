@@ -364,14 +364,17 @@ const styles = StyleSheet.create({
   },
   createButton: {
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 4,
     backgroundColor: '#39D98A',
   },
   createButtonText: {
     color: '#0B0F0D',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 15,
   },
   waitingText: {
     marginTop: 12,

@@ -39,13 +39,27 @@ interface BankPickerProps {
 export function BankPicker({ value, onChange }: BankPickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [query, setQuery] = useState('');
+  const [manualMode, setManualMode] = useState(false);
+  const [manualText, setManualText] = useState('');
 
   const filtered = query.trim() ? BANKS.filter((b) => b.name.includes(query.trim())) : BANKS;
 
+  const close = () => {
+    setQuery('');
+    setManualMode(false);
+    setManualText('');
+    setModalVisible(false);
+  };
+
   const handleSelect = (bankName: string) => {
     onChange(bankName);
-    setQuery('');
-    setModalVisible(false);
+    close();
+  };
+
+  const handleManualConfirm = () => {
+    if (!manualText.trim()) return;
+    onChange(manualText.trim());
+    close();
   };
 
   return (
@@ -55,52 +69,80 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value || '은행 선택'}</Text>
       </Pressable>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setQuery('');
-          setModalVisible(false);
-        }}
-      >
-        <Pressable
-          style={styles.overlay}
-          onPress={() => {
-            setQuery('');
-            setModalVisible(false);
-          }}
-        >
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={close}>
+        <Pressable style={styles.overlay} onPress={close}>
           <Pressable style={styles.card} onPress={() => {}}>
-            <Text style={styles.title}>은행 선택</Text>
+            {manualMode ? (
+              <>
+                <View style={styles.titleRow}>
+                  <Pressable onPress={() => setManualMode(false)} hitSlop={8}>
+                    <Ionicons name="chevron-back" size={18} color="#8A9490" />
+                  </Pressable>
+                  <Text style={styles.title}>은행명 직접 입력</Text>
+                  <View style={{ width: 18 }} />
+                </View>
 
-            <View style={styles.searchRow}>
-              <Ionicons name="search" size={15} color="#5A625E" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="은행 검색"
-                placeholderTextColor="#5A625E"
-                value={query}
-                onChangeText={setQuery}
-                autoFocus
-              />
-            </View>
+                <TextInput
+                  style={styles.manualInput}
+                  placeholder="은행명을 입력하세요"
+                  placeholderTextColor="#5A625E"
+                  value={manualText}
+                  onChangeText={setManualText}
+                  autoFocus
+                />
 
-            <FlatList
-              data={filtered}
-              keyExtractor={(b) => b.name}
-              style={styles.list}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <Pressable style={styles.bankRow} onPress={() => handleSelect(item.name)}>
-                  <View style={[styles.badge, { backgroundColor: item.color }]}>
-                    <Text style={styles.badgeText}>{item.name.slice(0, 1)}</Text>
-                  </View>
-                  <Text style={styles.bankName}>{item.name}</Text>
+                <Pressable
+                  style={[styles.confirmButton, !manualText.trim() && styles.confirmButtonDisabled]}
+                  disabled={!manualText.trim()}
+                  onPress={handleManualConfirm}
+                >
+                  <Text style={styles.confirmButtonText}>확인</Text>
                 </Pressable>
-              )}
-              ListEmptyComponent={<Text style={styles.emptyText}>검색 결과가 없어요</Text>}
-            />
+              </>
+            ) : (
+              <>
+                <Text style={styles.title}>은행 선택</Text>
+
+                <View style={styles.searchRow}>
+                  <Ionicons name="search" size={15} color="#5A625E" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="은행 검색"
+                    placeholderTextColor="#5A625E"
+                    value={query}
+                    onChangeText={setQuery}
+                    autoFocus
+                  />
+                </View>
+
+                <FlatList
+                  data={filtered}
+                  keyExtractor={(b) => b.name}
+                  style={styles.list}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <Pressable style={styles.bankRow} onPress={() => handleSelect(item.name)}>
+                      <View style={[styles.badge, { backgroundColor: item.color }]}>
+                        <Text style={styles.badgeText}>{item.name.slice(0, 1)}</Text>
+                      </View>
+                      <Text style={styles.bankName}>{item.name}</Text>
+                    </Pressable>
+                  )}
+                  ListEmptyComponent={<Text style={styles.emptyText}>검색 결과가 없어요</Text>}
+                />
+
+                <Pressable
+                  style={styles.manualLink}
+                  onPress={() => {
+                    setManualText('');
+                    setManualMode(true);
+                  }}
+                >
+                  <Ionicons name="add-circle-outline" size={15} color="#8A9490" />
+                  <Text style={styles.manualLinkText}>목록에 없는 은행 (직접 입력)</Text>
+                </Pressable>
+              </>
+            )}
           </Pressable>
         </Pressable>
       </Modal>
@@ -150,6 +192,50 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 14,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  manualInput: {
+    borderWidth: 1,
+    borderColor: '#22302A',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#FFFFFF',
+    backgroundColor: '#0B0F0D',
+  },
+  confirmButton: {
+    marginTop: 14,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: '#39D98A',
+  },
+  confirmButtonDisabled: {
+    opacity: 0.4,
+  },
+  confirmButtonText: {
+    color: '#0B0F0D',
+    fontWeight: '700',
+  },
+  manualLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#22302A',
+  },
+  manualLinkText: {
+    color: '#8A9490',
+    fontSize: 12,
+    fontWeight: '600',
   },
   searchRow: {
     flexDirection: 'row',

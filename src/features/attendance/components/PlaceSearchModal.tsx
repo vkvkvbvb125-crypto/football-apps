@@ -1,0 +1,217 @@
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { searchPlaces, type PlaceResult } from '../services/placeService';
+
+interface PlaceSearchModalProps {
+  value: { name: string } | null;
+  onSelect: (place: PlaceResult) => void;
+}
+
+export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    debounceRef.current = setTimeout(() => {
+      searchPlaces(trimmed)
+        .then((places) => {
+          setResults(places);
+          setError(null);
+        })
+        .catch(() => {
+          setError('검색에 실패했어요');
+          setResults([]);
+        })
+        .finally(() => setLoading(false));
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  const close = () => {
+    setQuery('');
+    setResults([]);
+    setError(null);
+    setModalVisible(false);
+  };
+
+  const handleSelect = (place: PlaceResult) => {
+    onSelect(place);
+    close();
+  };
+
+  return (
+    <>
+      <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
+        <Ionicons name="location-outline" size={16} color={value ? '#39D98A' : '#5A625E'} />
+        <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value?.name ?? '장소 검색'}</Text>
+      </Pressable>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={close}>
+        <Pressable style={styles.overlay} onPress={close}>
+          <Pressable style={styles.card} onPress={() => {}}>
+            <Text style={styles.title}>경기 장소 검색</Text>
+
+            <View style={styles.searchRow}>
+              <Ionicons name="search" size={15} color="#5A625E" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="장소명으로 검색"
+                placeholderTextColor="#5A625E"
+                value={query}
+                onChangeText={setQuery}
+                autoFocus
+              />
+            </View>
+
+            {loading && <ActivityIndicator style={styles.loading} color="#39D98A" />}
+            {!loading && error && <Text style={styles.emptyText}>{error}</Text>}
+            {!loading && !error && query.trim() !== '' && results.length === 0 && (
+              <Text style={styles.emptyText}>검색 결과가 없어요</Text>
+            )}
+
+            <FlatList
+              data={results}
+              keyExtractor={(p) => p.id}
+              style={styles.list}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <Pressable style={styles.placeRow} onPress={() => handleSelect(item)}>
+                  <View style={styles.placeRowTop}>
+                    <Text style={styles.placeName}>{item.name}</Text>
+                    {!!item.category && (
+                      <View style={styles.categoryTag}>
+                        <Text style={styles.categoryTagText}>{item.category}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.placeAddress}>{item.address}</Text>
+                </Pressable>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#22302A',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#0F1512',
+  },
+  fieldText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  fieldTextPlaceholder: {
+    color: '#5A625E',
+    fontWeight: '400',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    width: 320,
+    maxHeight: '75%',
+    backgroundColor: '#141A17',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#22302A',
+    padding: 20,
+  },
+  title: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#22302A',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#0B0F0D',
+  },
+  searchInput: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 14,
+    padding: 0,
+  },
+  loading: {
+    marginTop: 16,
+  },
+  list: {
+    marginTop: 8,
+  },
+  placeRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1B231F',
+  },
+  placeRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  placeName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  categoryTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#1B231F',
+  },
+  categoryTagText: {
+    color: '#39D98A',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  placeAddress: {
+    marginTop: 3,
+    color: '#8A9490',
+    fontSize: 12,
+  },
+  emptyText: {
+    color: '#5A625E',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+});

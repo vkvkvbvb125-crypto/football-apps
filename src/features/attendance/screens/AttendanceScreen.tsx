@@ -24,6 +24,9 @@ import { MonthNavigator } from '../components/MonthNavigator';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { TimeWheelPicker } from '../components/TimeWheelPicker';
 import { DeadlinePicker } from '../components/DeadlinePicker';
+import { PlaceSearchModal } from '../components/PlaceSearchModal';
+import { PlaceDetailModal } from '../components/PlaceDetailModal';
+import type { PlaceResult } from '../services/placeService';
 import type { AttendanceStatus } from '../../../types/database';
 import type { MatchWithVotes } from '../services/attendanceService';
 
@@ -32,6 +35,14 @@ const VOTE_OPTIONS: { status: AttendanceStatus; label: string }[] = [
   { status: 'absent', label: '불참' },
   { status: 'undecided', label: '미정' },
 ];
+
+interface SelectedPlace {
+  name: string;
+  category: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
 
 const CALENDAR_HEIGHT_FALLBACK = 420;
 
@@ -58,9 +69,10 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   const [actionMatch, setActionMatch] = useState<MatchWithVotes | null>(null);
   const [actionAnchorY, setActionAnchorY] = useState(0);
   const [timeText, setTimeText] = useState('19:00');
-  const [locationText, setLocationText] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
   const [quarterMinutesText, setQuarterMinutesText] = useState('10');
   const [deadlineText, setDeadlineText] = useState('');
+  const [detailMatch, setDetailMatch] = useState<MatchWithVotes | null>(null);
 
   const [calendarCollapsed, setCalendarCollapsed] = useState(false);
   const [calendarHeight, setCalendarHeight] = useState(CALENDAR_HEIGHT_FALLBACK);
@@ -126,7 +138,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   const handleOpenCreate = () => {
     setEditingMatchId(null);
     setTimeText('19:00');
-    setLocationText('');
+    setSelectedPlace(null);
     setQuarterMinutesText('10');
     setDeadlineText('');
     setModalVisible(true);
@@ -137,7 +149,17 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
     setSelectedDate(d);
     setEditingMatchId(match.id);
     setTimeText(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-    setLocationText(match.location ?? '');
+    setSelectedPlace(
+      match.location
+        ? {
+            name: match.location,
+            category: match.place_category,
+            address: match.address,
+            latitude: match.latitude,
+            longitude: match.longitude,
+          }
+        : null
+    );
     setQuarterMinutesText(String(match.quarter_minutes));
     setDeadlineText(match.vote_deadline ? new Date(match.vote_deadline).toISOString().slice(0, 16).replace('T', ' ') : '');
     setModalVisible(true);
@@ -170,7 +192,11 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
 
     const payload = {
       matchDate: matchDate.toISOString(),
-      location: locationText.trim(),
+      location: selectedPlace?.name ?? '',
+      address: selectedPlace?.address ?? null,
+      latitude: selectedPlace?.latitude ?? null,
+      longitude: selectedPlace?.longitude ?? null,
+      placeCategory: selectedPlace?.category ?? null,
       voteDeadline,
       quarterMinutes: Number(quarterMinutesText) || 10,
     };
@@ -259,7 +285,11 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
                         )}
                       </View>
                     </View>
-                    {match.location && <Text style={styles.cardLocation}>{match.location}</Text>}
+                    {match.location && (
+                      <Pressable onPress={() => setDetailMatch(match)}>
+                        <Text style={styles.cardLocation}>{match.location}</Text>
+                      </Pressable>
+                    )}
 
                     <Text style={styles.countsText}>
                       참석 {counts.attend} · 불참 {counts.absent} · 미정 {counts.undecided}
@@ -309,12 +339,17 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
             <Text style={styles.fieldLabel}>경기 시간</Text>
             <TimeWheelPicker value={timeText} onChange={setTimeText} />
 
-            <TextInput
-              style={styles.input}
-              placeholder="장소"
-              placeholderTextColor="#5A625E"
-              value={locationText}
-              onChangeText={setLocationText}
+            <PlaceSearchModal
+              value={selectedPlace}
+              onSelect={(place: PlaceResult) =>
+                setSelectedPlace({
+                  name: place.name,
+                  category: place.category,
+                  address: place.address,
+                  latitude: place.latitude,
+                  longitude: place.longitude,
+                })
+              }
             />
             <TextInput
               style={styles.input}
@@ -366,6 +401,18 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
           </View>
         </Pressable>
       </Modal>
+
+      {detailMatch && (
+        <PlaceDetailModal
+          visible
+          onClose={() => setDetailMatch(null)}
+          name={detailMatch.location ?? ''}
+          category={detailMatch.place_category}
+          address={detailMatch.address}
+          latitude={detailMatch.latitude}
+          longitude={detailMatch.longitude}
+        />
+      )}
     </ScreenGradient>
   );
 }

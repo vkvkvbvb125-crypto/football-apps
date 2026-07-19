@@ -34,10 +34,10 @@ AWS 콘솔 → Lambda → 함수 생성:
 
 - [ ] **Step 2: 코드 작성 요청**
 
-콘솔의 코드 편집기(`index.js`)에 아래 코드를 그대로 붙여넣고 **Deploy** 버튼을 누르도록 안내:
+콘솔의 코드 편집기(`index.mjs` — Node.js 20.x 이상 콘솔 템플릿은 ES 모듈로 생성되므로 `exports.handler`가 아니라 `export const handler`를 써야 한다)에 아래 코드를 그대로 붙여넣고 **Deploy** 버튼을 누르도록 안내:
 
 ```javascript
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const secret = process.env.RELAY_SECRET;
   const providedSecret = event.headers && event.headers['x-relay-secret'];
   if (!secret || providedSecret !== secret) {

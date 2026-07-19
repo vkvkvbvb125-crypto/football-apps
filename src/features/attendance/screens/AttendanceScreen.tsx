@@ -90,21 +90,54 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   const [calendarWeather, setCalendarWeather] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const eligible = matches.filter((m) => {
-      if (m.latitude == null || m.longitude == null) return false;
-      const hoursUntilMatch = (new Date(m.match_date).getTime() - Date.now()) / (1000 * 60 * 60);
-      return hoursUntilMatch <= 240 && hoursUntilMatch >= -3;
-    });
-    if (eligible.length === 0) {
+    interface WeatherTarget {
+      dateKey: string;
+      latitude: number;
+      longitude: number;
+      matchDateIso: string;
+    }
+
+    const targets: WeatherTarget[] = [];
+    const today = new Date();
+    for (let i = 0; i <= 10; i++) {
+      const day = new Date(today);
+      day.setDate(day.getDate() + i);
+      const key = dateKey(day);
+
+      const matchOnDay = matches.find((m) => {
+        const d = new Date(m.match_date);
+        return dateKey(d) === key && m.latitude != null && m.longitude != null;
+      });
+
+      if (matchOnDay) {
+        targets.push({
+          dateKey: key,
+          latitude: matchOnDay.latitude as number,
+          longitude: matchOnDay.longitude as number,
+          matchDateIso: matchOnDay.match_date,
+        });
+      } else if (activeTeam?.team.home_latitude != null && activeTeam?.team.home_longitude != null) {
+        const noon = new Date(day);
+        noon.setHours(12, 0, 0, 0);
+        targets.push({
+          dateKey: key,
+          latitude: activeTeam.team.home_latitude,
+          longitude: activeTeam.team.home_longitude,
+          matchDateIso: noon.toISOString(),
+        });
+      }
+    }
+
+    if (targets.length === 0) {
       setCalendarWeather({});
       return;
     }
 
     let cancelled = false;
     Promise.all(
-      eligible.map((m) =>
-        fetchMatchWeather(m.latitude as number, m.longitude as number, m.match_date)
-          .then((weather) => ({ match: m, weather }))
+      targets.map((t) =>
+        fetchMatchWeather(t.latitude, t.longitude, t.matchDateIso)
+          .then((weather) => ({ dateKey: t.dateKey, weather }))
           .catch(() => null)
       )
     ).then((results) => {
@@ -119,7 +152,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
                 ? '🌧️'
                 : '⛅'
               : weatherEmoji(w.precipitationType ?? '0', w.sky ?? '1');
-          next[dateKey(new Date(r.match.match_date))] = emoji;
+          next[r.dateKey] = emoji;
         }
       });
       setCalendarWeather(next);
@@ -127,7 +160,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
     return () => {
       cancelled = true;
     };
-  }, [matches]);
+  }, [matches, activeTeam]);
 
   const monthMatches = useMemo(() => {
     return matches

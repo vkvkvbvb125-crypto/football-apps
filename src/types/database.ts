@@ -30,12 +30,20 @@ export interface Database {
           id: string;
           name: string;
           invite_code: string;
+          home_place_name: string | null;
+          home_address: string | null;
+          home_latitude: number | null;
+          home_longitude: number | null;
           created_by: string;
           created_at: string;
         };
         Insert: {
           name: string;
           created_by: string;
+          home_place_name?: string | null;
+          home_address?: string | null;
+          home_latitude?: number | null;
+          home_longitude?: number | null;
         };
         Update: Partial<Database['public']['Tables']['teams']['Insert']>;
         Relationships: [];

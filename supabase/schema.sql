@@ -46,6 +46,10 @@ create table teams (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   invite_code text not null unique default substr(md5(random()::text), 1, 8),
+  home_place_name text,
+  home_address text,
+  home_latitude double precision,
+  home_longitude double precision,
   created_by uuid not null references profiles(id),
   created_at timestamptz not null default now()
 );

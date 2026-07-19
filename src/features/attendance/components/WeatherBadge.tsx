@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { fetchMatchWeather, weatherEmoji, type MatchWeather } from '../services/weatherService';
+import { fetchMatchWeather, weatherEmoji, weatherLabel, type MatchWeather } from '../services/weatherService';
 
 interface WeatherBadgeProps {
   latitude: number | null;
@@ -38,13 +38,17 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
       amRain || pmRain || Number(weather.amPop ?? '0') >= 60 || Number(weather.pmPop ?? '0') >= 60;
 
     return (
-      <View style={styles.container}>
-        <View style={styles.row}>
+      <View>
+        <View style={styles.card}>
           <Text style={styles.emoji}>{amRain || pmRain ? '🌧️' : '⛅'}</Text>
-          <Text style={styles.text}>
-            오전 {weather.amWeather}({weather.amPop}%) · 오후 {weather.pmWeather}({weather.pmPop}%) ·{' '}
-            {weather.minTemp}~{weather.maxTemp}°C
-          </Text>
+          <View style={styles.textCol}>
+            <Text style={styles.condition}>
+              오전 {weather.amWeather} · 오후 {weather.pmWeather}
+            </Text>
+            <Text style={styles.temp}>
+              {weather.minTemp}~{weather.maxTemp}°C · 강수 {weather.amPop}~{weather.pmPop}%
+            </Text>
+          </View>
         </View>
         {showIndoorHint && <Text style={styles.hint}>☔ 비 예보 - 실내 대체 장소도 고려해보세요</Text>}
       </View>
@@ -52,16 +56,20 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
   }
 
   const pty = weather.precipitationType ?? '0';
+  const sky = weather.sky ?? '1';
   const pop = Number(weather.precipitationChance ?? '0');
   const showIndoorHint = pty !== '0' || pop >= 60;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.row}>
-        <Text style={styles.emoji}>{weatherEmoji(pty, weather.sky ?? '1')}</Text>
-        <Text style={styles.text}>
-          {weather.temperature}°C · 강수 {weather.precipitationChance}%
-        </Text>
+    <View>
+      <View style={styles.card}>
+        <Text style={styles.emoji}>{weatherEmoji(pty, sky)}</Text>
+        <View style={styles.textCol}>
+          <Text style={styles.condition}>{weatherLabel(pty, sky)}</Text>
+          <Text style={styles.temp}>
+            {weather.temperature}°C · 강수 {weather.precipitationChance}%
+          </Text>
+        </View>
       </View>
       {showIndoorHint && <Text style={styles.hint}>☔ 비 예보 - 실내 대체 장소도 고려해보세요</Text>}
     </View>
@@ -69,24 +77,37 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
 }
 
 const styles = StyleSheet.create({
-  container: {
+  card: {
     marginTop: 8,
-  },
-  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#0F1512',
+    borderWidth: 1,
+    borderColor: '#22302A',
   },
   emoji: {
-    fontSize: 22,
+    fontSize: 26,
   },
-  text: {
-    color: '#8A9490',
+  textCol: {
+    gap: 1,
+  },
+  condition: {
+    color: '#FFFFFF',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  temp: {
+    color: '#8A9490',
+    fontSize: 12,
     fontWeight: '600',
   },
   hint: {
-    marginTop: 2,
+    marginTop: 4,
     color: '#F0B429',
     fontSize: 11,
     fontWeight: '600',

@@ -81,9 +81,9 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
               <Text style={reelStyles.label}>분</Text>
             </View>
             <View style={reelStyles.reel}>
-              <Wheel key={`h-${hourChoices.length}`} data={hourChoices} selected={draftHour} onSelect={handleHourChange} />
+              <Wheel data={hourChoices} selected={draftHour} onSelect={handleHourChange} resetKey={modalVisible} />
               <Text style={reelStyles.colon}>:</Text>
-              <Wheel key={`m-${minuteChoices.length}`} data={minuteChoices} selected={draftMinute} onSelect={setDraftMinute} />
+              <Wheel data={minuteChoices} selected={draftMinute} onSelect={setDraftMinute} resetKey={modalVisible} />
             </View>
             <Text style={reelStyles.caption}>
               경기 당일 {pad(draftHour)}:{pad(draftMinute)} 마감

@@ -25,21 +25,42 @@ interface WheelProps {
   data: number[];
   selected: number;
   onSelect: (value: number) => void;
+  resetKey?: unknown;
 }
 
-export function Wheel({ data, selected, onSelect }: WheelProps) {
+export function Wheel({ data, selected, onSelect, resetKey }: WheelProps) {
   const scrollRef = useRef<ScrollView>(null);
+  const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialIndex = Math.max(0, data.indexOf(selected));
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: initialIndex * ITEM_HEIGHT, animated: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [resetKey]);
 
-  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+  useEffect(
+    () => () => {
+      if (settleTimeoutRef.current) clearTimeout(settleTimeoutRef.current);
+    },
+    []
+  );
+
+  const selectFromOffset = (offsetY: number) => {
+    const index = Math.round(offsetY / ITEM_HEIGHT);
     const clamped = Math.min(data.length - 1, Math.max(0, index));
     onSelect(data[clamped]);
+  };
+
+  const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    selectFromOffset(e.nativeEvent.contentOffset.y);
+  };
+
+  // 웹은 마우스 휠/트랙패드 스크롤에서 onMomentumScrollEnd가 안 터지는 경우가 있어
+  // 스크롤이 멈춘 뒤(150ms) onScroll 기준으로도 값을 확정한다.
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = e.nativeEvent.contentOffset.y;
+    if (settleTimeoutRef.current) clearTimeout(settleTimeoutRef.current);
+    settleTimeoutRef.current = setTimeout(() => selectFromOffset(offsetY), 150);
   };
 
   return (
@@ -51,6 +72,8 @@ export function Wheel({ data, selected, onSelect }: WheelProps) {
       snapToInterval={ITEM_HEIGHT}
       decelerationRate="fast"
       onMomentumScrollEnd={handleMomentumEnd}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
     >
       {data.map((v) => (
         <View key={v} style={reelStyles.item}>
@@ -68,9 +91,10 @@ interface TimeReelProps {
   minute: number;
   onHourChange: (h: number) => void;
   onMinuteChange: (m: number) => void;
+  resetKey?: unknown;
 }
 
-export function TimeReel({ hour, minute, onHourChange, onMinuteChange }: TimeReelProps) {
+export function TimeReel({ hour, minute, onHourChange, onMinuteChange, resetKey }: TimeReelProps) {
   return (
     <View>
       <View style={reelStyles.labelRow}>
@@ -78,9 +102,9 @@ export function TimeReel({ hour, minute, onHourChange, onMinuteChange }: TimeRee
         <Text style={reelStyles.label}>분</Text>
       </View>
       <View style={reelStyles.reel}>
-        <Wheel data={HOURS} selected={hour} onSelect={onHourChange} />
+        <Wheel data={HOURS} selected={hour} onSelect={onHourChange} resetKey={resetKey} />
         <Text style={reelStyles.colon}>:</Text>
-        <Wheel data={MINUTES} selected={minute} onSelect={onMinuteChange} />
+        <Wheel data={MINUTES} selected={minute} onSelect={onMinuteChange} resetKey={resetKey} />
       </View>
       <Text style={reelStyles.caption}>선택된 시간: {formatAmPm(hour, minute)}</Text>
     </View>
@@ -178,7 +202,13 @@ export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
           <View style={styles.card}>
             <Text style={styles.title}>시간 선택</Text>
 
-            <TimeReel hour={draftHour} minute={draftMinute} onHourChange={setDraftHour} onMinuteChange={setDraftMinute} />
+            <TimeReel
+              hour={draftHour}
+              minute={draftMinute}
+              onHourChange={setDraftHour}
+              onMinuteChange={setDraftMinute}
+              resetKey={modalVisible}
+            />
 
             <View style={styles.buttonRow}>
               <Pressable style={styles.cancelButton} onPress={() => setModalVisible(false)}>

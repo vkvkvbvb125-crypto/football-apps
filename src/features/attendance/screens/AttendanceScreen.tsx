@@ -27,6 +27,7 @@ import { DeadlinePicker } from '../components/DeadlinePicker';
 import { PlaceSearchModal } from '../components/PlaceSearchModal';
 import { PlaceDetailModal } from '../components/PlaceDetailModal';
 import { WeatherBadge } from '../components/WeatherBadge';
+import { fetchMatchWeather, weatherEmoji } from '../services/weatherService';
 import type { PlaceResult } from '../services/placeService';
 import type { AttendanceStatus } from '../../../types/database';
 import type { MatchWithVotes } from '../services/attendanceService';
@@ -126,6 +127,44 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   }, [monthOffset]);
 
   const markedDates = useMemo(() => new Set(matches.map((m) => dateKey(new Date(m.match_date)))), [matches]);
+
+  const [calendarWeather, setCalendarWeather] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const eligible = matches.filter((m) => {
+      if (m.latitude == null || m.longitude == null) return false;
+      const hoursUntilMatch = (new Date(m.match_date).getTime() - Date.now()) / (1000 * 60 * 60);
+      return hoursUntilMatch <= 72 && hoursUntilMatch >= -3;
+    });
+    if (eligible.length === 0) {
+      setCalendarWeather({});
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      eligible.map((m) =>
+        fetchMatchWeather(m.latitude as number, m.longitude as number, m.match_date)
+          .then((weather) => ({ match: m, weather }))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      results.forEach((r) => {
+        if (r && r.weather.available) {
+          next[dateKey(new Date(r.match.match_date))] = weatherEmoji(
+            r.weather.precipitationType ?? '0',
+            r.weather.sky ?? '1'
+          );
+        }
+      });
+      setCalendarWeather(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [matches]);
 
   const monthMatches = useMemo(() => {
     return matches
@@ -235,6 +274,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
               month={visibleMonth.month}
               selectedDate={selectedDate}
               markedDates={markedDates}
+              weatherByDate={calendarWeather}
               onSelectDate={setSelectedDate}
             />
           </View>

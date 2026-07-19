@@ -1,21 +1,11 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { fetchMatchWeather, type MatchWeather } from '../services/weatherService';
+import { fetchMatchWeather, weatherEmoji, type MatchWeather } from '../services/weatherService';
 
 interface WeatherBadgeProps {
   latitude: number | null;
   longitude: number | null;
   matchDateIso: string;
-}
-
-function weatherIconName(pty: string, sky: string): keyof typeof Ionicons.glyphMap {
-  if (pty === '1' || pty === '4' || pty === '5') return 'rainy-outline';
-  if (pty === '2' || pty === '6') return 'rainy-outline';
-  if (pty === '3' || pty === '7') return 'snow-outline';
-  if (sky === '1') return 'sunny-outline';
-  if (sky === '3') return 'partly-sunny-outline';
-  return 'cloudy-outline';
 }
 
 export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadgeProps) {
@@ -48,7 +38,7 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Ionicons name={weatherIconName(pty, weather.sky ?? '1')} size={14} color="#8A9490" />
+        <Text style={styles.emoji}>{weatherEmoji(pty, weather.sky ?? '1')}</Text>
         <Text style={styles.text}>
           {weather.temperature}°C · 강수 {weather.precipitationChance}%
         </Text>
@@ -60,16 +50,20 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 6,
+    marginTop: 8,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
+  },
+  emoji: {
+    fontSize: 22,
   },
   text: {
     color: '#8A9490',
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
   },
   hint: {
     marginTop: 2,

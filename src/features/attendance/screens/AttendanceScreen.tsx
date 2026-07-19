@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   Modal,
-  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -46,8 +44,6 @@ interface SelectedPlace {
   longitude: number | null;
 }
 
-const CALENDAR_HEIGHT_FALLBACK = 420;
-
 function dateKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
@@ -75,43 +71,6 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   const [quarterMinutesText, setQuarterMinutesText] = useState('10');
   const [deadlineText, setDeadlineText] = useState('');
   const [detailMatch, setDetailMatch] = useState<MatchWithVotes | null>(null);
-
-  const [calendarCollapsed, setCalendarCollapsed] = useState(false);
-  const [calendarHeight, setCalendarHeight] = useState(CALENDAR_HEIGHT_FALLBACK);
-  const calendarHeightRef = useRef(CALENDAR_HEIGHT_FALLBACK);
-  const calendarAnim = useRef(new Animated.Value(1)).current; // 1 = open, 0 = collapsed
-  const dragBaseRef = useRef(1);
-
-  const handleCalendarLayout = (e: { nativeEvent: { layout: { height: number } } }) => {
-    const h = e.nativeEvent.layout.height;
-    calendarHeightRef.current = h;
-    setCalendarHeight(h);
-  };
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 3,
-      onPanResponderGrant: () => {
-        dragBaseRef.current = calendarCollapsed ? 0 : 1;
-      },
-      onPanResponderMove: (_, gesture) => {
-        const next = Math.max(0, Math.min(1, dragBaseRef.current + gesture.dy / calendarHeightRef.current));
-        calendarAnim.setValue(next);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        const next = Math.max(0, Math.min(1, dragBaseRef.current + gesture.dy / calendarHeightRef.current));
-        const shouldOpen = next > 0.5;
-        setCalendarCollapsed(!shouldOpen);
-        Animated.spring(calendarAnim, { toValue: shouldOpen ? 1 : 0, useNativeDriver: false, bounciness: 4 }).start();
-      },
-    })
-  ).current;
-
-  const listTranslateY = calendarAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, Math.max(0, calendarHeight - 60)],
-  });
 
   useEffect(() => {
     if (activeTeam) loadMatches();
@@ -178,18 +137,6 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
       })
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
   }, [matches, visibleMonth]);
-
-  // 경기가 있는 달을 처음 열 때는 캘린더를 접어서 시작해 일정 목록을 더 많이 보여준다.
-  // 사용자가 손으로 드래그해서 편 뒤에는 이 자동 접힘이 다시 끼어들지 않도록 최초 1회만 동작.
-  const autoCollapsedRef = useRef(false);
-  useEffect(() => {
-    if (autoCollapsedRef.current || !loaded) return;
-    autoCollapsedRef.current = true;
-    if (monthMatches.length > 0) {
-      setCalendarCollapsed(true);
-      calendarAnim.setValue(0);
-    }
-  }, [loaded, monthMatches]);
 
   const handleOpenCreate = () => {
     setEditingMatchId(null);
@@ -283,8 +230,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <View style={styles.contentArea}>
-          <View style={styles.calendarFixed} onLayout={handleCalendarLayout}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
             <CalendarGrid
               year={visibleMonth.year}
               month={visibleMonth.month}
@@ -293,13 +239,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
               weatherByDate={calendarWeather}
               onSelectDate={setSelectedDate}
             />
-          </View>
-
-          <Animated.View style={[styles.listOverlay, { transform: [{ translateY: listTranslateY }] }]}>
-          <View style={styles.handleRow} {...panResponder.panHandlers}>
-            <View style={styles.handleBar} />
-          </View>
-          <ScrollView contentContainerStyle={styles.list}>
+            <View style={styles.list}>
             {loading && !loaded ? (
               <ActivityIndicator style={{ marginTop: 24 }} color="#39D98A" />
             ) : monthMatches.length === 0 ? (
@@ -380,9 +320,8 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
                 );
               })
             )}
-            </ScrollView>
-          </Animated.View>
-          </View>
+            </View>
+          </ScrollView>
 
           {isAdmin && (
             <Pressable style={styles.fab} onPress={handleOpenCreate}>
@@ -489,37 +428,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  contentArea: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  calendarFixed: {
-    // 항상 같은 자리에 고정되는 배경 레이어
-  },
-  listOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#0B0F0D',
-    zIndex: 10,
-  },
-  handleRow: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#2A342F',
+  scrollContent: {
+    paddingBottom: 100,
   },
   list: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 160,
+    paddingTop: 16,
     gap: 12,
   },
   fab: {

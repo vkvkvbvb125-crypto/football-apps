@@ -144,7 +144,6 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const today = new Date();
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startWeekday; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
@@ -173,18 +172,11 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
             const hasMatch = markedDates.has(dateKey(date));
             const weatherEmoji = weatherByDate?.[dateKey(date)];
             const tint = weatherEmoji ? weatherTint(weatherEmoji) : null;
-            const diffDays = Math.round((date.getTime() - todayMidnight.getTime()) / 86400000);
-            const isForecastUnavailable = !tint && diffDays >= 0;
 
             return (
               <Pressable key={di} style={styles.cell} onPress={() => onSelectDate(date)}>
                 <View
-                  style={[
-                    styles.dayCircle,
-                    tint ? { backgroundColor: tint } : null,
-                    isForecastUnavailable && !isSelected && styles.dayCircleUnavailable,
-                    isSelected && styles.dayCircleSelected,
-                  ]}
+                  style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
                 >
                   {tint && !isSelected && weatherEmoji && <WeatherEffect emoji={weatherEmoji} />}
                   <Text
@@ -237,11 +229,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  dayCircleUnavailable: {
-    borderWidth: 1,
-    borderColor: 'rgba(138,148,144,0.5)',
-    borderStyle: 'dashed',
   },
   effectContainer: {
     position: 'absolute',

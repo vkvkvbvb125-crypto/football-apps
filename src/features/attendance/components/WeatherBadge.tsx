@@ -10,24 +10,44 @@ interface WeatherBadgeProps {
 
 export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadgeProps) {
   const [weather, setWeather] = useState<MatchWeather | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
-    if (latitude == null || longitude == null) return;
+    setWeather(null);
+    setUnavailable(false);
+
+    if (latitude == null || longitude == null) {
+      setUnavailable(true);
+      return;
+    }
     const hoursUntilMatch = (new Date(matchDateIso).getTime() - Date.now()) / (1000 * 60 * 60);
-    if (hoursUntilMatch > 240 || hoursUntilMatch < -3) return;
+    if (hoursUntilMatch > 240 || hoursUntilMatch < -3) {
+      setUnavailable(true);
+      return;
+    }
 
     let cancelled = false;
     fetchMatchWeather(latitude, longitude, matchDateIso)
       .then((result) => {
-        if (!cancelled) setWeather(result);
+        if (cancelled) return;
+        if (result.available) setWeather(result);
+        else setUnavailable(true);
       })
       .catch(() => {
-        // 날씨 조회 실패는 조용히 무시 (카드에 그냥 안 보이면 됨)
+        if (!cancelled) setUnavailable(true);
       });
     return () => {
       cancelled = true;
     };
   }, [latitude, longitude, matchDateIso]);
+
+  if (unavailable) {
+    return (
+      <View style={styles.unavailableCard}>
+        <Text style={styles.unavailableText}>날씨 조회가 안 되는 날짜예요</Text>
+      </View>
+    );
+  }
 
   if (!weather || !weather.available) return null;
 
@@ -110,6 +130,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: '#F0B429',
     fontSize: 11,
+    fontWeight: '600',
+  },
+  unavailableCard: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#0F1512',
+    borderWidth: 1,
+    borderColor: '#22302A',
+  },
+  unavailableText: {
+    color: '#8A9490',
+    fontSize: 12,
     fontWeight: '600',
   },
 });

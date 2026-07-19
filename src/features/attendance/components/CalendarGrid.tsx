@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -21,6 +22,47 @@ function weatherTint(emoji: string): string | null {
   if (emoji === '☀️') return 'rgba(250,204,21,0.28)';
   if (emoji === '⛅' || emoji === '☁️') return 'rgba(148,163,184,0.28)';
   return null;
+}
+
+function isPrecipitation(emoji: string): boolean {
+  return emoji === '🌧️' || emoji === '🌨️' || emoji === '❄️';
+}
+
+function RainDrops() {
+  const anims = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const loops = anims.map((anim, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 260),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 900,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }),
+        ])
+      )
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [anims]);
+
+  return (
+    <View style={styles.rainContainer} pointerEvents="none">
+      {anims.map((anim, i) => {
+        const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [-6, 46] });
+        const opacity = anim.interpolate({ inputRange: [0, 0.1, 0.8, 1], outputRange: [0, 1, 1, 0] });
+        return (
+          <Animated.View
+            key={i}
+            style={[styles.raindrop, { left: 10 + i * 10, opacity, transform: [{ translateY }] }]}
+          />
+        );
+      })}
+    </View>
+  );
 }
 
 export function CalendarGrid({ year, month, selectedDate, markedDates, weatherByDate, onSelectDate }: CalendarGridProps) {
@@ -63,6 +105,7 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
                 <View
                   style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
                 >
+                  {tint && !isSelected && weatherEmoji && isPrecipitation(weatherEmoji) && <RainDrops />}
                   <Text
                     style={[
                       styles.dayText,
@@ -112,6 +155,22 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  rainContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  raindrop: {
+    position: 'absolute',
+    top: 0,
+    width: 2,
+    height: 10,
+    borderRadius: 1,
+    backgroundColor: 'rgba(191,219,254,0.9)',
   },
   dayCircleSelected: {
     backgroundColor: '#39D98A',

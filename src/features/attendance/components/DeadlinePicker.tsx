@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   fieldText: {
     color: '#FFFFFF',

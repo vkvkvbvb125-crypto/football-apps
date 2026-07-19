@@ -26,10 +26,10 @@ function weatherTint(emoji: string): string | null {
 
 function WeatherEffect({ emoji }: { emoji: string }) {
   if (emoji === '🌧️' || emoji === '🌨️') {
-    return <FallingParticles color="rgba(191,219,254,0.9)" size={2} duration={450} stagger={120} />;
+    return <FallingParticles color="rgba(191,219,254,0.9)" size={2} duration={280} stagger={70} />;
   }
   if (emoji === '❄️') {
-    return <FallingParticles color="rgba(255,255,255,0.85)" size={4} duration={900} stagger={220} />;
+    return <FallingParticles color="rgba(255,255,255,0.85)" size={4} duration={550} stagger={140} />;
   }
   if (emoji === '☀️') return <SunGlow />;
   if (emoji === '⛅' || emoji === '☁️') return <CloudDrift />;

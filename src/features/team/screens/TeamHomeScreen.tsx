@@ -39,8 +39,10 @@ export function TeamHomeScreen() {
       <View style={styles.banner}>
         <FieldBackground />
         <View style={styles.bannerContent}>
-          <View>
-            <Text style={styles.teamName}>{activeTeam.team.name}</Text>
+          <View style={styles.bannerLeft}>
+            <Text style={styles.teamName} numberOfLines={1}>
+              {activeTeam.team.name}
+            </Text>
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>{isAdmin ? '총무' : '일반 멤버'}</Text>
             </View>
@@ -59,10 +61,16 @@ export function TeamHomeScreen() {
               <Text style={styles.inviteCode}>{activeTeam.team.invite_code}</Text>
             </View>
             <View style={styles.inviteButtons}>
-              <Pressable style={styles.copyButton} onPress={handleCopyInviteCode}>
+              <Pressable
+                style={({ pressed }) => [styles.copyButton, pressed && styles.pressedOpacity]}
+                onPress={handleCopyInviteCode}
+              >
                 <Text style={styles.copyButtonText}>{copied ? '복사됨' : '복사'}</Text>
               </Pressable>
-              <Pressable style={styles.shareButton} onPress={handleShareInvite}>
+              <Pressable
+                style={({ pressed }) => [styles.shareButton, pressed && styles.pressedOpacity]}
+                onPress={handleShareInvite}
+              >
                 <Text style={styles.shareButtonText}>공유</Text>
               </Pressable>
             </View>
@@ -96,6 +104,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  pressedOpacity: {
+    opacity: 0.7,
+  },
   scrollContent: {
     paddingBottom: 40,
   },
@@ -112,6 +123,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
+  },
+  bannerLeft: {
+    flexShrink: 1,
+    marginRight: 12,
   },
   teamName: {
     fontSize: 24,
@@ -168,7 +183,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#22C55E',
+    backgroundColor: '#39D98A',
   },
   copyButtonText: {
     color: '#FFFFFF',

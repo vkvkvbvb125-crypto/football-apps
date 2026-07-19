@@ -317,7 +317,9 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
                     </View>
                     {match.location && (
                       <Pressable onPress={() => setDetailMatch(match)}>
-                        <Text style={styles.cardLocation}>{match.location}</Text>
+                        <Text style={styles.cardLocation} numberOfLines={1} ellipsizeMode="tail">
+                          {match.location}
+                        </Text>
                       </Pressable>
                     )}
 
@@ -337,10 +339,11 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
                           key={opt.status}
                           disabled={isLocked}
                           onPress={() => vote(match.id, opt.status)}
-                          style={[
+                          style={({ pressed }) => [
                             styles.voteChip,
                             myVote?.status === opt.status && styles.voteChipActive,
                             isLocked && styles.voteChipDisabled,
+                            pressed && !isLocked && styles.pressedOpacity,
                           ]}
                         >
                           <Text style={[styles.voteChipText, myVote?.status === opt.status && styles.voteChipTextActive]}>
@@ -357,7 +360,10 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
           </ScrollView>
 
           {isAdmin && (
-            <Pressable style={styles.fab} onPress={handleOpenCreate}>
+            <Pressable
+              style={({ pressed }) => [styles.fab, pressed && styles.pressedOpacity]}
+              onPress={handleOpenCreate}
+            >
               <Ionicons name="add" size={28} color="#0B0F0D" />
             </Pressable>
           )}
@@ -455,6 +461,9 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
 const styles = StyleSheet.create({
   body: {
     flex: 1,
+  },
+  pressedOpacity: {
+    opacity: 0.7,
   },
   errorText: {
     color: '#F87171',

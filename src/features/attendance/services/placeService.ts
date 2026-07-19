@@ -9,8 +9,13 @@ export interface PlaceResult {
   longitude: number;
 }
 
-export async function searchPlaces(query: string): Promise<PlaceResult[]> {
-  const { data, error } = await supabase.functions.invoke('search-places', { body: { query } });
+export async function searchPlaces(
+  query: string,
+  location?: { latitude: number; longitude: number }
+): Promise<PlaceResult[]> {
+  const { data, error } = await supabase.functions.invoke('search-places', {
+    body: { query, latitude: location?.latitude, longitude: location?.longitude },
+  });
   if (error) throw error;
   return data.results as PlaceResult[];
 }

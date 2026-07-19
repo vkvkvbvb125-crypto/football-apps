@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { searchPlaces, type PlaceResult } from '../services/placeService';
+
+const CATEGORIES = ['풋살장', '축구장', '운동장', '체육관'];
 
 interface PlaceSearchModalProps {
   value: { name: string } | null;
@@ -14,7 +17,23 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationDenied, setLocationDenied] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 모달이 열릴 때 현재 위치를 가져와서 "내 주변" 검색에 쓴다. 권한 거부 시 위치 없이 전국 검색으로 대체.
+  useEffect(() => {
+    if (!modalVisible || coords) return;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationDenied(true);
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+    })();
+  }, [modalVisible, coords]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -27,7 +46,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
     }
     setLoading(true);
     debounceRef.current = setTimeout(() => {
-      searchPlaces(trimmed)
+      searchPlaces(trimmed, coords ?? undefined)
         .then((places) => {
           setResults(places);
           setError(null);
@@ -41,7 +60,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, coords]);
 
   const close = () => {
     setQuery('');
@@ -79,8 +98,27 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
               />
             </View>
 
+            <View style={styles.chipRow}>
+              {CATEGORIES.map((cat) => (
+                <Pressable
+                  key={cat}
+                  style={[styles.chip, query === cat && styles.chipActive]}
+                  onPress={() => setQuery(cat)}
+                >
+                  <Text style={[styles.chipText, query === cat && styles.chipTextActive]}>{cat}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {locationDenied && (
+              <Text style={styles.hintText}>위치 권한이 없어서 내 주변이 아닌 전국 검색 결과가 나와요</Text>
+            )}
+
             {loading && <ActivityIndicator style={styles.loading} color="#39D98A" />}
             {!loading && error && <Text style={styles.emptyText}>{error}</Text>}
+            {!loading && !error && query.trim() === '' && (
+              <Text style={styles.emptyText}>카테고리를 선택하거나 검색해보세요</Text>
+            )}
             {!loading && !error && query.trim() !== '' && results.length === 0 && (
               <Text style={styles.emptyText}>검색 결과가 없어요</Text>
             )}
@@ -170,6 +208,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     padding: 0,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#1B231F',
+    borderWidth: 1,
+    borderColor: '#22302A',
+  },
+  chipActive: {
+    backgroundColor: '#39D98A',
+    borderColor: '#39D98A',
+  },
+  chipText: {
+    color: '#8A9490',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#0B0F0D',
+  },
+  hintText: {
+    marginTop: 10,
+    color: '#8A9490',
+    fontSize: 11,
+    textAlign: 'center',
   },
   loading: {
     marginTop: 16,

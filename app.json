@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "풋살모임",
+    "slug": "futsal-club",
+    "scheme": "futsalclub",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.futsalclub.app"
+    },
+    "android": {
+      "package": "com.futsalclub.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#39D98A"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "주변 풋살장/축구장을 찾을 때 현재 위치를 사용해요."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "63195f98-f8cf-46c6-9aaa-59510693219b"
+      }
+    },
+    "owner": "qiawns00"
+  }
+}

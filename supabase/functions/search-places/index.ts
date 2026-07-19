@@ -12,7 +12,7 @@ interface KakaoDocument {
 
 export default {
   fetch: withSupabase({ auth: ['publishable', 'secret'] }, async (req) => {
-    const { query } = await req.json();
+    const { query, latitude, longitude } = await req.json();
     if (!query || !query.trim()) {
       return Response.json({ error: 'query가 필요합니다.' }, { status: 400 });
     }
@@ -23,7 +23,16 @@ export default {
       return Response.json({ error: 'KAKAO_CLIENT_ID가 설정되지 않았습니다.' }, { status: 500 });
     }
 
-    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`;
+    const params = new URLSearchParams({ query });
+    if (typeof latitude === 'number' && typeof longitude === 'number') {
+      // 카카오 로컬 API: x=경도, y=위도. 위치가 있으면 반경 20km 내에서 가까운 순으로 정렬.
+      params.set('x', String(longitude));
+      params.set('y', String(latitude));
+      params.set('radius', '20000');
+      params.set('sort', 'distance');
+    }
+
+    const url = `https://dapi.kakao.com/v2/local/search/keyword.json?${params.toString()}`;
     const kakaoRes = await fetch(url, {
       headers: { Authorization: `KakaoAK ${restApiKey}` },
     });

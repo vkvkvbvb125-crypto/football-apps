@@ -179,6 +179,18 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
   }, [matches, visibleMonth]);
 
+  // 경기가 있는 달을 처음 열 때는 캘린더를 접어서 시작해 일정 목록을 더 많이 보여준다.
+  // 사용자가 손으로 드래그해서 편 뒤에는 이 자동 접힘이 다시 끼어들지 않도록 최초 1회만 동작.
+  const autoCollapsedRef = useRef(false);
+  useEffect(() => {
+    if (autoCollapsedRef.current || !loaded) return;
+    autoCollapsedRef.current = true;
+    if (monthMatches.length > 0) {
+      setCalendarCollapsed(true);
+      calendarAnim.setValue(0);
+    }
+  }, [loaded, monthMatches]);
+
   const handleOpenCreate = () => {
     setEditingMatchId(null);
     setTimeText('19:00');

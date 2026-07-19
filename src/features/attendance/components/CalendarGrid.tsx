@@ -15,6 +15,14 @@ function dateKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+function weatherTint(emoji: string): string | null {
+  if (emoji === '🌧️' || emoji === '🌨️') return 'rgba(59,130,246,0.35)';
+  if (emoji === '❄️') return 'rgba(147,197,253,0.35)';
+  if (emoji === '☀️') return 'rgba(250,204,21,0.28)';
+  if (emoji === '⛅' || emoji === '☁️') return 'rgba(148,163,184,0.28)';
+  return null;
+}
+
 export function CalendarGrid({ year, month, selectedDate, markedDates, weatherByDate, onSelectDate }: CalendarGridProps) {
   const firstDayOfMonth = new Date(year, month, 1);
   const startWeekday = firstDayOfMonth.getDay();
@@ -48,10 +56,13 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
             const isToday = dateKey(date) === dateKey(today);
             const hasMatch = markedDates.has(dateKey(date));
             const weatherEmoji = weatherByDate?.[dateKey(date)];
+            const tint = weatherEmoji ? weatherTint(weatherEmoji) : null;
 
             return (
               <Pressable key={di} style={styles.cell} onPress={() => onSelectDate(date)}>
-                <View style={[styles.dayCircle, isSelected && styles.dayCircleSelected]}>
+                <View
+                  style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
+                >
                   <Text
                     style={[
                       styles.dayText,
@@ -62,11 +73,7 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
                     {date.getDate()}
                   </Text>
                 </View>
-                {weatherEmoji ? (
-                  <Text style={styles.weatherEmoji}>{weatherEmoji}</Text>
-                ) : (
-                  hasMatch && <View style={[styles.dot, isSelected && styles.dotSelected]} />
-                )}
+                {hasMatch && !tint && <View style={[styles.dot, isSelected && styles.dotSelected]} />}
               </Pressable>
             );
           })}
@@ -127,10 +134,6 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#39D98A',
-  },
-  weatherEmoji: {
-    marginTop: 2,
-    fontSize: 12,
   },
   dotSelected: {
     backgroundColor: '#39D98A',

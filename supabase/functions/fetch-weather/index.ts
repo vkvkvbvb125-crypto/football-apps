@@ -63,15 +63,18 @@ function getLatestBaseDateTime(now: Date): { baseDate: string; baseTime: string 
 }
 
 // 경기 시각과 가장 가까운 3시간 예보 슬롯(0,3,6,...,21시)을 찾는다.
+// matchDate는 UTC 기준 Date이므로, Deno 서버(UTC 로컬타임)에서 getHours() 등 로컬 메서드를 쓰면
+// KST가 아니라 UTC 시각을 읽게 된다 - 반드시 KST로 직접 보정한 뒤 getUTC*로 읽어야 한다.
 function nearestForecastSlot(matchDate: Date): { fcstDate: string; fcstTime: string } {
+  const kst = new Date(matchDate.getTime() + 9 * 60 * 60 * 1000);
   const slots = [0, 3, 6, 9, 12, 15, 18, 21];
-  const hour = matchDate.getHours();
+  const hour = kst.getUTCHours();
 
   if (hour === 23) {
     // 23시는 같은 날 21시보다 다음날 0시 슬롯이 더 가까움
-    const nextDay = new Date(matchDate.getTime() + 24 * 60 * 60 * 1000);
+    const nextDay = new Date(kst.getTime() + 24 * 60 * 60 * 1000);
     return {
-      fcstDate: `${nextDay.getFullYear()}${pad(nextDay.getMonth() + 1)}${pad(nextDay.getDate())}`,
+      fcstDate: `${nextDay.getUTCFullYear()}${pad(nextDay.getUTCMonth() + 1)}${pad(nextDay.getUTCDate())}`,
       fcstTime: '0000',
     };
   }
@@ -87,7 +90,7 @@ function nearestForecastSlot(matchDate: Date): { fcstDate: string; fcstTime: str
   }
 
   return {
-    fcstDate: `${matchDate.getFullYear()}${pad(matchDate.getMonth() + 1)}${pad(matchDate.getDate())}`,
+    fcstDate: `${kst.getUTCFullYear()}${pad(kst.getUTCMonth() + 1)}${pad(kst.getUTCDate())}`,
     fcstTime: `${pad(closest)}00`,
   };
 }

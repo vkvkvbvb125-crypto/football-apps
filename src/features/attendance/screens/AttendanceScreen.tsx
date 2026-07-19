@@ -26,6 +26,7 @@ import { TimeWheelPicker } from '../components/TimeWheelPicker';
 import { DeadlinePicker } from '../components/DeadlinePicker';
 import { PlaceSearchModal } from '../components/PlaceSearchModal';
 import { PlaceDetailModal } from '../components/PlaceDetailModal';
+import { WeatherBadge } from '../components/WeatherBadge';
 import type { PlaceResult } from '../services/placeService';
 import type { AttendanceStatus } from '../../../types/database';
 import type { MatchWithVotes } from '../services/attendanceService';
@@ -290,6 +291,12 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
                         <Text style={styles.cardLocation}>{match.location}</Text>
                       </Pressable>
                     )}
+
+                    <WeatherBadge
+                      latitude={match.latitude}
+                      longitude={match.longitude}
+                      matchDateIso={match.match_date}
+                    />
 
                     <Text style={styles.countsText}>
                       참석 {counts.attend} · 불참 {counts.absent} · 미정 {counts.undecided}

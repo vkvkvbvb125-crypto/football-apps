@@ -99,6 +99,151 @@ interface KmaItem {
   fcstValue: string;
 }
 
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * DEGRAD;
+  const dLon = (lon2 - lon1) * DEGRAD;
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * DEGRAD) * Math.cos(lat2 * DEGRAD) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+interface MidRegion {
+  regId: string;
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+// 중기육상예보(getMidLandFcst)용 도 단위 구역코드. getFcstZoneCd로 확인한 실제 regId이며,
+// 이 API 응답 자체엔 좌표가 없어(집계 구역) 각 권역 대표지점 좌표를 직접 지정했다.
+const LAND_REGIONS: MidRegion[] = [
+  { regId: '11B00000', name: '서울.인천.경기', lat: 37.5665, lon: 126.978 },
+  { regId: '11C10000', name: '충청북도', lat: 36.6424, lon: 127.489 },
+  { regId: '11C20000', name: '충청남도', lat: 36.3504, lon: 127.3845 },
+  { regId: '11D10000', name: '강원영서', lat: 37.8228, lon: 128.1555 },
+  { regId: '11D20000', name: '강원영동', lat: 37.7519, lon: 128.8761 },
+  { regId: '11F10000', name: '전북자치도', lat: 35.8242, lon: 127.148 },
+  { regId: '11F20000', name: '전라남도', lat: 34.8161, lon: 126.4629 },
+  { regId: '11G00000', name: '제주도', lat: 33.4996, lon: 126.5312 },
+  { regId: '11H10000', name: '경상북도', lat: 36.576, lon: 128.5056 },
+  { regId: '11H20000', name: '경상남도', lat: 35.2285, lon: 128.6811 },
+];
+
+// 중기기온예보(getMidTa)용 시 단위 구역코드. getFcstZoneCd 응답의 실제 좌표를 그대로 사용.
+const TA_REGIONS: MidRegion[] = [
+  { regId: '11B10101', name: '서울', lat: 37.56609444, lon: 126.9774167 },
+  { regId: '11B20201', name: '인천', lat: 37.477501, lon: 126.62458 },
+  { regId: '11B20601', name: '수원', lat: 37.272293, lon: 126.985367 },
+  { regId: '11C10301', name: '청주', lat: 36.63924, lon: 127.440659 },
+  { regId: '11C20401', name: '대전', lat: 36.34914444, lon: 127.3843389 },
+  { regId: '11C20404', name: '세종', lat: 36.57, lon: 127.27 },
+  { regId: '11D10301', name: '춘천', lat: 37.88135, lon: 127.7303972 },
+  { regId: '11D20501', name: '강릉', lat: 37.75072778, lon: 128.8769944 },
+  { regId: '11F10201', name: '전주', lat: 35.82382222, lon: 127.1520167 },
+  { regId: '11F20501', name: '광주', lat: 35.16128056, lon: 126.9158417 },
+  { regId: '11G00201', name: '제주', lat: 33.486275, lon: 126.4979528 },
+  { regId: '11G00401', name: '서귀포', lat: 33.24612, lon: 126.565331 },
+  { regId: '11H10501', name: '안동', lat: 36.56676111, lon: 128.7308417 },
+  { regId: '11H10701', name: '대구', lat: 35.87151944, lon: 128.6029722 },
+  { regId: '11H20101', name: '울산', lat: 35.53866667, lon: 129.3547361 },
+  { regId: '11H20201', name: '부산', lat: 35.104683, lon: 129.032013 },
+  { regId: '11H20301', name: '창원', lat: 35.22753889, lon: 128.6819389 },
+];
+
+function nearestRegion(regions: MidRegion[], lat: number, lon: number): MidRegion {
+  let nearest = regions[0];
+  let minDist = haversineDistance(lat, lon, nearest.lat, nearest.lon);
+  for (const r of regions) {
+    const dist = haversineDistance(lat, lon, r.lat, r.lon);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = r;
+    }
+  }
+  return nearest;
+}
+
+function getMidFcstBaseTime(now: Date): { tmFc: string; announceDateKst: Date } {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const hhmm = kst.getUTCHours() * 100 + kst.getUTCMinutes();
+
+  // 중기예보는 06:00, 18:00 하루 2회 발표 (발표 후 약 20~30분 뒤 반영)
+  if (hhmm >= 1830) {
+    return { tmFc: `${fmtDate(kst)}1800`, announceDateKst: kst };
+  }
+  if (hhmm >= 630) {
+    return { tmFc: `${fmtDate(kst)}0600`, announceDateKst: kst };
+  }
+  const prevDay = new Date(kst.getTime() - 24 * 60 * 60 * 1000);
+  return { tmFc: `${fmtDate(prevDay)}1800`, announceDateKst: prevDay };
+}
+
+function fmtDate(d: Date): string {
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
+}
+
+// 발표일(KST 자정 기준) 대비 경기일이 며칠 뒤인지 정수로 계산
+function calendarDayDiff(announceDateKst: Date, matchDateIso: string): number {
+  const matchKst = new Date(new Date(matchDateIso).getTime() + 9 * 60 * 60 * 1000);
+  const announceDay = Date.UTC(announceDateKst.getUTCFullYear(), announceDateKst.getUTCMonth(), announceDateKst.getUTCDate());
+  const matchDay = Date.UTC(matchKst.getUTCFullYear(), matchKst.getUTCMonth(), matchKst.getUTCDate());
+  return Math.round((matchDay - announceDay) / (24 * 60 * 60 * 1000));
+}
+
+interface MidForecast {
+  amWeather: string;
+  amPop: string;
+  pmWeather: string;
+  pmPop: string;
+  minTemp: string;
+  maxTemp: string;
+}
+
+async function fetchMidForecast(
+  serviceKey: string,
+  landRegId: string,
+  taRegId: string,
+  tmFc: string,
+  dayN: number
+): Promise<MidForecast | null> {
+  const landParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: landRegId, tmFc });
+  const taParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: taRegId, tmFc });
+
+  const [landRes, taRes] = await Promise.all([
+    fetch(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst?${landParams.toString()}`),
+    fetch(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?${taParams.toString()}`),
+  ]);
+  if (!landRes.ok || !taRes.ok) return null;
+
+  const landItem = (await landRes.json()).response?.body?.items?.item?.[0];
+  const taItem = (await taRes.json()).response?.body?.items?.item?.[0];
+  if (!landItem || !taItem) return null;
+
+  // 8~10일차는 오전/오후 구분 없이 통합값만 제공됨
+  const hasAmPm = dayN <= 7;
+  const amWeather: string | undefined = hasAmPm ? landItem[`wf${dayN}Am`] : landItem[`wf${dayN}`];
+  const pmWeather: string | undefined = hasAmPm ? landItem[`wf${dayN}Pm`] : landItem[`wf${dayN}`];
+  const amPop = hasAmPm ? landItem[`rnSt${dayN}Am`] : landItem[`rnSt${dayN}`];
+  const pmPop = hasAmPm ? landItem[`rnSt${dayN}Pm`] : landItem[`rnSt${dayN}`];
+  const minTemp = taItem[`taMin${dayN}`];
+  const maxTemp = taItem[`taMax${dayN}`];
+
+  if (!amWeather || !pmWeather || minTemp == null || maxTemp == null) {
+    // 이 발표시각 기준으로 그 날짜 예보가 아직 없음(예: 3일차, 또는 아직 안 채워진 경계 케이스)
+    return null;
+  }
+
+  return {
+    amWeather,
+    pmWeather,
+    amPop: String(amPop),
+    pmPop: String(pmPop),
+    minTemp: String(minTemp),
+    maxTemp: String(maxTemp),
+  };
+}
+
 export default {
   fetch: withSupabase({ auth: ['publishable', 'secret'] }, async (req) => {
     const { latitude, longitude, matchDateIso } = await req.json();
@@ -109,13 +254,28 @@ export default {
     const matchDate = new Date(matchDateIso);
     const now = new Date();
     const hoursUntilMatch = (matchDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    if (hoursUntilMatch > 72 || hoursUntilMatch < -3) {
+    if (hoursUntilMatch > 240 || hoursUntilMatch < -3) {
       return Response.json({ available: false });
     }
 
     const serviceKey = Deno.env.get('KMA_SERVICE_KEY');
     if (!serviceKey) {
       return Response.json({ error: 'KMA_SERVICE_KEY가 설정되지 않았습니다.' }, { status: 500 });
+    }
+
+    if (hoursUntilMatch > 72) {
+      const { tmFc, announceDateKst } = getMidFcstBaseTime(now);
+      const dayN = calendarDayDiff(announceDateKst, matchDateIso);
+      if (dayN < 4 || dayN > 10) {
+        return Response.json({ available: false });
+      }
+
+      const landRegion = nearestRegion(LAND_REGIONS, latitude, longitude);
+      const taRegion = nearestRegion(TA_REGIONS, latitude, longitude);
+      const mid = await fetchMidForecast(serviceKey, landRegion.regId, taRegion.regId, tmFc, dayN);
+      if (!mid) return Response.json({ available: false });
+
+      return Response.json({ available: true, range: 'mid', ...mid });
     }
 
     const { nx, ny } = toGrid(latitude, longitude);
@@ -151,6 +311,7 @@ export default {
 
     return Response.json({
       available: true,
+      range: 'short',
       temperature: valueOf('TMP'),
       precipitationChance: valueOf('POP'),
       precipitationType: valueOf('PTY'),

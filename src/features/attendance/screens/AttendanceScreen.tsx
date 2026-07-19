@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 100,
+    paddingBottom: 160,
     gap: 12,
   },
   fab: {

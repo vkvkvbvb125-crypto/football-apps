@@ -1,4 +1,4 @@
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -40,6 +40,17 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
     const url = `https://map.kakao.com/link/to/${encodeURIComponent(name)},${latitude},${longitude}`;
     Linking.openURL(url);
   };
+
+  // react-native-webview는 웹 플랫폼을 지원하지 않아서(자체적으로 에러 문구만 렌더링),
+  // 웹에서는 지도 미리보기 대신 카카오맵으로 바로 여는 버튼만 보여준다. 앱(iOS/Android)에서는 지도 미리보기가 뜬다.
+  if (Platform.OS === 'web') {
+    return (
+      <Pressable style={styles.webFallback} onPress={openDirections}>
+        <Ionicons name="map-outline" size={20} color="#39D98A" />
+        <Text style={styles.webFallbackText}>지도 미리보기는 앱에서 볼 수 있어요{'\n'}여기를 눌러 카카오맵으로 열기</Text>
+      </Pressable>
+    );
+  }
 
   return (
     <View style={styles.mapContainer}>
@@ -153,5 +164,20 @@ const styles = StyleSheet.create({
   mapWebview: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  webFallback: {
+    marginTop: 12,
+    height: 96,
+    borderRadius: 12,
+    backgroundColor: '#0B0F0D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  webFallbackText: {
+    color: '#8A9490',
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

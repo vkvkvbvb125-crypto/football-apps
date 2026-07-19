@@ -24,43 +24,116 @@ function weatherTint(emoji: string): string | null {
   return null;
 }
 
-function isPrecipitation(emoji: string): boolean {
-  return emoji === '🌧️' || emoji === '🌨️' || emoji === '❄️';
+function WeatherEffect({ emoji }: { emoji: string }) {
+  if (emoji === '🌧️' || emoji === '🌨️') {
+    return <FallingParticles color="rgba(191,219,254,0.9)" size={2} duration={450} stagger={120} />;
+  }
+  if (emoji === '❄️') {
+    return <FallingParticles color="rgba(255,255,255,0.85)" size={4} duration={900} stagger={220} />;
+  }
+  if (emoji === '☀️') return <SunGlow />;
+  if (emoji === '⛅' || emoji === '☁️') return <CloudDrift />;
+  return null;
 }
 
-function RainDrops() {
-  const anims = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+function FallingParticles({
+  color,
+  size,
+  duration,
+  stagger,
+  count = 3,
+}: {
+  color: string;
+  size: number;
+  duration: number;
+  stagger: number;
+  count?: number;
+}) {
+  const anims = useRef(Array.from({ length: count }, () => new Animated.Value(0))).current;
 
   useEffect(() => {
     const loops = anims.map((anim, i) =>
       Animated.loop(
         Animated.sequence([
-          Animated.delay(i * 260),
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 900,
-            easing: Easing.linear,
-            useNativeDriver: true,
-          }),
+          Animated.delay(i * stagger),
+          Animated.timing(anim, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true }),
         ])
       )
     );
     loops.forEach((l) => l.start());
     return () => loops.forEach((l) => l.stop());
-  }, [anims]);
+  }, [anims, duration, stagger]);
 
   return (
-    <View style={styles.rainContainer} pointerEvents="none">
+    <View style={styles.effectContainer} pointerEvents="none">
       {anims.map((anim, i) => {
         const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [-6, 46] });
         const opacity = anim.interpolate({ inputRange: [0, 0.1, 0.8, 1], outputRange: [0, 1, 1, 0] });
         return (
           <Animated.View
             key={i}
-            style={[styles.raindrop, { left: 10 + i * 10, opacity, transform: [{ translateY }] }]}
+            style={[
+              styles.particle,
+              {
+                left: 8 + i * 11,
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                backgroundColor: color,
+                opacity,
+                transform: [{ translateY }],
+              },
+            ]}
           />
         );
       })}
+    </View>
+  );
+}
+
+function SunGlow() {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+
+  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.15] });
+  const opacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.5] });
+
+  return (
+    <View style={styles.effectContainer} pointerEvents="none">
+      <Animated.View style={[styles.sunGlow, { opacity, transform: [{ scale }] }]} />
+    </View>
+  );
+}
+
+function CloudDrift() {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+
+  const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [-6, 6] });
+
+  return (
+    <View style={styles.effectContainer} pointerEvents="none">
+      <Animated.View style={[styles.cloud, { transform: [{ translateX }] }]} />
     </View>
   );
 }
@@ -71,6 +144,7 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const today = new Date();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startWeekday; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
@@ -99,13 +173,20 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
             const hasMatch = markedDates.has(dateKey(date));
             const weatherEmoji = weatherByDate?.[dateKey(date)];
             const tint = weatherEmoji ? weatherTint(weatherEmoji) : null;
+            const diffDays = Math.round((date.getTime() - todayMidnight.getTime()) / 86400000);
+            const isForecastUnavailable = !tint && diffDays >= 0;
 
             return (
               <Pressable key={di} style={styles.cell} onPress={() => onSelectDate(date)}>
                 <View
-                  style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
+                  style={[
+                    styles.dayCircle,
+                    tint ? { backgroundColor: tint } : null,
+                    isForecastUnavailable && !isSelected && styles.dayCircleUnavailable,
+                    isSelected && styles.dayCircleSelected,
+                  ]}
                 >
-                  {tint && !isSelected && weatherEmoji && isPrecipitation(weatherEmoji) && <RainDrops />}
+                  {tint && !isSelected && weatherEmoji && <WeatherEffect emoji={weatherEmoji} />}
                   <Text
                     style={[
                       styles.dayText,
@@ -157,20 +238,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  rainContainer: {
+  dayCircleUnavailable: {
+    borderWidth: 1,
+    borderColor: 'rgba(138,148,144,0.5)',
+    borderStyle: 'dashed',
+  },
+  effectContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
-  raindrop: {
+  particle: {
     position: 'absolute',
     top: 0,
-    width: 2,
-    height: 10,
-    borderRadius: 1,
-    backgroundColor: 'rgba(191,219,254,0.9)',
+  },
+  sunGlow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FACC15',
+  },
+  cloud: {
+    position: 'absolute',
+    top: 14,
+    left: 9,
+    width: 26,
+    height: 14,
+    borderRadius: 8,
+    backgroundColor: 'rgba(203,213,225,0.55)',
   },
   dayCircleSelected: {
     backgroundColor: '#39D98A',

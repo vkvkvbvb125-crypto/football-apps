@@ -297,7 +297,8 @@ export default {
     });
 
     const kmaRes = await fetch(
-      `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`
+      `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; futsal-club-app)', Accept: 'application/json' } }
     );
     if (!kmaRes.ok) {
       const bodyText = await kmaRes.text();

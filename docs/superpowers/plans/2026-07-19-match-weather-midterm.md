@@ -76,7 +76,14 @@ Step 1, 2에서 확인한 실제 필드명이 Task 3의 코드와 다르면, Tas
 - Consumes: Task 2에서 확인한 실제 API 응답 구조.
 - Produces: `fetch-weather` 응답에 `range: 'short' | 'mid'` 필드 추가. `range === 'mid'`일 때: `{ available: true, range: 'mid', amWeather: string, amPop: string, pmWeather: string, pmPop: string, minTemp: string, maxTemp: string }`. Task 4가 이 형태를 그대로 소비한다.
 
-- [ ] **Step 1: 거리 계산 + 예보구역 검색 함수 추가**
+**Task 2 실제 검증 결과 (2026-07-19, `getFcstZoneCd`로 직접 확인 완료):**
+- 육상예보(`getMidLandFcst`)는 도(道) 단위 10개 코드만 유효하다. 이 코드들은 `getFcstZoneCd`에 좌표가 `0.0, 0.0`으로 비어있어서(집계용 상위 구역이라 좌표 없음), 대표 좌표는 직접 지정한다.
+- 기온예보(`getMidTa`)는 시(市) 단위 코드를 쓰고, `getFcstZoneCd`에 실제 좌표가 있다(`regSp:"C"`).
+- 두 API 모두 매 요청마다 `getFcstZoneCd`를 호출할 필요 없이, 검증된 코드를 고정 테이블로 두고 최근접 지역만 계산하면 된다(별도 API 호출 없음 — 원래 계획보다 단순해짐).
+- "3일 후"는 중기예보에 없다(단기예보가 이미 커버). 06:00 발표본은 4일~10일차, 18:00 발표본도 동일하게 4일~10일차부터 시작(발표 시각이 늦어도 최소 4일차부터)를 실제로 확인했다.
+- 8~10일차는 오전/오후 구분 없이 `wf{N}`/`rnSt{N}` 통합값 하나만 온다(3~7일차는 `wf{N}Am`/`wf{N}Pm` 등 오전/오후 구분).
+
+- [ ] **Step 1: 거리 계산 + 지역코드 테이블 추가**
 
 기존 `toGrid` 함수 아래에 추가:
 
@@ -90,54 +97,91 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-interface FcstZone {
+interface MidRegion {
   regId: string;
-  regName: string;
+  name: string;
   lat: number;
   lon: number;
 }
 
-async function findNearestZone(serviceKey: string, latitude: number, longitude: number): Promise<FcstZone | null> {
-  const params = new URLSearchParams({
-    serviceKey,
-    pageNo: '1',
-    numOfRows: '300',
-    dataType: 'JSON',
-  });
-  const res = await fetch(`https://apis.data.go.kr/1360000/FcstZoneInfoService/getFcstZoneCd?${params.toString()}`);
-  if (!res.ok) return null;
-  const json = await res.json();
-  const items: FcstZone[] = json.response?.body?.items?.item ?? [];
-  if (items.length === 0) return null;
+// 중기육상예보(getMidLandFcst)용 도 단위 구역코드. getFcstZoneCd로 확인한 실제 regId이며,
+// 이 API 응답 자체엔 좌표가 없어(집계 구역) 각 권역 대표지점 좌표를 직접 지정했다.
+const LAND_REGIONS: MidRegion[] = [
+  { regId: '11B00000', name: '서울.인천.경기', lat: 37.5665, lon: 126.978 },
+  { regId: '11C10000', name: '충청북도', lat: 36.6424, lon: 127.489 },
+  { regId: '11C20000', name: '충청남도', lat: 36.3504, lon: 127.3845 },
+  { regId: '11D10000', name: '강원영서', lat: 37.8228, lon: 128.1555 },
+  { regId: '11D20000', name: '강원영동', lat: 37.7519, lon: 128.8761 },
+  { regId: '11F10000', name: '전북자치도', lat: 35.8242, lon: 127.148 },
+  { regId: '11F20000', name: '전라남도', lat: 34.8161, lon: 126.4629 },
+  { regId: '11G00000', name: '제주도', lat: 33.4996, lon: 126.5312 },
+  { regId: '11H10000', name: '경상북도', lat: 36.576, lon: 128.5056 },
+  { regId: '11H20000', name: '경상남도', lat: 35.2285, lon: 128.6811 },
+];
 
-  let nearest = items[0];
-  let minDist = haversineDistance(latitude, longitude, Number(nearest.lat), Number(nearest.lon));
-  for (const item of items) {
-    const dist = haversineDistance(latitude, longitude, Number(item.lat), Number(item.lon));
+// 중기기온예보(getMidTa)용 시 단위 구역코드. getFcstZoneCd 응답의 실제 좌표를 그대로 사용.
+const TA_REGIONS: MidRegion[] = [
+  { regId: '11B10101', name: '서울', lat: 37.56609444, lon: 126.9774167 },
+  { regId: '11B20201', name: '인천', lat: 37.477501, lon: 126.62458 },
+  { regId: '11B20601', name: '수원', lat: 37.272293, lon: 126.985367 },
+  { regId: '11C10301', name: '청주', lat: 36.63924, lon: 127.440659 },
+  { regId: '11C20401', name: '대전', lat: 36.34914444, lon: 127.3843389 },
+  { regId: '11C20404', name: '세종', lat: 36.57, lon: 127.27 },
+  { regId: '11D10301', name: '춘천', lat: 37.88135, lon: 127.7303972 },
+  { regId: '11D20501', name: '강릉', lat: 37.75072778, lon: 128.8769944 },
+  { regId: '11F10201', name: '전주', lat: 35.82382222, lon: 127.1520167 },
+  { regId: '11F20501', name: '광주', lat: 35.16128056, lon: 126.9158417 },
+  { regId: '11G00201', name: '제주', lat: 33.486275, lon: 126.4979528 },
+  { regId: '11G00401', name: '서귀포', lat: 33.24612, lon: 126.565331 },
+  { regId: '11H10501', name: '안동', lat: 36.56676111, lon: 128.7308417 },
+  { regId: '11H10701', name: '대구', lat: 35.87151944, lon: 128.6029722 },
+  { regId: '11H20101', name: '울산', lat: 35.53866667, lon: 129.3547361 },
+  { regId: '11H20201', name: '부산', lat: 35.104683, lon: 129.032013 },
+  { regId: '11H20301', name: '창원', lat: 35.22753889, lon: 128.6819389 },
+];
+
+function nearestRegion(regions: MidRegion[], lat: number, lon: number): MidRegion {
+  let nearest = regions[0];
+  let minDist = haversineDistance(lat, lon, nearest.lat, nearest.lon);
+  for (const r of regions) {
+    const dist = haversineDistance(lat, lon, r.lat, r.lon);
     if (dist < minDist) {
       minDist = dist;
-      nearest = item;
+      nearest = r;
     }
   }
   return nearest;
 }
 ```
 
-(Task 2 결과에 따라 `getFcstZoneCd`가 육상예보/기온예보용 `regId`를 어떻게 구분하는지 반영해서 `findNearestZone`이 필요하면 두 종류의 `regId`를 각각 반환하도록 조정한다.)
-
 - [ ] **Step 2: 중기예보 조회 함수 추가**
 
 ```typescript
-function getMidFcstBaseTime(now: Date): string {
+function getMidFcstBaseTime(now: Date): { tmFc: string; announceDateKst: Date } {
   const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const hhmm = kst.getUTCHours() * 100 + kst.getUTCMinutes();
-  const baseDate = `${kst.getUTCFullYear()}${pad(kst.getUTCMonth() + 1)}${pad(kst.getUTCDate())}`;
+
   // 중기예보는 06:00, 18:00 하루 2회 발표 (발표 후 약 20~30분 뒤 반영)
-  if (hhmm >= 1830) return `${baseDate}1800`;
-  if (hhmm >= 630) return `${baseDate}0600`;
+  if (hhmm >= 1830) {
+    return { tmFc: `${fmtDate(kst)}1800`, announceDateKst: kst };
+  }
+  if (hhmm >= 630) {
+    return { tmFc: `${fmtDate(kst)}0600`, announceDateKst: kst };
+  }
   const prevDay = new Date(kst.getTime() - 24 * 60 * 60 * 1000);
-  const prevBaseDate = `${prevDay.getUTCFullYear()}${pad(prevDay.getUTCMonth() + 1)}${pad(prevDay.getUTCDate())}`;
-  return `${prevBaseDate}1800`;
+  return { tmFc: `${fmtDate(prevDay)}1800`, announceDateKst: prevDay };
+}
+
+function fmtDate(d: Date): string {
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
+}
+
+// 발표일(KST 자정 기준) 대비 경기일이 며칠 뒤인지 정수로 계산
+function calendarDayDiff(announceDateKst: Date, matchDateIso: string): number {
+  const matchKst = new Date(new Date(matchDateIso).getTime() + 9 * 60 * 60 * 1000);
+  const announceDay = Date.UTC(announceDateKst.getUTCFullYear(), announceDateKst.getUTCMonth(), announceDateKst.getUTCDate());
+  const matchDay = Date.UTC(matchKst.getUTCFullYear(), matchKst.getUTCMonth(), matchKst.getUTCDate());
+  return Math.round((matchDay - announceDay) / (24 * 60 * 60 * 1000));
 }
 
 interface MidForecast {
@@ -153,27 +197,11 @@ async function fetchMidForecast(
   serviceKey: string,
   landRegId: string,
   taRegId: string,
-  daysAhead: number
+  tmFc: string,
+  dayN: number
 ): Promise<MidForecast | null> {
-  const tmFc = getMidFcstBaseTime(new Date());
-  const dayN = Math.min(10, Math.max(3, daysAhead));
-
-  const landParams = new URLSearchParams({
-    serviceKey,
-    pageNo: '1',
-    numOfRows: '1',
-    dataType: 'JSON',
-    regId: landRegId,
-    tmFc,
-  });
-  const taParams = new URLSearchParams({
-    serviceKey,
-    pageNo: '1',
-    numOfRows: '1',
-    dataType: 'JSON',
-    regId: taRegId,
-    tmFc,
-  });
+  const landParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: landRegId, tmFc });
+  const taParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: taRegId, tmFc });
 
   const [landRes, taRes] = await Promise.all([
     fetch(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst?${landParams.toString()}`),
@@ -187,18 +215,25 @@ async function fetchMidForecast(
 
   // 8~10일차는 오전/오후 구분 없이 통합값만 제공됨
   const hasAmPm = dayN <= 7;
-  const amWeather = hasAmPm ? landItem[`wf${dayN}Am`] : landItem[`wf${dayN}`];
-  const pmWeather = hasAmPm ? landItem[`wf${dayN}Pm`] : landItem[`wf${dayN}`];
+  const amWeather: string | undefined = hasAmPm ? landItem[`wf${dayN}Am`] : landItem[`wf${dayN}`];
+  const pmWeather: string | undefined = hasAmPm ? landItem[`wf${dayN}Pm`] : landItem[`wf${dayN}`];
   const amPop = hasAmPm ? landItem[`rnSt${dayN}Am`] : landItem[`rnSt${dayN}`];
   const pmPop = hasAmPm ? landItem[`rnSt${dayN}Pm`] : landItem[`rnSt${dayN}`];
+  const minTemp = taItem[`taMin${dayN}`];
+  const maxTemp = taItem[`taMax${dayN}`];
+
+  if (!amWeather || !pmWeather || minTemp == null || maxTemp == null) {
+    // 이 발표시각 기준으로 그 날짜 예보가 아직 없음(예: 3일차, 또는 아직 안 채워진 경계 케이스)
+    return null;
+  }
 
   return {
     amWeather,
     pmWeather,
     amPop: String(amPop),
     pmPop: String(pmPop),
-    minTemp: String(taItem[`taMin${dayN}`]),
-    maxTemp: String(taItem[`taMax${dayN}`]),
+    minTemp: String(minTemp),
+    maxTemp: String(maxTemp),
   };
 }
 ```
@@ -239,11 +274,15 @@ async function fetchMidForecast(
     }
 
     if (hoursUntilMatch > 72) {
-      const daysAhead = Math.ceil(hoursUntilMatch / 24);
-      const zone = await findNearestZone(serviceKey, latitude, longitude);
-      if (!zone) return Response.json({ available: false });
+      const { tmFc, announceDateKst } = getMidFcstBaseTime(now);
+      const dayN = calendarDayDiff(announceDateKst, matchDateIso);
+      if (dayN < 4 || dayN > 10) {
+        return Response.json({ available: false });
+      }
 
-      const mid = await fetchMidForecast(serviceKey, zone.regId, zone.regId, daysAhead);
+      const landRegion = nearestRegion(LAND_REGIONS, latitude, longitude);
+      const taRegion = nearestRegion(TA_REGIONS, latitude, longitude);
+      const mid = await fetchMidForecast(serviceKey, landRegion.regId, taRegion.regId, tmFc, dayN);
       if (!mid) return Response.json({ available: false });
 
       return Response.json({ available: true, range: 'mid', ...mid });
@@ -251,8 +290,6 @@ async function fetchMidForecast(
 
     const { nx, ny } = toGrid(latitude, longitude);
 ```
-
-(Task 2 결과, 육상예보와 기온예보의 `regId`가 서로 다른 값이어야 한다면 `findNearestZone`을 두 번 호출하거나 `zone.regId`를 각 용도에 맞게 변환하는 로직으로 이 Step을 수정한다.)
 
 - [ ] **Step 4: 단기예보 응답에도 `range: 'short'` 추가**
 

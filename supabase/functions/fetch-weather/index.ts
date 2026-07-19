@@ -102,6 +102,39 @@ interface KmaItem {
   fcstValue: string;
 }
 
+const RELAY_URL = Deno.env.get('WEATHER_RELAY_URL');
+const RELAY_SECRET = Deno.env.get('WEATHER_RELAY_SECRET');
+
+interface RelayResponse {
+  ok: boolean;
+  status: number;
+  json: () => Promise<any>;
+  text: () => Promise<string>;
+}
+
+// 기상청 API가 Supabase 엣지함수의 발신 IP를 막아서(401), 서울 리전 AWS Lambda를 거쳐 대신 호출한다.
+async function fetchViaRelay(url: string): Promise<RelayResponse> {
+  if (!RELAY_URL || !RELAY_SECRET) {
+    throw new Error('WEATHER_RELAY_URL/WEATHER_RELAY_SECRET가 설정되지 않았습니다.');
+  }
+  const relayRes = await fetch(RELAY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Relay-Secret': RELAY_SECRET },
+    body: JSON.stringify({ url }),
+  });
+  if (!relayRes.ok) {
+    const bodyText = await relayRes.text();
+    throw new Error(`릴레이 호출 실패 (status ${relayRes.status}): ${bodyText.slice(0, 300)}`);
+  }
+  const { status, body } = await relayRes.json();
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => JSON.parse(body),
+    text: async () => body,
+  };
+}
+
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * DEGRAD;
@@ -214,8 +247,8 @@ async function fetchMidForecast(
   const taParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: taRegId, tmFc });
 
   const [landRes, taRes] = await Promise.all([
-    fetch(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst?${landParams.toString()}`),
-    fetch(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?${taParams.toString()}`),
+    fetchViaRelay(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst?${landParams.toString()}`),
+    fetchViaRelay(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?${taParams.toString()}`),
   ]);
   if (!landRes.ok || !taRes.ok) return null;
 
@@ -296,9 +329,8 @@ export default {
       ny: String(ny),
     });
 
-    const kmaRes = await fetch(
-      `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; futsal-club-app)', Accept: 'application/json' } }
+    const kmaRes = await fetchViaRelay(
+      `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`
     );
     if (!kmaRes.ok) {
       const bodyText = await kmaRes.text();

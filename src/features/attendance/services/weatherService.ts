@@ -2,10 +2,17 @@ import { supabase } from '../../../lib/supabase';
 
 export interface MatchWeather {
   available: boolean;
+  range?: 'short' | 'mid';
   temperature?: string;
   precipitationChance?: string;
   precipitationType?: string;
   sky?: string;
+  amWeather?: string;
+  amPop?: string;
+  pmWeather?: string;
+  pmPop?: string;
+  minTemp?: string;
+  maxTemp?: string;
 }
 
 export async function fetchMatchWeather(

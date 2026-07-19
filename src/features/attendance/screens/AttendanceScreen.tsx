@@ -134,7 +134,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
     const eligible = matches.filter((m) => {
       if (m.latitude == null || m.longitude == null) return false;
       const hoursUntilMatch = (new Date(m.match_date).getTime() - Date.now()) / (1000 * 60 * 60);
-      return hoursUntilMatch <= 72 && hoursUntilMatch >= -3;
+      return hoursUntilMatch <= 240 && hoursUntilMatch >= -3;
     });
     if (eligible.length === 0) {
       setCalendarWeather({});
@@ -153,10 +153,14 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
       const next: Record<string, string> = {};
       results.forEach((r) => {
         if (r && r.weather.available) {
-          next[dateKey(new Date(r.match.match_date))] = weatherEmoji(
-            r.weather.precipitationType ?? '0',
-            r.weather.sky ?? '1'
-          );
+          const w = r.weather;
+          const emoji =
+            w.range === 'mid'
+              ? w.amWeather?.includes('비') || w.pmWeather?.includes('비')
+                ? '🌧️'
+                : '⛅'
+              : weatherEmoji(w.precipitationType ?? '0', w.sky ?? '1');
+          next[dateKey(new Date(r.match.match_date))] = emoji;
         }
       });
       setCalendarWeather(next);

@@ -14,7 +14,7 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
   useEffect(() => {
     if (latitude == null || longitude == null) return;
     const hoursUntilMatch = (new Date(matchDateIso).getTime() - Date.now()) / (1000 * 60 * 60);
-    if (hoursUntilMatch > 72 || hoursUntilMatch < -3) return;
+    if (hoursUntilMatch > 240 || hoursUntilMatch < -3) return;
 
     let cancelled = false;
     fetchMatchWeather(latitude, longitude, matchDateIso)
@@ -30,6 +30,26 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
   }, [latitude, longitude, matchDateIso]);
 
   if (!weather || !weather.available) return null;
+
+  if (weather.range === 'mid') {
+    const amRain = weather.amWeather?.includes('비') || weather.amWeather?.includes('눈');
+    const pmRain = weather.pmWeather?.includes('비') || weather.pmWeather?.includes('눈');
+    const showIndoorHint =
+      amRain || pmRain || Number(weather.amPop ?? '0') >= 60 || Number(weather.pmPop ?? '0') >= 60;
+
+    return (
+      <View style={styles.container}>
+        <View style={styles.row}>
+          <Text style={styles.emoji}>{amRain || pmRain ? '🌧️' : '⛅'}</Text>
+          <Text style={styles.text}>
+            오전 {weather.amWeather}({weather.amPop}%) · 오후 {weather.pmWeather}({weather.pmPop}%) ·{' '}
+            {weather.minTemp}~{weather.maxTemp}°C
+          </Text>
+        </View>
+        {showIndoorHint && <Text style={styles.hint}>☔ 비 예보 - 실내 대체 장소도 고려해보세요</Text>}
+      </View>
+    );
+  }
 
   const pty = weather.precipitationType ?? '0';
   const pop = Number(weather.precipitationChance ?? '0');

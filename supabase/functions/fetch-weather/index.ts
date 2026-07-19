@@ -300,7 +300,11 @@ export default {
       `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`
     );
     if (!kmaRes.ok) {
-      return Response.json({ error: '날씨 조회에 실패했습니다.' }, { status: 502 });
+      const bodyText = await kmaRes.text();
+      return Response.json(
+        { error: '날씨 조회에 실패했습니다.', debugStatus: kmaRes.status, debugBody: bodyText.slice(0, 500) },
+        { status: 502 }
+      );
     }
     const kmaJson = await kmaRes.json();
     const items: KmaItem[] = kmaJson.response?.body?.items?.item ?? [];

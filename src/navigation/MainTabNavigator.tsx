@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { SettlementScreen } from '../features/settlement/screens/SettlementScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
-import { TimerScreen } from '../features/timer/screens/TimerScreen';
 import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
 import { ReservationScreen } from '../features/reservation/screens/ReservationScreen';
 
@@ -52,11 +51,6 @@ export function MainTabNavigator() {
         name="Assignment"
         component={AssignmentScreen}
         options={{ title: '분배', tabBarIcon: tabIcon('people-outline', 'people') }}
-      />
-      <Tab.Screen
-        name="Timer"
-        component={TimerScreen}
-        options={{ title: '타이머', tabBarIcon: tabIcon('stopwatch-outline', 'stopwatch') }}
       />
       <Tab.Screen
         name="Team"

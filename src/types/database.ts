@@ -210,6 +210,7 @@ export interface Database {
           title: string;
           body: string;
           is_pinned?: boolean;
+          updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['announcements']['Insert']>;
         Relationships: [];

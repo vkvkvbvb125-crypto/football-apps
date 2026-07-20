@@ -152,6 +152,20 @@ create table notifications (
   created_at timestamptz not null default now()
 );
 
+-- ---------------------------------------------------------
+-- 10. announcements: 총무가 작성하는 공지사항 (작성 시 알림 발송)
+-- ---------------------------------------------------------
+create table announcements (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  author_id uuid not null references team_members(id),
+  title text not null,
+  body text not null,
+  is_pinned boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- =========================================================
 -- 헬퍼 함수 (security definer로 team_members 자기참조 재귀 방지)
 -- =========================================================
@@ -228,6 +242,7 @@ alter table settlements enable row level security;
 alter table payments enable row level security;
 alter table team_assignments enable row level security;
 alter table notifications enable row level security;
+alter table announcements enable row level security;
 
 -- profiles: 본인 또는 같은 팀 소속 멤버만 조회 가능
 create policy "profiles_select" on profiles for select
@@ -317,3 +332,9 @@ create policy "assignments_write_admin" on team_assignments for all
 -- notifications: 본인 알림만 조회/읽음처리 가능. 생성은 엣지 함수(service role)로만 처리
 create policy "notifications_select_own" on notifications for select using (user_id = auth.uid());
 create policy "notifications_update_own" on notifications for update using (user_id = auth.uid());
+
+-- announcements: 팀원 조회 가능, 작성/수정/삭제는 총무만
+create policy "announcements_select" on announcements for select using (is_team_member(team_id));
+create policy "announcements_write_admin" on announcements for all
+  using (is_team_admin(team_id))
+  with check (is_team_admin(team_id));

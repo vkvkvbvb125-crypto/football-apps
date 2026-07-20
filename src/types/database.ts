@@ -193,6 +193,27 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>;
         Relationships: [];
       };
+      announcements: {
+        Row: {
+          id: string;
+          team_id: string;
+          author_id: string;
+          title: string;
+          body: string;
+          is_pinned: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          team_id: string;
+          author_id: string;
+          title: string;
+          body: string;
+          is_pinned?: boolean;
+        };
+        Update: Partial<Database['public']['Tables']['announcements']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

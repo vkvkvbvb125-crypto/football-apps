@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Share, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useTeamStore } from '../stores/teamStore';
+import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
+import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
 import { FieldBackground } from '../../../components/FieldBackground';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
@@ -15,6 +18,15 @@ export function TeamHomeScreen() {
   const signOut = useAuthStore((s) => s.signOut);
   const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
   const [copied, setCopied] = useState(false);
+
+  const announcements = useAnnouncementsStore((s) => s.announcements);
+  const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
+  const createAnnouncement = useAnnouncementsStore((s) => s.createAnnouncement);
+  const [formVisible, setFormVisible] = useState(false);
+
+  useEffect(() => {
+    if (activeTeam) loadAnnouncements();
+  }, [activeTeam?.team.id]);
 
   if (!activeTeam) return null;
 
@@ -94,8 +106,46 @@ export function TeamHomeScreen() {
             <Text style={styles.homeLocationHint}>경기 없는 날의 예상 날씨를 이 위치 기준으로 보여줘요</Text>
           </View>
         )}
+
+        <View style={styles.announceSection}>
+          <View style={styles.announceHeader}>
+            <Text style={styles.announceTitle}>공지사항</Text>
+            {isAdmin && (
+              <Pressable onPress={() => setFormVisible(true)} hitSlop={8}>
+                <Ionicons name="add-circle-outline" size={20} color="#39D98A" />
+              </Pressable>
+            )}
+          </View>
+          {announcements.length === 0 ? (
+            <Text style={styles.announceEmpty}>등록된 공지가 없어요</Text>
+          ) : (
+            announcements.slice(0, 3).map((a) => (
+              <View key={a.id} style={styles.announceItem}>
+                {a.is_pinned && <Ionicons name="pin" size={12} color="#39D98A" style={styles.announcePinIcon} />}
+                <View style={styles.announceItemText}>
+                  <Text style={styles.announceItemTitle} numberOfLines={1}>
+                    {a.title}
+                  </Text>
+                  <Text style={styles.announceItemBody} numberOfLines={1}>
+                    {a.body}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
       </View>
     </ScrollView>
+
+    <AnnouncementFormModal
+      visible={formVisible}
+      editing={null}
+      onClose={() => setFormVisible(false)}
+      onSubmit={(input) => {
+        createAnnouncement(input);
+        setFormVisible(false);
+      }}
+    />
     </ScreenGradient>
   );
 }
@@ -219,5 +269,50 @@ const styles = StyleSheet.create({
   homeLocationHint: {
     fontSize: 11,
     color: '#5A625E',
+  },
+  announceSection: {
+    marginTop: 12,
+    backgroundColor: '#141A17',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#22302A',
+    gap: 10,
+  },
+  announceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  announceTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  announceEmpty: {
+    color: '#5A625E',
+    fontSize: 12,
+  },
+  announceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+  },
+  announcePinIcon: {
+    marginTop: 2,
+  },
+  announceItemText: {
+    flex: 1,
+  },
+  announceItemTitle: {
+    color: '#E7ECE9',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  announceItemBody: {
+    marginTop: 2,
+    color: '#8A9490',
+    fontSize: 12,
   },
 });

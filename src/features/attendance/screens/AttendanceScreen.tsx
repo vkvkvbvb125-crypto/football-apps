@@ -261,14 +261,14 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
         />
       ) : (
         <View style={styles.body}>
-          <MonthNavigator offset={monthOffset} onChange={setMonthOffset} />
-
           {weatherLoading && (
             <View style={styles.weatherLoadingRow}>
               <ActivityIndicator size="small" color="#39D98A" />
               <Text style={styles.weatherLoadingText}>날씨 조회 중...</Text>
             </View>
           )}
+
+          <MonthNavigator offset={monthOffset} onChange={setMonthOffset} />
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 

@@ -52,16 +52,19 @@ function FallingParticles({
   const anims = useRef(Array.from({ length: count }, () => new Animated.Value(0))).current;
 
   useEffect(() => {
-    const loops = anims.map((anim, i) =>
+    // 스태거 딜레이는 시작할 때 한 번만 적용해야 한다 - 루프 안에 넣으면 매 반복마다
+    // 딜레이가 다시 더해져서 빗줄기별로 주기가 달라지고(280ms vs 350ms vs 420ms 등)
+    // 시간이 지날수록 서로 어긋나 버린다.
+    const loops = anims.map((anim) =>
       Animated.loop(
-        Animated.sequence([
-          Animated.delay(i * stagger),
-          Animated.timing(anim, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true }),
-        ])
+        Animated.timing(anim, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true })
       )
     );
-    loops.forEach((l) => l.start());
-    return () => loops.forEach((l) => l.stop());
+    const timeouts = loops.map((loop, i) => setTimeout(() => loop.start(), i * stagger));
+    return () => {
+      timeouts.forEach(clearTimeout);
+      loops.forEach((l) => l.stop());
+    };
   }, [anims, duration, stagger]);
 
   return (

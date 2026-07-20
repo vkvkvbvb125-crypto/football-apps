@@ -27,7 +27,7 @@ export function TimerPanel() {
       setTimeout(() => {
         player.seekTo(0);
         player.play();
-      }, i * 450);
+      }, i * 650);
     }
   };
 

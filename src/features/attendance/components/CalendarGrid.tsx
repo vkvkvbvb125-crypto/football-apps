@@ -189,18 +189,10 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
                 <View
                   style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
                 >
-                  {tint && !isSelected && weatherEmoji && <WeatherEffect emoji={weatherEmoji} />}
-                  <Text
-                    style={[
-                      styles.dayText,
-                      isToday && !isSelected && styles.dayTextToday,
-                      isSelected && styles.dayTextSelected,
-                    ]}
-                  >
-                    {date.getDate()}
-                  </Text>
+                  {tint && weatherEmoji && <WeatherEffect emoji={weatherEmoji} />}
+                  <Text style={[styles.dayText, isToday && styles.dayTextToday]}>{date.getDate()}</Text>
                 </View>
-                {hasMatch && !tint && <View style={[styles.dot, isSelected && styles.dotSelected]} />}
+                {hasMatch && !tint && <View style={styles.dot} />}
               </Pressable>
             );
           })}
@@ -271,7 +263,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(203,213,225,0.55)',
   },
   dayCircleSelected: {
-    backgroundColor: '#39D98A',
+    borderWidth: 2,
+    borderColor: '#39D98A',
   },
   dayText: {
     color: '#FFFFFF',
@@ -281,18 +274,11 @@ const styles = StyleSheet.create({
     color: '#39D98A',
     fontWeight: '700',
   },
-  dayTextSelected: {
-    color: '#0B0F0D',
-    fontWeight: '700',
-  },
   dot: {
     marginTop: 4,
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#39D98A',
-  },
-  dotSelected: {
     backgroundColor: '#39D98A',
   },
 });

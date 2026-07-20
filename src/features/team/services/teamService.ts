@@ -95,3 +95,18 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMemberWithPr
     };
   });
 }
+
+export async function updateMemberSkillTag(teamMemberId: string, skillTag: TeamMemberRow['skill_tag']) {
+  const { error } = await supabase.from('team_members').update({ skill_tag: skillTag }).eq('id', teamMemberId);
+  if (error) throw error;
+}
+
+export async function updateMemberRole(teamMemberId: string, role: TeamMemberRow['role']) {
+  const { error } = await supabase.from('team_members').update({ role }).eq('id', teamMemberId);
+  if (error) throw error;
+}
+
+export async function removeMember(teamMemberId: string) {
+  const { error } = await supabase.from('team_members').delete().eq('id', teamMemberId);
+  if (error) throw error;
+}

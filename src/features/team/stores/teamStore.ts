@@ -4,11 +4,15 @@ import {
   fetchMyMemberships,
   fetchTeamMembers,
   joinTeamByInvite as joinTeamByInviteRequest,
+  removeMember as removeMemberRequest,
+  updateMemberRole as updateMemberRoleRequest,
+  updateMemberSkillTag as updateMemberSkillTagRequest,
   updateTeamHomeLocation as updateTeamHomeLocationRequest,
   type TeamHomeLocation,
   type TeamMembership,
   type TeamMemberWithProfile,
 } from '../services/teamService';
+import type { SkillTag } from '../../../types/database';
 
 interface TeamState {
   memberships: TeamMembership[];
@@ -22,6 +26,9 @@ interface TeamState {
   createTeam: (name: string) => Promise<void>;
   joinTeam: (inviteCode: string) => Promise<void>;
   updateHomeLocation: (location: TeamHomeLocation) => Promise<void>;
+  updateMemberSkillTag: (teamMemberId: string, skillTag: SkillTag | null) => Promise<void>;
+  promoteToAdmin: (teamMemberId: string) => Promise<void>;
+  removeMember: (teamMemberId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -84,6 +91,36 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await get().loadMemberships();
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '대표 지역 설정에 실패했습니다.', loading: false });
+    }
+  },
+  updateMemberSkillTag: async (teamMemberId, skillTag) => {
+    try {
+      await updateMemberSkillTagRequest(teamMemberId, skillTag);
+      await get().loadMembers();
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : '실력태그 변경에 실패했습니다.' });
+    }
+  },
+  promoteToAdmin: async (teamMemberId) => {
+    try {
+      await updateMemberRoleRequest(teamMemberId, 'admin');
+      await get().loadMembers();
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : '총무 임명에 실패했습니다.' });
+    }
+  },
+  removeMember: async (teamMemberId) => {
+    const target = get().members.find((m) => m.id === teamMemberId);
+    const adminCount = get().members.filter((m) => m.role === 'admin').length;
+    if (target?.role === 'admin' && adminCount <= 1) {
+      set({ error: '마지막 총무는 내보낼 수 없어요. 먼저 다른 총무를 임명해주세요.' });
+      return;
+    }
+    try {
+      await removeMemberRequest(teamMemberId);
+      await get().loadMembers();
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : '멤버 내보내기에 실패했습니다.' });
     }
   },
   reset: () => set({ memberships: [], activeTeam: null, members: [], loaded: false, error: null }),

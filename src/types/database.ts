@@ -79,6 +79,7 @@ export interface Database {
           vote_deadline: string | null;
           status: MatchStatus;
           quarter_minutes: number;
+          team_count: number;
           created_by: string;
           created_at: string;
         };
@@ -93,6 +94,7 @@ export interface Database {
           vote_deadline?: string | null;
           status?: MatchStatus;
           quarter_minutes?: number;
+          team_count?: number;
           created_by: string;
         };
         Update: Partial<Database['public']['Tables']['matches']['Insert']>;

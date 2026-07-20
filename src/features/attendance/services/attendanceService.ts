@@ -98,3 +98,8 @@ export async function deleteMatch(matchId: string) {
   const { error } = await supabase.from('matches').delete().eq('id', matchId);
   if (error) throw error;
 }
+
+export async function updateMatchTeamCount(matchId: string, teamCount: number) {
+  const { error } = await supabase.from('matches').update({ team_count: teamCount }).eq('id', matchId);
+  if (error) throw error;
+}

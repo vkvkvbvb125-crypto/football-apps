@@ -82,6 +82,7 @@ create table matches (
   vote_deadline timestamptz,
   status text not null default 'open' check (status in ('open', 'locked', 'completed')),
   quarter_minutes int not null default 10,
+  team_count int not null default 2 check (team_count between 2 and 5),
   created_by uuid not null references team_members(id),
   created_at timestamptz not null default now()
 );

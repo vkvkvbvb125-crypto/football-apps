@@ -242,19 +242,43 @@ async function fetchMidForecast(
   taRegId: string,
   tmFc: string,
   dayN: number
-): Promise<MidForecast | null> {
+): Promise<{ data: MidForecast | null; debug: Record<string, unknown> }> {
   const landParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: landRegId, tmFc });
   const taParams = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '1', dataType: 'JSON', regId: taRegId, tmFc });
 
-  const [landRes, taRes] = await Promise.all([
-    fetchViaRelay(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst?${landParams.toString()}`),
-    fetchViaRelay(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?${taParams.toString()}`),
-  ]);
-  if (!landRes.ok || !taRes.ok) return null;
+  let landRes: RelayResponse;
+  let taRes: RelayResponse;
+  try {
+    [landRes, taRes] = await Promise.all([
+      fetchViaRelay(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst?${landParams.toString()}`),
+      fetchViaRelay(`https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?${taParams.toString()}`),
+    ]);
+  } catch (err) {
+    return { data: null, debug: { step: 'relay_exception', message: String(err) } };
+  }
+  if (!landRes.ok || !taRes.ok) {
+    return {
+      data: null,
+      debug: { step: 'relay_not_ok', landStatus: landRes.status, taStatus: taRes.status },
+    };
+  }
 
-  const landItem = (await landRes.json()).response?.body?.items?.item?.[0];
-  const taItem = (await taRes.json()).response?.body?.items?.item?.[0];
-  if (!landItem || !taItem) return null;
+  const landJson = await landRes.json();
+  const taJson = await taRes.json();
+  const landItem = landJson.response?.body?.items?.item?.[0];
+  const taItem = taJson.response?.body?.items?.item?.[0];
+  if (!landItem || !taItem) {
+    return {
+      data: null,
+      debug: {
+        step: 'no_item',
+        landResultCode: landJson.response?.header?.resultCode,
+        landResultMsg: landJson.response?.header?.resultMsg,
+        taResultCode: taJson.response?.header?.resultCode,
+        taResultMsg: taJson.response?.header?.resultMsg,
+      },
+    };
+  }
 
   // 8~10일차는 오전/오후 구분 없이 통합값만 제공됨
   const hasAmPm = dayN <= 7;
@@ -267,16 +291,100 @@ async function fetchMidForecast(
 
   if (!amWeather || !pmWeather || minTemp == null || maxTemp == null) {
     // 이 발표시각 기준으로 그 날짜 예보가 아직 없음(예: 3일차, 또는 아직 안 채워진 경계 케이스)
-    return null;
+    return {
+      data: null,
+      debug: {
+        step: 'fields_missing',
+        hasAmPm,
+        amWeather: amWeather ?? null,
+        pmWeather: pmWeather ?? null,
+        minTemp: minTemp ?? null,
+        maxTemp: maxTemp ?? null,
+        landItemKeys: Object.keys(landItem),
+        taItemKeys: Object.keys(taItem),
+      },
+    };
   }
 
   return {
-    amWeather,
-    pmWeather,
-    amPop: String(amPop),
-    pmPop: String(pmPop),
-    minTemp: String(minTemp),
-    maxTemp: String(maxTemp),
+    data: {
+      amWeather,
+      pmWeather,
+      amPop: String(amPop),
+      pmPop: String(pmPop),
+      minTemp: String(minTemp),
+      maxTemp: String(maxTemp),
+    },
+    debug: { step: 'ok' },
+  };
+}
+
+async function fetchShortTermForecast(
+  serviceKey: string,
+  latitude: number,
+  longitude: number,
+  matchDate: Date,
+  now: Date
+): Promise<{ body: Record<string, unknown>; status?: number }> {
+  const { nx, ny } = toGrid(latitude, longitude);
+  const { baseDate, baseTime } = getLatestBaseDateTime(now);
+  const { fcstDate, fcstTime } = nearestForecastSlot(matchDate);
+
+  const params = new URLSearchParams({
+    serviceKey,
+    numOfRows: '1000',
+    pageNo: '1',
+    dataType: 'JSON',
+    base_date: baseDate,
+    base_time: baseTime,
+    nx: String(nx),
+    ny: String(ny),
+  });
+
+  let kmaRes: RelayResponse;
+  try {
+    kmaRes = await fetchViaRelay(
+      `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`
+    );
+  } catch (err) {
+    return { body: { available: false, reason: 'relay_exception', message: String(err) } };
+  }
+  if (!kmaRes.ok) {
+    const bodyText = await kmaRes.text();
+    return {
+      body: { error: '날씨 조회에 실패했습니다.', debugStatus: kmaRes.status, debugBody: bodyText.slice(0, 500) },
+      status: 502,
+    };
+  }
+  const kmaJson = await kmaRes.json();
+  const items: KmaItem[] = kmaJson.response?.body?.items?.item ?? [];
+
+  const slotItems = items.filter((i) => i.fcstDate === fcstDate && i.fcstTime === fcstTime);
+  if (slotItems.length === 0) {
+    const availableSlots = [...new Set(items.map((i) => `${i.fcstDate} ${i.fcstTime}`))];
+    return {
+      body: {
+        available: false,
+        reason: 'no_matching_slot',
+        wantedSlot: `${fcstDate} ${fcstTime}`,
+        baseDate,
+        baseTime,
+        availableSlots,
+      },
+    };
+  }
+
+  const valueOf = (category: string) => slotItems.find((i) => i.category === category)?.fcstValue ?? null;
+
+  return {
+    body: {
+      available: true,
+      range: 'short',
+      temperature: valueOf('TMP'),
+      precipitationChance: valueOf('POP'),
+      precipitationType: valueOf('PTY'),
+      sky: valueOf('SKY'),
+    },
   };
 }
 
@@ -291,7 +399,7 @@ export default {
     const now = new Date();
     const hoursUntilMatch = (matchDate.getTime() - now.getTime()) / (1000 * 60 * 60);
     if (hoursUntilMatch > 240 || hoursUntilMatch < -3) {
-      return Response.json({ available: false });
+      return Response.json({ available: false, reason: 'out_of_range', hoursUntilMatch });
     }
 
     const serviceKey = Deno.env.get('KMA_SERVICE_KEY');
@@ -299,63 +407,30 @@ export default {
       return Response.json({ error: 'KMA_SERVICE_KEY가 설정되지 않았습니다.' }, { status: 500 });
     }
 
+    // 중기예보는 실제로 5일차부터 데이터가 채워진다(4일차 이하 필드는 기상청 응답 자체에 없음).
+    // 그래서 72시간~5일차 사이(대략 3~4일 뒤)는 단기예보 범위도 지났고 중기예보도 아직 데이터가
+    // 없는 공백 구간이 생긴다. 이 구간에서는 단기예보가 혹시 그 시점까지 데이터를 갖고 있는지
+    // 밑져야 본전으로 한 번 더 시도해본다 (안 되면 어차피 지금처럼 조회 불가로 자연스럽게 떨어짐).
     if (hoursUntilMatch > 72) {
       const { tmFc, announceDateKst } = getMidFcstBaseTime(now);
       const dayN = calendarDayDiff(announceDateKst, matchDateIso);
-      if (dayN < 4 || dayN > 10) {
-        return Response.json({ available: false });
+
+      if (dayN >= 5 && dayN <= 10) {
+        const landRegion = nearestRegion(LAND_REGIONS, latitude, longitude);
+        const taRegion = nearestRegion(TA_REGIONS, latitude, longitude);
+        const { data: mid, debug: midDebug } = await fetchMidForecast(serviceKey, landRegion.regId, taRegion.regId, tmFc, dayN);
+        if (mid) {
+          return Response.json({ available: true, range: 'mid', ...mid });
+        }
+        // 중기예보에서 못 받았으면 아래 단기예보 폴백으로 넘어감 (참고용으로 이유는 버림, midDebug는 필요시 로그로만)
+        void midDebug;
       }
 
-      const landRegion = nearestRegion(LAND_REGIONS, latitude, longitude);
-      const taRegion = nearestRegion(TA_REGIONS, latitude, longitude);
-      const mid = await fetchMidForecast(serviceKey, landRegion.regId, taRegion.regId, tmFc, dayN);
-      if (!mid) return Response.json({ available: false });
-
-      return Response.json({ available: true, range: 'mid', ...mid });
+      const { body, status } = await fetchShortTermForecast(serviceKey, latitude, longitude, matchDate, now);
+      return Response.json(body, status ? { status } : undefined);
     }
 
-    const { nx, ny } = toGrid(latitude, longitude);
-    const { baseDate, baseTime } = getLatestBaseDateTime(now);
-    const { fcstDate, fcstTime } = nearestForecastSlot(matchDate);
-
-    const params = new URLSearchParams({
-      serviceKey,
-      numOfRows: '1000',
-      pageNo: '1',
-      dataType: 'JSON',
-      base_date: baseDate,
-      base_time: baseTime,
-      nx: String(nx),
-      ny: String(ny),
-    });
-
-    const kmaRes = await fetchViaRelay(
-      `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?${params.toString()}`
-    );
-    if (!kmaRes.ok) {
-      const bodyText = await kmaRes.text();
-      return Response.json(
-        { error: '날씨 조회에 실패했습니다.', debugStatus: kmaRes.status, debugBody: bodyText.slice(0, 500) },
-        { status: 502 }
-      );
-    }
-    const kmaJson = await kmaRes.json();
-    const items: KmaItem[] = kmaJson.response?.body?.items?.item ?? [];
-
-    const slotItems = items.filter((i) => i.fcstDate === fcstDate && i.fcstTime === fcstTime);
-    if (slotItems.length === 0) {
-      return Response.json({ available: false });
-    }
-
-    const valueOf = (category: string) => slotItems.find((i) => i.category === category)?.fcstValue ?? null;
-
-    return Response.json({
-      available: true,
-      range: 'short',
-      temperature: valueOf('TMP'),
-      precipitationChance: valueOf('POP'),
-      precipitationType: valueOf('PTY'),
-      sky: valueOf('SKY'),
-    });
+    const { body, status } = await fetchShortTermForecast(serviceKey, latitude, longitude, matchDate, now);
+    return Response.json(body, status ? { status } : undefined);
   }),
 };

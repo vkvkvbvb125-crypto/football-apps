@@ -10,9 +10,10 @@ import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
+import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
 
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
-  const [view, setView] = useState<'assign' | 'timer'>('assign');
+  const [view, setView] = useState<'assign' | 'timer' | 'score'>('assign');
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
   const isAdmin = activeTeam?.role === 'admin';
@@ -66,6 +67,16 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
         >
           <Text style={[styles.viewToggleText, view === 'timer' && styles.viewToggleTextActive]}>타이머</Text>
         </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.viewToggle,
+            view === 'score' && styles.viewToggleActive,
+            pressed && styles.pressedOpacity,
+          ]}
+          onPress={() => setView('score')}
+        >
+          <Text style={[styles.viewToggleText, view === 'score' && styles.viewToggleTextActive]}>스코어</Text>
+        </Pressable>
       </View>
 
       {!activeTeam ? (
@@ -79,6 +90,10 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
       ) : view === 'timer' ? (
         <ScrollView>
           <TimerPanel />
+        </ScrollView>
+      ) : view === 'score' ? (
+        <ScrollView>
+          <ScoreboardPanel />
         </ScrollView>
       ) : loading && !loaded ? (
         <ActivityIndicator style={{ marginTop: 40 }} color="#39D98A" />

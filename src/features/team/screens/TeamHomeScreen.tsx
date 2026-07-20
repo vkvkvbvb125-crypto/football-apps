@@ -9,6 +9,7 @@ import { AnnouncementFormModal } from '../../announcements/components/Announceme
 import { AnnouncementListModal } from '../../announcements/components/AnnouncementListModal';
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
+import { MemberListModal } from '../components/MemberListModal';
 import { FieldBackground } from '../../../components/FieldBackground';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
@@ -20,6 +21,12 @@ export function TeamHomeScreen() {
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const signOut = useAuthStore((s) => s.signOut);
   const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
+  const members = useTeamStore((s) => s.members);
+  const loadMembers = useTeamStore((s) => s.loadMembers);
+  const updateMemberSkillTag = useTeamStore((s) => s.updateMemberSkillTag);
+  const promoteToAdmin = useTeamStore((s) => s.promoteToAdmin);
+  const removeMember = useTeamStore((s) => s.removeMember);
+  const [memberListVisible, setMemberListVisible] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const announcements = useAnnouncementsStore((s) => s.announcements);
@@ -62,6 +69,10 @@ export function TeamHomeScreen() {
 
   useEffect(() => {
     if (activeTeam) loadAnnouncements();
+  }, [activeTeam?.team.id]);
+
+  useEffect(() => {
+    if (activeTeam) loadMembers();
   }, [activeTeam?.team.id]);
 
   if (!activeTeam) return null;
@@ -143,6 +154,13 @@ export function TeamHomeScreen() {
           </View>
         )}
 
+        <View style={styles.memberSection}>
+          <Text style={styles.memberTitle}>멤버 {members.length}명</Text>
+          <Pressable onPress={() => setMemberListVisible(true)}>
+            <Text style={styles.announceSeeAll}>전체보기</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.announceSection}>
           <View style={styles.announceHeader}>
             <Text style={styles.announceTitle}>공지사항</Text>
@@ -218,6 +236,16 @@ export function TeamHomeScreen() {
       onClose={() => setSelectedAnnouncement(null)}
       onEdit={handleOpenEdit}
       onDelete={handleDeleteAnnouncement}
+    />
+    <MemberListModal
+      visible={memberListVisible}
+      members={members}
+      selfMemberId={activeTeam.membershipId}
+      isAdmin={isAdmin}
+      onClose={() => setMemberListVisible(false)}
+      onChangeSkillTag={updateMemberSkillTag}
+      onPromote={promoteToAdmin}
+      onRemove={removeMember}
     />
     </ScreenGradient>
   );
@@ -342,6 +370,22 @@ const styles = StyleSheet.create({
   homeLocationHint: {
     fontSize: 11,
     color: '#5A625E',
+  },
+  memberSection: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#141A17',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#22302A',
+  },
+  memberTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   announceSection: {
     marginTop: 12,

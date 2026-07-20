@@ -48,6 +48,7 @@ export interface TeamMemberWithProfile {
   id: string;
   userId: string;
   role: TeamMemberRow['role'];
+  skillTag: TeamMemberRow['skill_tag'];
   displayName: string;
   avatarUrl: string | null;
 }
@@ -88,6 +89,7 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMemberWithPr
       id: m.id,
       userId: m.user_id,
       role: m.role,
+      skillTag: m.skill_tag,
       displayName: profile?.display_name ?? '멤버',
       avatarUrl: profile?.avatar_url ?? null,
     };

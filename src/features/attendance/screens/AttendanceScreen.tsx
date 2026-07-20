@@ -134,28 +134,22 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
     }
 
     let cancelled = false;
-    Promise.all(
-      targets.map((t) =>
-        fetchMatchWeather(t.latitude, t.longitude, t.matchDateIso)
-          .then((weather) => ({ dateKey: t.dateKey, weather }))
-          .catch(() => null)
-      )
-    ).then((results) => {
-      if (cancelled) return;
-      const next: Record<string, string> = {};
-      results.forEach((r) => {
-        if (r && r.weather.available) {
-          const w = r.weather;
+    setCalendarWeather({});
+    // 날짜마다 도착하는 대로 바로 반영 - 전부 모아서 한번에 갱신하면 동시성 제한 때문에
+    // 가장 늦게 끝나는 날짜만큼 화면이 안 바뀌는 것처럼 보인다.
+    targets.forEach((t) => {
+      fetchMatchWeather(t.latitude, t.longitude, t.matchDateIso)
+        .then((weather) => {
+          if (cancelled || !weather.available) return;
           const emoji =
-            w.range === 'mid'
-              ? w.amWeather?.includes('비') || w.pmWeather?.includes('비')
+            weather.range === 'mid'
+              ? weather.amWeather?.includes('비') || weather.pmWeather?.includes('비')
                 ? '🌧️'
                 : '⛅'
-              : weatherEmoji(w.precipitationType ?? '0', w.sky ?? '1');
-          next[r.dateKey] = emoji;
-        }
-      });
-      setCalendarWeather(next);
+              : weatherEmoji(weather.precipitationType ?? '0', weather.sky ?? '1');
+          setCalendarWeather((prev) => ({ ...prev, [t.dateKey]: emoji }));
+        })
+        .catch(() => {});
     });
     return () => {
       cancelled = true;

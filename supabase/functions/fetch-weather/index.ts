@@ -135,6 +135,11 @@ async function fetchViaRelay(url: string): Promise<RelayResponse> {
   };
 }
 
+// "YYYYMMDD"+"HHmm" 형태의 예보 슬롯을 비교 가능한 값으로 변환 (실제 타임존 보정은 필요 없음 - 같은 방식으로만 파싱하면 상대적 거리 비교엔 충분).
+function slotToComparable(fcstDate: string, fcstTime: string): number {
+  return Number(fcstDate) * 10000 + Number(fcstTime);
+}
+
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * DEGRAD;
@@ -359,7 +364,27 @@ async function fetchShortTermForecast(
   const kmaJson = await kmaRes.json();
   const items: KmaItem[] = kmaJson.response?.body?.items?.item ?? [];
 
-  const slotItems = items.filter((i) => i.fcstDate === fcstDate && i.fcstTime === fcstTime);
+  let slotItems = items.filter((i) => i.fcstDate === fcstDate && i.fcstTime === fcstTime);
+
+  if (slotItems.length === 0) {
+    // 정확히 원하는 시각 데이터가 없으면(예보 범위 경계) 가장 가까운 시각의 데이터로 대체한다.
+    const wanted = slotToComparable(fcstDate, fcstTime);
+    const uniqueSlots = [...new Set(items.map((i) => `${i.fcstDate} ${i.fcstTime}`))];
+    let closest: { fcstDate: string; fcstTime: string } | null = null;
+    let minDiff = Infinity;
+    for (const slot of uniqueSlots) {
+      const [d, t] = slot.split(' ');
+      const diff = Math.abs(slotToComparable(d, t) - wanted);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = { fcstDate: d, fcstTime: t };
+      }
+    }
+    if (closest) {
+      slotItems = items.filter((i) => i.fcstDate === closest!.fcstDate && i.fcstTime === closest!.fcstTime);
+    }
+  }
+
   if (slotItems.length === 0) {
     const availableSlots = [...new Set(items.map((i) => `${i.fcstDate} ${i.fcstTime}`))];
     return {

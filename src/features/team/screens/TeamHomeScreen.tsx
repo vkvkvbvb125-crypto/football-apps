@@ -10,6 +10,9 @@ import { AnnouncementListModal } from '../../announcements/components/Announceme
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
+import { usePollsStore } from '../../polls/stores/pollsStore';
+import { PollFormModal } from '../../polls/components/PollFormModal';
+import { PollCard } from '../../polls/components/PollCard';
 import { FieldBackground } from '../../../components/FieldBackground';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
@@ -38,6 +41,25 @@ export function TeamHomeScreen() {
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementRow | null>(null);
   const [listVisible, setListVisible] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRow | null>(null);
+
+  const polls = usePollsStore((s) => s.polls);
+  const loadPolls = usePollsStore((s) => s.loadPolls);
+  const createPoll = usePollsStore((s) => s.createPoll);
+  const deletePoll = usePollsStore((s) => s.deletePoll);
+  const votePoll = usePollsStore((s) => s.vote);
+  const [pollFormVisible, setPollFormVisible] = useState(false);
+
+  const handleDeletePoll = (id: string) => {
+    const message = '이 투표를 삭제하시겠어요?';
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) deletePoll(id);
+      return;
+    }
+    Alert.alert('투표 삭제', message, [
+      { text: '아니오', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: () => deletePoll(id) },
+    ]);
+  };
 
   const handleOpenEdit = (a: AnnouncementRow) => {
     setSelectedAnnouncement(null);
@@ -73,6 +95,10 @@ export function TeamHomeScreen() {
 
   useEffect(() => {
     if (activeTeam) loadMembers();
+  }, [activeTeam?.team.id]);
+
+  useEffect(() => {
+    if (activeTeam) loadPolls();
   }, [activeTeam?.team.id]);
 
   if (!activeTeam) return null;
@@ -199,6 +225,31 @@ export function TeamHomeScreen() {
             ))
           )}
         </View>
+
+        <View style={styles.pollSection}>
+          <View style={styles.announceHeader}>
+            <Text style={styles.announceTitle}>투표</Text>
+            {isAdmin && (
+              <Pressable onPress={() => setPollFormVisible(true)} hitSlop={8}>
+                <Ionicons name="add-circle-outline" size={20} color="#39D98A" />
+              </Pressable>
+            )}
+          </View>
+          {polls.length === 0 ? (
+            <Text style={styles.announceEmpty}>등록된 투표가 없어요</Text>
+          ) : (
+            polls.map((poll) => (
+              <PollCard
+                key={poll.id}
+                poll={poll}
+                selfMemberId={activeTeam.membershipId}
+                isAdmin={isAdmin}
+                onVote={(optionIndex) => votePoll(poll.id, optionIndex)}
+                onDelete={() => handleDeletePoll(poll.id)}
+              />
+            ))
+          )}
+        </View>
       </View>
     </ScrollView>
 
@@ -246,6 +297,14 @@ export function TeamHomeScreen() {
       onChangeSkillTag={updateMemberSkillTag}
       onPromote={promoteToAdmin}
       onRemove={removeMember}
+    />
+    <PollFormModal
+      visible={pollFormVisible}
+      onClose={() => setPollFormVisible(false)}
+      onSubmit={(input) => {
+        createPoll(input);
+        setPollFormVisible(false);
+      }}
     />
     </ScreenGradient>
   );
@@ -441,5 +500,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: '#8A9490',
     fontSize: 12,
+  },
+  pollSection: {
+    marginTop: 12,
+    backgroundColor: '#141A17',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#22302A',
+    gap: 10,
   },
 });

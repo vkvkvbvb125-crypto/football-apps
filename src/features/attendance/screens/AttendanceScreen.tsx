@@ -88,6 +88,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   const markedDates = useMemo(() => new Set(matches.map((m) => dateKey(new Date(m.match_date)))), [matches]);
 
   const [calendarWeather, setCalendarWeather] = useState<Record<string, string>>({});
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   useEffect(() => {
     interface WeatherTarget {
@@ -130,11 +131,14 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
 
     if (targets.length === 0) {
       setCalendarWeather({});
+      setWeatherLoading(false);
       return;
     }
 
     let cancelled = false;
+    let pendingCount = targets.length;
     setCalendarWeather({});
+    setWeatherLoading(true);
     // 날짜마다 도착하는 대로 바로 반영 - 전부 모아서 한번에 갱신하면 동시성 제한 때문에
     // 가장 늦게 끝나는 날짜만큼 화면이 안 바뀌는 것처럼 보인다.
     targets.forEach((t) => {
@@ -149,7 +153,11 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
               : weatherEmoji(weather.precipitationType ?? '0', weather.sky ?? '1');
           setCalendarWeather((prev) => ({ ...prev, [t.dateKey]: emoji }));
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => {
+          pendingCount -= 1;
+          if (pendingCount === 0 && !cancelled) setWeatherLoading(false);
+        });
     });
     return () => {
       cancelled = true;
@@ -254,6 +262,13 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
       ) : (
         <View style={styles.body}>
           <MonthNavigator offset={monthOffset} onChange={setMonthOffset} />
+
+          {weatherLoading && (
+            <View style={styles.weatherLoadingRow}>
+              <ActivityIndicator size="small" color="#39D98A" />
+              <Text style={styles.weatherLoadingText}>날씨 조회 중...</Text>
+            </View>
+          )}
 
           {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -463,6 +478,17 @@ const styles = StyleSheet.create({
     color: '#F87171',
     textAlign: 'center',
     marginTop: 8,
+  },
+  weatherLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  weatherLoadingText: {
+    color: '#8A9490',
+    fontSize: 12,
   },
   scrollContent: {
     paddingBottom: 100,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { EmptyState } from '../../../components/EmptyState';
@@ -7,9 +8,8 @@ import { TabHeader } from '../../../components/TabHeader';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
+import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
-
-const GROUPS = ['A', 'B'];
 
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const [view, setView] = useState<'assign' | 'timer'>('assign');
@@ -27,6 +27,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const loadAssignments = useAssignmentStore((s) => s.loadAssignments);
   const randomize = useAssignmentStore((s) => s.randomize);
   const moveMember = useAssignmentStore((s) => s.moveMember);
+  const addGroup = useAssignmentStore((s) => s.addGroup);
+  const removeLastGroup = useAssignmentStore((s) => s.removeLastGroup);
 
   useEffect(() => {
     if (!activeTeam) return;
@@ -110,30 +112,53 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                   )}
                 </View>
 
-                {matchAssignments.length === 0 ? (
-                  <Text style={styles.waitingText}>아직 분배되지 않았어요</Text>
-                ) : (
-                  <View style={styles.groupsRow}>
-                    {GROUPS.map((group) => (
-                      <View key={group} style={styles.groupColumn}>
-                        <Text style={styles.groupTitle}>{group}팀</Text>
-                        {matchAssignments
-                          .filter((a) => a.group_label === group)
-                          .map((a) => (
-                            <Pressable
-                              key={a.team_member_id}
-                              disabled={!isAdmin}
-                              style={({ pressed }) => [styles.memberChip, pressed && isAdmin && styles.pressedOpacity]}
-                              hitSlop={6}
-                              onPress={() => moveMember(match.id, a.team_member_id, group === 'A' ? 'B' : 'A')}
-                            >
-                              <Text style={styles.memberName}>{nameFor(a.team_member_id)}</Text>
-                            </Pressable>
-                          ))}
-                      </View>
-                    ))}
-                  </View>
-                )}
+                {(() => {
+                  const groupLabels = groupLabelsFor(match.team_count);
+                  return (
+                    <View style={styles.groupsRow}>
+                      {groupLabels.map((group, groupIndex) => {
+                        const isLastGroup = groupIndex === groupLabels.length - 1;
+                        return (
+                          <View key={group} style={styles.groupColumn}>
+                            <View style={styles.groupHeader}>
+                              <Text style={styles.groupTitle}>{group}팀</Text>
+                              {isAdmin && isLastGroup && groupLabels.length > 2 && (
+                                <Pressable onPress={() => removeLastGroup(match.id)} hitSlop={8}>
+                                  <Ionicons name="trash-outline" size={14} color="#8A9490" />
+                                </Pressable>
+                              )}
+                            </View>
+                            {matchAssignments
+                              .filter((a) => a.group_label === group)
+                              .map((a) => (
+                                <Pressable
+                                  key={a.team_member_id}
+                                  disabled={!isAdmin}
+                                  style={({ pressed }) => [
+                                    styles.memberChip,
+                                    pressed && isAdmin && styles.pressedOpacity,
+                                  ]}
+                                  hitSlop={6}
+                                  onPress={() => moveMember(match.id, a.team_member_id)}
+                                >
+                                  <Text style={styles.memberName}>{nameFor(a.team_member_id)}</Text>
+                                </Pressable>
+                              ))}
+                          </View>
+                        );
+                      })}
+                      {isAdmin && groupLabels.length < 5 && (
+                        <Pressable
+                          style={({ pressed }) => [styles.addGroupChip, pressed && styles.pressedOpacity]}
+                          onPress={() => addGroup(match.id)}
+                        >
+                          <Ionicons name="add" size={16} color="#39D98A" />
+                          <Text style={styles.addGroupText}>팀 추가</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  );
+                })()}
               </View>
             );
           })}
@@ -212,25 +237,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-  waitingText: {
-    marginTop: 12,
-    color: '#5A625E',
-    fontSize: 12,
-  },
   groupsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginTop: 14,
   },
   groupColumn: {
-    flex: 1,
+    flexBasis: '45%',
+    flexGrow: 1,
     gap: 6,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   groupTitle: {
     color: '#39D98A',
     fontWeight: '700',
     fontSize: 13,
-    marginBottom: 4,
+  },
+  addGroupChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#39D98A',
+    alignSelf: 'flex-start',
+  },
+  addGroupText: {
+    color: '#39D98A',
+    fontWeight: '700',
+    fontSize: 12,
   },
   memberChip: {
     paddingVertical: 11,

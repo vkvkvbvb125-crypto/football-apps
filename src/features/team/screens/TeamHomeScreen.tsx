@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Share, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useTeamStore } from '../stores/teamStore';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
 import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
+import { AnnouncementListModal } from '../../announcements/components/AnnouncementListModal';
+import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
+import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { FieldBackground } from '../../../components/FieldBackground';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
@@ -22,7 +25,40 @@ export function TeamHomeScreen() {
   const announcements = useAnnouncementsStore((s) => s.announcements);
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
   const createAnnouncement = useAnnouncementsStore((s) => s.createAnnouncement);
+  const updateAnnouncement = useAnnouncementsStore((s) => s.updateAnnouncement);
+  const deleteAnnouncement = useAnnouncementsStore((s) => s.deleteAnnouncement);
   const [formVisible, setFormVisible] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementRow | null>(null);
+  const [listVisible, setListVisible] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRow | null>(null);
+
+  const handleOpenEdit = (a: AnnouncementRow) => {
+    setSelectedAnnouncement(null);
+    setEditingAnnouncement(a);
+    setFormVisible(true);
+  };
+
+  const handleDeleteAnnouncement = (a: AnnouncementRow) => {
+    const message = '이 공지를 삭제하시겠어요?';
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) {
+        deleteAnnouncement(a.id);
+        setSelectedAnnouncement(null);
+      }
+      return;
+    }
+    Alert.alert('공지 삭제', message, [
+      { text: '아니오', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          deleteAnnouncement(a.id);
+          setSelectedAnnouncement(null);
+        },
+      },
+    ]);
+  };
 
   useEffect(() => {
     if (activeTeam) loadAnnouncements();
@@ -110,17 +146,28 @@ export function TeamHomeScreen() {
         <View style={styles.announceSection}>
           <View style={styles.announceHeader}>
             <Text style={styles.announceTitle}>공지사항</Text>
-            {isAdmin && (
-              <Pressable onPress={() => setFormVisible(true)} hitSlop={8}>
-                <Ionicons name="add-circle-outline" size={20} color="#39D98A" />
+            <View style={styles.announceHeaderRight}>
+              {isAdmin && (
+                <Pressable
+                  onPress={() => {
+                    setEditingAnnouncement(null);
+                    setFormVisible(true);
+                  }}
+                  hitSlop={8}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="#39D98A" />
+                </Pressable>
+              )}
+              <Pressable onPress={() => setListVisible(true)}>
+                <Text style={styles.announceSeeAll}>전체보기</Text>
               </Pressable>
-            )}
+            </View>
           </View>
           {announcements.length === 0 ? (
             <Text style={styles.announceEmpty}>등록된 공지가 없어요</Text>
           ) : (
             announcements.slice(0, 3).map((a) => (
-              <View key={a.id} style={styles.announceItem}>
+              <Pressable key={a.id} style={styles.announceItem} onPress={() => setSelectedAnnouncement(a)}>
                 {a.is_pinned && <Ionicons name="pin" size={12} color="#39D98A" style={styles.announcePinIcon} />}
                 <View style={styles.announceItemText}>
                   <Text style={styles.announceItemTitle} numberOfLines={1}>
@@ -130,7 +177,7 @@ export function TeamHomeScreen() {
                     {a.body}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
             ))
           )}
         </View>
@@ -139,12 +186,38 @@ export function TeamHomeScreen() {
 
     <AnnouncementFormModal
       visible={formVisible}
-      editing={null}
+      editing={editingAnnouncement}
       onClose={() => setFormVisible(false)}
       onSubmit={(input) => {
-        createAnnouncement(input);
+        if (editingAnnouncement) {
+          updateAnnouncement(editingAnnouncement.id, input);
+        } else {
+          createAnnouncement(input);
+        }
         setFormVisible(false);
       }}
+    />
+    <AnnouncementListModal
+      visible={listVisible}
+      announcements={announcements}
+      isAdmin={isAdmin}
+      onClose={() => setListVisible(false)}
+      onSelect={(a) => {
+        setListVisible(false);
+        setSelectedAnnouncement(a);
+      }}
+      onCreate={() => {
+        setListVisible(false);
+        setEditingAnnouncement(null);
+        setFormVisible(true);
+      }}
+    />
+    <AnnouncementDetailModal
+      announcement={selectedAnnouncement}
+      isAdmin={isAdmin}
+      onClose={() => setSelectedAnnouncement(null)}
+      onEdit={handleOpenEdit}
+      onDelete={handleDeleteAnnouncement}
     />
     </ScreenGradient>
   );
@@ -283,6 +356,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  announceHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  announceSeeAll: {
+    color: '#8A9490',
+    fontSize: 12,
+    fontWeight: '600',
   },
   announceTitle: {
     color: '#FFFFFF',

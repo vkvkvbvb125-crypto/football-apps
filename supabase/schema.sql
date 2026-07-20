@@ -166,6 +166,28 @@ create table announcements (
   updated_at timestamptz not null default now()
 );
 
+-- ---------------------------------------------------------
+-- 11. polls / poll_responses: 총무가 만드는 자유 질문 투표
+-- ---------------------------------------------------------
+create table polls (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  author_id uuid not null references team_members(id),
+  question text not null,
+  options jsonb not null,
+  deadline timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table poll_responses (
+  id uuid primary key default gen_random_uuid(),
+  poll_id uuid not null references polls(id) on delete cascade,
+  team_member_id uuid not null references team_members(id) on delete cascade,
+  option_index int not null,
+  updated_at timestamptz not null default now(),
+  unique (poll_id, team_member_id)
+);
+
 -- =========================================================
 -- 헬퍼 함수 (security definer로 team_members 자기참조 재귀 방지)
 -- =========================================================
@@ -243,6 +265,8 @@ alter table payments enable row level security;
 alter table team_assignments enable row level security;
 alter table notifications enable row level security;
 alter table announcements enable row level security;
+alter table polls enable row level security;
+alter table poll_responses enable row level security;
 
 -- profiles: 본인 또는 같은 팀 소속 멤버만 조회 가능
 create policy "profiles_select" on profiles for select
@@ -338,3 +362,17 @@ create policy "announcements_select" on announcements for select using (is_team_
 create policy "announcements_write_admin" on announcements for all
   using (is_team_admin(team_id))
   with check (is_team_admin(team_id));
+
+-- polls: 팀원 조회 가능, 작성/삭제는 총무만
+create policy "polls_select" on polls for select using (is_team_member(team_id));
+create policy "polls_write_admin" on polls for all
+  using (is_team_admin(team_id))
+  with check (is_team_admin(team_id));
+
+-- poll_responses: 팀원 조회 가능(득표 집계), 본인 응답만 작성/수정 가능
+create policy "poll_responses_select" on poll_responses for select
+  using (exists (select 1 from polls p where p.id = poll_id and is_team_member(p.team_id)));
+create policy "poll_responses_insert_own" on poll_responses for insert
+  with check (team_member_id in (select id from team_members where user_id = auth.uid()));
+create policy "poll_responses_update_own" on poll_responses for update
+  using (team_member_id in (select id from team_members where user_id = auth.uid()));

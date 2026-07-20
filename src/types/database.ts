@@ -215,6 +215,42 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['announcements']['Insert']>;
         Relationships: [];
       };
+      polls: {
+        Row: {
+          id: string;
+          team_id: string;
+          author_id: string;
+          question: string;
+          options: string[];
+          deadline: string | null;
+          created_at: string;
+        };
+        Insert: {
+          team_id: string;
+          author_id: string;
+          question: string;
+          options: string[];
+          deadline?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['polls']['Insert']>;
+        Relationships: [];
+      };
+      poll_responses: {
+        Row: {
+          id: string;
+          poll_id: string;
+          team_member_id: string;
+          option_index: number;
+          updated_at: string;
+        };
+        Insert: {
+          poll_id: string;
+          team_member_id: string;
+          option_index: number;
+        };
+        Update: Partial<Database['public']['Tables']['poll_responses']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

@@ -166,8 +166,11 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
   return (
     <View style={styles.container}>
       <View style={styles.weekdayRow}>
-        {WEEKDAYS.map((w) => (
-          <Text key={w} style={styles.weekdayText}>
+        {WEEKDAYS.map((w, i) => (
+          <Text
+            key={w}
+            style={[styles.weekdayText, i === 0 && styles.weekdayTextSunday, i === 6 && styles.weekdayTextSaturday]}
+          >
             {w}
           </Text>
         ))}
@@ -183,6 +186,7 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
             const hasMatch = markedDates.has(dateKey(date));
             const weatherEmoji = weatherByDate?.[dateKey(date)];
             const tint = weatherEmoji ? weatherTint(weatherEmoji) : null;
+            const weekday = date.getDay();
 
             return (
               <Pressable key={di} style={styles.cell} onPress={() => onSelectDate(date)}>
@@ -190,7 +194,16 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
                   style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
                 >
                   {tint && weatherEmoji && <WeatherEffect emoji={weatherEmoji} />}
-                  <Text style={[styles.dayText, isToday && styles.dayTextToday]}>{date.getDate()}</Text>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      weekday === 0 && styles.dayTextSunday,
+                      weekday === 6 && styles.dayTextSaturday,
+                      isToday && styles.dayTextToday,
+                    ]}
+                  >
+                    {date.getDate()}
+                  </Text>
                 </View>
                 {hasMatch && !tint && <View style={styles.dot} />}
               </Pressable>
@@ -198,13 +211,43 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
           })}
         </View>
       ))}
+
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: '#39D98A' }]} />
+          <Text style={styles.legendText}>경기 예정</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: 'rgba(59,130,246,0.9)' }]} />
+          <Text style={styles.legendText}>비</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: 'rgba(147,197,253,0.9)' }]} />
+          <Text style={styles.legendText}>눈</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: 'rgba(250,204,21,0.9)' }]} />
+          <Text style={styles.legendText}>맑음</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: 'rgba(148,163,184,0.9)' }]} />
+          <Text style={styles.legendText}>흐림</Text>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    marginHorizontal: 20,
+    marginTop: 4,
     paddingHorizontal: 12,
+    paddingVertical: 16,
+    backgroundColor: '#141A17',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#22302A',
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -216,6 +259,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 12,
+  },
+  weekdayTextSunday: {
+    color: '#F87171',
+  },
+  weekdayTextSaturday: {
+    color: '#60A5FA',
   },
   weekRow: {
     flexDirection: 'row',
@@ -270,6 +319,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
   },
+  dayTextSunday: {
+    color: '#F87171',
+  },
+  dayTextSaturday: {
+    color: '#60A5FA',
+  },
   dayTextToday: {
     color: '#39D98A',
     fontWeight: '700',
@@ -280,5 +335,29 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     backgroundColor: '#39D98A',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#22302A',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    color: '#8A9490',
+    fontSize: 11,
   },
 });

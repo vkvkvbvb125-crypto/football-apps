@@ -23,8 +23,8 @@
 - 탭 순서: 홈(`HomeScreen`) → 일정(`AttendanceScreen`) → 경기운영(`AssignmentScreen`, 원형 강조) → 정산(`SettlementScreen`) → 팀(`TeamHomeScreen`)
 - `Reservation` 탭 제거, `src/features/reservation/` 폴더 삭제 (다른 곳에서 참조 없음, 스텁 상태였음 확인 완료)
 - `Assignment` 탭 `title`을 `'분배'` → `'경기운영'`으로 변경 (그동안 사용자가 부르던 이름과 통일)
-- `Assignment` 탭에만 커스텀 `tabBarButton`을 적용해 다른 4개보다 살짝 위로 떠 있는 원형 버튼으로 렌더링. 색상 규칙은 나머지 탭과 동일하게 **선택 시에만 라임(#4ADE80), 비선택 시 비활성색(#5A625E)** — 항상 초록으로 고정하지 않음(정적 목업이 매 화면 동일 색으로 그려진 것뿐이라 판단, 다른 탭과 색 규칙이 달라지면 오히려 어색함).
-- 원형 버튼 스타일: 지름 56, 배경 `#173A26`(딥그린 계열 짙은 톤), 테두리 1.5px `#4ADE80`(비활성 시 `#2D5F3E`), 탭 바 기준 `top: -14` 정도로 띄움.
+- 초기 목업(캡슐형 하단바, 아이콘만 표시)을 참고해 **탭 바 전체를 라벨 없는 아이콘 전용으로 변경**(`tabBarShowLabel: false`), 높이를 82→64로 슬림하게, 상단 모서리를 `borderTopLeftRadius/borderTopRightRadius: 24`로 둥글게. `tabBarActiveTintColor`/`tabBarInactiveTintColor`는 방금 적용한 테마 값(`#2D5F3E`/`#5A625E`) 그대로 유지 — 이 톤 자체를 바꾸는 요청은 아니었음.
+- `Assignment` 탭만 `tabBarIcon`을 커스텀 렌더링해 지름 44 원형 배지 안에 아이콘을 넣고 `top: -14`로 살짝 띄운다. 배지 배경/테두리는 기존에 승인된 톤(`#173A26`/`#2D5F3E`)만 사용하고 새로 라임(`#4ADE80`)을 추가하지 않는다 — 지난 테마 작업에서 라임은 "알림배지·오늘날짜·FAB" 세 가지로만 좁게 쓰기로 확정했고, 탭 활성 표시는 그 범위 밖이라 이번엔 넣지 않음(원하면 나중에 이 배지도 포함하도록 조정 가능). 아이콘 색은 배지 배경 대비를 위해 포커스 여부와 무관하게 흰색(`#FFFFFF`) 고정, 대신 배지 배경을 포커스 시 살짝 밝은 딥그린(`#22543A`)으로 바꿔 선택 상태를 표현.
 
 **파일:** `src/features/assignment/screens/AssignmentScreen.tsx`
 

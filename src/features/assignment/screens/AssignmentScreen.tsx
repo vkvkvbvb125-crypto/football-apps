@@ -47,7 +47,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   return (
     <ScreenGradient>
       <ParticleSphere />
-      <TabHeader title="분배" />
+      <TabHeader title="경기운영" />
       <View style={styles.viewToggleRow}>
         <Pressable
           style={({ pressed }) => [

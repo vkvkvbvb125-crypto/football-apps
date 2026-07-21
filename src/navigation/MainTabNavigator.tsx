@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View } from 'react-native';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { SettlementScreen } from '../features/settlement/screens/SettlementScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
 import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
-import { ReservationScreen } from '../features/reservation/screens/ReservationScreen';
+import { HomeScreen } from '../features/home/screens/HomeScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -14,43 +15,63 @@ function tabIcon(outlineName: keyof typeof Ionicons.glyphMap, filledName: keyof 
   );
 }
 
+function assignmentTabIcon({ focused }: { focused: boolean }) {
+  return (
+    <View
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        top: -14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? '#22543A' : '#173A26',
+        borderWidth: 1.5,
+        borderColor: '#2D5F3E',
+      }}
+    >
+      <Ionicons name={focused ? 'football' : 'football-outline'} size={22} color="#FFFFFF" />
+    </View>
+  );
+}
+
 export function MainTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarActiveTintColor: '#2D5F3E',
         tabBarInactiveTintColor: '#5A625E',
         tabBarStyle: {
           backgroundColor: '#0F1512',
           borderTopColor: '#1E2924',
-          height: 82,
-          paddingTop: 8,
-          paddingBottom: 16,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          height: 64,
+          paddingTop: 10,
         },
-        tabBarItemStyle: { paddingTop: 2 },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', lineHeight: 22 },
       }}
     >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: '홈', tabBarIcon: tabIcon('home-outline', 'home') }}
+      />
       <Tab.Screen
         name="Attendance"
         component={AttendanceScreen}
         options={{ title: '일정', tabBarIcon: tabIcon('calendar-outline', 'calendar') }}
       />
       <Tab.Screen
+        name="Assignment"
+        component={AssignmentScreen}
+        options={{ title: '경기운영', tabBarIcon: assignmentTabIcon }}
+      />
+      <Tab.Screen
         name="Settlement"
         component={SettlementScreen}
         options={{ title: '정산', tabBarIcon: tabIcon('cash-outline', 'cash') }}
-      />
-      <Tab.Screen
-        name="Reservation"
-        component={ReservationScreen}
-        options={{ title: '예약', tabBarIcon: tabIcon('calendar-clear-outline', 'calendar-clear') }}
-      />
-      <Tab.Screen
-        name="Assignment"
-        component={AssignmentScreen}
-        options={{ title: '분배', tabBarIcon: tabIcon('people-outline', 'people') }}
       />
       <Tab.Screen
         name="Team"

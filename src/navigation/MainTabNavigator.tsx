@@ -41,7 +41,7 @@ export function MainTabNavigator() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarActiveTintColor: '#2D5F3E',
-        tabBarInactiveTintColor: '#5A625E',
+        tabBarInactiveTintColor: '#E7ECE9',
         tabBarStyle: {
           position: 'absolute',
           left: 16,

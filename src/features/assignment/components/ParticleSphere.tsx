@@ -2,10 +2,14 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
 const PARTICLE_COUNT = 150;
-const SPHERE_RADIUS = 130;
+const DEFAULT_SPHERE_RADIUS = 130;
 const ROTATION_STEPS = 36;
 const ROTATION_DURATION_MS = 26000;
 const DOT_BASE_SIZE = 4;
+
+interface ParticleSphereProps {
+  size?: number;
+}
 
 interface ParticleFrames {
   key: number;
@@ -22,7 +26,7 @@ function lerp(value: number, inMin: number, inMax: number, outMin: number, outMa
 }
 
 // 구 표면에 점을 고르게 분포시키는 피보나치 스피어 알고리즘.
-function buildParticles(): ParticleFrames[] {
+function buildParticles(radius: number, dotBaseSize: number): ParticleFrames[] {
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => {
@@ -31,7 +35,7 @@ function buildParticles(): ParticleFrames[] {
     const theta0 = goldenAngle * i;
     const x0 = Math.cos(theta0) * radiusAtY;
     const z0 = Math.sin(theta0) * radiusAtY;
-    const size = DOT_BASE_SIZE * lerp(radiusAtY, 0, 1, 0.7, 1);
+    const size = dotBaseSize * lerp(radiusAtY, 0, 1, 0.7, 1);
 
     const xSteps: number[] = [];
     const opacitySteps: number[] = [];
@@ -45,17 +49,19 @@ function buildParticles(): ParticleFrames[] {
       const x = x0 * cos + z0 * sin;
       const z = -x0 * sin + z0 * cos;
 
-      xSteps.push(x * SPHERE_RADIUS - size / 2);
+      xSteps.push(x * radius - size / 2);
       opacitySteps.push(lerp(z, -1, 1, 0.12, 0.85));
       scaleSteps.push(lerp(z, -1, 1, 0.5, 1.15));
     }
 
-    return { key: i, y: y0 * SPHERE_RADIUS - size / 2, size, xSteps, opacitySteps, scaleSteps };
+    return { key: i, y: y0 * radius - size / 2, size, xSteps, opacitySteps, scaleSteps };
   });
 }
 
-export function ParticleSphere() {
-  const particles = useMemo(() => buildParticles(), []);
+export function ParticleSphere({ size }: ParticleSphereProps) {
+  const radius = size ? size * 0.42 : DEFAULT_SPHERE_RADIUS;
+  const dotBaseSize = size ? (DOT_BASE_SIZE * size) / 300 : DOT_BASE_SIZE;
+  const particles = useMemo(() => buildParticles(radius, dotBaseSize), [radius, dotBaseSize]);
   const rotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -85,7 +91,7 @@ export function ParticleSphere() {
   );
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={size ? { width: size, height: size } : styles.container} pointerEvents="none">
       <View style={styles.center}>
         {particles.map((p) => (
           <Animated.View

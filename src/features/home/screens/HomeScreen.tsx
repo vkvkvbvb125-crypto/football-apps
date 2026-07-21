@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dDayBadge: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontSize: 13,
     fontWeight: '800',
   },

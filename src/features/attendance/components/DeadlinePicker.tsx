@@ -63,7 +63,7 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
   return (
     <>
       <Pressable style={styles.field} onPress={handleOpen}>
-        <Ionicons name="flag-outline" size={16} color={isSet ? '#2D5F3E' : '#5A625E'} />
+        <Ionicons name="flag-outline" size={16} color={isSet ? '#4ADE80' : '#5A625E'} />
         <Text style={[styles.fieldText, !isSet && styles.fieldTextPlaceholder]}>{formatDisplay(value)}</Text>
       </Pressable>
 
@@ -71,7 +71,7 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
         <View style={styles.overlay}>
           <View style={styles.card}>
             <View style={styles.titleRow}>
-              <Ionicons name="flag-outline" size={16} color="#2D5F3E" />
+              <Ionicons name="flag-outline" size={16} color="#4ADE80" />
               <Text style={styles.title}>마감 설정</Text>
             </View>
             <Text style={styles.hint}>경기 시작({matchTime}) 전까지만 마감을 설정할 수 있어요</Text>
@@ -193,10 +193,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   confirmText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
   },
 });

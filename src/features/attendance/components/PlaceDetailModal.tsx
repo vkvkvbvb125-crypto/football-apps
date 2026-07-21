@@ -46,7 +46,7 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
   if (Platform.OS === 'web') {
     return (
       <Pressable style={styles.webFallback} onPress={openDirections}>
-        <Ionicons name="map-outline" size={20} color="#2D5F3E" />
+        <Ionicons name="map-outline" size={20} color="#4ADE80" />
         <Text style={styles.webFallbackText}>지도 미리보기는 앱에서 볼 수 있어요{'\n'}여기를 눌러 카카오맵으로 열기</Text>
       </Pressable>
     );
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   categoryTagText: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontSize: 10,
     fontWeight: '700',
   },

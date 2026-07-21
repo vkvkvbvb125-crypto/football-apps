@@ -562,8 +562,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   voteChipActive: {
-    backgroundColor: '#2D5F3E',
-    borderColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
+    borderColor: '#4ADE80',
   },
   voteChipDisabled: {
     opacity: 0.4,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   voteChipTextActive: {
-    color: '#FFFFFF',
+    color: '#0F1512',
   },
   modalOverlay: {
     flex: 1,
@@ -630,10 +630,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   modalCreateText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
   },
   actionOverlay: {

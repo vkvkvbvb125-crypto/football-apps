@@ -78,7 +78,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
 
           {options.length < 6 && (
             <Pressable style={styles.addOptionButton} onPress={handleAddOption}>
-              <Ionicons name="add" size={16} color="#2D5F3E" />
+              <Ionicons name="add" size={16} color="#4ADE80" />
               <Text style={styles.addOptionText}>선택지 추가</Text>
             </Pressable>
           )}
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   addOptionText: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -174,10 +174,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   confirmText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
   },
 });

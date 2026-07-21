@@ -129,7 +129,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                         <Ionicons
                           name={copiedMatchId === match.id ? 'checkmark' : 'copy-outline'}
                           size={15}
-                          color="#2D5F3E"
+                          color="#4ADE80"
                         />
                       </Pressable>
                     </View>
@@ -174,7 +174,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
 
                     {latestAccount && (
                       <Pressable style={styles.latestAccountChip} onPress={() => applyLatestAccount(match.id)}>
-                        <Ionicons name="time-outline" size={13} color="#2D5F3E" />
+                        <Ionicons name="time-outline" size={13} color="#4ADE80" />
                         <Text style={styles.latestAccountChipText}>
                           최근 사용: {latestAccount.bankName} {latestAccount.accountNumber} ({latestAccount.accountHolder})
                         </Text>
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   perPersonAmount: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   previewAmount: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     color: '#D2A34C',
   },
   paymentStatusPaid: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
   },
   createForm: {
     gap: 8,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   latestAccountChipText: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -369,10 +369,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     marginTop: 4,
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   createButtonText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
     fontSize: 15,
   },

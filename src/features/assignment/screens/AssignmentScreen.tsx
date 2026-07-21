@@ -169,7 +169,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                           style={({ pressed }) => [styles.addGroupChip, pressed && styles.pressedOpacity]}
                           onPress={() => addGroup(match.id)}
                         >
-                          <Ionicons name="add" size={16} color="#2D5F3E" />
+                          <Ionicons name="add" size={16} color="#4ADE80" />
                           <Text style={styles.addGroupText}>팀 추가</Text>
                         </Pressable>
                       )}
@@ -205,8 +205,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   viewToggleActive: {
-    backgroundColor: '#2D5F3E',
-    borderColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
+    borderColor: '#4ADE80',
   },
   viewToggleText: {
     color: '#8A9490',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   viewToggleTextActive: {
-    color: '#FFFFFF',
+    color: '#0F1512',
   },
   list: {
     paddingHorizontal: 20,
@@ -247,10 +247,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   randomizeButtonText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   groupTitle: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -284,11 +284,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#2D5F3E',
+    borderColor: '#4ADE80',
     alignSelf: 'flex-start',
   },
   addGroupText: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '700',
     fontSize: 12,
   },

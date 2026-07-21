@@ -187,19 +187,19 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 20,
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   startButton: {
     marginTop: 24,
     marginHorizontal: 28,
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    boxShadow: '0px 6px 12px rgba(45,95,62,0.3)',
+    boxShadow: '0px 6px 12px rgba(74,222,128,0.35)',
   },
   startButtonText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontSize: 16,
     fontWeight: '700',
   },

@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   brandNameAccent: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
   },
   tagline: {
     marginTop: 10,

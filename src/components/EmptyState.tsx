@@ -63,13 +63,13 @@ const styles = StyleSheet.create({
   actionButton: {
     marginTop: 24,
     borderWidth: 1.5,
-    borderColor: '#2D5F3E',
+    borderColor: '#4ADE80',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 999,
   },
   actionButtonText: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '700',
     fontSize: 14,
   },

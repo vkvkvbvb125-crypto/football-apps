@@ -77,7 +77,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
-        <Ionicons name="location-outline" size={16} color={value ? '#2D5F3E' : '#5A625E'} />
+        <Ionicons name="location-outline" size={16} color={value ? '#4ADE80' : '#5A625E'} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value?.name ?? '장소 검색'}</Text>
       </Pressable>
 
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   chipActive: {
-    backgroundColor: '#2D5F3E',
-    borderColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
+    borderColor: '#4ADE80',
   },
   chipText: {
     color: '#8A9490',
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#FFFFFF',
+    color: '#0F1512',
   },
   hintText: {
     marginTop: 10,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   categoryTagText: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontSize: 10,
     fontWeight: '700',
   },

@@ -19,17 +19,18 @@ function assignmentTabIcon({ focused }: { focused: boolean }) {
   return (
     <View
       style={{
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        top: -8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        top: -4,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#4ADE80',
-        boxShadow: '0px 6px 14px rgba(74,222,128,0.45)',
+        backgroundColor: '#173A26',
+        borderWidth: 1.5,
+        borderColor: '#4ADE80',
       }}
     >
-      <Ionicons name={focused ? 'football' : 'football-outline'} size={22} color="#0F1512" />
+      <Ionicons name={focused ? 'football' : 'football-outline'} size={20} color="#4ADE80" />
     </View>
   );
 }
@@ -40,16 +41,16 @@ export function MainTabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarActiveTintColor: '#2D5F3E',
+        tabBarActiveTintColor: '#4ADE80',
         tabBarInactiveTintColor: '#E7ECE9',
         tabBarStyle: {
           position: 'absolute',
           left: 16,
           right: 16,
-          bottom: 6,
+          bottom: 0,
           backgroundColor: '#141A17',
-          borderRadius: 32,
-          height: 60,
+          borderRadius: 28,
+          height: 56,
           borderWidth: 1,
           borderColor: '#22302A',
           boxShadow: '0px 8px 20px rgba(0,0,0,0.4)',

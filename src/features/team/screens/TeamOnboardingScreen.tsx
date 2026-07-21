@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   submitButton: {
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontSize: 16,
     fontWeight: '700',
   },

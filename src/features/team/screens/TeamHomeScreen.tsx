@@ -199,7 +199,7 @@ export function TeamHomeScreen() {
                   }}
                   hitSlop={8}
                 >
-                  <Ionicons name="add-circle-outline" size={20} color="#2D5F3E" />
+                  <Ionicons name="add-circle-outline" size={20} color="#4ADE80" />
                 </Pressable>
               )}
               <Pressable onPress={() => setListVisible(true)}>
@@ -231,7 +231,7 @@ export function TeamHomeScreen() {
             <Text style={styles.announceTitle}>투표</Text>
             {isAdmin && (
               <Pressable onPress={() => setPollFormVisible(true)} hitSlop={8}>
-                <Ionicons name="add-circle-outline" size={20} color="#2D5F3E" />
+                <Ionicons name="add-circle-outline" size={20} color="#4ADE80" />
               </Pressable>
             )}
           </View>
@@ -393,10 +393,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   copyButtonText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '600',
     fontSize: 13,
   },

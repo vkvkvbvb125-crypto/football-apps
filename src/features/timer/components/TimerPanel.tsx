@@ -153,10 +153,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
     fontSize: 14,
   },

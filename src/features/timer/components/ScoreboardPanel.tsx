@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   teamLabel: {
-    color: '#2D5F3E',
+    color: '#4ADE80',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   scoreButtonPrimary: {
-    backgroundColor: '#2D5F3E',
-    borderColor: '#2D5F3E',
+    backgroundColor: '#4ADE80',
+    borderColor: '#4ADE80',
   },
   scoreButtonText: {
     color: '#8A9490',
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   scoreButtonTextPrimary: {
-    color: '#FFFFFF',
+    color: '#0F1512',
     fontWeight: '700',
     fontSize: 14,
   },

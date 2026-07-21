@@ -9,6 +9,7 @@ import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
+import { ParticleSphere } from '../components/ParticleSphere';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
 
@@ -45,6 +46,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
   return (
     <ScreenGradient>
+      <ParticleSphere />
       <TabHeader title="분배" />
       <View style={styles.viewToggleRow}>
         <Pressable

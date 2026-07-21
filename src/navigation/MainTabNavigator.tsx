@@ -19,10 +19,10 @@ function assignmentTabIcon({ focused }: { focused: boolean }) {
   return (
     <View
       style={{
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        top: -14,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        top: -6,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: focused ? '#22543A' : '#173A26',
@@ -30,7 +30,7 @@ function assignmentTabIcon({ focused }: { focused: boolean }) {
         borderColor: '#2D5F3E',
       }}
     >
-      <Ionicons name={focused ? 'football' : 'football-outline'} size={22} color="#FFFFFF" />
+      <Ionicons name={focused ? 'football' : 'football-outline'} size={20} color="#FFFFFF" />
     </View>
   );
 }
@@ -46,11 +46,11 @@ export function MainTabNavigator() {
         tabBarStyle: {
           backgroundColor: '#0F1512',
           borderTopColor: '#1E2924',
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          height: 64,
-          paddingTop: 10,
+          height: 82,
+          paddingTop: 8,
+          paddingBottom: 16,
         },
+        tabBarItemStyle: { paddingTop: 2 },
       }}
     >
       <Tab.Screen

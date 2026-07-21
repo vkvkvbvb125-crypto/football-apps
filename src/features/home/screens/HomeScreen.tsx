@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { TabHeader } from '../../../components/TabHeader';
 import { WeatherBadge } from '../../attendance/components/WeatherBadge';
+import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
@@ -71,50 +74,70 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
     <ScreenGradient>
       <TabHeader title="홈" />
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.hero}>
+          <ParticleSphere />
+          <LinearGradient
+            colors={['rgba(15,21,18,0)', 'rgba(15,21,18,0.55)', 'rgba(15,21,18,0.97)']}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View style={styles.heroContent}>
+            <Text style={styles.heroEyebrow} numberOfLines={1}>
+              {activeTeam.team.name}
+            </Text>
+            {nextMatch ? (
+              <>
+                <Text style={styles.heroDDay}>{formatDDay(nextMatch.match_date)}</Text>
+                <Text style={styles.heroMatchLine}>
+                  {formatMatchDate(nextMatch.match_date).dateLabel} · {nextMatch.location ?? '장소 미정'} ·{' '}
+                  {formatMatchDate(nextMatch.match_date).timeLabel}
+                </Text>
+                <WeatherBadge
+                  latitude={nextMatch.latitude}
+                  longitude={nextMatch.longitude}
+                  matchDateIso={nextMatch.match_date}
+                />
+                <Text style={styles.heroAttendee}>
+                  참석 {nextMatch.votes.filter((v) => v.status === 'attend').length}명
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.heroEmptyTitle}>등록된 경기가 없어요</Text>
+                <Text style={styles.heroEmptySubtitle}>새 경기가 등록되면 여기에 보여드릴게요</Text>
+              </>
+            )}
+          </View>
+        </View>
+
         {latestAnnouncement && (
           <Pressable style={styles.card} onPress={() => navigation.navigate('Team')}>
-            <Text style={styles.cardLabel}>공지</Text>
-            <Text style={styles.announceTitle} numberOfLines={1}>
-              {latestAnnouncement.title}
-            </Text>
-            <Text style={styles.announceBody} numberOfLines={1}>
-              {latestAnnouncement.body}
-            </Text>
+            <View style={styles.cardIconChip}>
+              <Ionicons name="megaphone-outline" size={16} color="#4ADE80" />
+            </View>
+            <View style={styles.cardTextCol}>
+              <Text style={styles.cardLabel}>공지</Text>
+              <Text style={styles.announceTitle} numberOfLines={1}>
+                {latestAnnouncement.title}
+              </Text>
+              <Text style={styles.announceBody} numberOfLines={1}>
+                {latestAnnouncement.body}
+              </Text>
+            </View>
           </Pressable>
         )}
 
-        {nextMatch ? (
-          <View style={styles.card}>
-            <View style={styles.matchHeaderRow}>
-              <Text style={styles.cardLabel}>다음 경기</Text>
-              <Text style={styles.dDayBadge}>{formatDDay(nextMatch.match_date)}</Text>
-            </View>
-            <Text style={styles.matchLine}>
-              {formatMatchDate(nextMatch.match_date).dateLabel} · {nextMatch.location ?? '장소 미정'} ·{' '}
-              {formatMatchDate(nextMatch.match_date).timeLabel}
-            </Text>
-            <WeatherBadge
-              latitude={nextMatch.latitude}
-              longitude={nextMatch.longitude}
-              matchDateIso={nextMatch.match_date}
-            />
-            <Text style={styles.attendeeCount}>
-              참석 {nextMatch.votes.filter((v) => v.status === 'attend').length}명
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.emptyEmoji}>📅</Text>
-            <Text style={styles.emptyTitle}>등록된 경기가 없어요</Text>
-            <Text style={styles.emptySubtitle}>새 경기가 등록되면 여기에 보여드릴게요</Text>
-          </View>
-        )}
-
         {nudge && (
-          <Pressable style={styles.nudgeCard} onPress={nudge.onPress}>
-            <Text style={styles.nudgeText} numberOfLines={1}>
-              {nudge.text}
-            </Text>
+          <Pressable style={styles.card} onPress={nudge.onPress}>
+            <View style={[styles.cardIconChip, styles.cardIconChipWarn]}>
+              <Ionicons name="alert-circle-outline" size={16} color="#D2A34C" />
+            </View>
+            <View style={styles.cardTextCol}>
+              <Text style={styles.nudgeText} numberOfLines={2}>
+                {nudge.text}
+              </Text>
+            </View>
           </Pressable>
         )}
       </ScrollView>
@@ -127,17 +150,83 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 12,
   },
-  card: {
-    backgroundColor: '#141A17',
-    borderRadius: 14,
-    padding: 16,
+  hero: {
+    height: 220,
+    borderRadius: 20,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#22302A',
-    gap: 6,
+  },
+  heroContent: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 18,
+    gap: 4,
+  },
+  heroEyebrow: {
+    color: '#B9C2BD',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  heroDDay: {
+    color: '#4ADE80',
+    fontSize: 34,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  heroMatchLine: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  heroAttendee: {
+    marginTop: 2,
+    color: '#8A9490',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heroEmptyTitle: {
+    marginTop: 6,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  heroEmptySubtitle: {
+    marginTop: 2,
+    color: '#8A9490',
+    fontSize: 12,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#141A17',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#22302A',
+  },
+  cardIconChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(74,222,128,0.15)',
+  },
+  cardIconChipWarn: {
+    backgroundColor: 'rgba(210,163,76,0.15)',
+  },
+  cardTextCol: {
+    flex: 1,
+    gap: 2,
   },
   cardLabel: {
     color: '#8A9490',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   announceTitle: {
@@ -148,46 +237,6 @@ const styles = StyleSheet.create({
   announceBody: {
     color: '#8A9490',
     fontSize: 12,
-  },
-  matchHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dDayBadge: {
-    color: '#4ADE80',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  matchLine: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  attendeeCount: {
-    marginTop: 4,
-    color: '#8A9490',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyEmoji: {
-    fontSize: 28,
-  },
-  emptyTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  emptySubtitle: {
-    color: '#8A9490',
-    fontSize: 12,
-  },
-  nudgeCard: {
-    backgroundColor: '#141A17',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#22302A',
   },
   nudgeText: {
     color: '#D2A34C',

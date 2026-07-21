@@ -19,10 +19,10 @@ export function MainTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#39D98A',
+        tabBarActiveTintColor: '#2D5F3E',
         tabBarInactiveTintColor: '#5A625E',
         tabBarStyle: {
-          backgroundColor: '#0B0F0D',
+          backgroundColor: '#0F1512',
           borderTopColor: '#1E2924',
           height: 82,
           paddingTop: 8,

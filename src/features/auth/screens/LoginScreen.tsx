@@ -13,7 +13,7 @@ export function LoginScreen() {
     <View style={styles.container}>
       <View style={styles.brand}>
         <View style={styles.logoCircle}>
-          <Ionicons name="football-outline" size={40} color="#39D98A" />
+          <Ionicons name="football-outline" size={40} color="#2D5F3E" />
         </View>
         <Text style={styles.brandName}>
           킥<Text style={styles.brandNameAccent}>데이</Text>
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   brandNameAccent: {
-    color: '#39D98A',
+    color: '#2D5F3E',
   },
   tagline: {
     marginTop: 10,

@@ -80,7 +80,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
           onAction={() => navigation.navigate('Team')}
         />
       ) : loading && !loaded ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#39D98A" />
+        <ActivityIndicator style={{ marginTop: 40 }} color="#4ADE80" />
       ) : matchesWithAttendees.length === 0 ? (
         <EmptyState
           emoji="💰"
@@ -129,7 +129,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                         <Ionicons
                           name={copiedMatchId === match.id ? 'checkmark' : 'copy-outline'}
                           size={15}
-                          color="#39D98A"
+                          color="#2D5F3E"
                         />
                       </Pressable>
                     </View>
@@ -174,7 +174,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
 
                     {latestAccount && (
                       <Pressable style={styles.latestAccountChip} onPress={() => applyLatestAccount(match.id)}>
-                        <Ionicons name="time-outline" size={13} color="#39D98A" />
+                        <Ionicons name="time-outline" size={13} color="#2D5F3E" />
                         <Text style={styles.latestAccountChipText}>
                           최근 사용: {latestAccount.bankName} {latestAccount.accountNumber} ({latestAccount.accountHolder})
                         </Text>
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   perPersonAmount: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   previewAmount: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -325,10 +325,10 @@ const styles = StyleSheet.create({
   paymentStatus: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8A9490',
+    color: '#D2A34C',
   },
   paymentStatusPaid: {
-    color: '#39D98A',
+    color: '#2D5F3E',
   },
   createForm: {
     gap: 8,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   latestAccountChipText: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -369,10 +369,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     marginTop: 4,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   createButtonText: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

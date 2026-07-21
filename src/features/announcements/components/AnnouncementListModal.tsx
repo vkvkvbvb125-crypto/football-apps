@@ -36,7 +36,7 @@ export function AnnouncementListModal({
             {announcements.map((a) => (
               <Pressable key={a.id} style={styles.item} onPress={() => onSelect(a)}>
                 <View style={styles.itemHeader}>
-                  {a.is_pinned && <Ionicons name="pin" size={12} color="#39D98A" />}
+                  {a.is_pinned && <Ionicons name="pin" size={12} color="#4ADE80" />}
                   <Text style={styles.itemTitle} numberOfLines={1}>
                     {a.title}
                   </Text>
@@ -62,7 +62,7 @@ export function AnnouncementListModal({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   header: {
     flexDirection: 'row',
@@ -118,9 +118,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#4ADE80',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 8px 16px rgba(57,217,138,0.4)',
+    boxShadow: '0px 8px 16px rgba(74,222,128,0.4)',
   },
 });

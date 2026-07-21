@@ -120,7 +120,7 @@ export function MemberListModal({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   header: {
     flexDirection: 'row',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontWeight: '700',
     fontSize: 15,
   },

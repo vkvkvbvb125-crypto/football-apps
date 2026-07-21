@@ -10,7 +10,7 @@ function buildMapHtml(latitude: number, longitude: number) {
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <style>html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #0B0F0D; }</style>
+    <style>html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #0F1512; }</style>
   </head>
   <body>
     <div id="map"></div>
@@ -46,7 +46,7 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
   if (Platform.OS === 'web') {
     return (
       <Pressable style={styles.webFallback} onPress={openDirections}>
-        <Ionicons name="map-outline" size={20} color="#39D98A" />
+        <Ionicons name="map-outline" size={20} color="#2D5F3E" />
         <Text style={styles.webFallbackText}>지도 미리보기는 앱에서 볼 수 있어요{'\n'}여기를 눌러 카카오맵으로 열기</Text>
       </Pressable>
     );
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   categoryTagText: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   mapWebview: {
     flex: 1,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 96,
     borderRadius: 12,
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,

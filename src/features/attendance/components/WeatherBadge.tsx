@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     marginTop: 4,
-    color: '#F0B429',
+    color: '#D2A34C',
     fontSize: 11,
     fontWeight: '600',
   },

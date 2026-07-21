@@ -187,16 +187,16 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 20,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   startButton: {
     marginTop: 24,
     marginHorizontal: 28,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    boxShadow: '0px 6px 12px rgba(57,217,138,0.3)',
+    boxShadow: '0px 6px 12px rgba(45,95,62,0.3)',
   },
   startButtonText: {
     color: '#FFFFFF',

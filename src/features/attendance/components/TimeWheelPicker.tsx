@@ -143,7 +143,7 @@ export const reelStyles = StyleSheet.create({
     borderRadius: 12,
   },
   pillActive: {
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   itemText: {
     color: '#5A625E',
@@ -151,7 +151,7 @@ export const reelStyles = StyleSheet.create({
     fontWeight: '700',
   },
   itemTextActive: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
   },
   colon: {
     color: '#8A9490',
@@ -161,7 +161,7 @@ export const reelStyles = StyleSheet.create({
   },
   caption: {
     marginTop: 12,
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
@@ -193,7 +193,7 @@ export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={handleOpen}>
-        <Ionicons name="time-outline" size={16} color="#39D98A" />
+        <Ionicons name="time-outline" size={16} color="#2D5F3E" />
         <Text style={styles.fieldText}>{value}</Text>
       </Pressable>
 
@@ -283,10 +283,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   confirmText: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

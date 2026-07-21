@@ -53,7 +53,7 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
             <Switch
               value={isPinned}
               onValueChange={setIsPinned}
-              trackColor={{ false: '#22302A', true: '#39D98A' }}
+              trackColor={{ false: '#22302A', true: '#4ADE80' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -136,10 +136,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   confirmText: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
     fontWeight: '700',
   },
 });

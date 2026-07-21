@@ -65,7 +65,7 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
-        <Ionicons name="business-outline" size={16} color={value ? '#39D98A' : '#5A625E'} />
+        <Ionicons name="business-outline" size={16} color={value ? '#2D5F3E' : '#5A625E'} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value || '은행 선택'}</Text>
       </Pressable>
 
@@ -206,20 +206,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   confirmButton: {
     marginTop: 14,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   confirmButtonDisabled: {
     opacity: 0.4,
   },
   confirmButtonText: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   manualLink: {
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   searchInput: {
     flex: 1,
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    color: '#0B0F0D',
+    color: '#0F1512',
     fontSize: 12,
     fontWeight: '800',
   },

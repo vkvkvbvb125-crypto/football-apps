@@ -98,7 +98,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
           <ScoreboardPanel />
         </ScrollView>
       ) : loading && !loaded ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#39D98A" />
+        <ActivityIndicator style={{ marginTop: 40 }} color="#4ADE80" />
       ) : matchesWithAttendees.length === 0 ? (
         <EmptyState
           emoji="👥"
@@ -169,7 +169,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                           style={({ pressed }) => [styles.addGroupChip, pressed && styles.pressedOpacity]}
                           onPress={() => addGroup(match.id)}
                         >
-                          <Ionicons name="add" size={16} color="#39D98A" />
+                          <Ionicons name="add" size={16} color="#2D5F3E" />
                           <Text style={styles.addGroupText}>팀 추가</Text>
                         </Pressable>
                       )}
@@ -205,8 +205,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   viewToggleActive: {
-    backgroundColor: '#39D98A',
-    borderColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
+    borderColor: '#2D5F3E',
   },
   viewToggleText: {
     color: '#8A9490',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   viewToggleTextActive: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
   },
   list: {
     paddingHorizontal: 20,
@@ -247,10 +247,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   randomizeButtonText: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 12,
   },
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   groupTitle: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontWeight: '700',
     fontSize: 13,
   },
@@ -284,11 +284,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#39D98A',
+    borderColor: '#2D5F3E',
     alignSelf: 'flex-start',
   },
   addGroupText: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontWeight: '700',
     fontSize: 12,
   },

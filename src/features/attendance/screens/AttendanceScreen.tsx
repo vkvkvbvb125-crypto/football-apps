@@ -263,7 +263,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
         <View style={styles.body}>
           {weatherLoading && (
             <View style={styles.weatherLoadingRow}>
-              <ActivityIndicator size="small" color="#39D98A" />
+              <ActivityIndicator size="small" color="#4ADE80" />
               <Text style={styles.weatherLoadingText}>날씨 조회 중...</Text>
             </View>
           )}
@@ -283,7 +283,7 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
             />
             <View style={styles.list}>
             {loading && !loaded ? (
-              <ActivityIndicator style={{ marginTop: 24 }} color="#39D98A" />
+              <ActivityIndicator style={{ marginTop: 24 }} color="#4ADE80" />
             ) : monthMatches.length === 0 ? (
               <EmptyState emoji="🗓️" title="이 달엔 등록된 경기가 없어요" subtitle="+ 버튼으로 새 경기를 만들어보세요" />
             ) : (
@@ -505,10 +505,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#4ADE80',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 8px 16px rgba(57,217,138,0.4)',
+    boxShadow: '0px 8px 16px rgba(74,222,128,0.4)',
   },
   card: {
     backgroundColor: '#141A17',
@@ -562,8 +562,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   voteChipActive: {
-    backgroundColor: '#39D98A',
-    borderColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
+    borderColor: '#2D5F3E',
   },
   voteChipDisabled: {
     opacity: 0.4,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   voteChipTextActive: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
@@ -630,10 +630,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   modalCreateText: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   actionOverlay: {

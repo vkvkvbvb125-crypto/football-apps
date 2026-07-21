@@ -44,7 +44,7 @@ export function TabHeader({ title }: TabHeaderProps) {
             <Text style={styles.panelTitle}>알림</Text>
             <ScrollView contentContainerStyle={styles.panelList}>
               {loading && notifications.length === 0 ? (
-                <ActivityIndicator color="#39D98A" style={styles.loadingIndicator} />
+                <ActivityIndicator color="#4ADE80" style={styles.loadingIndicator} />
               ) : notifications.length === 0 ? (
                 <Text style={styles.emptyText}>알림이 없어요</Text>
               ) : (

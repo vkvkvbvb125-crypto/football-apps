@@ -199,7 +199,7 @@ export function TeamHomeScreen() {
                   }}
                   hitSlop={8}
                 >
-                  <Ionicons name="add-circle-outline" size={20} color="#39D98A" />
+                  <Ionicons name="add-circle-outline" size={20} color="#2D5F3E" />
                 </Pressable>
               )}
               <Pressable onPress={() => setListVisible(true)}>
@@ -212,7 +212,7 @@ export function TeamHomeScreen() {
           ) : (
             announcements.slice(0, 3).map((a) => (
               <Pressable key={a.id} style={styles.announceItem} onPress={() => setSelectedAnnouncement(a)}>
-                {a.is_pinned && <Ionicons name="pin" size={12} color="#39D98A" style={styles.announcePinIcon} />}
+                {a.is_pinned && <Ionicons name="pin" size={12} color="#4ADE80" style={styles.announcePinIcon} />}
                 <View style={styles.announceItemText}>
                   <Text style={styles.announceItemTitle} numberOfLines={1}>
                     {a.title}
@@ -231,7 +231,7 @@ export function TeamHomeScreen() {
             <Text style={styles.announceTitle}>투표</Text>
             {isAdmin && (
               <Pressable onPress={() => setPollFormVisible(true)} hitSlop={8}>
-                <Ionicons name="add-circle-outline" size={20} color="#39D98A" />
+                <Ionicons name="add-circle-outline" size={20} color="#2D5F3E" />
               </Pressable>
             )}
           </View>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   copyButtonText: {
     color: '#FFFFFF',

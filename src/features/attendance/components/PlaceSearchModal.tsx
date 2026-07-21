@@ -77,7 +77,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
-        <Ionicons name="location-outline" size={16} color={value ? '#39D98A' : '#5A625E'} />
+        <Ionicons name="location-outline" size={16} color={value ? '#2D5F3E' : '#5A625E'} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value?.name ?? '장소 검색'}</Text>
       </Pressable>
 
@@ -114,7 +114,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
               <Text style={styles.hintText}>위치 권한이 없어서 내 주변이 아닌 전국 검색 결과가 나와요</Text>
             )}
 
-            {loading && <ActivityIndicator style={styles.loading} color="#39D98A" />}
+            {loading && <ActivityIndicator style={styles.loading} color="#4ADE80" />}
             {!loading && error && <Text style={styles.emptyText}>{error}</Text>}
             {!loading && !error && query.trim() === '' && (
               <Text style={styles.emptyText}>카테고리를 선택하거나 검색해보세요</Text>
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#0B0F0D',
+    backgroundColor: '#0F1512',
   },
   searchInput: {
     flex: 1,
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     borderColor: '#22302A',
   },
   chipActive: {
-    backgroundColor: '#39D98A',
-    borderColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
+    borderColor: '#2D5F3E',
   },
   chipText: {
     color: '#8A9490',
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#0B0F0D',
+    color: '#FFFFFF',
   },
   hintText: {
     marginTop: 10,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   categoryTagText: {
-    color: '#39D98A',
+    color: '#2D5F3E',
     fontSize: 10,
     fontWeight: '700',
   },

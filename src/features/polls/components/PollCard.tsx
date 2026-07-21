@@ -102,14 +102,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   optionSelected: {
-    borderColor: '#39D98A',
+    borderColor: '#2D5F3E',
   },
   optionFill: {
     position: 'absolute',
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: 'rgba(57,217,138,0.16)',
+    backgroundColor: 'rgba(45,95,62,0.25)',
   },
   optionText: {
     flex: 1,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionTextSelected: {
-    color: '#39D98A',
+    color: '#2D5F3E',
   },
   optionCount: {
     color: '#8A9490',

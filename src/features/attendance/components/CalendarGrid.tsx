@@ -214,7 +214,7 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
 
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#39D98A' }]} />
+          <View style={[styles.legendDot, { backgroundColor: '#2D5F3E' }]} />
           <Text style={styles.legendText}>경기 예정</Text>
         </View>
         <View style={styles.legendItem}>
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   dayCircleSelected: {
     borderWidth: 2,
-    borderColor: '#39D98A',
+    borderColor: '#2D5F3E',
   },
   dayText: {
     color: '#FFFFFF',
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     color: '#60A5FA',
   },
   dayTextToday: {
-    color: '#39D98A',
+    color: '#4ADE80',
     fontWeight: '700',
   },
   dot: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#39D98A',
+    backgroundColor: '#2D5F3E',
   },
   legendRow: {
     flexDirection: 'row',

@@ -37,7 +37,7 @@ export function AnnouncementDetailModal({
           <Pressable style={styles.card} onPress={() => {}}>
             <View style={styles.headerRow}>
               <View style={styles.headerLeft}>
-                {announcement.is_pinned && <Ionicons name="pin" size={13} color="#39D98A" />}
+                {announcement.is_pinned && <Ionicons name="pin" size={13} color="#4ADE80" />}
                 <Text style={styles.dateText}>{dateLabel}</Text>
               </View>
               {isAdmin && (

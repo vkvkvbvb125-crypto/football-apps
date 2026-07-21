@@ -1,8 +1,8 @@
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { ParticleSphere } from '../../assignment/components/ParticleSphere';
+import { SphereLogoMark } from '../../../components/SphereLogoMark';
 
 export function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
@@ -13,14 +13,15 @@ export function LoginScreen() {
     <ScreenGradient>
     <View style={styles.container}>
       <View style={styles.brand}>
-        <Image source={require('../../../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <View style={styles.logoWrap}>
+          <View style={styles.logoGlow} />
+          <SphereLogoMark size={160} />
+        </View>
         <Text style={styles.brandName}>
           킥<Text style={styles.brandNameAccent}>데이</Text>
         </Text>
+        <Text style={styles.brandNameEn}>KICKDAY</Text>
         <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
-        <View style={styles.sphereWrap}>
-          <ParticleSphere size={150} />
-        </View>
       </View>
 
       <View style={styles.bottom}>
@@ -62,11 +63,21 @@ const styles = StyleSheet.create({
   brand: {
     alignItems: 'center',
   },
-  logo: {
-    width: 96,
-    height: 96,
-    borderRadius: 22,
+  logoWrap: {
+    width: 160,
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
+  },
+  logoGlow: {
+    position: 'absolute',
+    width: 120,
+    height: 32,
+    bottom: 6,
+    borderRadius: 60,
+    backgroundColor: 'rgba(74,222,128,0.35)',
+    boxShadow: '0px 0px 40px 12px rgba(74,222,128,0.35)',
   },
   brandName: {
     fontSize: 28,
@@ -77,17 +88,17 @@ const styles = StyleSheet.create({
   brandNameAccent: {
     color: '#4ADE80',
   },
+  brandNameEn: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4ADE80',
+    letterSpacing: 4,
+  },
   tagline: {
     marginTop: 10,
     fontSize: 14,
     color: '#8A9490',
-  },
-  sphereWrap: {
-    marginTop: 12,
-    width: 150,
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   bottom: {
     width: '100%',

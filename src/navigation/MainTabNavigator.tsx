@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View } from 'react-native';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { SettlementScreen } from '../features/settlement/screens/SettlementScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
 import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
+import { SphereLogoMark } from '../components/SphereLogoMark';
 
 const Tab = createBottomTabNavigator();
 
@@ -16,23 +16,7 @@ function tabIcon(outlineName: keyof typeof Ionicons.glyphMap, filledName: keyof 
 }
 
 function assignmentTabIcon({ focused }: { focused: boolean }) {
-  return (
-    <View
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        top: -4,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#173A26',
-        borderWidth: 1.5,
-        borderColor: '#4ADE80',
-      }}
-    >
-      <Ionicons name={focused ? 'football' : 'football-outline'} size={20} color="#4ADE80" />
-    </View>
-  );
+  return <SphereLogoMark size={26} color={focused ? '#4ADE80' : '#5A625E'} />;
 }
 
 export function MainTabNavigator() {

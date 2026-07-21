@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
+import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 
 export function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
@@ -12,13 +13,14 @@ export function LoginScreen() {
     <ScreenGradient>
     <View style={styles.container}>
       <View style={styles.brand}>
-        <View style={styles.logoCircle}>
-          <Ionicons name="football-outline" size={40} color="#2D5F3E" />
-        </View>
+        <Image source={require('../../../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.brandName}>
           킥<Text style={styles.brandNameAccent}>데이</Text>
         </Text>
-        <Text style={styles.tagline}>우리 팀 경기, 이제 더 쉽게</Text>
+        <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
+        <View style={styles.sphereWrap}>
+          <ParticleSphere size={150} />
+        </View>
       </View>
 
       <View style={styles.bottom}>
@@ -33,13 +35,16 @@ export function LoginScreen() {
             <ActivityIndicator color="#3C1E1E" />
           ) : (
             <View style={styles.loginButtonContent}>
-              <View style={styles.kakaoBubble} />
-              <Text style={styles.loginButtonText}>카카오톡으로 간편가입</Text>
+              <Ionicons name="chatbubble" size={18} color="#3C1E1E" />
+              <Text style={styles.loginButtonText}>카카오로 시작하기</Text>
             </View>
           )}
         </Pressable>
 
-        <Text style={styles.footnote}>가입한 적 없다면 자동으로 계정이 만들어져요</Text>
+        <Text style={styles.footnote}>
+          로그인 시 <Text style={styles.footnoteLink}>이용약관</Text> 및{' '}
+          <Text style={styles.footnoteLink}>개인정보처리방침</Text>에 동의하게 됩니다
+        </Text>
       </View>
     </View>
     </ScreenGradient>
@@ -57,15 +62,10 @@ const styles = StyleSheet.create({
   brand: {
     alignItems: 'center',
   },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#141A17',
-    borderWidth: 1,
-    borderColor: '#22302A',
-    alignItems: 'center',
-    justifyContent: 'center',
+  logo: {
+    width: 96,
+    height: 96,
+    borderRadius: 22,
     marginBottom: 20,
   },
   brandName: {
@@ -81,6 +81,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: '#8A9490',
+  },
+  sphereWrap: {
+    marginTop: 12,
+    width: 150,
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottom: {
     width: '100%',
@@ -102,15 +109,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  kakaoBubble: {
-    width: 17,
-    height: 14,
-    backgroundColor: '#3C1E1E',
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-    borderBottomRightRadius: 7,
-    borderBottomLeftRadius: 1,
-  },
   loginButtonText: {
     color: '#3C1E1E',
     fontSize: 16,
@@ -120,6 +118,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#8A9490',
     fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  footnoteLink: {
+    textDecorationLine: 'underline',
   },
   error: {
     marginBottom: 12,

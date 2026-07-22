@@ -13,7 +13,7 @@ export function LoginScreen() {
     <View style={styles.container}>
       <View style={styles.brand}>
         <Image
-          source={require('../../../../assets/onbording-1.png')}
+          source={require('../../../../assets/12.png')}
           style={styles.logoImage}
           resizeMode="contain"
         />

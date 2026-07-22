@@ -90,7 +90,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           i === 0 ? (
             <View key={i} style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH }]}>
               <Image
-                source={require('../../../../assets/onbording-1.png')}
+                source={require('../../../../assets/12.png')}
                 style={styles.introImage}
                 resizeMode="contain"
               />

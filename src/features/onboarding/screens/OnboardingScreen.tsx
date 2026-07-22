@@ -88,7 +88,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
       >
         {SLIDES.map((slide, i) =>
           i === 0 ? (
-            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+            <View key={i} style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH }]}>
               <Image
                 source={require('../../../../assets/onbording-1.png')}
                 style={styles.introImage}
@@ -152,6 +152,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  introSlide: {
+    justifyContent: 'flex-start',
+    paddingTop: 4,
+  },
   illustrationCard: {
     width: '100%',
     maxWidth: 340,
@@ -177,8 +181,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   introImage: {
-    width: 320,
-    height: 480,
+    width: 340,
+    height: 510,
     marginBottom: 4,
   },
   titleAccent: {

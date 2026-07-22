@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   },
   introSlide: {
     justifyContent: 'flex-start',
-    paddingTop: 4,
+    paddingTop: -24,
     paddingHorizontal: 12,
   },
   illustrationCard: {
@@ -194,14 +194,14 @@ const styles = StyleSheet.create({
     color: '#4ADE80',
   },
   introTitle: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: 40,
+    lineHeight: 42,
   },
   introSubtitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontSize: 15,
     fontWeight: '500',
     color: '#8A9490',

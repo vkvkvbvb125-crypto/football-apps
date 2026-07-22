@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   featureSubtitleSize: {
-    fontSize: 20,
+    fontSize: 15,
     marginTop: 20,
   },
   stepNumber: {

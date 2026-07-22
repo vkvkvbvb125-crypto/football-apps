@@ -125,8 +125,8 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               />
               <View style={styles.featureTextBlock}>
                 <Text style={styles.stepNumber}>01</Text>
-                <Text style={styles.title}>{slide.title}</Text>
-                <Text style={styles.subtitle}>{slide.subtitle}</Text>
+                <Text style={[styles.title, styles.centerText]}>{slide.title}</Text>
+                <Text style={[styles.subtitle, styles.centerText]}>{slide.subtitle}</Text>
               </View>
             </View>
           ) : (
@@ -233,8 +233,11 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   featureTextBlock: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginTop: 24,
+  },
+  centerText: {
+    textAlign: 'center',
   },
   stepNumber: {
     color: '#4ADE80',

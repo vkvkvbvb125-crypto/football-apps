@@ -245,12 +245,12 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   featureSubtitleSize: {
-    fontSize: 10,
+    fontSize: 20,
     marginTop: 20,
   },
   stepNumber: {
     color: '#4ADE80',
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
     letterSpacing: 1,
     marginBottom: 16,

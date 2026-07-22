@@ -193,7 +193,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   introTextBlock: {
-    width: '100%',
     alignItems: 'flex-start',
     marginTop: -80,
   },

@@ -73,7 +73,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const introSlideMarginTop = -SCREEN_HEIGHT * 0.105;
   const introTextMarginTop = -SCREEN_HEIGHT * 0.098;
 
-  const feature2ImageWidth = SCREEN_WIDTH * 0.8;
+  const feature2ImageWidth = SCREEN_WIDTH;
   const feature2ImageHeight = feature2ImageWidth * 1.5;
 
   return (
@@ -120,7 +120,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
             <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
               <Image
                 source={require('../../../../assets/onbording-2.png')}
-                style={{ width: feature2ImageWidth, height: feature2ImageHeight }}
+                style={{ width: feature2ImageWidth, height: feature2ImageHeight, marginHorizontal: -28 }}
                 resizeMode="contain"
               />
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>

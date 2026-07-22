@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   introTitle: {
     fontSize: 40,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#4ADE80',
     textAlign: 'left',
     lineHeight: 42,
   },
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 20,
     fontWeight: '400',
-    color: '#8A9490',
+    color: '#4ADE80',
     textAlign: 'left',
   },
   title: {

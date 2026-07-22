@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   introSlide: {
     justifyContent: 'flex-start',
-    paddingTop: -48,
+    marginTop: -48,
     paddingHorizontal: 12,
   },
   illustrationCard: {

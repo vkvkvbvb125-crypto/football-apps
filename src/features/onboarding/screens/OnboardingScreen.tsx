@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   introTextBlock: {
     width: '100%',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   titleAccent: {
     color: '#4ADE80',
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: 'left',
+    textAlign: 'center',
     lineHeight: 42,
   },
   introSubtitle: {
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#8A9490',
-    textAlign: 'left',
+    textAlign: 'center',
   },
   title: {
     fontSize: 22,

@@ -100,11 +100,13 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 ]}
                 resizeMode="contain"
               />
-              <Text style={styles.introTitle}>
-                풋살,{'\n'}
-                <Text style={styles.titleAccent}>연결의 시작</Text>
-              </Text>
-              <Text style={styles.introSubtitle}>{slide.subtitle}</Text>
+              <View style={styles.introTextBlock}>
+                <Text style={styles.introTitle}>
+                  풋살,{'\n'}
+                  <Text style={styles.titleAccent}>연결의 시작</Text>
+                </Text>
+                <Text style={styles.introSubtitle}>{slide.subtitle}</Text>
+              </View>
             </View>
           ) : (
             <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
@@ -190,6 +192,10 @@ const styles = StyleSheet.create({
   introImage: {
     marginBottom: 4,
   },
+  introTextBlock: {
+    width: '100%',
+    alignItems: 'flex-start',
+  },
   titleAccent: {
     color: '#4ADE80',
   },
@@ -197,7 +203,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: 42,
   },
   introSubtitle: {
@@ -205,7 +211,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#8A9490',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   title: {
     fontSize: 22,

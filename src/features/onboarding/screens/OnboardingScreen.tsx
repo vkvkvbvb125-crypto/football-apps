@@ -93,7 +93,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           i === 0 ? (
             <View key={i} style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH }]}>
               <Image
-                source={require('../../../../assets/222.png')}
+                source={require('../../../../assets/onbording-1.png')}
                 style={[
                   styles.introImage,
                   { width: introImageWidth, height: introImageHeight, marginHorizontal: -12 },
@@ -195,6 +195,7 @@ const styles = StyleSheet.create({
   introTextBlock: {
     width: '100%',
     alignItems: 'center',
+    marginTop: -120,
   },
   titleAccent: {
     color: '#4ADE80',

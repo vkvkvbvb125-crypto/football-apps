@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   slide: {
     paddingHorizontal: 28,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   illustrationCard: {
     width: '100%',
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
   },
   introImage: {
     width: 260,
-    aspectRatio: 1024 / 1536,
+    height: 390,
     marginBottom: 16,
   },
   titleAccent: {

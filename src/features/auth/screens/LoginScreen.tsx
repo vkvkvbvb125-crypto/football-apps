@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   },
   logoImage: {
     width: 200,
-    aspectRatio: 1024 / 1536,
+    height: 300,
     marginBottom: 8,
   },
   brandName: {

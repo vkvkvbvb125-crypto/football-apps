@@ -123,10 +123,12 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 style={{ width: feature2ImageWidth, height: feature2ImageHeight }}
                 resizeMode="contain"
               />
-              <View style={styles.featureTextBlock}>
+              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
                 <Text style={styles.stepNumber}>01</Text>
-                <Text style={[styles.title, styles.centerText]}>{slide.title}</Text>
-                <Text style={[styles.subtitle, styles.centerText]}>{slide.subtitle}</Text>
+                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
+                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
+                  {slide.subtitle}
+                </Text>
               </View>
             </View>
           ) : (
@@ -234,10 +236,15 @@ const styles = StyleSheet.create({
   },
   featureTextBlock: {
     alignItems: 'center',
-    marginTop: 24,
   },
   centerText: {
     textAlign: 'center',
+  },
+  featureTitleSize: {
+    fontSize: 35,
+  },
+  featureSubtitleSize: {
+    fontSize: 15,
   },
   stepNumber: {
     color: '#4ADE80',

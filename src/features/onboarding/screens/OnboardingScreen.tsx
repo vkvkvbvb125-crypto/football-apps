@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: -84,
-    gap: 6,
+    gap: 12,
   },
   dot: {
     width: 6,

@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   },
   introSlide: {
     justifyContent: 'flex-start',
-    marginTop: -48,
+    marginTop: -86,
     paddingHorizontal: 12,
   },
   illustrationCard: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   introTextBlock: {
     width: '100%',
     alignItems: 'center',
-    marginTop: -120,
+    marginTop: -95,
   },
   titleAccent: {
     color: '#4ADE80',

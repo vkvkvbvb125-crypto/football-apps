@@ -52,7 +52,7 @@ interface OnboardingScreenProps {
 }
 
 export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const markSeen = useOnboardingStore((s) => s.markSeen);
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -70,6 +70,8 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 
   const introImageWidth = SCREEN_WIDTH;
   const introImageHeight = introImageWidth * 1.5;
+  const introSlideMarginTop = -SCREEN_HEIGHT * 0.105;
+  const introTextMarginTop = -SCREEN_HEIGHT * 0.098;
 
   return (
     <ScreenGradient>
@@ -91,7 +93,10 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
       >
         {SLIDES.map((slide, i) =>
           i === 0 ? (
-            <View key={i} style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH }]}>
+            <View
+              key={i}
+              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
+            >
               <Image
                 source={require('../../../../assets/onbording-1.png')}
                 style={[
@@ -100,7 +105,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 ]}
                 resizeMode="contain"
               />
-              <View style={styles.introTextBlock}>
+              <View style={[styles.introTextBlock, { marginTop: introTextMarginTop }]}>
                 <Text style={styles.introTitle}>
                   풋살,{'\n'}
                   <Text style={styles.titleAccent}>연결의 시작</Text>
@@ -162,7 +167,6 @@ const styles = StyleSheet.create({
   },
   introSlide: {
     justifyContent: 'flex-start',
-    marginTop: -86,
     paddingHorizontal: 12,
   },
   illustrationCard: {
@@ -194,7 +198,6 @@ const styles = StyleSheet.create({
   },
   introTextBlock: {
     alignItems: 'flex-start',
-    marginTop: -80,
   },
   titleAccent: {
     color: '#4ADE80',

@@ -68,7 +68,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
     setIndex(newIndex);
   };
 
-  const introImageWidth = SCREEN_WIDTH * 0.94;
+  const introImageWidth = SCREEN_WIDTH;
   const introImageHeight = introImageWidth * 1.5;
 
   return (
@@ -93,8 +93,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           i === 0 ? (
             <View key={i} style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH }]}>
               <Image
-                source={require('../../../../assets/12.png')}
-                style={[styles.introImage, { width: introImageWidth, height: introImageHeight }]}
+                source={require('../../../../assets/222.png')}
+                style={[
+                  styles.introImage,
+                  { width: introImageWidth, height: introImageHeight, marginHorizontal: -12 },
+                ]}
                 resizeMode="contain"
               />
               <Text style={styles.introTitle}>

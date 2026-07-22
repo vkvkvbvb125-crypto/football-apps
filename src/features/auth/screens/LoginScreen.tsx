@@ -1,8 +1,7 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { SphereLogoMark } from '../../../components/SphereLogoMark';
 
 export function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
@@ -13,10 +12,11 @@ export function LoginScreen() {
     <ScreenGradient>
     <View style={styles.container}>
       <View style={styles.brand}>
-        <View style={styles.logoWrap}>
-          <View style={styles.logoGlow} />
-          <SphereLogoMark size={160} />
-        </View>
+        <Image
+          source={require('../../../../assets/3D구형.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.brandName}>
           킥<Text style={styles.brandNameAccent}>데이</Text>
         </Text>
@@ -57,27 +57,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 28,
-    paddingTop: 140,
+    paddingTop: 88,
     paddingBottom: 56,
   },
   brand: {
     alignItems: 'center',
   },
-  logoWrap: {
-    width: 160,
-    height: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  logoGlow: {
-    position: 'absolute',
-    width: 120,
-    height: 32,
-    bottom: 6,
-    borderRadius: 60,
-    backgroundColor: 'rgba(74,222,128,0.35)',
-    boxShadow: '0px 0px 40px 12px rgba(74,222,128,0.35)',
+  logoImage: {
+    width: 200,
+    aspectRatio: 1024 / 1536,
+    marginBottom: 8,
   },
   brandName: {
     fontSize: 28,

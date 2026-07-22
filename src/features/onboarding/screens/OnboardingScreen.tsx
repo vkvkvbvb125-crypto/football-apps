@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import {
+  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -13,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { FieldBackground } from '../../../components/FieldBackground';
-import { SphereLogoMark } from '../../../components/SphereLogoMark';
 
 const SLIDES = [
   {
@@ -89,10 +89,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         {SLIDES.map((slide, i) =>
           i === 0 ? (
             <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-              <View style={styles.introHero}>
-                <View style={styles.introGlow} />
-                <SphereLogoMark size={220} />
-              </View>
+              <Image
+                source={require('../../../../assets/3D구형.png')}
+                style={styles.introImage}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>
                 풋살,{'\n'}
                 <Text style={styles.titleAccent}>연결의 시작</Text>
@@ -174,21 +175,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  introHero: {
-    width: '100%',
-    height: 260,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 40,
-  },
-  introGlow: {
-    position: 'absolute',
-    width: 160,
-    height: 36,
-    bottom: 24,
-    borderRadius: 80,
-    backgroundColor: 'rgba(74,222,128,0.35)',
-    boxShadow: '0px 0px 50px 16px rgba(74,222,128,0.35)',
+  introImage: {
+    width: 260,
+    aspectRatio: 1024 / 1536,
+    marginBottom: 16,
   },
   titleAccent: {
     color: '#4ADE80',

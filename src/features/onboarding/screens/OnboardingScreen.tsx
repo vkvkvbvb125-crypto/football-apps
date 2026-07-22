@@ -241,17 +241,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   featureTitleSize: {
-    fontSize: 35,
+    fontSize: 30,
+    fontWeight: '400',
   },
   featureSubtitleSize: {
-    fontSize: 15,
+    fontSize: 10,
+    marginTop: 20,
   },
   stepNumber: {
     color: '#4ADE80',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
-    marginBottom: 6,
+    marginBottom: 16,
   },
   title: {
     fontSize: 22,

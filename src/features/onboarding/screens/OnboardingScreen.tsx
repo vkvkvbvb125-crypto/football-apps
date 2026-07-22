@@ -68,6 +68,9 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
     setIndex(newIndex);
   };
 
+  const introImageWidth = SCREEN_WIDTH * 0.94;
+  const introImageHeight = introImageWidth * 1.5;
+
   return (
     <ScreenGradient>
     <View style={styles.container}>
@@ -91,7 +94,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
             <View key={i} style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH }]}>
               <Image
                 source={require('../../../../assets/12.png')}
-                style={styles.introImage}
+                style={[styles.introImage, { width: introImageWidth, height: introImageHeight }]}
                 resizeMode="contain"
               />
               <Text style={styles.introTitle}>
@@ -155,6 +158,7 @@ const styles = StyleSheet.create({
   introSlide: {
     justifyContent: 'flex-start',
     paddingTop: 4,
+    paddingHorizontal: 12,
   },
   illustrationCard: {
     width: '100%',
@@ -181,8 +185,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   introImage: {
-    width: 340,
-    height: 510,
     marginBottom: 4,
   },
   titleAccent: {

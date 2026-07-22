@@ -22,9 +22,9 @@ const SLIDES = [
     subtitle: '킥데이와 함께!',
   },
   {
-    icon: 'cash-outline',
-    title: '회비 정산도\n자동으로 계산해요',
-    subtitle: '총무는 입금 확인 체크만 하면 끝',
+    icon: 'shield-outline',
+    title: '팀을 만들고\n팀원을 초대하세요',
+    subtitle: '초대 링크 하나로 팀 구성 완료!',
   },
   {
     icon: 'stopwatch-outline',
@@ -73,6 +73,9 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const introSlideMarginTop = -SCREEN_HEIGHT * 0.105;
   const introTextMarginTop = -SCREEN_HEIGHT * 0.098;
 
+  const feature2ImageWidth = SCREEN_WIDTH * 0.8;
+  const feature2ImageHeight = feature2ImageWidth * 1.5;
+
   return (
     <ScreenGradient>
     <View style={styles.container}>
@@ -111,6 +114,19 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                   <Text style={styles.titleAccent}>연결의 시작</Text>
                 </Text>
                 <Text style={styles.introSubtitle}>{slide.subtitle}</Text>
+              </View>
+            </View>
+          ) : i === 1 ? (
+            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+              <Image
+                source={require('../../../../assets/onbording-2.png')}
+                style={{ width: feature2ImageWidth, height: feature2ImageHeight }}
+                resizeMode="contain"
+              />
+              <View style={styles.featureTextBlock}>
+                <Text style={styles.stepNumber}>01</Text>
+                <Text style={styles.title}>{slide.title}</Text>
+                <Text style={styles.subtitle}>{slide.subtitle}</Text>
               </View>
             </View>
           ) : (
@@ -215,6 +231,17 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#8A9490',
     textAlign: 'left',
+  },
+  featureTextBlock: {
+    alignItems: 'flex-start',
+    marginTop: 24,
+  },
+  stepNumber: {
+    color: '#4ADE80',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   title: {
     fontSize: 22,

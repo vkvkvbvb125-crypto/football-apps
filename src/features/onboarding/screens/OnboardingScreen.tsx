@@ -13,12 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { FieldBackground } from '../../../components/FieldBackground';
+import { SphereLogoMark } from '../../../components/SphereLogoMark';
 
 const SLIDES = [
   {
     icon: 'shield-outline',
-    title: '팀을 만들고\n팀원을 초대하세요',
-    subtitle: '초대 링크 하나로 팀 구성 완료',
+    title: '풋살,\n연결의 시작',
+    subtitle: '킥데이와 함께!',
   },
   {
     icon: 'cash-outline',
@@ -85,18 +86,32 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         onScroll={handleScrollEnd}
         scrollEventThrottle={16}
       >
-        {SLIDES.map((slide, i) => (
-          <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <View style={styles.illustrationCard}>
-              <FieldBackground variant="night" />
-              <View style={styles.mainBadge}>
-                <Ionicons name={slide.icon} size={52} color="#FFFFFF" />
+        {SLIDES.map((slide, i) =>
+          i === 0 ? (
+            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+              <View style={styles.introHero}>
+                <View style={styles.introGlow} />
+                <SphereLogoMark size={220} />
               </View>
+              <Text style={styles.title}>
+                풋살,{'\n'}
+                <Text style={styles.titleAccent}>연결의 시작</Text>
+              </Text>
+              <Text style={styles.subtitle}>{slide.subtitle}</Text>
             </View>
-            <Text style={styles.title}>{slide.title}</Text>
-            <Text style={styles.subtitle}>{slide.subtitle}</Text>
-          </View>
-        ))}
+          ) : (
+            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+              <View style={styles.illustrationCard}>
+                <FieldBackground variant="night" />
+                <View style={styles.mainBadge}>
+                  <Ionicons name={slide.icon} size={52} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.title}>{slide.title}</Text>
+              <Text style={styles.subtitle}>{slide.subtitle}</Text>
+            </View>
+          )
+        )}
       </ScrollView>
 
       <View style={styles.dots}>
@@ -158,6 +173,25 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  introHero: {
+    width: '100%',
+    height: 260,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
+  introGlow: {
+    position: 'absolute',
+    width: 160,
+    height: 36,
+    bottom: 24,
+    borderRadius: 80,
+    backgroundColor: 'rgba(74,222,128,0.35)',
+    boxShadow: '0px 0px 50px 16px rgba(74,222,128,0.35)',
+  },
+  titleAccent: {
+    color: '#4ADE80',
   },
   title: {
     fontSize: 22,

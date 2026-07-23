@@ -28,8 +28,8 @@ const SLIDES = [
   },
   {
     icon: 'stopwatch-outline',
-    title: '오프라인에서도\n경기 타이머가 동작해요',
-    subtitle: '쿼터 종료 알림까지 한 번에',
+    title: '경기 일정을\n쉽게 관리하세요',
+    subtitle: '참가 여부와 일정 조율을 한눈에!',
   },
   {
     icon: 'checkbox-outline',
@@ -128,6 +128,24 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               />
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
                 <Text style={styles.stepNumber}>01</Text>
+                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
+                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
+                  {slide.subtitle}
+                </Text>
+              </View>
+            </View>
+          ) : i === 2 ? (
+            <View
+              key={i}
+              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
+            >
+              <Image
+                source={require('../../../../assets/onbording-3.png')}
+                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
+                resizeMode="contain"
+              />
+              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
+                <Text style={styles.stepNumber}>02</Text>
                 <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
                 <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
                   {slide.subtitle}

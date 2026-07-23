@@ -117,10 +117,13 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               </View>
             </View>
           ) : i === 1 ? (
-            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+            <View
+              key={i}
+              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
+            >
               <Image
                 source={require('../../../../assets/onbording-2.png')}
-                style={{ width: feature2ImageWidth, height: feature2ImageHeight, marginHorizontal: -28 }}
+                style={{ width: feature2ImageWidth, height: feature2ImageHeight, marginHorizontal: -12 }}
                 resizeMode="contain"
               />
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>

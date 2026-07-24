@@ -16,7 +16,7 @@ const UPCOMING_LIMIT = 5;
 function formatMatchDate(iso: string) {
   const d = new Date(iso);
   const dateLabel = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-  const timeLabel = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const timeLabel = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true });
   return { dateLabel, timeLabel };
 }
 
@@ -88,8 +88,9 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>다가오는 경기</Text>
-          <Pressable onPress={() => navigation.navigate('Attendance')} hitSlop={8}>
+          <Pressable style={styles.sectionLinkRow} onPress={() => navigation.navigate('Attendance')} hitSlop={8}>
             <Text style={styles.sectionLink}>전체보기</Text>
+            <Ionicons name="chevron-forward" size={14} color="#8A9490" />
           </Pressable>
         </View>
 
@@ -124,8 +125,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         )}
 
         <Pressable style={styles.createButton} onPress={() => navigation.navigate('Attendance')}>
-          <Ionicons name="add" size={18} color="#0F1512" />
           <Text style={styles.createButtonText}>경기 만들기</Text>
+          <Ionicons name="add" size={18} color="#0F1512" />
         </Pressable>
       </ScrollView>
     </ScreenGradient>
@@ -174,6 +175,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '800',
+  },
+  sectionLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   sectionLink: {
     color: '#8A9490',

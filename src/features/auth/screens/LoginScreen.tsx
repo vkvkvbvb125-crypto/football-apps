@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 28,
-    paddingTop: 48,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   brand: {

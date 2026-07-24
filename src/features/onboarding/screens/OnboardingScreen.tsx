@@ -139,21 +139,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               key={i}
               style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
             >
-              <View style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}>
-                <Image
-                  source={require('../../../../assets/onbording-3.png')}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="contain"
-                />
-                <View style={[styles.bubble, { left: '2.4%', top: '21.8%', width: '44.3%', height: '11.7%' }]}>
-                  <Text style={styles.bubbleText}>내일 20:00</Text>
-                  <Text style={styles.bubbleText}>풋살장 A</Text>
-                </View>
-                <View style={[styles.bubble, { left: '58.6%', top: '59.8%', width: '36.1%', height: '10.4%' }]}>
-                  <Text style={styles.bubbleText}>토 18:00</Text>
-                  <Text style={styles.bubbleText}>풋살장 B</Text>
-                </View>
-              </View>
+              <Image
+                source={require('../../../../assets/onbording-3.png')}
+                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
+                resizeMode="contain"
+              />
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
                 <Text style={styles.stepNumber}>02</Text>
                 <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
@@ -244,17 +234,6 @@ const styles = StyleSheet.create({
   },
   introImage: {
     marginBottom: 4,
-  },
-  bubble: {
-    position: 'absolute',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingLeft: '10%',
-  },
-  bubbleText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
   },
   introTextBlock: {
     alignItems: 'flex-start',

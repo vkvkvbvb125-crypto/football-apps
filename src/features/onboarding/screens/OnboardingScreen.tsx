@@ -139,11 +139,21 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               key={i}
               style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
             >
-              <Image
-                source={require('../../../../assets/onbording-3.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
+              <View style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}>
+                <Image
+                  source={require('../../../../assets/onbording-3.png')}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="contain"
+                />
+                <View style={[styles.bubble, { left: '5%', top: '22.5%', width: '40%' }]}>
+                  <Text style={styles.bubbleText}>내일 20:00</Text>
+                  <Text style={styles.bubbleText}>풋살장 A</Text>
+                </View>
+                <View style={[styles.bubble, { left: '57%', top: '60.5%', width: '38%' }]}>
+                  <Text style={styles.bubbleText}>토 18:00</Text>
+                  <Text style={styles.bubbleText}>풋살장 B</Text>
+                </View>
+              </View>
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
                 <Text style={styles.stepNumber}>02</Text>
                 <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
@@ -234,6 +244,16 @@ const styles = StyleSheet.create({
   },
   introImage: {
     marginBottom: 4,
+  },
+  bubble: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubbleText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
   introTextBlock: {
     alignItems: 'flex-start',

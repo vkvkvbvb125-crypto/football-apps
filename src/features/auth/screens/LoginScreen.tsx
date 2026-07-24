@@ -40,15 +40,14 @@ export function LoginScreen() {
           ) : (
             <View style={styles.loginButtonContent}>
               <Ionicons name="chatbubble" size={18} color="#3C1E1E" />
-              <Text style={styles.loginButtonText}>카카오로 시작하기</Text>
+              <Text style={styles.loginButtonText}>카카오톡으로 시작하기</Text>
             </View>
           )}
         </Pressable>
 
         <Text style={styles.footnote}>
           로그인 시 <Text style={styles.footnoteLink}>이용약관</Text> 및{' '}
-          <Text style={styles.footnoteLink}>개인정보처리방침</Text>
-          {'\n'}에 동의하게 됩니다
+          <Text style={styles.footnoteLink}>개인정보처리방침</Text>에{'\n'}동의하게 됩니다
         </Text>
       </View>
     </View>

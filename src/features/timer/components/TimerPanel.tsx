@@ -6,7 +6,7 @@ import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 
 const STROKE_WIDTH = 6;
-const PARTICLE_BOX = 300;
+const PARTICLE_OVERFLOW = 70;
 
 function formatTime(totalSeconds: number) {
   const clamped = Math.max(0, totalSeconds);
@@ -24,7 +24,7 @@ function formatTime(totalSeconds: number) {
 
 export function TimerPanel() {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const ringSize = Math.min(250, SCREEN_WIDTH * 0.66);
+  const ringSize = Math.min(280, SCREEN_WIDTH * 0.68);
   const radius = (ringSize - STROKE_WIDTH) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -89,57 +89,59 @@ export function TimerPanel() {
   };
 
   const totalSeconds = quarterMinutes * 60;
-  const progress = totalSeconds > 0 ? Math.min(1, remainingSeconds / totalSeconds) : 0;
-  const strokeDashoffset = circumference * (1 - progress);
   const stateLabel =
     remainingSeconds === 0 ? '종료' : isRunning ? '진행중' : remainingSeconds === totalSeconds ? '경기 전' : '일시정지';
+  // ponytail: 대기 상태(경기 전)는 목표 목업처럼 절반 정도만 밝게 고정 표시.
+  // 실행/일시정지/종료 시에는 실제 남은 시간 비율을 그대로 반영.
+  const progress =
+    stateLabel === '경기 전' ? 0.475 : totalSeconds > 0 ? Math.min(1, remainingSeconds / totalSeconds) : 0;
+  const strokeDashoffset = circumference * (1 - progress);
 
   return (
     <View style={styles.content}>
-      <View style={styles.ringSection}>
-        <View style={styles.particleLayer} pointerEvents="none">
-          <ParticleSphere size={PARTICLE_BOX} />
+      <View style={[styles.ringSection, { width: ringSize, height: ringSize }]}>
+        <View
+          style={[styles.particleLayer, { width: ringSize, height: ringSize }]}
+          pointerEvents="none"
+        >
+          <View style={{ transform: [{ scaleX: (ringSize + PARTICLE_OVERFLOW) / ringSize }] }}>
+            <ParticleSphere size={ringSize} />
+          </View>
         </View>
 
-        <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
-          <Svg width={ringSize} height={ringSize}>
-            <Circle
-              cx={ringSize / 2}
-              cy={ringSize / 2}
-              r={radius}
-              stroke="#1D472F"
-              strokeWidth={STROKE_WIDTH}
-              fill="none"
-            />
-            <Circle
-              cx={ringSize / 2}
-              cy={ringSize / 2}
-              r={radius}
-              stroke="#52D979"
-              strokeWidth={STROKE_WIDTH}
-              strokeLinecap="round"
-              strokeDasharray={`${circumference} ${circumference}`}
-              strokeDashoffset={strokeDashoffset}
-              fill="none"
-              rotation={-90}
-              originX={ringSize / 2}
-              originY={ringSize / 2}
-            />
-          </Svg>
-          <View style={styles.ringCenter}>
-            <Text style={styles.stateLabel}>{stateLabel}</Text>
-            <Text style={styles.timeDisplay}>{formatTime(remainingSeconds)}</Text>
-            <View style={styles.quarterRow}>
-              <TextInput
-                style={styles.quarterInput}
-                value={String(quarterMinutes)}
-                onChangeText={handleMinutesChange}
-                keyboardType="number-pad"
-                editable={!isRunning}
-              />
-              <Text style={styles.quarterUnit}>분</Text>
-            </View>
-          </View>
+        <Svg width={ringSize} height={ringSize}>
+          <Circle
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={radius}
+            stroke="#173D2A"
+            strokeOpacity={0.9}
+            strokeWidth={STROKE_WIDTH}
+            fill="none"
+          />
+          <Circle
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={radius}
+            stroke="#54DA79"
+            strokeWidth={STROKE_WIDTH}
+            strokeLinecap="round"
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
+            fill="none"
+            transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+          />
+        </Svg>
+        <View style={styles.ringCenter}>
+          <Text style={styles.stateLabel}>{stateLabel}</Text>
+          <Text style={styles.timeDisplay}>{formatTime(remainingSeconds)}</Text>
+          <TextInput
+            style={styles.quarterInput}
+            value={`${quarterMinutes}분`}
+            onChangeText={(text) => handleMinutesChange(text.replace(/[^0-9]/g, ''))}
+            keyboardType="number-pad"
+            editable={!isRunning}
+          />
         </View>
       </View>
 
@@ -165,21 +167,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ringSection: {
-    width: PARTICLE_BOX,
-    height: PARTICLE_BOX,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   particleLayer: {
     position: 'absolute',
-    width: PARTICLE_BOX,
-    height: PARTICLE_BOX,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ringCenter: {
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -195,22 +198,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
-  quarterRow: {
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   quarterInput: {
+    marginTop: 4,
     color: '#8A9490',
     fontSize: 11,
     textAlign: 'center',
-    width: 16,
     padding: 0,
-  },
-  quarterUnit: {
-    color: '#8A9490',
-    fontSize: 11,
   },
   controlRow: {
     flexDirection: 'row',

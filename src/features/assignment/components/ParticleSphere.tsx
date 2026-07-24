@@ -50,7 +50,7 @@ function buildParticles(radius: number, dotBaseSize: number): ParticleFrames[] {
       const z = -x0 * sin + z0 * cos;
 
       xSteps.push(x * radius - size / 2);
-      opacitySteps.push(lerp(z, -1, 1, 0.06, 0.45));
+      opacitySteps.push(lerp(z, -1, 1, 0.3, 0.8));
       scaleSteps.push(lerp(z, -1, 1, 0.4, 0.9));
     }
 
@@ -134,6 +134,6 @@ const styles = StyleSheet.create({
   },
   dot: {
     position: 'absolute',
-    backgroundColor: '#4ADE80',
+    backgroundColor: '#22D96F',
   },
 });

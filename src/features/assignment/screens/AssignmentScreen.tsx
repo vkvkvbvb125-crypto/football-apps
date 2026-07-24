@@ -228,8 +228,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timerScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
+    paddingBottom: 100,
   },
   list: {
     paddingHorizontal: 20,

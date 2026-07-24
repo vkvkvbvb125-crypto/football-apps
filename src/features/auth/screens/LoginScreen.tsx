@@ -10,8 +10,8 @@ export function LoginScreen() {
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   // 화면이 짧은 기기에서 하단 버튼/약관 문구가 밀려나 잘리지 않도록,
   // 화면 높이 기준 예산과 화면 폭 기준 값 중 더 작은 쪽으로 이미지 크기를 정한다.
-  const logoWidthFromHeight = (SCREEN_HEIGHT * 0.44) / 1.5;
-  const logoWidth = Math.min(SCREEN_WIDTH * 0.92, logoWidthFromHeight);
+  const logoWidthFromHeight = (SCREEN_HEIGHT * 0.55) / 1.5;
+  const logoWidth = Math.min(SCREEN_WIDTH, logoWidthFromHeight);
   const logoHeight = logoWidth * 1.5;
 
   return (

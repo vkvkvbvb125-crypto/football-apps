@@ -9,7 +9,6 @@ import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
-import { ParticleSphere } from '../components/ParticleSphere';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
 
@@ -46,19 +45,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
   return (
     <ScreenGradient>
-      <ParticleSphere />
       <TabHeader title="경기운영" />
       <View style={styles.viewToggleRow}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.viewToggle,
-            view === 'assign' && styles.viewToggleActive,
-            pressed && styles.pressedOpacity,
-          ]}
-          onPress={() => setView('assign')}
-        >
-          <Text style={[styles.viewToggleText, view === 'assign' && styles.viewToggleTextActive]}>분배</Text>
-        </Pressable>
         <Pressable
           style={({ pressed }) => [
             styles.viewToggle,
@@ -72,6 +60,18 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
         <Pressable
           style={({ pressed }) => [
             styles.viewToggle,
+            styles.viewToggleDivider,
+            view === 'assign' && styles.viewToggleActive,
+            pressed && styles.pressedOpacity,
+          ]}
+          onPress={() => setView('assign')}
+        >
+          <Text style={[styles.viewToggleText, view === 'assign' && styles.viewToggleTextActive]}>팀 분배</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.viewToggle,
+            styles.viewToggleDivider,
             view === 'score' && styles.viewToggleActive,
             pressed && styles.pressedOpacity,
           ]}
@@ -90,7 +90,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
           onAction={() => navigation.navigate('Team')}
         />
       ) : view === 'timer' ? (
-        <ScrollView>
+        <ScrollView style={styles.timerScroll} contentContainerStyle={styles.timerScrollContent}>
           <TimerPanel />
         </ScrollView>
       ) : view === 'score' ? (
@@ -191,30 +191,45 @@ const styles = StyleSheet.create({
   },
   viewToggleRow: {
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    height: 28,
+    marginHorizontal: 18,
+    marginBottom: 14,
+    borderRadius: 6,
+    backgroundColor: '#101918',
+    borderWidth: 1,
+    borderColor: 'rgba(67, 91, 85, 0.35)',
+    overflow: 'hidden',
   },
   viewToggle: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
-    borderWidth: 1,
-    borderColor: '#22302A',
+    justifyContent: 'center',
+  },
+  viewToggleDivider: {
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(67, 91, 85, 0.35)',
   },
   viewToggleActive: {
-    backgroundColor: '#4ADE80',
-    borderColor: '#4ADE80',
+    margin: 2,
+    borderRadius: 5,
+    backgroundColor: 'rgba(35, 91, 55, 0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(60, 138, 82, 0.45)',
   },
   viewToggleText: {
-    color: '#8A9490',
+    color: '#87918F',
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 11,
   },
   viewToggleTextActive: {
-    color: '#0F1512',
+    color: '#73D993',
+  },
+  timerScroll: {
+    flex: 1,
+  },
+  timerScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   list: {
     paddingHorizontal: 20,

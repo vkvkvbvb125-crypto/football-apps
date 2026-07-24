@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 
-const PARTICLE_COUNT = 150;
+const PARTICLE_COUNT = 70;
 const DEFAULT_SPHERE_RADIUS = 130;
 const ROTATION_STEPS = 36;
 const ROTATION_DURATION_MS = 26000;
-const DOT_BASE_SIZE = 4;
+const DOT_BASE_SIZE = 3;
 
 interface ParticleSphereProps {
   size?: number;
@@ -50,8 +50,8 @@ function buildParticles(radius: number, dotBaseSize: number): ParticleFrames[] {
       const z = -x0 * sin + z0 * cos;
 
       xSteps.push(x * radius - size / 2);
-      opacitySteps.push(lerp(z, -1, 1, 0.12, 0.85));
-      scaleSteps.push(lerp(z, -1, 1, 0.5, 1.15));
+      opacitySteps.push(lerp(z, -1, 1, 0.06, 0.45));
+      scaleSteps.push(lerp(z, -1, 1, 0.4, 0.9));
     }
 
     return { key: i, y: y0 * radius - size / 2, size, xSteps, opacitySteps, scaleSteps };

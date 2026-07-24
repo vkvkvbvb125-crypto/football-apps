@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, Vibration, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, Vibration, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
+import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 
-const RING_SIZE = 232;
-const STROKE_WIDTH = 10;
-const RADIUS = (RING_SIZE - STROKE_WIDTH) / 2;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const STROKE_WIDTH = 6;
+const PARTICLE_BOX = 300;
 
 function formatTime(totalSeconds: number) {
   const clamped = Math.max(0, totalSeconds);
@@ -24,6 +23,11 @@ function formatTime(totalSeconds: number) {
 }
 
 export function TimerPanel() {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const ringSize = Math.min(250, SCREEN_WIDTH * 0.66);
+  const radius = (ringSize - STROKE_WIDTH) / 2;
+  const circumference = 2 * Math.PI * radius;
+
   const [quarterMinutes, setQuarterMinutes] = useState(10);
   const [remainingSeconds, setRemainingSeconds] = useState(quarterMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
@@ -86,63 +90,69 @@ export function TimerPanel() {
 
   const totalSeconds = quarterMinutes * 60;
   const progress = totalSeconds > 0 ? Math.min(1, remainingSeconds / totalSeconds) : 0;
-  const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+  const strokeDashoffset = circumference * (1 - progress);
   const stateLabel =
     remainingSeconds === 0 ? '종료' : isRunning ? '진행중' : remainingSeconds === totalSeconds ? '경기 전' : '일시정지';
 
   return (
     <View style={styles.content}>
-      <View style={styles.ringWrap}>
-        <Svg width={RING_SIZE} height={RING_SIZE}>
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RADIUS}
-            stroke="rgba(74,222,128,0.15)"
-            strokeWidth={STROKE_WIDTH}
-            fill="none"
-          />
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RADIUS}
-            stroke="#4ADE80"
-            strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
-            strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-            strokeDashoffset={strokeDashoffset}
-            fill="none"
-            rotation={-90}
-            originX={RING_SIZE / 2}
-            originY={RING_SIZE / 2}
-          />
-        </Svg>
-        <View style={styles.ringCenter}>
-          <Text style={styles.stateLabel}>{stateLabel}</Text>
-          <Text style={styles.timeDisplay}>{formatTime(remainingSeconds)}</Text>
-          <View style={styles.quarterRow}>
-            <TextInput
-              style={styles.quarterInput}
-              value={String(quarterMinutes)}
-              onChangeText={handleMinutesChange}
-              keyboardType="number-pad"
-              editable={!isRunning}
+      <View style={styles.ringSection}>
+        <View style={styles.particleLayer} pointerEvents="none">
+          <ParticleSphere size={PARTICLE_BOX} />
+        </View>
+
+        <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+          <Svg width={ringSize} height={ringSize}>
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke="#1D472F"
+              strokeWidth={STROKE_WIDTH}
+              fill="none"
             />
-            <Text style={styles.quarterUnit}>분</Text>
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke="#52D979"
+              strokeWidth={STROKE_WIDTH}
+              strokeLinecap="round"
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={strokeDashoffset}
+              fill="none"
+              rotation={-90}
+              originX={ringSize / 2}
+              originY={ringSize / 2}
+            />
+          </Svg>
+          <View style={styles.ringCenter}>
+            <Text style={styles.stateLabel}>{stateLabel}</Text>
+            <Text style={styles.timeDisplay}>{formatTime(remainingSeconds)}</Text>
+            <View style={styles.quarterRow}>
+              <TextInput
+                style={styles.quarterInput}
+                value={String(quarterMinutes)}
+                onChangeText={handleMinutesChange}
+                keyboardType="number-pad"
+                editable={!isRunning}
+              />
+              <Text style={styles.quarterUnit}>분</Text>
+            </View>
           </View>
         </View>
       </View>
 
       <View style={styles.controlRow}>
         <Pressable style={styles.secondaryButton} onPress={handleReset}>
-          <Ionicons name="refresh-outline" size={16} color="#8A9490" />
+          <Ionicons name="refresh-outline" size={14} color="#8A9490" />
           <Text style={styles.secondaryButtonText}>초기화</Text>
         </Pressable>
         <Pressable style={styles.primaryButton} onPress={handleStartPause}>
           <Text style={styles.primaryButtonText}>{isRunning ? '일시정지' : '시작'}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={handleAddMinute}>
-          <Ionicons name="add" size={16} color="#8A9490" />
+          <Ionicons name="add" size={14} color="#8A9490" />
           <Text style={styles.secondaryButtonText}>1분</Text>
         </Pressable>
       </View>
@@ -152,20 +162,26 @@ export function TimerPanel() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
     alignItems: 'center',
   },
-  ringWrap: {
-    width: RING_SIZE,
-    height: RING_SIZE,
+  ringSection: {
+    width: PARTICLE_BOX,
+    height: PARTICLE_BOX,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  particleLayer: {
+    position: 'absolute',
+    width: PARTICLE_BOX,
+    height: PARTICLE_BOX,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ringCenter: {
     position: 'absolute',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   stateLabel: {
     color: '#8A9490',
@@ -175,41 +191,42 @@ const styles = StyleSheet.create({
   timeDisplay: {
     marginTop: 8,
     color: '#FFFFFF',
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
   quarterRow: {
-    marginTop: 6,
+    marginTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   quarterInput: {
     color: '#8A9490',
-    fontSize: 13,
-    textAlign: 'right',
-    minWidth: 14,
+    fontSize: 11,
+    textAlign: 'center',
+    width: 16,
     padding: 0,
   },
   quarterUnit: {
     color: '#8A9490',
-    fontSize: 13,
+    fontSize: 11,
   },
   controlRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 28,
-    width: '100%',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 16,
   },
   secondaryButton: {
-    flex: 1,
+    width: 74,
+    height: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 999,
+    gap: 4,
+    borderRadius: 16,
     backgroundColor: '#141A17',
     borderWidth: 1,
     borderColor: '#22302A',
@@ -217,18 +234,19 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#8A9490',
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
   },
   primaryButton: {
-    flex: 1.5,
-    paddingVertical: 14,
-    borderRadius: 999,
+    width: 88,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#4ADE80',
   },
   primaryButtonText: {
     color: '#0F1512',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14,
   },
 });

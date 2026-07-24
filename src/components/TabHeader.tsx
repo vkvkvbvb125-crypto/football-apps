@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotificationsStore } from '../features/notifications/stores/notificationsStore';
 
 interface TabHeaderProps {
@@ -8,6 +9,7 @@ interface TabHeaderProps {
 }
 
 export function TabHeader({ title }: TabHeaderProps) {
+  const insets = useSafeAreaInsets();
   const notifications = useNotificationsStore((s) => s.notifications);
   const loading = useNotificationsStore((s) => s.loading);
   const load = useNotificationsStore((s) => s.load);
@@ -27,7 +29,7 @@ export function TabHeader({ title }: TabHeaderProps) {
   };
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { paddingTop: insets.top + 10 }]}>
       <Text style={styles.title}>{title}</Text>
       <Pressable onPress={handleOpenBell} hitSlop={8} style={styles.bellWrap}>
         <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
@@ -76,8 +78,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   title: {
     flex: 1,

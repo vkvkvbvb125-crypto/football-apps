@@ -15,7 +15,7 @@ const Stack = createNativeStackNavigator();
 
 const navTheme = {
   ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: '#000000', card: '#000000' },
+  colors: { ...DarkTheme.colors, background: '#07100D', card: '#07100D' },
 };
 
 function LoadingScreen() {

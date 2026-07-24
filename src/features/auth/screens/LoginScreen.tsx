@@ -21,9 +21,9 @@ export function LoginScreen() {
           resizeMode="contain"
         />
         <Text style={styles.brandName}>
-          킥<Text style={styles.brandNameAccent}>데이</Text>
+          킥 <Text style={styles.brandNameAccent}>데이</Text>
         </Text>
-        <Text style={styles.brandNameEn}>KICKDAY</Text>
+        <Text style={styles.brandNameEn}>K I C K D A Y</Text>
         <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
       </View>
 

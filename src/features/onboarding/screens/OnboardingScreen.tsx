@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { FieldBackground } from '../../../components/FieldBackground';
@@ -58,6 +59,7 @@ interface OnboardingScreenProps {
 
 export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const markSeen = useOnboardingStore((s) => s.markSeen);
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -80,7 +82,8 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 
   return (
     <ScreenGradient>
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
+      <ScrollView contentContainerStyle={styles.outerScrollContent}>
       <View style={styles.skipRow}>
         <Pressable onPress={handleFinish} hitSlop={8}>
           <Text style={styles.skipText}>건너뛰기</Text>
@@ -231,6 +234,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           <Text style={styles.startButtonText}>시작하기</Text>
         </Pressable>
       )}
+      </ScrollView>
     </View>
     </ScreenGradient>
   );
@@ -239,8 +243,9 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 56,
-    paddingBottom: 40,
+  },
+  outerScrollContent: {
+    flexGrow: 1,
   },
   skipRow: {
     alignItems: 'flex-end',

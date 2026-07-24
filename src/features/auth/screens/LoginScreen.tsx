@@ -1,5 +1,6 @@
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 
@@ -7,51 +8,65 @@ export function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
   const signingIn = useAuthStore((s) => s.signingIn);
   const error = useAuthStore((s) => s.error);
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
-  // 온보딩 인트로 화면과 동일하게 화면 폭 100% 기준(높이 제한 없이)
-  const logoWidth = SCREEN_WIDTH;
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // 화면 폭 100% 기준으로 키우되, 화면이 짧은 기기에서는 높이 예산(화면
+  // 높이의 65%) 안으로 자동으로 줄어들게 해서 하단 버튼/약관 문구가
+  // 화면 밖으로 밀려나지 않도록 한다. 일반적인 폰 화면에서는 두 값이
+  // 거의 같아서 지금 보이는 크기와 차이가 없다.
+  const logoWidthFromHeight = (SCREEN_HEIGHT * 0.65) / 1.5;
+  const logoWidth = Math.min(SCREEN_WIDTH, logoWidthFromHeight);
   const logoHeight = logoWidth * 1.5;
 
   return (
     <ScreenGradient>
-    <View style={styles.container}>
-      <View style={styles.brand}>
-        <Image
-          source={require('../../../../assets/onbording-1.png')}
-          style={[styles.logoImage, { width: logoWidth, height: logoHeight, marginHorizontal: -28 }]}
-          resizeMode="contain"
-        />
-        <Text style={styles.brandName}>
-          킥 <Text style={styles.brandNameAccent}>데이</Text>
-        </Text>
-        <Text style={styles.brandNameEn}>K I C K D A Y</Text>
-        <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        <View style={styles.brand}>
+          <Image
+            source={require('../../../../assets/onbording-1.png')}
+            style={[
+              styles.logoImage,
+              { width: logoWidth, height: logoHeight, marginBottom: -logoHeight * 0.17 },
+            ]}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandName}>
+            킥 <Text style={styles.brandNameAccent}>데이</Text>
+          </Text>
+          <Text style={styles.brandNameEn}>K I C K D A Y</Text>
+          <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
+        </View>
 
-      <View style={styles.bottom}>
-        {error && <Text style={styles.error}>{error}</Text>}
+        <View style={styles.bottom}>
+          {error && <Text style={styles.error}>{error}</Text>}
 
-        <Pressable
-          style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
-          onPress={signIn}
-          disabled={signingIn}
-        >
-          {signingIn ? (
-            <ActivityIndicator color="#3C1E1E" />
-          ) : (
-            <View style={styles.loginButtonContent}>
-              <Ionicons name="chatbubble" size={18} color="#3C1E1E" />
-              <Text style={styles.loginButtonText}>카카오톡으로 시작하기</Text>
-            </View>
-          )}
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
+            onPress={signIn}
+            disabled={signingIn}
+          >
+            {signingIn ? (
+              <ActivityIndicator color="#3C1E1E" />
+            ) : (
+              <View style={styles.loginButtonContent}>
+                <Ionicons name="chatbubble" size={18} color="#3C1E1E" />
+                <Text style={styles.loginButtonText}>카카오톡으로 시작하기</Text>
+              </View>
+            )}
+          </Pressable>
 
-        <Text style={styles.footnote}>
-          로그인 시 <Text style={styles.footnoteLink}>이용약관</Text> 및{' '}
-          <Text style={styles.footnoteLink}>개인정보처리방침</Text>에{'\n'}동의하게 됩니다
-        </Text>
-      </View>
-    </View>
+          <Text style={styles.footnote}>
+            로그인 시 <Text style={styles.footnoteLink}>이용약관</Text> 및{' '}
+            <Text style={styles.footnoteLink}>개인정보처리방침</Text>에{'\n'}동의하게 됩니다
+          </Text>
+        </View>
+      </ScrollView>
     </ScreenGradient>
   );
 }

@@ -48,7 +48,7 @@ function dateKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
+export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const matches = useAttendanceStore((s) => s.matches);
   const loaded = useAttendanceStore((s) => s.loaded);
@@ -185,6 +185,13 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
     setModalVisible(true);
   };
 
+  useEffect(() => {
+    if (isAdmin && (route.params as { openCreate?: boolean } | undefined)?.openCreate) {
+      handleOpenCreate();
+      navigation.setParams({ openCreate: undefined });
+    }
+  }, [route.params, isAdmin]);
+
   const handleOpenEdit = (match: MatchWithVotes) => {
     const d = new Date(match.match_date);
     setSelectedDate(d);
@@ -288,7 +295,11 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
             {loading && !loaded ? (
               <ActivityIndicator style={{ marginTop: 24 }} color="#4ADE80" />
             ) : monthMatches.length === 0 ? (
-              <EmptyState emoji="🗓️" title="이 달엔 등록된 경기가 없어요" subtitle="+ 버튼으로 새 경기를 만들어보세요" />
+              <EmptyState
+                emoji="🗓️"
+                title="이 달엔 등록된 경기가 없어요"
+                subtitle="홈 화면의 경기 만들기 버튼으로 새 경기를 만들어보세요"
+              />
             ) : (
               monthMatches.map((match) => {
                 const myVote = match.votes.find((v) => v.team_member_id === activeTeam.membershipId);
@@ -370,15 +381,6 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
             )}
             </View>
           </ScrollView>
-
-          {isAdmin && (
-            <Pressable
-              style={({ pressed }) => [styles.fab, pressed && styles.pressedOpacity]}
-              onPress={handleOpenCreate}
-            >
-              <Ionicons name="add" size={28} color="#0B0F0D" />
-            </Pressable>
-          )}
         </View>
       )}
 
@@ -500,18 +502,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     gap: 12,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#4ADE80',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0px 8px 16px rgba(74,222,128,0.4)',
   },
   card: {
     backgroundColor: '#141A17',

@@ -53,6 +53,7 @@ function MatchWeatherChip({ match }: { match: MatchWithVotes }) {
 
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
+  const isAdmin = activeTeam?.role === 'admin';
   const members = useTeamStore((s) => s.members);
   const loadMembers = useTeamStore((s) => s.loadMembers);
 
@@ -124,10 +125,15 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           })
         )}
 
-        <Pressable style={styles.createButton} onPress={() => navigation.navigate('Attendance')}>
-          <Text style={styles.createButtonText}>경기 만들기</Text>
-          <Ionicons name="add" size={18} color="#0F1512" />
-        </Pressable>
+        {isAdmin && (
+          <Pressable
+            style={styles.createButton}
+            onPress={() => navigation.navigate('Attendance', { openCreate: true })}
+          >
+            <Text style={styles.createButtonText}>경기 만들기</Text>
+            <Ionicons name="add" size={18} color="#0F1512" />
+          </Pressable>
+        )}
       </ScrollView>
     </ScreenGradient>
   );

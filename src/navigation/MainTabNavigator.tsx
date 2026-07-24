@@ -21,10 +21,10 @@ function assignmentTabIcon() {
   return (
     <View
       style={{
-        width: 68,
-        height: 68,
-        borderRadius: 34,
-        top: -26,
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        top: -12,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#0F1512',

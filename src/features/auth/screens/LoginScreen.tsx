@@ -47,7 +47,8 @@ export function LoginScreen() {
 
         <Text style={styles.footnote}>
           로그인 시 <Text style={styles.footnoteLink}>이용약관</Text> 및{' '}
-          <Text style={styles.footnoteLink}>개인정보처리방침</Text>에 동의하게 됩니다
+          <Text style={styles.footnoteLink}>개인정보처리방침</Text>
+          {'\n'}에 동의하게 됩니다
         </Text>
       </View>
     </View>

@@ -24,7 +24,7 @@ function assignmentTabIcon() {
         width: 72,
         height: 72,
         borderRadius: 36,
-        top: -12,
+        top: -20,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#0F1512',

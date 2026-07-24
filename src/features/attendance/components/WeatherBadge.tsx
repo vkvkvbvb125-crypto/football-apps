@@ -8,21 +8,23 @@ interface WeatherBadgeProps {
   matchDateIso: string;
 }
 
+type UnavailableReason = 'no-location' | 'date-range' | 'fetch-failed';
+
 export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadgeProps) {
   const [weather, setWeather] = useState<MatchWeather | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+  const [unavailable, setUnavailable] = useState<UnavailableReason | null>(null);
 
   useEffect(() => {
     setWeather(null);
-    setUnavailable(false);
+    setUnavailable(null);
 
     if (latitude == null || longitude == null) {
-      setUnavailable(true);
+      setUnavailable('no-location');
       return;
     }
     const hoursUntilMatch = (new Date(matchDateIso).getTime() - Date.now()) / (1000 * 60 * 60);
     if (hoursUntilMatch > 240 || hoursUntilMatch < -3) {
-      setUnavailable(true);
+      setUnavailable('date-range');
       return;
     }
 
@@ -31,10 +33,10 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
       .then((result) => {
         if (cancelled) return;
         if (result.available) setWeather(result);
-        else setUnavailable(true);
+        else setUnavailable('fetch-failed');
       })
       .catch(() => {
-        if (!cancelled) setUnavailable(true);
+        if (!cancelled) setUnavailable('fetch-failed');
       });
     return () => {
       cancelled = true;
@@ -42,9 +44,15 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
   }, [latitude, longitude, matchDateIso]);
 
   if (unavailable) {
+    const message =
+      unavailable === 'no-location'
+        ? '장소를 설정하면 날씨를 볼 수 있어요'
+        : unavailable === 'date-range'
+          ? '날씨 조회가 안 되는 날짜예요'
+          : '날씨 조회에 실패했어요';
     return (
       <View style={styles.unavailableCard}>
-        <Text style={styles.unavailableText}>날씨 조회가 안 되는 날짜예요</Text>
+        <Text style={styles.unavailableText}>{message}</Text>
       </View>
     );
   }

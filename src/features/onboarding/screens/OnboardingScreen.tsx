@@ -32,11 +32,6 @@ const SLIDES = [
     subtitle: '참가 여부와 일정 조율을 한눈에!',
   },
   {
-    icon: 'checkbox-outline',
-    title: '참석 투표로\n인원을 빠르게 파악하세요',
-    subtitle: '마감 시간이 지나면 자동으로 투표가 잠겨요',
-  },
-  {
     icon: 'cash-outline',
     title: '회비 정산도\n자동으로 계산해요',
     subtitle: '총무는 입금 확인 체크만 하면 끝',
@@ -154,7 +149,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 </Text>
               </View>
             </View>
-          ) : i === 4 ? (
+          ) : i === 3 ? (
             <View
               key={i}
               style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
@@ -165,14 +160,14 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 resizeMode="contain"
               />
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>04</Text>
+                <Text style={styles.stepNumber}>03</Text>
                 <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
                 <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
                   {slide.subtitle}
                 </Text>
               </View>
             </View>
-          ) : i === 5 ? (
+          ) : i === 4 ? (
             <View
               key={i}
               style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}

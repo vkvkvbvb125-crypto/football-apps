@@ -37,11 +37,6 @@ const SLIDES = [
     subtitle: '마감 시간이 지나면 자동으로 투표가 잠겨요',
   },
   {
-    icon: 'people-outline',
-    title: '참석 인원으로\n팀을 나눠보세요',
-    subtitle: '랜덤 분배 후 필요하면 직접 조정할 수 있어요',
-  },
-  {
     icon: 'cash-outline',
     title: '회비 정산도\n자동으로 계산해요',
     subtitle: '총무는 입금 확인 체크만 하면 끝',
@@ -165,7 +160,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
             >
               <Image
-                source={require('../../../../assets/onbording-4.png')}
+                source={require('../../../../assets/onbording-5.png')}
                 style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
                 resizeMode="contain"
               />
@@ -178,24 +173,6 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
               </View>
             </View>
           ) : i === 5 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-5.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
-              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>05</Text>
-                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
-                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
-                  {slide.subtitle}
-                </Text>
-              </View>
-            </View>
-          ) : i === 6 ? (
             <View
               key={i}
               style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}

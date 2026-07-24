@@ -165,10 +165,13 @@ export function AttendanceScreen({ navigation }: BottomTabScreenProps<any>) {
   }, [matches, activeTeam]);
 
   const monthMatches = useMemo(() => {
+    const startOfToday = new Date().setHours(0, 0, 0, 0);
     return matches
       .filter((m) => {
         const d = new Date(m.match_date);
-        return d.getFullYear() === visibleMonth.year && d.getMonth() === visibleMonth.month;
+        return (
+          d.getFullYear() === visibleMonth.year && d.getMonth() === visibleMonth.month && d.getTime() >= startOfToday
+        );
       })
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
   }, [matches, visibleMonth]);

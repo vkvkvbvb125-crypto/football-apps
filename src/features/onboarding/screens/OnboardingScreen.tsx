@@ -154,6 +154,42 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 </Text>
               </View>
             </View>
+          ) : i === 4 ? (
+            <View
+              key={i}
+              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
+            >
+              <Image
+                source={require('../../../../assets/onbording-4.png')}
+                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
+                resizeMode="contain"
+              />
+              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
+                <Text style={styles.stepNumber}>04</Text>
+                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
+                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
+                  {slide.subtitle}
+                </Text>
+              </View>
+            </View>
+          ) : i === 5 ? (
+            <View
+              key={i}
+              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
+            >
+              <Image
+                source={require('../../../../assets/onbording-5.png')}
+                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
+                resizeMode="contain"
+              />
+              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
+                <Text style={styles.stepNumber}>05</Text>
+                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
+                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
+                  {slide.subtitle}
+                </Text>
+              </View>
+            </View>
           ) : (
             <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
               <View style={styles.illustrationCard}>

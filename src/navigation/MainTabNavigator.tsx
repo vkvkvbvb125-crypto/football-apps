@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View } from 'react-native';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { SettlementScreen } from '../features/settlement/screens/SettlementScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
@@ -15,8 +16,22 @@ function tabIcon(outlineName: keyof typeof Ionicons.glyphMap, filledName: keyof 
   );
 }
 
-function assignmentTabIcon({ focused }: { focused: boolean }) {
-  return <SphereLogoMark size={26} color={focused ? '#4ADE80' : '#5A625E'} />;
+function assignmentTabIcon() {
+  return (
+    <View
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(74,222,128,0.18)',
+        boxShadow: '0px 0px 12px 2px rgba(74,222,128,0.5)',
+      }}
+    >
+      <SphereLogoMark size={26} color="#4ADE80" />
+    </View>
+  );
 }
 
 export function MainTabNavigator() {
@@ -24,22 +39,16 @@ export function MainTabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
         tabBarActiveTintColor: '#4ADE80',
         tabBarInactiveTintColor: '#E7ECE9',
         tabBarStyle: {
-          position: 'absolute',
-          left: 16,
-          right: 16,
-          bottom: 0,
-          backgroundColor: '#141A17',
-          borderRadius: 28,
-          height: 56,
-          borderWidth: 1,
-          borderColor: '#22302A',
-          boxShadow: '0px 8px 20px rgba(0,0,0,0.4)',
+          backgroundColor: '#0F1512',
+          borderTopColor: '#1E2924',
+          height: 68,
+          paddingTop: 8,
+          paddingBottom: 12,
         },
-        tabBarItemStyle: { paddingVertical: 0 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
       <Tab.Screen

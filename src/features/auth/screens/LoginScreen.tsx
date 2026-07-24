@@ -118,11 +118,11 @@ const styles = StyleSheet.create({
   footnote: {
     marginTop: 16,
     color: '#8A9490',
-    fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,
   },
   footnoteLink: {
+    color: '#4ADE80',
     textDecorationLine: 'underline',
   },
   error: {

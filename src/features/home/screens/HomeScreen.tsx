@@ -16,7 +16,7 @@ const UPCOMING_LIMIT = 5;
 function formatMatchDate(iso: string) {
   const d = new Date(iso);
   const dateLabel = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-  const timeLabel = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const timeLabel = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
   return { dateLabel, timeLabel };
 }
 

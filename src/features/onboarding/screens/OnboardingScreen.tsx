@@ -41,6 +41,11 @@ const SLIDES = [
     title: '참석 인원으로\n팀을 나눠보세요',
     subtitle: '랜덤 분배 후 필요하면 직접 조정할 수 있어요',
   },
+  {
+    icon: 'cash-outline',
+    title: '회비 정산도\n자동으로 계산해요',
+    subtitle: '총무는 입금 확인 체크만 하면 끝',
+  },
 ] as const satisfies ReadonlyArray<{
   icon: keyof typeof Ionicons.glyphMap;
   title: string;

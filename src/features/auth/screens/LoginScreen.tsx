@@ -59,9 +59,10 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 32,
     paddingHorizontal: 28,
-    paddingTop: 16,
+    paddingTop: 1,
     paddingBottom: 40,
   },
   brand: {

@@ -147,11 +147,11 @@ const styles = StyleSheet.create({
   },
   greetingIcon: {
     position: 'absolute',
-    width: 130,
-    height: 130,
-    right: -16,
-    bottom: -20,
-    opacity: 0.9,
+    width: 190,
+    height: 190,
+    right: -30,
+    bottom: -40,
+    opacity: 0.95,
   },
   greetingTitle: {
     color: '#FFFFFF',

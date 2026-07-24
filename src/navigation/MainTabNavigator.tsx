@@ -44,11 +44,12 @@ export function MainTabNavigator() {
         tabBarStyle: {
           backgroundColor: '#0F1512',
           borderTopColor: '#1E2924',
-          height: 68,
+          height: 82,
           paddingTop: 8,
-          paddingBottom: 12,
+          paddingBottom: 16,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', lineHeight: 14 },
+        tabBarItemStyle: { paddingTop: 2 },
       }}
     >
       <Tab.Screen

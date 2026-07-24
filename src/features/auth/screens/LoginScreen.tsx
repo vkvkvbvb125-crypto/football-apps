@@ -8,7 +8,7 @@ export function LoginScreen() {
   const signingIn = useAuthStore((s) => s.signingIn);
   const error = useAuthStore((s) => s.error);
   const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const logoWidth = SCREEN_WIDTH * 0.85;
+  const logoWidth = SCREEN_WIDTH * 0.5;
   const logoHeight = logoWidth * 1.5;
 
   return (
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    marginBottom: -60,
+    marginBottom: -35,
   },
   brandName: {
     fontSize: 36,

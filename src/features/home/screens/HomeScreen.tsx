@@ -1,18 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { TabHeader } from '../../../components/TabHeader';
-import { WeatherBadge } from '../../attendance/components/WeatherBadge';
-import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
-import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
-import { usePollsStore } from '../../polls/stores/pollsStore';
+import { fetchMatchWeather, weatherEmoji } from '../../attendance/services/weatherService';
+import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 
 const NEXT_MATCH_GRACE_MS = 3 * 60 * 60 * 1000;
+const UPCOMING_LIMIT = 5;
 
 function formatMatchDate(iso: string) {
   const d = new Date(iso);
@@ -21,125 +20,109 @@ function formatMatchDate(iso: string) {
   return { dateLabel, timeLabel };
 }
 
-function formatDDay(iso: string) {
-  const diffMs = new Date(iso).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0);
-  const days = Math.round(diffMs / 86400000);
-  if (days <= 0) return '오늘';
-  return `D-${days}`;
+function MatchWeatherChip({ match }: { match: MatchWithVotes }) {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    setText(null);
+    if (match.latitude == null || match.longitude == null) return;
+    const hoursUntilMatch = (new Date(match.match_date).getTime() - Date.now()) / (1000 * 60 * 60);
+    if (hoursUntilMatch > 240 || hoursUntilMatch < -3) return;
+
+    let cancelled = false;
+    fetchMatchWeather(match.latitude, match.longitude, match.match_date)
+      .then((weather) => {
+        if (cancelled || !weather.available) return;
+        if (weather.range === 'mid') {
+          const rain = weather.amWeather?.includes('비') || weather.pmWeather?.includes('비');
+          setText(`${rain ? '🌧️' : '⛅'} ${weather.minTemp}~${weather.maxTemp}°C`);
+        } else {
+          const emoji = weatherEmoji(weather.precipitationType ?? '0', weather.sky ?? '1');
+          setText(`${emoji} ${weather.temperature}°C`);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [match.id, match.latitude, match.longitude, match.match_date]);
+
+  if (!text) return null;
+  return <Text style={styles.matchMeta}>{text}</Text>;
 }
 
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
+  const members = useTeamStore((s) => s.members);
+  const loadMembers = useTeamStore((s) => s.loadMembers);
 
   const matches = useAttendanceStore((s) => s.matches);
   const loadMatches = useAttendanceStore((s) => s.loadMatches);
 
-  const announcements = useAnnouncementsStore((s) => s.announcements);
-  const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
-
-  const polls = usePollsStore((s) => s.polls);
-  const loadPolls = usePollsStore((s) => s.loadPolls);
-
   useEffect(() => {
     if (!activeTeam) return;
     loadMatches();
-    loadAnnouncements();
-    loadPolls();
+    loadMembers();
   }, [activeTeam?.team.id]);
 
   if (!activeTeam) return null;
 
   const now = Date.now();
-  const nextMatch = matches.find((m) => new Date(m.match_date).getTime() >= now - NEXT_MATCH_GRACE_MS);
-  const latestAnnouncement = announcements[0] ?? null;
-
-  const myVoteOnNextMatch = nextMatch?.votes.find((v) => v.team_member_id === activeTeam.membershipId);
-  const openUnansweredPoll = polls.find(
-    (p) =>
-      (p.deadline == null || new Date(p.deadline).getTime() > now) &&
-      !p.responses.some((r) => r.team_member_id === activeTeam.membershipId)
-  );
-
-  let nudge: { text: string; onPress: () => void } | null = null;
-  if (nextMatch && !myVoteOnNextMatch) {
-    nudge = { text: '다음 경기 투표에 참여해주세요', onPress: () => navigation.navigate('Attendance') };
-  } else if (openUnansweredPoll) {
-    nudge = {
-      text: `새 투표에 참여해주세요: ${openUnansweredPoll.question}`,
-      onPress: () => navigation.navigate('Team'),
-    };
-  }
+  const upcomingMatches = matches
+    .filter((m) => new Date(m.match_date).getTime() >= now - NEXT_MATCH_GRACE_MS)
+    .slice(0, UPCOMING_LIMIT);
 
   return (
     <ScreenGradient>
       <TabHeader title="홈" />
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
-          <ParticleSphere />
-          <LinearGradient
-            colors={['rgba(15,21,18,0)', 'rgba(15,21,18,0.55)', 'rgba(15,21,18,0.97)']}
-            locations={[0, 0.45, 1]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <View style={styles.heroContent}>
-            <Text style={styles.heroEyebrow} numberOfLines={1}>
-              {activeTeam.team.name}
-            </Text>
-            {nextMatch ? (
-              <>
-                <Text style={styles.heroDDay}>{formatDDay(nextMatch.match_date)}</Text>
-                <Text style={styles.heroMatchLine}>
-                  {formatMatchDate(nextMatch.match_date).dateLabel} · {nextMatch.location ?? '장소 미정'} ·{' '}
-                  {formatMatchDate(nextMatch.match_date).timeLabel}
-                </Text>
-                <WeatherBadge
-                  latitude={nextMatch.latitude}
-                  longitude={nextMatch.longitude}
-                  matchDateIso={nextMatch.match_date}
-                />
-                <Text style={styles.heroAttendee}>
-                  참석 {nextMatch.votes.filter((v) => v.status === 'attend').length}명
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.heroEmptyTitle}>등록된 경기가 없어요</Text>
-                <Text style={styles.heroEmptySubtitle}>새 경기가 등록되면 여기에 보여드릴게요</Text>
-              </>
-            )}
-          </View>
+        <LinearGradient colors={['#2D5F3E', '#173A26']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greetingCard}>
+          <Ionicons name="football" size={110} color="rgba(255,255,255,0.1)" style={styles.greetingIcon} />
+          <Text style={styles.greetingTitle}>즐거운 풋살,{'\n'}오늘도 함께!</Text>
+          <Text style={styles.greetingSubtitle}>오늘도 멋진 경기를 즐겨보세요</Text>
+        </LinearGradient>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>다가오는 경기</Text>
+          <Pressable onPress={() => navigation.navigate('Attendance')} hitSlop={8}>
+            <Text style={styles.sectionLink}>전체보기</Text>
+          </Pressable>
         </View>
 
-        {latestAnnouncement && (
-          <Pressable style={styles.card} onPress={() => navigation.navigate('Team')}>
-            <View style={styles.cardIconChip}>
-              <Ionicons name="megaphone-outline" size={16} color="#4ADE80" />
-            </View>
-            <View style={styles.cardTextCol}>
-              <Text style={styles.cardLabel}>공지</Text>
-              <Text style={styles.announceTitle} numberOfLines={1}>
-                {latestAnnouncement.title}
-              </Text>
-              <Text style={styles.announceBody} numberOfLines={1}>
-                {latestAnnouncement.body}
-              </Text>
-            </View>
-          </Pressable>
+        {upcomingMatches.length === 0 ? (
+          <View style={styles.matchCard}>
+            <Text style={styles.emptyTitle}>등록된 경기가 없어요</Text>
+            <Text style={styles.emptySubtitle}>새 경기가 등록되면 여기에 보여드릴게요</Text>
+          </View>
+        ) : (
+          upcomingMatches.map((match) => {
+            const { dateLabel, timeLabel } = formatMatchDate(match.match_date);
+            const attendCount = match.votes.filter((v) => v.status === 'attend').length;
+            return (
+              <Pressable
+                key={match.id}
+                style={({ pressed }) => [styles.matchCard, pressed && styles.matchCardPressed]}
+                onPress={() => navigation.navigate('Attendance')}
+              >
+                <Text style={styles.matchDate}>
+                  {dateLabel} {timeLabel}
+                </Text>
+                <Text style={styles.matchLocation}>{match.location ?? '장소 미정'}</Text>
+                <View style={styles.matchMetaRow}>
+                  <MatchWeatherChip match={match} />
+                  <Text style={styles.matchAttend}>
+                    참여 {attendCount}/{members.length}명
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })
         )}
 
-        {nudge && (
-          <Pressable style={styles.card} onPress={nudge.onPress}>
-            <View style={[styles.cardIconChip, styles.cardIconChipWarn]}>
-              <Ionicons name="alert-circle-outline" size={16} color="#D2A34C" />
-            </View>
-            <View style={styles.cardTextCol}>
-              <Text style={styles.nudgeText} numberOfLines={2}>
-                {nudge.text}
-              </Text>
-            </View>
-          </Pressable>
-        )}
+        <Pressable style={styles.createButton} onPress={() => navigation.navigate('Attendance')}>
+          <Ionicons name="add" size={18} color="#0F1512" />
+          <Text style={styles.createButtonText}>경기 만들기</Text>
+        </Pressable>
       </ScrollView>
     </ScreenGradient>
   );
@@ -148,99 +131,107 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 const styles = StyleSheet.create({
   content: {
     padding: 20,
-    gap: 12,
+    gap: 14,
+    paddingBottom: 100,
   },
-  hero: {
-    height: 220,
-    borderRadius: 20,
+  greetingCard: {
+    borderRadius: 18,
+    padding: 20,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#22302A',
-  },
-  heroContent: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 18,
     gap: 4,
   },
-  heroEyebrow: {
-    color: '#B9C2BD',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+  greetingIcon: {
+    position: 'absolute',
+    right: -10,
+    bottom: -16,
   },
-  heroDDay: {
-    color: '#4ADE80',
-    fontSize: 34,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  heroMatchLine: {
+  greetingTitle: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 27,
   },
-  heroAttendee: {
+  greetingSubtitle: {
     marginTop: 2,
-    color: '#8A9490',
-    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
     fontWeight: '600',
   },
-  heroEmptyTitle: {
-    marginTop: 6,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  sectionTitle: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  heroEmptySubtitle: {
-    marginTop: 2,
+  sectionLink: {
     color: '#8A9490',
     fontSize: 12,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#141A17',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#22302A',
-  },
-  cardIconChip: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(74,222,128,0.15)',
-  },
-  cardIconChipWarn: {
-    backgroundColor: 'rgba(210,163,76,0.15)',
-  },
-  cardTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  cardLabel: {
-    color: '#8A9490',
-    fontSize: 11,
     fontWeight: '600',
   },
-  announceTitle: {
+  matchCard: {
+    backgroundColor: '#141A17',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#22302A',
+    gap: 4,
+  },
+  matchCardPressed: {
+    opacity: 0.85,
+  },
+  matchDate: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
-  announceBody: {
+  matchLocation: {
+    color: '#8A9490',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  matchMetaRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  matchMeta: {
     color: '#8A9490',
     fontSize: 12,
   },
-  nudgeText: {
-    color: '#D2A34C',
-    fontSize: 13,
+  matchAttend: {
+    color: '#4ADE80',
+    fontSize: 12,
     fontWeight: '700',
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    marginTop: 2,
+    color: '#8A9490',
+    fontSize: 12,
+  },
+  createButton: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#4ADE80',
+    borderRadius: 999,
+    paddingVertical: 14,
+  },
+  createButtonText: {
+    color: '#0F1512',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

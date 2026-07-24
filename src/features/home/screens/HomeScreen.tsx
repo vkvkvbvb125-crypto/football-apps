@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,7 +77,11 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
       <TabHeader title="홈" />
       <ScrollView contentContainerStyle={styles.content}>
         <LinearGradient colors={['#2D5F3E', '#173A26']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.greetingCard}>
-          <Ionicons name="football" size={110} color="rgba(255,255,255,0.1)" style={styles.greetingIcon} />
+          <Image
+            source={require('../../../../assets/축구공.png')}
+            style={styles.greetingIcon}
+            resizeMode="contain"
+          />
           <Text style={styles.greetingTitle}>즐거운 풋살,{'\n'}오늘도 함께!</Text>
           <Text style={styles.greetingSubtitle}>오늘도 멋진 경기를 즐겨보세요</Text>
         </LinearGradient>
@@ -142,8 +146,11 @@ const styles = StyleSheet.create({
   },
   greetingIcon: {
     position: 'absolute',
-    right: -10,
-    bottom: -16,
+    width: 130,
+    height: 130,
+    right: -16,
+    bottom: -20,
+    opacity: 0.9,
   },
   greetingTitle: {
     color: '#FFFFFF',

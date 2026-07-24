@@ -43,8 +43,8 @@ const SLIDES = [
   },
   {
     icon: 'shield-outline',
-    title: '지금 바로\n시작해보세요',
-    subtitle: '킥데이와 함께 첫 경기를 만들어보세요!',
+    title: '킥데이와 함께\n풋살을 시작해보세요',
+    subtitle: '',
   },
 ] as const satisfies ReadonlyArray<{
   icon: keyof typeof Ionicons.glyphMap;
@@ -200,9 +200,9 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
                 resizeMode="contain"
               />
-              <View style={[styles.introTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.introTitle}>{slide.title}</Text>
-                <Text style={styles.introSubtitle}>{slide.subtitle}</Text>
+              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
+                <Text style={styles.stepNumber}>05</Text>
+                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
               </View>
             </View>
           ) : (

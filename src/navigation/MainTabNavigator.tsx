@@ -12,7 +12,7 @@ const Tab = createBottomTabNavigator();
 const NAV_BG = 'rgba(6, 14, 14, 0.96)';
 const NAV_BORDER = 'rgba(85, 110, 108, 0.35)';
 const ACTIVE_COLOR = '#35F58A';
-const INACTIVE_ICON = '#8A9693';
+const INACTIVE_ICON = '#9AA6A2';
 const INACTIVE_LABEL = '#6F7977';
 
 function tabIcon(outlineName: keyof typeof Ionicons.glyphMap, filledName: keyof typeof Ionicons.glyphMap) {
@@ -29,7 +29,7 @@ function tabLabel(title: string) {
   return ({ focused }: { focused: boolean }) => (
     <Text
       style={{
-        marginTop: 4,
+        marginTop: 3,
         fontSize: 10,
         fontWeight: '600',
         color: focused ? ACTIVE_COLOR : INACTIVE_LABEL,
@@ -44,23 +44,35 @@ function assignmentTabIcon() {
   return (
     <View
       style={{
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        top: -5,
+        width: 59,
+        height: 59,
+        borderRadius: 29.5,
+        top: 4,
         zIndex: 10,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#071010',
         borderWidth: 1,
-        borderColor: 'rgba(80, 110, 107, 0.55)',
+        borderColor: 'rgba(100, 140, 135, 0.7)',
       }}
     >
-      <Image
-        source={require('../../assets/네비게이션.png')}
-        style={{ width: 44, height: 44 }}
-        resizeMode="contain"
-      />
+      <View
+        style={{
+          width: 51,
+          height: 51,
+          borderRadius: 25.5,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(120, 160, 150, 0.45)',
+        }}
+      >
+        <Image
+          source={require('../../assets/네비게이션.png')}
+          style={{ width: 40, height: 40 }}
+          resizeMode="contain"
+        />
+      </View>
     </View>
   );
 }
@@ -72,14 +84,14 @@ export function MainTabNavigator() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          left: 12,
-          right: 12,
+          left: 8,
+          right: 8,
           bottom: 10,
-          height: 60,
+          height: 59,
           paddingTop: 0,
           paddingBottom: 0,
           backgroundColor: NAV_BG,
-          borderRadius: 10,
+          borderRadius: 9,
           borderWidth: 1,
           borderColor: NAV_BORDER,
           boxShadow: '0px 4px 12px rgba(0,0,0,0.35)',
@@ -114,7 +126,7 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="Team"
         component={TeamHomeScreen}
-        options={{ title: '팀', tabBarIcon: tabIcon('shield-outline', 'shield'), tabBarLabel: tabLabel('팀') }}
+        options={{ title: '팀', tabBarIcon: tabIcon('people-outline', 'people'), tabBarLabel: tabLabel('팀') }}
       />
     </Tab.Navigator>
   );

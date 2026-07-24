@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../features/auth/stores/authStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
@@ -12,6 +12,11 @@ import { MainTabNavigator } from './MainTabNavigator';
 import { registerForPushNotifications } from '../features/notifications/services/pushService';
 
 const Stack = createNativeStackNavigator();
+
+const navTheme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: '#000000', card: '#000000' },
+};
 
 function LoadingScreen() {
   return (
@@ -54,7 +59,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!onboardingSeen ? (
           <Stack.Screen name="Onboarding">

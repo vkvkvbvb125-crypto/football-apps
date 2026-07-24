@@ -20,9 +20,7 @@ export function LoginScreen() {
           style={[styles.logoImage, { width: logoWidth, height: logoHeight }]}
           resizeMode="contain"
         />
-        <Text style={styles.brandName}>
-          킥<Text style={styles.brandNameAccent}>데이</Text>
-        </Text>
+        <Text style={styles.brandName}>킥데이</Text>
         <Text style={styles.brandNameEn}>KICKDAY</Text>
         <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
       </View>
@@ -74,9 +72,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.3,
-  },
-  brandNameAccent: {
-    color: '#4ADE80',
   },
   brandNameEn: {
     marginTop: 2,

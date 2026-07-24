@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    marginBottom: -40,
+    marginBottom: -80,
   },
   brandName: {
     fontSize: 28,

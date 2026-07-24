@@ -75,7 +75,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
 
   const introImageWidth = SCREEN_WIDTH;
   const introImageHeight = introImageWidth * 1.5;
-  const introSlideMarginTop = -SCREEN_HEIGHT * 0.105;
+  const introSlideMarginTop = -SCREEN_HEIGHT * 0.06;
   const introTextMarginTop = -SCREEN_HEIGHT * 0.098;
 
   return (

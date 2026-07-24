@@ -1,4 +1,4 @@
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
@@ -7,6 +7,9 @@ export function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
   const signingIn = useAuthStore((s) => s.signingIn);
   const error = useAuthStore((s) => s.error);
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const logoWidth = SCREEN_WIDTH * 0.85;
+  const logoHeight = logoWidth * 1.5;
 
   return (
     <ScreenGradient>
@@ -14,7 +17,7 @@ export function LoginScreen() {
       <View style={styles.brand}>
         <Image
           source={require('../../../../assets/onbording-1.png')}
-          style={styles.logoImage}
+          style={[styles.logoImage, { width: logoWidth, height: logoHeight }]}
           resizeMode="contain"
         />
         <Text style={styles.brandName}>
@@ -64,9 +67,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    width: 200,
-    height: 300,
-    marginBottom: 8,
+    marginBottom: -40,
   },
   brandName: {
     fontSize: 28,

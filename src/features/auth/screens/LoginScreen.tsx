@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FEE500',
     paddingVertical: 16,
-    borderRadius: 999,
+    borderRadius: 16,
     alignItems: 'center',
     boxShadow: '0px 6px 12px rgba(254,229,0,0.35)',
   },

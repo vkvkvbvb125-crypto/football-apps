@@ -76,6 +76,8 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const feature2ImageWidth = SCREEN_WIDTH;
   const feature2ImageHeight = feature2ImageWidth * 1.5;
 
+  const feature3ImageHeight = introImageWidth * (1199 / 1312);
+
   return (
     <ScreenGradient>
     <View style={styles.container}>
@@ -141,7 +143,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
             >
               <Image
                 source={require('../../../../assets/onbording-3.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
+                style={{ width: introImageWidth, height: feature3ImageHeight, marginHorizontal: -12 }}
                 resizeMode="contain"
               />
               <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>

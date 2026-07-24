@@ -145,11 +145,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                   style={{ width: '100%', height: '100%' }}
                   resizeMode="contain"
                 />
-                <View style={[styles.bubble, { left: '5%', top: '22.5%', width: '40%' }]}>
+                <View style={[styles.bubble, { left: '2.4%', top: '21.8%', width: '44.3%', height: '11.7%' }]}>
                   <Text style={styles.bubbleText}>내일 20:00</Text>
                   <Text style={styles.bubbleText}>풋살장 A</Text>
                 </View>
-                <View style={[styles.bubble, { left: '57%', top: '60.5%', width: '38%' }]}>
+                <View style={[styles.bubble, { left: '58.6%', top: '59.8%', width: '36.1%', height: '10.4%' }]}>
                   <Text style={styles.bubbleText}>토 18:00</Text>
                   <Text style={styles.bubbleText}>풋살장 B</Text>
                 </View>
@@ -247,8 +247,9 @@ const styles = StyleSheet.create({
   },
   bubble: {
     position: 'absolute',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
+    paddingLeft: '10%',
   },
   bubbleText: {
     color: '#FFFFFF',

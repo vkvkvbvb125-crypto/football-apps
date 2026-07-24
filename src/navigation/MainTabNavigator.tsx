@@ -40,7 +40,7 @@ function tabLabel(title: string) {
   );
 }
 
-function assignmentTabIcon() {
+function assignmentTabIcon({ focused }: { focused: boolean }) {
   return (
     <View
       style={{
@@ -51,9 +51,9 @@ function assignmentTabIcon() {
         zIndex: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#071010',
-        borderWidth: 1,
-        borderColor: 'rgba(100, 140, 135, 0.7)',
+        backgroundColor: focused ? '#0B1A12' : '#071010',
+        borderWidth: focused ? 1.5 : 1,
+        borderColor: focused ? ACTIVE_COLOR : 'rgba(100, 140, 135, 0.7)',
       }}
     >
       <View
@@ -64,7 +64,7 @@ function assignmentTabIcon() {
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 1,
-          borderColor: 'rgba(120, 160, 150, 0.45)',
+          borderColor: focused ? 'rgba(53, 245, 138, 0.55)' : 'rgba(120, 160, 150, 0.45)',
         }}
       >
         <Image
@@ -73,6 +73,16 @@ function assignmentTabIcon() {
           resizeMode="contain"
         />
       </View>
+      <View
+        style={{
+          position: 'absolute',
+          bottom: -8,
+          width: 5,
+          height: 5,
+          borderRadius: 2.5,
+          backgroundColor: focused ? ACTIVE_COLOR : 'transparent',
+        }}
+      />
     </View>
   );
 }

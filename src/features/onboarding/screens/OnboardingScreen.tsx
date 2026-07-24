@@ -46,6 +46,11 @@ const SLIDES = [
     title: '회비 정산도\n자동으로 계산해요',
     subtitle: '총무는 입금 확인 체크만 하면 끝',
   },
+  {
+    icon: 'shield-outline',
+    title: '지금 바로\n시작해보세요',
+    subtitle: '킥데이와 함께 첫 경기를 만들어보세요!',
+  },
 ] as const satisfies ReadonlyArray<{
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
@@ -188,6 +193,21 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
                 <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
                   {slide.subtitle}
                 </Text>
+              </View>
+            </View>
+          ) : i === 6 ? (
+            <View
+              key={i}
+              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
+            >
+              <Image
+                source={require('../../../../assets/onbording-1.png')}
+                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
+                resizeMode="contain"
+              />
+              <View style={[styles.introTextBlock, { marginTop: introTextMarginTop }]}>
+                <Text style={styles.introTitle}>{slide.title}</Text>
+                <Text style={styles.introSubtitle}>{slide.subtitle}</Text>
               </View>
             </View>
           ) : (

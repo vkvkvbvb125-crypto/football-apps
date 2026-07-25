@@ -39,7 +39,8 @@
           "locationWhenInUsePermission": "주변 풋살장/축구장을 찾을 때 현재 위치를 사용해요."
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-font"
     ],
     "extra": {
       "eas": {

@@ -11,7 +11,6 @@ import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
-import { EmbeddedNavBar } from '../../../navigation/EmbeddedNavBar';
 
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const [view, setView] = useState<'assign' | 'timer' | 'score'>('assign');
@@ -180,10 +179,6 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
               })}
             </View>
           )}
-
-          <View style={styles.embeddedNavWrap}>
-            <EmbeddedNavBar />
-          </View>
         </ScrollView>
       )}
     </ScreenGradient>
@@ -232,10 +227,7 @@ const styles = StyleSheet.create({
   },
   bodyContent: {
     paddingHorizontal: 11,
-    paddingBottom: 20,
-  },
-  embeddedNavWrap: {
-    marginTop: 14,
+    paddingBottom: 100,
   },
   list: {
     gap: 12,

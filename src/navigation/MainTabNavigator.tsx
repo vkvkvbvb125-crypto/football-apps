@@ -126,14 +126,7 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="Assignment"
         component={AssignmentScreen}
-        options={{
-          title: '경기운영',
-          tabBarIcon: assignmentTabIcon,
-          tabBarLabel: () => null,
-          // 경기운영 화면은 자체 콘텐츠 흐름 안에 내장형 네비게이션(EmbeddedNavBar)을 그려서
-          // 하단 여백 없이 압축 배치한다 - 떠 있는 전역 탭바는 이 화면에서만 숨긴다.
-          tabBarStyle: { display: 'none' },
-        }}
+        options={{ title: '경기운영', tabBarIcon: assignmentTabIcon, tabBarLabel: () => null }}
       />
       <Tab.Screen
         name="Settlement"

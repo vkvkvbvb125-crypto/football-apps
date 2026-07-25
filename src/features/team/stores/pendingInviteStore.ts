@@ -1,0 +1,13 @@
+import { create } from 'zustand';
+
+interface PendingInviteState {
+  code: string | null;
+  setCode: (code: string) => void;
+  clear: () => void;
+}
+
+export const usePendingInviteStore = create<PendingInviteState>((set) => ({
+  code: null,
+  setCode: (code) => set({ code }),
+  clear: () => set({ code: null }),
+}));

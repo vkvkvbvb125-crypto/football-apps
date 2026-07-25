@@ -50,7 +50,7 @@ function buildParticles(radius: number, dotBaseSize: number): ParticleFrames[] {
       const z = -x0 * sin + z0 * cos;
 
       xSteps.push(x * radius - size / 2);
-      opacitySteps.push(lerp(z, -1, 1, 0.3, 0.8));
+      opacitySteps.push(lerp(z, -1, 1, 0.25, 0.75));
       scaleSteps.push(lerp(z, -1, 1, 0.4, 0.9));
     }
 

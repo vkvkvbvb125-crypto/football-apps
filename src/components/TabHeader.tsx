@@ -6,9 +6,11 @@ import { useNotificationsStore } from '../features/notifications/stores/notifica
 
 interface TabHeaderProps {
   title: string;
+  titleSize?: number;
+  iconSize?: number;
 }
 
-export function TabHeader({ title }: TabHeaderProps) {
+export function TabHeader({ title, titleSize = 20, iconSize = 22 }: TabHeaderProps) {
   const insets = useSafeAreaInsets();
   const notifications = useNotificationsStore((s) => s.notifications);
   const loading = useNotificationsStore((s) => s.loading);
@@ -30,9 +32,9 @@ export function TabHeader({ title }: TabHeaderProps) {
 
   return (
     <View style={[styles.row, { paddingTop: insets.top + 10 }]}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { fontSize: titleSize }]}>{title}</Text>
       <Pressable onPress={handleOpenBell} hitSlop={8} style={styles.bellWrap}>
-        <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+        <Ionicons name="notifications-outline" size={iconSize} color="#FFFFFF" />
         {unreadCount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>

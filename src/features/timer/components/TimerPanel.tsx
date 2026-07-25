@@ -5,8 +5,8 @@ import Svg, { Circle } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 
-const STROKE_WIDTH = 6;
-const PARTICLE_OVERFLOW = 70;
+const STROKE_WIDTH = 5;
+const PARTICLE_OVERFLOW = 60;
 
 function formatTime(totalSeconds: number) {
   const clamped = Math.max(0, totalSeconds);
@@ -24,7 +24,7 @@ function formatTime(totalSeconds: number) {
 
 export function TimerPanel() {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const ringSize = Math.min(280, SCREEN_WIDTH * 0.68);
+  const ringSize = Math.min(240, SCREEN_WIDTH * 0.64);
   const radius = (ringSize - STROKE_WIDTH) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -114,7 +114,7 @@ export function TimerPanel() {
             cx={ringSize / 2}
             cy={ringSize / 2}
             r={radius}
-            stroke="#173D2A"
+            stroke="#173A28"
             strokeOpacity={0.9}
             strokeWidth={STROKE_WIDTH}
             fill="none"
@@ -123,7 +123,7 @@ export function TimerPanel() {
             cx={ringSize / 2}
             cy={ringSize / 2}
             r={radius}
-            stroke="#54DA79"
+            stroke="#50D978"
             strokeWidth={STROKE_WIDTH}
             strokeLinecap="round"
             strokeDasharray={`${circumference} ${circumference}`}
@@ -146,15 +146,24 @@ export function TimerPanel() {
       </View>
 
       <View style={styles.controlRow}>
-        <Pressable style={styles.secondaryButton} onPress={handleReset}>
-          <Ionicons name="refresh-outline" size={14} color="#8A9490" />
+        <Pressable
+          style={[styles.secondaryButton, { width: SCREEN_WIDTH * 0.23 }]}
+          onPress={handleReset}
+        >
+          <Ionicons name="refresh-outline" size={13} color="#8A9490" />
           <Text style={styles.secondaryButtonText}>초기화</Text>
         </Pressable>
-        <Pressable style={styles.primaryButton} onPress={handleStartPause}>
+        <Pressable
+          style={[styles.primaryButton, { width: SCREEN_WIDTH * 0.28 }]}
+          onPress={handleStartPause}
+        >
           <Text style={styles.primaryButtonText}>{isRunning ? '일시정지' : '시작'}</Text>
         </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={handleAddMinute}>
-          <Ionicons name="add" size={14} color="#8A9490" />
+        <Pressable
+          style={[styles.secondaryButton, { width: SCREEN_WIDTH * 0.23 }]}
+          onPress={handleAddMinute}
+        >
+          <Ionicons name="add" size={13} color="#8A9490" />
           <Text style={styles.secondaryButtonText}>1분</Text>
         </Pressable>
       </View>
@@ -188,38 +197,37 @@ const styles = StyleSheet.create({
   },
   stateLabel: {
     color: '#8A9490',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   timeDisplay: {
-    marginTop: 8,
+    marginTop: 6,
     color: '#FFFFFF',
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
   quarterInput: {
-    marginTop: 4,
+    marginTop: 3,
     color: '#8A9490',
-    fontSize: 11,
+    fontSize: 10,
     textAlign: 'center',
     padding: 0,
   },
   controlRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginTop: 16,
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 13,
   },
   secondaryButton: {
-    width: 74,
-    height: 32,
+    height: 30,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    borderRadius: 16,
+    borderRadius: 15,
     backgroundColor: '#141A17',
     borderWidth: 1,
     borderColor: '#22302A',
@@ -227,19 +235,18 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#8A9490',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 11,
   },
   primaryButton: {
-    width: 88,
-    height: 34,
-    borderRadius: 17,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4ADE80',
+    backgroundColor: '#50D978',
   },
   primaryButtonText: {
     color: '#0F1512',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
   },
 });

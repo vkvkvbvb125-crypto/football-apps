@@ -11,6 +11,7 @@ import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
+import { EmbeddedNavBar } from '../../../navigation/EmbeddedNavBar';
 
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const [view, setView] = useState<'assign' | 'timer' | 'score'>('assign');
@@ -45,7 +46,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
   return (
     <ScreenGradient>
-      <TabHeader title="경기운영" />
+      <TabHeader title="경기운영" titleSize={16} iconSize={18} />
       <View style={styles.viewToggleRow}>
         <Pressable
           style={({ pressed }) => [
@@ -89,96 +90,100 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
           actionLabel="팀 만들기 / 가입"
           onAction={() => navigation.navigate('Team')}
         />
-      ) : view === 'timer' ? (
-        <ScrollView style={styles.timerScroll} contentContainerStyle={styles.timerScrollContent}>
-          <TimerPanel />
-        </ScrollView>
-      ) : view === 'score' ? (
-        <ScrollView>
-          <ScoreboardPanel />
-        </ScrollView>
-      ) : loading && !loaded ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#4ADE80" />
-      ) : matchesWithAttendees.length === 0 ? (
-        <EmptyState
-          emoji="👥"
-          title="아직 분배할 경기가 없어요"
-          subtitle={'참석투표가 있는 경기가 생기면\n여기서 팀을 나눌 수 있어요'}
-        />
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
-          {error && <Text style={styles.errorText}>{error}</Text>}
-          {matchesWithAttendees.map((match) => {
-            const matchAssignments = assignments.filter((a) => a.match_id === match.id);
+        <ScrollView contentContainerStyle={styles.bodyContent}>
+          {view === 'timer' ? (
+            <TimerPanel />
+          ) : view === 'score' ? (
+            <ScoreboardPanel />
+          ) : loading && !loaded ? (
+            <ActivityIndicator style={{ marginTop: 40 }} color="#4ADE80" />
+          ) : matchesWithAttendees.length === 0 ? (
+            <EmptyState
+              emoji="👥"
+              title="아직 분배할 경기가 없어요"
+              subtitle={'참석투표가 있는 경기가 생기면\n여기서 팀을 나눌 수 있어요'}
+            />
+          ) : (
+            <View style={styles.list}>
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              {matchesWithAttendees.map((match) => {
+                const matchAssignments = assignments.filter((a) => a.match_id === match.id);
 
-            return (
-              <View key={match.id} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardDate}>
-                    {new Date(match.match_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
-                  </Text>
-                  {isAdmin && (
-                    <Pressable
-                      style={({ pressed }) => [styles.randomizeButton, pressed && styles.pressedOpacity]}
-                      onPress={() => randomize(match.id)}
-                    >
-                      <Text style={styles.randomizeButtonText}>
-                        {matchAssignments.length > 0 ? '다시 분배' : '랜덤 분배'}
+                return (
+                  <View key={match.id} style={styles.card}>
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.cardDate}>
+                        {new Date(match.match_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
                       </Text>
-                    </Pressable>
-                  )}
-                </View>
-
-                {(() => {
-                  const groupLabels = groupLabelsFor(match.team_count);
-                  return (
-                    <View style={styles.groupsRow}>
-                      {groupLabels.map((group, groupIndex) => {
-                        const isLastGroup = groupIndex === groupLabels.length - 1;
-                        return (
-                          <View key={group} style={styles.groupColumn}>
-                            <View style={styles.groupHeader}>
-                              <Text style={styles.groupTitle}>{group}팀</Text>
-                              {isAdmin && isLastGroup && groupLabels.length > 2 && (
-                                <Pressable onPress={() => removeLastGroup(match.id)} hitSlop={8}>
-                                  <Ionicons name="trash-outline" size={14} color="#8A9490" />
-                                </Pressable>
-                              )}
-                            </View>
-                            {matchAssignments
-                              .filter((a) => a.group_label === group)
-                              .map((a) => (
-                                <Pressable
-                                  key={a.team_member_id}
-                                  disabled={!isAdmin}
-                                  style={({ pressed }) => [
-                                    styles.memberChip,
-                                    pressed && isAdmin && styles.pressedOpacity,
-                                  ]}
-                                  hitSlop={6}
-                                  onPress={() => moveMember(match.id, a.team_member_id)}
-                                >
-                                  <Text style={styles.memberName}>{nameFor(a.team_member_id)}</Text>
-                                </Pressable>
-                              ))}
-                          </View>
-                        );
-                      })}
-                      {isAdmin && groupLabels.length < 5 && (
+                      {isAdmin && (
                         <Pressable
-                          style={({ pressed }) => [styles.addGroupChip, pressed && styles.pressedOpacity]}
-                          onPress={() => addGroup(match.id)}
+                          style={({ pressed }) => [styles.randomizeButton, pressed && styles.pressedOpacity]}
+                          onPress={() => randomize(match.id)}
                         >
-                          <Ionicons name="add" size={16} color="#4ADE80" />
-                          <Text style={styles.addGroupText}>팀 추가</Text>
+                          <Text style={styles.randomizeButtonText}>
+                            {matchAssignments.length > 0 ? '다시 분배' : '랜덤 분배'}
+                          </Text>
                         </Pressable>
                       )}
                     </View>
-                  );
-                })()}
-              </View>
-            );
-          })}
+
+                    {(() => {
+                      const groupLabels = groupLabelsFor(match.team_count);
+                      return (
+                        <View style={styles.groupsRow}>
+                          {groupLabels.map((group, groupIndex) => {
+                            const isLastGroup = groupIndex === groupLabels.length - 1;
+                            return (
+                              <View key={group} style={styles.groupColumn}>
+                                <View style={styles.groupHeader}>
+                                  <Text style={styles.groupTitle}>{group}팀</Text>
+                                  {isAdmin && isLastGroup && groupLabels.length > 2 && (
+                                    <Pressable onPress={() => removeLastGroup(match.id)} hitSlop={8}>
+                                      <Ionicons name="trash-outline" size={14} color="#8A9490" />
+                                    </Pressable>
+                                  )}
+                                </View>
+                                {matchAssignments
+                                  .filter((a) => a.group_label === group)
+                                  .map((a) => (
+                                    <Pressable
+                                      key={a.team_member_id}
+                                      disabled={!isAdmin}
+                                      style={({ pressed }) => [
+                                        styles.memberChip,
+                                        pressed && isAdmin && styles.pressedOpacity,
+                                      ]}
+                                      hitSlop={6}
+                                      onPress={() => moveMember(match.id, a.team_member_id)}
+                                    >
+                                      <Text style={styles.memberName}>{nameFor(a.team_member_id)}</Text>
+                                    </Pressable>
+                                  ))}
+                              </View>
+                            );
+                          })}
+                          {isAdmin && groupLabels.length < 5 && (
+                            <Pressable
+                              style={({ pressed }) => [styles.addGroupChip, pressed && styles.pressedOpacity]}
+                              onPress={() => addGroup(match.id)}
+                            >
+                              <Ionicons name="add" size={16} color="#4ADE80" />
+                              <Text style={styles.addGroupText}>팀 추가</Text>
+                            </Pressable>
+                          )}
+                        </View>
+                      );
+                    })()}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          <View style={styles.embeddedNavWrap}>
+            <EmbeddedNavBar />
+          </View>
         </ScrollView>
       )}
     </ScreenGradient>
@@ -191,13 +196,14 @@ const styles = StyleSheet.create({
   },
   viewToggleRow: {
     flexDirection: 'row',
-    height: 28,
-    marginHorizontal: 18,
-    marginBottom: 14,
+    height: 26,
+    marginHorizontal: 11,
+    marginTop: 9,
+    marginBottom: 13,
     borderRadius: 6,
-    backgroundColor: '#101918',
+    backgroundColor: '#0E1715',
     borderWidth: 1,
-    borderColor: 'rgba(67, 91, 85, 0.35)',
+    borderColor: 'rgba(62, 85, 79, 0.35)',
     overflow: 'hidden',
   },
   viewToggle: {
@@ -207,14 +213,14 @@ const styles = StyleSheet.create({
   },
   viewToggleDivider: {
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(67, 91, 85, 0.35)',
+    borderLeftColor: 'rgba(62, 85, 79, 0.35)',
   },
   viewToggleActive: {
     margin: 2,
     borderRadius: 5,
-    backgroundColor: 'rgba(35, 91, 55, 0.35)',
+    backgroundColor: 'rgba(27, 79, 45, 0.4)',
     borderWidth: 1,
-    borderColor: 'rgba(60, 138, 82, 0.45)',
+    borderColor: 'rgba(60, 150, 90, 0.5)',
   },
   viewToggleText: {
     color: '#87918F',
@@ -222,17 +228,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   viewToggleTextActive: {
-    color: '#73D993',
+    color: '#6ED78E',
   },
-  timerScroll: {
-    flex: 1,
+  bodyContent: {
+    paddingHorizontal: 11,
+    paddingBottom: 20,
   },
-  timerScrollContent: {
-    paddingBottom: 100,
+  embeddedNavWrap: {
+    marginTop: 14,
   },
   list: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
     gap: 12,
   },
   errorText: {

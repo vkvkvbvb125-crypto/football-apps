@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+// src/features/settlement/screens/SettlementScreen.tsx — 리디자인 적용판
+// store API(createSettlement, togglePayment, latestAccount) 그대로 사용.
+import { useEffect, useMemo, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -7,11 +9,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
+import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../stores/settlementStore';
 import { BankPicker } from '../components/BankPicker';
 import type { SettlementAccount } from '../services/settlementService';
+
+const EMPTY_ACCOUNT: SettlementAccount = { bankName: '', accountNumber: '', accountHolder: '' };
+
+function initialOf(name: string) {
+  return name.length > 2 ? name.slice(1) : name;
+}
 
 export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
@@ -28,45 +37,42 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
   const loadSettlements = useSettlementStore((s) => s.loadSettlements);
   const createSettlement = useSettlementStore((s) => s.createSettlement);
   const togglePayment = useSettlementStore((s) => s.togglePayment);
+  const latestAccount = useSettlementStore((s) => s.latestAccount);
+  const loadLatestAccount = useSettlementStore((s) => s.loadLatestAccount);
 
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
   const [accountDrafts, setAccountDrafts] = useState<Record<string, SettlementAccount>>({});
   const [copiedMatchId, setCopiedMatchId] = useState<string | null>(null);
-
-  const latestAccount = useSettlementStore((s) => s.latestAccount);
-  const loadLatestAccount = useSettlementStore((s) => s.loadLatestAccount);
 
   useEffect(() => {
     if (!activeTeam) return;
     (async () => {
       await loadMatches();
       await loadSettlements();
+      loadLatestAccount();
     })();
   }, [activeTeam?.team.id]);
 
-  useEffect(() => {
-    if (!activeTeam) return;
-    loadLatestAccount();
-  }, [activeTeam?.team.id]);
-
   const nameFor = (teamMemberId: string) => members.find((m) => m.id === teamMemberId)?.displayName ?? '멤버';
-
-  const accountFor = (matchId: string): SettlementAccount =>
-    accountDrafts[matchId] ?? { bankName: '', accountNumber: '', accountHolder: '' };
-
-  const updateAccountField = (matchId: string, field: keyof SettlementAccount, value: string) => {
+  const accountFor = (matchId: string) => accountDrafts[matchId] ?? EMPTY_ACCOUNT;
+  const updateAccountField = (matchId: string, field: keyof SettlementAccount, value: string) =>
     setAccountDrafts((prev) => ({ ...prev, [matchId]: { ...accountFor(matchId), [field]: value } }));
+  const isAccountComplete = (a: SettlementAccount) =>
+    !!a.bankName.trim() && !!a.accountNumber.trim() && !!a.accountHolder.trim();
+
+  const copyAccount = async (matchId: string, accountNumber: string) => {
+    await Clipboard.setStringAsync(accountNumber);
+    setCopiedMatchId(matchId);
+    setTimeout(() => setCopiedMatchId((cur) => (cur === matchId ? null : cur)), 1500);
   };
 
-  const applyLatestAccount = (matchId: string) => {
-    if (!latestAccount) return;
-    setAccountDrafts((prev) => ({ ...prev, [matchId]: latestAccount }));
-  };
-
-  const isAccountComplete = (account: SettlementAccount) =>
-    !!account.bankName.trim() && !!account.accountNumber.trim() && !!account.accountHolder.trim();
-
-  const matchesWithAttendees = matches.filter((m) => m.votes.some((v) => v.status === 'attend'));
+  const matchesWithAttendees = useMemo(
+    () =>
+      matches
+        .filter((m) => m.votes.some((v) => v.status === 'attend'))
+        .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
+    [matches]
+  );
 
   return (
     <ScreenGradient>
@@ -81,7 +87,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
           onAction={() => navigation.navigate('Team')}
         />
       ) : loading && !loaded ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#4ADE80" />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.green} />
       ) : matchesWithAttendees.length === 0 ? (
         <EmptyState
           emoji="💰"
@@ -89,95 +95,169 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
           subtitle={'참석투표가 있는 경기가 생기면\n여기서 회비를 정산할 수 있어요'}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
-          {error && <Text style={styles.errorText}>{error}</Text>}
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
+
           {matchesWithAttendees.map((match) => {
             const settlement = settlements.find((s) => s.match_id === match.id);
             const attendeeIds = match.votes.filter((v) => v.status === 'attend').map((v) => v.team_member_id);
-            const attendeeCount = attendeeIds.length;
             const draftAmount = Number(amountDrafts[match.id]) || 0;
-            const perPersonPreview = attendeeCount > 0 ? Math.ceil(draftAmount / attendeeCount) : 0;
+            const perPersonPreview = attendeeIds.length > 0 ? Math.ceil(draftAmount / attendeeIds.length) : 0;
+            const d = new Date(match.match_date);
+            const dateLabel = `${d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}${
+              match.location ? ` · ${match.location}` : ''
+            }`;
 
-            return (
-              <View key={match.id} style={styles.card}>
-                <Text style={styles.cardDate}>
-                  {new Date(match.match_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
-                  {match.location ? ` · ${match.location}` : ''}
-                </Text>
-                <Text style={styles.attendeeCount}>참석 {attendeeCount}명</Text>
+            // ── 정산 완료본
+            if (settlement) {
+              const paid = settlement.payments.filter((p) => p.is_paid).length;
+              const totalCount = settlement.payments.length || 1;
+              const pct = Math.round((paid / totalCount) * 100);
+              const collected = paid * (settlement.per_person_amount ?? 0);
+              const myPayment = settlement.payments.find((p) => p.team_member_id === activeTeam.membershipId);
+              const done = paid === settlement.payments.length;
 
-                {settlement ? (
-                  <>
-                    <View style={styles.amountRow}>
-                      <Text style={styles.totalAmount}>총 {settlement.total_amount.toLocaleString()}원</Text>
-                      <Text style={styles.perPersonAmount}>
-                        1인당 {settlement.per_person_amount?.toLocaleString()}원
+              return (
+                <View key={match.id} style={styles.card}>
+                  <View style={styles.cardHead}>
+                    <View style={{ flex: 1, gap: 3 }}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {dateLabel}
+                      </Text>
+                      <Text style={styles.cardSub}>
+                        참석 {attendeeIds.length}명 · 1인당 {settlement.per_person_amount?.toLocaleString()}원
                       </Text>
                     </View>
+                    <View style={[styles.statusChip, done ? styles.statusDone : styles.statusOngoing]}>
+                      <Text style={[styles.statusText, { color: done ? colors.green : colors.gold }]}>
+                        {done ? '완료' : '진행중'}
+                      </Text>
+                    </View>
+                  </View>
 
-                    <View style={styles.accountRow}>
+                  {/* 멤버: 내가 낼 금액이 제일 크게 */}
+                  {!isAdmin && myPayment && (
+                    <View style={styles.myDue}>
+                      <Text style={styles.myDueLabel}>{myPayment.is_paid ? '입금 완료' : '내가 낼 금액'}</Text>
+                      <View style={styles.myDueRow}>
+                        <Text style={[styles.myDueAmount, myPayment.is_paid && styles.myDuePaid]}>
+                          {settlement.per_person_amount?.toLocaleString()}
+                        </Text>
+                        <Text style={styles.myDueUnit}>원</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <Pressable
+                    onPress={() => copyAccount(match.id, settlement.account_number)}
+                    style={({ pressed }) => [styles.accountBox, pressed && styles.pressed]}
+                  >
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={styles.accountLabel}>입금 계좌</Text>
                       <Text style={styles.accountText}>
-                        {settlement.bank_name} {settlement.account_number} ({settlement.account_holder})
+                        {settlement.bank_name} {settlement.account_number}
                       </Text>
-                      <Pressable
-                        hitSlop={8}
-                        onPress={async () => {
-                          await Clipboard.setStringAsync(settlement.account_number);
-                          setCopiedMatchId(match.id);
-                          setTimeout(() => setCopiedMatchId((cur) => (cur === match.id ? null : cur)), 1500);
-                        }}
-                      >
-                        <Ionicons
-                          name={copiedMatchId === match.id ? 'checkmark' : 'copy-outline'}
-                          size={15}
-                          color="#4ADE80"
-                        />
-                      </Pressable>
+                      <Text style={styles.accountHolder}>예금주 {settlement.account_holder}</Text>
                     </View>
+                    <View style={[styles.copyBtn, copiedMatchId === match.id && styles.copyBtnDone]}>
+                      <Ionicons
+                        name={copiedMatchId === match.id ? 'checkmark' : 'copy-outline'}
+                        size={13}
+                        color={copiedMatchId === match.id ? colors.green : colors.bgRoot}
+                      />
+                      <Text style={[styles.copyText, copiedMatchId === match.id && { color: colors.green }]}>
+                        {copiedMatchId === match.id ? '복사됨' : '복사'}
+                      </Text>
+                    </View>
+                  </Pressable>
 
-                    <View style={styles.paymentList}>
-                      {settlement.payments.map((p) => (
+                  <View style={{ gap: 8 }}>
+                    <View style={styles.progressRow}>
+                      <View style={styles.progressAmountRow}>
+                        <Text style={styles.progressAmount}>{collected.toLocaleString()}</Text>
+                        <Text style={styles.progressTotal}>/ {settlement.total_amount.toLocaleString()}원</Text>
+                      </View>
+                      <Text style={styles.progressCount}>
+                        {paid}/{settlement.payments.length}명 입금
+                      </Text>
+                    </View>
+                    <View style={styles.track}>
+                      <View style={[styles.fill, { width: `${pct}%` }]} />
+                    </View>
+                  </View>
+
+                  <View style={styles.payments}>
+                    {settlement.payments.map((p) => {
+                      const canToggle = isAdmin || p.team_member_id === activeTeam.membershipId;
+                      return (
                         <Pressable
                           key={p.id}
-                          style={styles.paymentRow}
-                          disabled={!isAdmin && p.team_member_id !== activeTeam.membershipId}
+                          disabled={!canToggle}
                           onPress={() => togglePayment(p.id, !p.is_paid)}
+                          style={({ pressed }) => [styles.paymentRow, pressed && canToggle && styles.pressed]}
                         >
-                          <Text style={styles.paymentName}>{nameFor(p.team_member_id)}</Text>
-                          <Text style={[styles.paymentStatus, p.is_paid && styles.paymentStatusPaid]}>
-                            {p.is_paid ? '입금완료' : '미입금'}
+                          <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>{initialOf(nameFor(p.team_member_id))}</Text>
+                          </View>
+                          <Text style={styles.paymentName} numberOfLines={1}>
+                            {nameFor(p.team_member_id)}
+                            {p.team_member_id === activeTeam.membershipId ? ' (나)' : ''}
                           </Text>
+                          <Text style={styles.paymentAmount}>
+                            {settlement.per_person_amount?.toLocaleString()}원
+                          </Text>
+                          <View style={[styles.check, p.is_paid && styles.checkOn]}>
+                            {p.is_paid && <Ionicons name="checkmark" size={13} color={colors.bgRoot} />}
+                          </View>
                         </Pressable>
-                      ))}
-                    </View>
-                  </>
-                ) : isAdmin ? (
-                  <View style={styles.createForm}>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            }
+
+            // ── 정산 등록 전
+            return (
+              <View key={match.id} style={styles.card}>
+                <View style={styles.cardHead}>
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {dateLabel}
+                    </Text>
+                    <Text style={styles.cardSub}>참석 {attendeeIds.length}명</Text>
+                  </View>
+                  <View style={[styles.statusChip, styles.statusWaiting]}>
+                    <Text style={[styles.statusText, { color: colors.textMuted }]}>정산 전</Text>
+                  </View>
+                </View>
+
+                {isAdmin ? (
+                  <View style={{ gap: 10 }}>
                     <TextInput
-                      style={styles.amountInput}
+                      style={styles.input}
                       placeholder="총 비용 (원)"
-                      placeholderTextColor="#5A625E"
+                      placeholderTextColor={colors.placeholder}
                       keyboardType="number-pad"
                       value={amountDrafts[match.id] ?? ''}
                       onChangeText={(t) => setAmountDrafts((prev) => ({ ...prev, [match.id]: t }))}
                     />
 
                     {draftAmount > 0 && (
-                      <View style={styles.previewList}>
-                        {attendeeIds.map((id) => (
-                          <View key={id} style={styles.previewRow}>
-                            <Text style={styles.previewName}>{nameFor(id)}</Text>
-                            <Text style={styles.previewAmount}>{perPersonPreview.toLocaleString()}원</Text>
-                          </View>
-                        ))}
+                      <View style={styles.preview}>
+                        <Text style={styles.previewLabel}>1인당</Text>
+                        <Text style={styles.previewAmount}>{perPersonPreview.toLocaleString()}원</Text>
                       </View>
                     )}
 
-                    {latestAccount && (
-                      <Pressable style={styles.latestAccountChip} onPress={() => applyLatestAccount(match.id)}>
-                        <Ionicons name="time-outline" size={13} color="#4ADE80" />
-                        <Text style={styles.latestAccountChipText}>
-                          최근 사용: {latestAccount.bankName} {latestAccount.accountNumber} ({latestAccount.accountHolder})
+                    {!!latestAccount && (
+                      <Pressable
+                        onPress={() => setAccountDrafts((prev) => ({ ...prev, [match.id]: latestAccount }))}
+                        style={({ pressed }) => [styles.recentChip, pressed && styles.pressed]}
+                      >
+                        <Ionicons name="time-outline" size={13} color={colors.green} />
+                        <Text style={styles.recentText} numberOfLines={1}>
+                          최근 계좌 쓰기 · {latestAccount.bankName} {latestAccount.accountNumber}
                         </Text>
                       </Pressable>
                     )}
@@ -187,35 +267,35 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                       onChange={(name) => updateAccountField(match.id, 'bankName', name)}
                     />
                     <TextInput
-                      style={styles.amountInput}
+                      style={styles.input}
                       placeholder="계좌번호"
-                      placeholderTextColor="#5A625E"
+                      placeholderTextColor={colors.placeholder}
                       keyboardType="number-pad"
                       value={accountFor(match.id).accountNumber}
                       onChangeText={(t) => updateAccountField(match.id, 'accountNumber', t)}
                     />
                     <TextInput
-                      style={styles.amountInput}
+                      style={styles.input}
                       placeholder="예금주"
-                      placeholderTextColor="#5A625E"
+                      placeholderTextColor={colors.placeholder}
                       value={accountFor(match.id).accountHolder}
                       onChangeText={(t) => updateAccountField(match.id, 'accountHolder', t)}
                     />
 
                     <Pressable
-                      style={[styles.createButton, !isAccountComplete(accountFor(match.id)) && styles.createButtonDisabled]}
-                      disabled={!isAccountComplete(accountFor(match.id))}
-                      onPress={() => {
-                        const amount = Number(amountDrafts[match.id]);
-                        if (!amount) return;
-                        createSettlement(match.id, amount, accountFor(match.id));
-                      }}
+                      disabled={!isAccountComplete(accountFor(match.id)) || draftAmount <= 0}
+                      onPress={() => createSettlement(match.id, draftAmount, accountFor(match.id))}
+                      style={({ pressed }) => [
+                        styles.submit,
+                        (!isAccountComplete(accountFor(match.id)) || draftAmount <= 0) && styles.submitDisabled,
+                        pressed && styles.pressed,
+                      ]}
                     >
-                      <Text style={styles.createButtonText}>정산 등록</Text>
+                      <Text style={styles.submitText}>정산 등록</Text>
                     </Pressable>
                   </View>
                 ) : (
-                  <Text style={styles.waitingText}>총무가 정산을 등록하면 표시돼요</Text>
+                  <Text style={styles.waiting}>총무가 정산을 등록하면 알려드릴게요</Text>
                 )}
               </View>
             );
@@ -227,159 +307,155 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
 }
 
 const styles = StyleSheet.create({
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 12,
-  },
-  errorText: {
-    color: '#F87171',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
+  list: { paddingHorizontal: 20, paddingBottom: 110, gap: 14 },
+  pressed: { opacity: 0.85 },
+  errorText: { color: colors.danger, textAlign: 'center', marginBottom: 8 },
+
   card: {
-    backgroundColor: '#141A17',
-    borderRadius: 16,
+    backgroundColor: colors.card,
+    borderRadius: radius.hero,
     borderWidth: 1,
-    borderColor: '#22302A',
-    padding: 16,
+    borderColor: colors.border,
+    padding: 18,
+    gap: 14,
   },
-  cardDate: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
+  cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  cardTitle: { color: colors.text, fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
+  cardSub: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  statusChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
+  statusDone: { backgroundColor: 'rgba(74,222,128,0.14)' },
+  statusOngoing: { backgroundColor: 'rgba(210,163,76,0.14)' },
+  statusWaiting: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  statusText: { fontSize: 11, fontWeight: '800' },
+
+  myDue: { gap: 4 },
+  myDueLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
+  myDueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  myDueAmount: {
+    color: colors.text,
+    fontSize: 38,
+    fontWeight: '800',
+    letterSpacing: -1.4,
+    lineHeight: 42,
+    fontVariant: ['tabular-nums'],
   },
-  attendeeCount: {
-    marginTop: 4,
-    color: '#8A9490',
-    fontSize: 12,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  totalAmount: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  perPersonAmount: {
-    color: '#4ADE80',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  accountRow: {
+  myDuePaid: { color: colors.green },
+  myDueUnit: { color: colors.textMuted, fontSize: 15, fontWeight: '700', paddingBottom: 4 },
+
+  accountBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#0F1512',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 13,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
   },
-  accountText: {
-    color: '#8A9490',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  previewList: {
-    marginTop: 4,
-    gap: 6,
-  },
-  previewRow: {
+  accountLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
+  accountText: { color: colors.textStrong, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  accountHolder: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
+  copyBtn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#1B231F',
+    gap: 5,
+    height: 36,
+    paddingHorizontal: 13,
+    borderRadius: 11,
+    backgroundColor: colors.green,
   },
-  previewName: {
-    color: '#FFFFFF',
-    fontSize: 13,
+  copyBtnDone: { backgroundColor: '#1B2A22', borderWidth: 1, borderColor: colors.greenDeep },
+  copyText: { color: colors.bgRoot, fontSize: 12.5, fontWeight: '800' },
+
+  progressRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  progressAmountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  progressAmount: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -1,
+    fontVariant: ['tabular-nums'],
   },
-  previewAmount: {
-    color: '#4ADE80',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  paymentList: {
-    marginTop: 12,
-    gap: 6,
-  },
+  progressTotal: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
+  progressCount: { color: colors.green, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.divider, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 4, backgroundColor: colors.green },
+
+  payments: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: 2 },
   paymentRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#1B231F',
+    gap: 10,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
   },
-  paymentName: {
-    color: '#FFFFFF',
-    fontSize: 13,
+  avatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  paymentStatus: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#D2A34C',
+  avatarText: { color: '#8FA69C', fontSize: 10, fontWeight: '800' },
+  paymentName: { flex: 1, color: colors.textStrong, fontSize: 13, fontWeight: '600' },
+  paymentAmount: { color: colors.textDim, fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  check: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#2C3833',
   },
-  paymentStatusPaid: {
-    color: '#4ADE80',
+  checkOn: { backgroundColor: colors.green, borderColor: colors.green },
+
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.text,
+    fontSize: 14,
+    backgroundColor: colors.inputBg,
   },
-  createForm: {
-    gap: 8,
-    marginTop: 12,
+  preview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(74,222,128,0.07)',
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
   },
-  latestAccountChip: {
+  previewLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  previewAmount: { color: colors.green, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  recentChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    maxWidth: '100%',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: '#1B231F',
   },
-  latestAccountChipText: {
-    color: '#4ADE80',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  createButtonDisabled: {
-    opacity: 0.4,
-  },
-  amountInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#22302A',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: '#FFFFFF',
-    backgroundColor: '#0F1512',
-  },
-  createButton: {
-    justifyContent: 'center',
+  recentText: { color: colors.green, fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  submit: {
+    height: 50,
+    borderRadius: 15,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 4,
-    backgroundColor: '#4ADE80',
+    justifyContent: 'center',
+    backgroundColor: colors.green,
   },
-  createButtonText: {
-    color: '#0F1512',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  waitingText: {
-    marginTop: 12,
-    color: '#5A625E',
-    fontSize: 12,
-  },
+  submitDisabled: { opacity: 0.4 },
+  submitText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
+  waiting: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
 });

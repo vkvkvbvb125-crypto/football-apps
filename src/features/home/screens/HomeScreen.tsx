@@ -252,7 +252,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               <View style={styles.heroFooter}>
                 <View style={styles.heroFooterRow}>
                   <Text style={styles.heroFooterMeta}>
-                    미확인 {pending}명
+                    미투표 {pending}명
                     {next.vote_deadline ? ` · 투표 마감 ${ddayLabel(next.vote_deadline)}` : ''}
                   </Text>
                   <Text style={styles.heroFooterPct}>{Math.round(pct * 100)}% 모집</Text>

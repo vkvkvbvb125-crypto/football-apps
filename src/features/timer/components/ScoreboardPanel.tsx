@@ -1,154 +1,130 @@
+// src/features/timer/components/ScoreboardPanel.tsx — 리디자인 적용판
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
+import { colors, radius } from '../../../theme';
 
 export function ScoreboardPanel() {
   const [scoreA, setScoreA] = useState(0);
   const [scoreB, setScoreB] = useState(0);
 
-  const handleReset = () => {
-    setScoreA(0);
-    setScoreB(0);
-  };
+  const winner = scoreA === scoreB ? null : scoreA > scoreB ? 'A' : 'B';
 
   return (
-    <View style={styles.content}>
-      <View style={styles.scoreRow}>
-        <View style={styles.teamColumn}>
-          <Text style={styles.teamLabel}>A팀</Text>
-          <Text style={styles.scoreText}>{scoreA}</Text>
-          <View style={styles.scoreButtonRow}>
-            <Pressable
-              style={({ pressed }) => [styles.scoreButton, pressed && styles.pressedOpacity]}
-              onPress={() => setScoreA((s) => Math.max(0, s - 1))}
-            >
-              <Text style={styles.scoreButtonText}>-1</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.scoreButton, styles.scoreButtonPrimary, pressed && styles.pressedOpacity]}
-              onPress={() => setScoreA((s) => s + 1)}
-            >
-              <Text style={styles.scoreButtonTextPrimary}>+1</Text>
-            </Pressable>
-          </View>
+    <View style={styles.wrap}>
+      <View style={styles.card}>
+        <View style={styles.head}>
+          <Text style={styles.headText}>{winner ? `${winner}팀 리드` : '동점'}</Text>
         </View>
 
-        <Text style={styles.vsText}>VS</Text>
+        <View style={styles.row}>
+          <View style={styles.col}>
+            <Text style={[styles.team, { color: colors.green }]}>A팀</Text>
+            <Text style={[styles.score, winner === 'B' && styles.scoreDim]}>{scoreA}</Text>
+            <View style={styles.btnRow}>
+              <Pressable
+                onPress={() => setScoreA((s) => Math.max(0, s - 1))}
+                style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+              >
+                <Text style={styles.btnText}>−</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setScoreA((s) => s + 1)}
+                style={({ pressed }) => [styles.btn, styles.btnA, pressed && styles.pressed]}
+              >
+                <Text style={[styles.btnText, { color: colors.green }]}>+</Text>
+              </Pressable>
+            </View>
+          </View>
 
-        <View style={styles.teamColumn}>
-          <Text style={styles.teamLabel}>B팀</Text>
-          <Text style={styles.scoreText}>{scoreB}</Text>
-          <View style={styles.scoreButtonRow}>
-            <Pressable
-              style={({ pressed }) => [styles.scoreButton, pressed && styles.pressedOpacity]}
-              onPress={() => setScoreB((s) => Math.max(0, s - 1))}
-            >
-              <Text style={styles.scoreButtonText}>-1</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.scoreButton, styles.scoreButtonPrimary, pressed && styles.pressedOpacity]}
-              onPress={() => setScoreB((s) => s + 1)}
-            >
-              <Text style={styles.scoreButtonTextPrimary}>+1</Text>
-            </Pressable>
+          <Text style={styles.vs}>VS</Text>
+
+          <View style={styles.col}>
+            <Text style={[styles.team, { color: colors.blue }]}>B팀</Text>
+            <Text style={[styles.score, winner === 'A' && styles.scoreDim]}>{scoreB}</Text>
+            <View style={styles.btnRow}>
+              <Pressable
+                onPress={() => setScoreB((s) => Math.max(0, s - 1))}
+                style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+              >
+                <Text style={styles.btnText}>−</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setScoreB((s) => s + 1)}
+                style={({ pressed }) => [styles.btn, styles.btnB, pressed && styles.pressed]}
+              >
+                <Text style={[styles.btnText, { color: colors.blue }]}>+</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </View>
 
       <Pressable
-        style={({ pressed }) => [styles.resetButton, pressed && styles.pressedOpacity]}
-        onPress={handleReset}
+        onPress={() => {
+          setScoreA(0);
+          setScoreB(0);
+        }}
+        style={({ pressed }) => [styles.reset, pressed && styles.pressed]}
       >
-        <Text style={styles.resetButtonText}>초기화</Text>
+        <Text style={styles.resetText}>스코어 초기화</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
-    alignItems: 'center',
-  },
-  pressedOpacity: {
-    opacity: 0.7,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  teamColumn: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#141A17',
-    borderRadius: 16,
+  wrap: { gap: 12, paddingBottom: 20 },
+  pressed: { opacity: 0.8 },
+
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.hero,
     borderWidth: 1,
-    borderColor: '#22302A',
-    paddingVertical: 20,
+    borderColor: colors.border,
+    padding: 20,
+    gap: 18,
   },
-  teamLabel: {
-    color: '#4ADE80',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  scoreText: {
-    marginTop: 8,
-    color: '#FFFFFF',
-    fontSize: 48,
+  head: { alignItems: 'center' },
+  headText: { color: colors.textDim, fontSize: 11.5, fontWeight: '700' },
+
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  col: { flex: 1, alignItems: 'center', gap: 8 },
+  team: { fontSize: 13, fontWeight: '800' },
+  score: {
+    color: colors.text,
+    fontSize: 52,
     fontWeight: '800',
+    letterSpacing: -2,
+    lineHeight: 56,
     fontVariant: ['tabular-nums'],
   },
-  scoreButtonRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  scoreButton: {
+  scoreDim: { color: colors.textMuted },
+  vs: { color: colors.neutralFill, fontSize: 13, fontWeight: '800' },
+
+  btnRow: { flexDirection: 'row', gap: 6 },
+  btn: {
     width: 44,
-    height: 44,
-    borderRadius: 22,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1B231F',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: '#26332D',
   },
-  scoreButtonPrimary: {
-    backgroundColor: '#4ADE80',
-    borderColor: '#4ADE80',
-  },
-  scoreButtonText: {
-    color: '#8A9490',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  scoreButtonTextPrimary: {
-    color: '#0F1512',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  vsText: {
-    color: '#5A625E',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  resetButton: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#141A17',
+  btnA: { backgroundColor: '#1B2A22', borderColor: colors.greenDeep },
+  btnB: { backgroundColor: 'rgba(96,165,250,0.10)', borderColor: '#2F4560' },
+  btnText: { color: colors.textMuted, fontSize: 18, fontWeight: '700' },
+
+  reset: {
+    height: 48,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: '#26332D',
   },
-  resetButtonText: {
-    color: '#8A9490',
-    fontWeight: '600',
-    fontSize: 13,
-  },
+  resetText: { color: colors.textStrong, fontSize: 13.5, fontWeight: '800' },
 });

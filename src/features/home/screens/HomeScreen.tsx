@@ -1,7 +1,8 @@
 // src/features/home/screens/HomeScreen.tsx
 // 리디자인 적용본. 기존 store/service는 그대로 사용하고 UI만 교체했습니다.
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';

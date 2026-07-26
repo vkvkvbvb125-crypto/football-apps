@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Text, TextInput } from '../../../components/nativeText';
 import type { AnnouncementRow } from '../services/announcementsService';
 
 interface AnnouncementFormModalProps {

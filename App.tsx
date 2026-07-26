@@ -5,9 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { usePendingInviteStore } from './src/features/team/stores/pendingInviteStore';
-import { useAppFonts, applyGlobalFont } from './src/lib/fonts';
-
-applyGlobalFont();
+import { useAppFonts } from './src/lib/fonts';
 
 function handleIncomingUrl(url: string | null) {
   if (!url) return;

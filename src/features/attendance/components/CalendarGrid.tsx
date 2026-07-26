@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 

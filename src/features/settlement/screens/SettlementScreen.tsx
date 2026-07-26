@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../../../components/nativeText';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenGradient } from '../../../components/ScreenGradient';

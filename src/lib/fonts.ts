@@ -1,9 +1,8 @@
-// src/lib/fonts.ts — Pretendard 로딩 + 전역 적용
+// src/lib/fonts.ts — Pretendard 로딩 + 굵기 매핑
 //
 // RN은 iOS/Android에서 fontWeight + 커스텀 폰트 조합이 제대로 안 먹는 경우가 많아,
 // 굵기별 폰트 파일을 각각 등록하고 fontWeight → fontFamily로 매핑해준다.
-// 그래서 화면 코드에서는 지금처럼 fontWeight만 쓰면 되고, 수정할 게 없다.
-import { Text, TextInput } from 'react-native';
+// 실제 전역 적용은 ../components/nativeText.tsx의 Text/TextInput 래퍼가 담당한다.
 import { useFonts } from 'expo-font';
 
 export const PRETENDARD = {
@@ -25,10 +24,10 @@ export function useAppFonts() {
   return loaded || !!error; // 폰트 실패해도 앱은 시스템 폰트로 계속 뜨게 한다
 }
 
-type AnyStyle = Record<string, unknown> | AnyStyle[] | null | undefined | false;
+type AnyStyle = Record<string, unknown> | AnyStyle[] | null | undefined | false | string | number;
 
 function flattenWeight(style: AnyStyle): string | undefined {
-  if (!style) return undefined;
+  if (!style || typeof style !== 'object') return undefined;
   if (Array.isArray(style)) {
     for (let i = style.length - 1; i >= 0; i--) {
       const w = flattenWeight(style[i]);
@@ -42,33 +41,8 @@ function flattenWeight(style: AnyStyle): string | undefined {
   return key;
 }
 
-/**
- * 모든 <Text>/<TextInput>의 기본 폰트를 Pretendard로 바꾼다.
- * App.tsx에서 한 번만 호출.
- */
-export function applyGlobalFont() {
-  const patch = (Component: typeof Text | typeof TextInput) => {
-    const anyComp = Component as unknown as { render?: Function; defaultProps?: Record<string, unknown> };
-    const original = anyComp.render;
-    if (!original || (anyComp as { __fontPatched?: boolean }).__fontPatched) return;
-
-    anyComp.render = function (...args: unknown[]) {
-      const element = original.apply(this, args);
-      const style = element?.props?.style as AnyStyle;
-      const weight = flattenWeight(style) ?? '400';
-      const family = PRETENDARD[weight as keyof typeof PRETENDARD] ?? PRETENDARD['400'];
-      return {
-        ...element,
-        props: {
-          ...element.props,
-          // 화면에서 fontFamily를 직접 지정한 경우(예: 모노스페이스)는 존중한다
-          style: [{ fontFamily: family }, style],
-        },
-      };
-    };
-    (anyComp as { __fontPatched?: boolean }).__fontPatched = true;
-  };
-
-  patch(Text);
-  patch(TextInput);
+/** style에 적힌 fontWeight에 맞는 Pretendard fontFamily 이름을 돌려준다. */
+export function fontFamilyForStyle(style: unknown): string {
+  const weight = flattenWeight(style as AnyStyle) ?? '400';
+  return PRETENDARD[weight as keyof typeof PRETENDARD] ?? PRETENDARD['400'];
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, Share, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '../../auth/stores/authStore';

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { searchPlaces, type PlaceResult } from '../services/placeService';

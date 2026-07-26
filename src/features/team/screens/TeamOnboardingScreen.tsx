@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../../../components/nativeText';
 import { useTeamStore } from '../stores/teamStore';
 import { usePendingInviteStore } from '../stores/pendingInviteStore';
 import { useAuthStore } from '../../auth/stores/authStore';

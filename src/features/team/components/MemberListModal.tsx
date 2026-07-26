@@ -1,4 +1,5 @@
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import type { SkillTag } from '../../../types/database';
 import type { TeamMemberWithProfile } from '../services/teamService';

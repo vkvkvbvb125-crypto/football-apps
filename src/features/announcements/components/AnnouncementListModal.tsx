@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, StyleSheet, Text, View, Modal } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, Modal } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import type { AnnouncementRow } from '../services/announcementsService';
 

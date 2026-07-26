@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, Vibration, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Vibration, View, useWindowDimensions } from 'react-native';
+import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';

@@ -1,4 +1,5 @@
-import { Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 

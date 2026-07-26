@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Image, Text, View } from 'react-native';
+import { Image, View } from 'react-native';
+import { Text } from '../components/nativeText';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { SettlementScreen } from '../features/settlement/screens/SettlementScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';

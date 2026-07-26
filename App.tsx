@@ -19,7 +19,10 @@ function handleIncomingUrl(url: string | null) {
 }
 
 export default function App() {
-  const fontsReady = useAppFonts();
+  // 폰트 로딩 상태와 무관하게 항상 렌더링한다 - 폰트 로딩이 늦거나 실패해도
+  // 화면 자체가 안 뜨는 일이 없어야 한다. 로딩 전에는 시스템 폰트로 보이다가
+  // 로딩이 끝나면 적용되는 게 맞는 동작이다.
+  useAppFonts();
 
   useEffect(() => {
     Linking.getInitialURL().then(handleIncomingUrl);
@@ -30,7 +33,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={{ flex: 1, backgroundColor: '#07100D' }}>
-        {fontsReady && <RootNavigator />}
+        <RootNavigator />
         <StatusBar style="light" />
       </View>
     </SafeAreaProvider>

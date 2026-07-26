@@ -20,7 +20,12 @@ interface SettlementState {
   latestAccount: SettlementAccount | null;
   loadSettlements: () => Promise<void>;
   loadLatestAccount: () => Promise<void>;
-  createSettlement: (matchId: string, totalAmount: number, account: SettlementAccount) => Promise<void>;
+  createSettlement: (
+    matchId: string,
+    totalAmount: number,
+    account: SettlementAccount,
+    memberIds?: string[]
+  ) => Promise<void>;
   togglePayment: (paymentId: string, isPaid: boolean) => Promise<void>;
 }
 
@@ -52,10 +57,11 @@ export const useSettlementStore = create<SettlementState>((set, get) => ({
       // 최근 계좌 조회 실패는 조용히 무시 (편의 기능이라 정산 등록 자체엔 영향 없음)
     }
   },
-  createSettlement: async (matchId, totalAmount, account) => {
+  createSettlement: async (matchId, totalAmount, account, memberIds) => {
     const activeTeam = useTeamStore.getState().activeTeam;
     const match = useAttendanceStore.getState().matches.find((m) => m.id === matchId);
-    const attendeeIds = (match?.votes ?? []).filter((v) => v.status === 'attend').map((v) => v.team_member_id);
+    const attendeeIds =
+      memberIds ?? (match?.votes ?? []).filter((v) => v.status === 'attend').map((v) => v.team_member_id);
     set({ loading: true, error: null });
     try {
       await createSettlementRequest(matchId, totalAmount, attendeeIds, account);

@@ -16,7 +16,13 @@ import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../stores/settlementStore';
 import { BankPicker } from '../components/BankPicker';
 import { SendMoneySheet } from '../components/SendMoneySheet';
+import { CreateSettlementSheet } from '../components/CreateSettlementSheet';
+import { PendingSettlementCard, SettlementEmpty } from '../components/PendingSettlementCard';
 import type { SettlementAccount } from '../services/settlementService';
+
+function daysSince(dateIso: string) {
+  return Math.max(0, Math.floor((Date.now() - new Date(dateIso).getTime()) / 86_400_000));
+}
 
 const EMPTY_ACCOUNT: SettlementAccount = { bankName: '', accountNumber: '', accountHolder: '' };
 
@@ -42,10 +48,10 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
   const latestAccount = useSettlementStore((s) => s.latestAccount);
   const loadLatestAccount = useSettlementStore((s) => s.loadLatestAccount);
 
-  const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
   const [accountDrafts, setAccountDrafts] = useState<Record<string, SettlementAccount>>({});
   const [copiedMatchId, setCopiedMatchId] = useState<string | null>(null);
   const [sendMatchId, setSendMatchId] = useState<string | null>(null);
+  const [createSheetMatchId, setCreateSheetMatchId] = useState<string | null>(null);
   const [onlyUnpaidByMatch, setOnlyUnpaidByMatch] = useState<Record<string, boolean>>({});
   const [selectedPayments, setSelectedPayments] = useState<Record<string, boolean>>({});
   const [remindedMatches, setRemindedMatches] = useState<Record<string, boolean>>({});
@@ -107,6 +113,12 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
     [sendMatchId, settlements]
   );
 
+  const createSheetMatch = useMemo(
+    () => (createSheetMatchId ? matchesWithAttendees.find((m) => m.id === createSheetMatchId) ?? null : null),
+    [createSheetMatchId, matchesWithAttendees]
+  );
+  const createSheetAccount = createSheetMatchId ? accountFor(createSheetMatchId) : EMPTY_ACCOUNT;
+
   return (
     <ScreenGradient>
       <TabHeader title="정산" />
@@ -122,11 +134,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
       ) : loading && !loaded ? (
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.green} />
       ) : matchesWithAttendees.length === 0 ? (
-        <EmptyState
-          emoji="💰"
-          title="아직 정산할 경기가 없어요"
-          subtitle={'참석투표가 있는 경기가 생기면\n여기서 회비를 정산할 수 있어요'}
-        />
+        <SettlementEmpty isAdmin={isAdmin} />
       ) : (
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {!!error && <Text style={styles.errorText}>{error}</Text>}
@@ -134,8 +142,6 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
           {matchesWithAttendees.map((match) => {
             const settlement = settlements.find((s) => s.match_id === match.id);
             const attendeeIds = match.votes.filter((v) => v.status === 'attend').map((v) => v.team_member_id);
-            const draftAmount = Number(amountDrafts[match.id]) || 0;
-            const perPersonPreview = attendeeIds.length > 0 ? Math.ceil(draftAmount / attendeeIds.length) : 0;
             const d = new Date(match.match_date);
             const dateLabel = `${d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}${
               match.location ? ` · ${match.location}` : ''
@@ -334,101 +340,55 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
             }
 
             // ── 정산 등록 전
+            const accountReady = isAccountComplete(accountFor(match.id));
             return (
-              <View key={match.id} style={styles.card}>
-                <View style={styles.cardHead}>
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {dateLabel}
-                    </Text>
-                    <Text style={styles.cardSub}>참석 {attendeeIds.length}명</Text>
-                  </View>
-                  <View style={[styles.statusChip, styles.statusWaiting]}>
-                    <Text style={[styles.statusText, { color: colors.textMuted }]}>정산 전</Text>
-                  </View>
-                </View>
+              <View key={match.id} style={{ gap: 10 }}>
+                <PendingSettlementCard
+                  matchLabel={dateLabel}
+                  attendeeCount={attendeeIds.length}
+                  daysSince={daysSince(match.match_date)}
+                  isAdmin={isAdmin}
+                  onCreate={() => accountReady && setCreateSheetMatchId(match.id)}
+                />
 
-                {isAdmin ? (
-                  <View style={{ gap: 16 }}>
-                    <View style={styles.formSection}>
-                      <View style={styles.formSectionHead}>
-                        <View style={styles.formIcon}>
-                          <Ionicons name="cash-outline" size={15} color={colors.green} />
-                        </View>
-                        <Text style={styles.formSectionTitle}>총 비용</Text>
+                {isAdmin && !accountReady && (
+                  <View style={styles.formSection}>
+                    <View style={styles.formSectionHead}>
+                      <View style={styles.formIcon}>
+                        <Ionicons name="card-outline" size={15} color={colors.green} />
                       </View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="총 비용 (원)"
-                        placeholderTextColor={colors.placeholder}
-                        keyboardType="number-pad"
-                        value={amountDrafts[match.id] ?? ''}
-                        onChangeText={(t) => setAmountDrafts((prev) => ({ ...prev, [match.id]: t }))}
-                      />
-                      {draftAmount > 0 && (
-                        <View style={styles.preview}>
-                          <Text style={styles.previewLabel}>참석 {attendeeIds.length}명 · 1인당</Text>
-                          <Text style={styles.previewAmount}>{perPersonPreview.toLocaleString()}원</Text>
-                        </View>
+                      <Text style={styles.formSectionTitle}>입금 계좌를 먼저 등록해주세요</Text>
+                      {!!latestAccount && (
+                        <Pressable
+                          onPress={() => setAccountDrafts((prev) => ({ ...prev, [match.id]: latestAccount }))}
+                          style={({ pressed }) => [styles.recentChip, pressed && styles.pressed]}
+                        >
+                          <Ionicons name="time-outline" size={12} color={colors.green} />
+                          <Text style={styles.recentText} numberOfLines={1}>
+                            최근 계좌 쓰기
+                          </Text>
+                        </Pressable>
                       )}
                     </View>
-
-                    <View style={styles.formSection}>
-                      <View style={styles.formSectionHead}>
-                        <View style={styles.formIcon}>
-                          <Ionicons name="card-outline" size={15} color={colors.green} />
-                        </View>
-                        <Text style={styles.formSectionTitle}>입금 계좌</Text>
-                        {!!latestAccount && (
-                          <Pressable
-                            onPress={() => setAccountDrafts((prev) => ({ ...prev, [match.id]: latestAccount }))}
-                            style={({ pressed }) => [styles.recentChip, pressed && styles.pressed]}
-                          >
-                            <Ionicons name="time-outline" size={12} color={colors.green} />
-                            <Text style={styles.recentText} numberOfLines={1}>
-                              최근 계좌 쓰기
-                            </Text>
-                          </Pressable>
-                        )}
-                      </View>
-                      <BankPicker
-                        value={accountFor(match.id).bankName}
-                        onChange={(name) => updateAccountField(match.id, 'bankName', name)}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="계좌번호"
-                        placeholderTextColor={colors.placeholder}
-                        keyboardType="number-pad"
-                        value={accountFor(match.id).accountNumber}
-                        onChangeText={(t) => updateAccountField(match.id, 'accountNumber', t)}
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="예금주"
-                        placeholderTextColor={colors.placeholder}
-                        value={accountFor(match.id).accountHolder}
-                        onChangeText={(t) => updateAccountField(match.id, 'accountHolder', t)}
-                      />
-                    </View>
-
-                    <Pressable
-                      disabled={!isAccountComplete(accountFor(match.id)) || draftAmount <= 0}
-                      onPress={() => createSettlement(match.id, draftAmount, accountFor(match.id))}
-                      style={({ pressed }) => [
-                        styles.submit,
-                        (!isAccountComplete(accountFor(match.id)) || draftAmount <= 0) && styles.submitDisabled,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Ionicons name="checkmark-circle" size={17} color={colors.bgRoot} />
-                      <Text style={styles.submitText}>정산 등록</Text>
-                    </Pressable>
-                  </View>
-                ) : (
-                  <View style={styles.waitingBox}>
-                    <Ionicons name="hourglass-outline" size={16} color={colors.textFaint} />
-                    <Text style={styles.waiting}>총무가 정산을 등록하면 알려드릴게요</Text>
+                    <BankPicker
+                      value={accountFor(match.id).bankName}
+                      onChange={(name) => updateAccountField(match.id, 'bankName', name)}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="계좌번호"
+                      placeholderTextColor={colors.placeholder}
+                      keyboardType="number-pad"
+                      value={accountFor(match.id).accountNumber}
+                      onChangeText={(t) => updateAccountField(match.id, 'accountNumber', t)}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="예금주"
+                      placeholderTextColor={colors.placeholder}
+                      value={accountFor(match.id).accountHolder}
+                      onChangeText={(t) => updateAccountField(match.id, 'accountHolder', t)}
+                    />
                   </View>
                 )}
               </View>
@@ -445,6 +405,34 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
         holder={sendSettlement?.account_holder ?? ''}
         amount={sendSettlement?.per_person_amount ?? 0}
         onCopied={() => sendMatchId && setCopiedMatchId(sendMatchId)}
+      />
+
+      <CreateSettlementSheet
+        visible={!!createSheetMatch}
+        onClose={() => setCreateSheetMatchId(null)}
+        matchLabel={
+          createSheetMatch
+            ? `${new Date(createSheetMatch.match_date).toLocaleDateString('ko-KR', {
+                month: 'long',
+                day: 'numeric',
+              })}${createSheetMatch.location ? ` · ${createSheetMatch.location}` : ''}`
+            : ''
+        }
+        attendees={
+          createSheetMatch
+            ? createSheetMatch.votes
+                .filter((v) => v.status === 'attend')
+                .map((v) => ({ id: v.team_member_id, name: nameFor(v.team_member_id) }))
+            : []
+        }
+        account={{
+          bank: createSheetAccount.bankName,
+          no: createSheetAccount.accountNumber,
+          holder: createSheetAccount.accountHolder,
+        }}
+        onSubmit={({ total, targetIds }) => {
+          if (createSheetMatchId) createSettlement(createSheetMatchId, total, accountFor(createSheetMatchId), targetIds);
+        }}
       />
     </ScreenGradient>
   );
@@ -469,7 +457,6 @@ const styles = StyleSheet.create({
   statusChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   statusDone: { backgroundColor: 'rgba(74,222,128,0.14)' },
   statusOngoing: { backgroundColor: 'rgba(210,163,76,0.14)' },
-  statusWaiting: { backgroundColor: 'rgba(255,255,255,0.06)' },
   statusText: { fontSize: 11, fontWeight: '800' },
 
   myDue: { gap: 10 },
@@ -635,19 +622,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: colors.inputBg,
   },
-  preview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(74,222,128,0.07)',
-    borderWidth: 1,
-    borderColor: colors.greenDeep,
-  },
-  previewLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
-  previewAmount: { color: colors.green, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
   recentChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -659,23 +633,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#1B231F',
   },
   recentText: { color: colors.green, fontSize: 10.5, fontWeight: '700', flexShrink: 1 },
-  submit: {
-    height: 52,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    backgroundColor: colors.green,
-  },
-  submitDisabled: { opacity: 0.4 },
-  submitText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
-  waitingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  waiting: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
 });

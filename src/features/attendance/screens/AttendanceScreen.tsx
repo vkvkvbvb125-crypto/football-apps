@@ -1,3 +1,7 @@
+// src/features/attendance/screens/AttendanceScreen.tsx — 리디자인 적용판
+// 캘린더/모달 컴포넌트(CalendarGrid, TimeWheelPicker, DeadlinePicker, PlaceSearchModal,
+// PlaceDetailModal, WeatherBadge)와 store API는 기존 그대로 사용합니다.
+// 경기 만들기는 홈 화면 버튼 → openCreate 파라미터로만 진입한다 (이 화면 자체엔 FAB 없음).
 import { useEffect, useMemo, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +10,7 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
+import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../stores/attendanceStore';
 import { MonthNavigator } from '../components/MonthNavigator';
@@ -15,6 +20,7 @@ import { DeadlinePicker } from '../components/DeadlinePicker';
 import { PlaceSearchModal } from '../components/PlaceSearchModal';
 import { PlaceDetailModal } from '../components/PlaceDetailModal';
 import { WeatherBadge } from '../components/WeatherBadge';
+import { RosterSheet, type RosterMember } from '../components/RosterSheet';
 import { fetchMatchWeather, weatherEmoji } from '../services/weatherService';
 import type { PlaceResult } from '../services/placeService';
 import type { AttendanceStatus } from '../../../types/database';
@@ -34,12 +40,21 @@ interface SelectedPlace {
   longitude: number | null;
 }
 
-function dateKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+function ddayLabel(iso: string) {
+  const a = new Date(iso);
+  a.setHours(0, 0, 0, 0);
+  const b = new Date();
+  b.setHours(0, 0, 0, 0);
+  const diff = Math.round((a.getTime() - b.getTime()) / 86400000);
+  return diff === 0 ? 'TODAY' : diff > 0 ? `D-${diff}` : `D+${-diff}`;
 }
 
 export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
+  const members = useTeamStore((s) => s.members);
+
   const matches = useAttendanceStore((s) => s.matches);
   const loaded = useAttendanceStore((s) => s.loaded);
   const loading = useAttendanceStore((s) => s.loading);
@@ -61,12 +76,15 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const [quarterMinutesText, setQuarterMinutesText] = useState('10');
   const [deadlineText, setDeadlineText] = useState('');
   const [detailMatch, setDetailMatch] = useState<MatchWithVotes | null>(null);
+  const [rosterMatch, setRosterMatch] = useState<MatchWithVotes | null>(null);
+  const [calendarWeather, setCalendarWeather] = useState<Record<string, string>>({});
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  const isAdmin = activeTeam?.role === 'admin';
 
   useEffect(() => {
     if (activeTeam) loadMatches();
   }, [activeTeam?.team.id]);
-
-  const isAdmin = activeTeam?.role === 'admin';
 
   const visibleMonth = useMemo(() => {
     const d = new Date();
@@ -77,9 +95,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
   const markedDates = useMemo(() => new Set(matches.map((m) => dateKey(new Date(m.match_date)))), [matches]);
 
-  const [calendarWeather, setCalendarWeather] = useState<Record<string, string>>({});
-  const [weatherLoading, setWeatherLoading] = useState(false);
-
+  // 캘린더 날씨 (기존 로직 그대로)
   useEffect(() => {
     interface WeatherTarget {
       dateKey: string;
@@ -87,19 +103,16 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       longitude: number;
       matchDateIso: string;
     }
-
     const targets: WeatherTarget[] = [];
     const today = new Date();
     for (let i = 0; i <= 10; i++) {
       const day = new Date(today);
       day.setDate(day.getDate() + i);
       const key = dateKey(day);
-
       const matchOnDay = matches.find((m) => {
         const d = new Date(m.match_date);
         return dateKey(d) === key && m.latitude != null && m.longitude != null;
       });
-
       if (matchOnDay) {
         targets.push({
           dateKey: key,
@@ -118,19 +131,15 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         });
       }
     }
-
     if (targets.length === 0) {
       setCalendarWeather({});
       setWeatherLoading(false);
       return;
     }
-
     let cancelled = false;
-    let pendingCount = targets.length;
+    let pending = targets.length;
     setCalendarWeather({});
     setWeatherLoading(true);
-    // 날짜마다 도착하는 대로 바로 반영 - 전부 모아서 한번에 갱신하면 동시성 제한 때문에
-    // 가장 늦게 끝나는 날짜만큼 화면이 안 바뀌는 것처럼 보인다.
     targets.forEach((t) => {
       fetchMatchWeather(t.latitude, t.longitude, t.matchDateIso)
         .then((weather) => {
@@ -145,8 +154,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         })
         .catch(() => {})
         .finally(() => {
-          pendingCount -= 1;
-          if (pendingCount === 0 && !cancelled) setWeatherLoading(false);
+          pending -= 1;
+          if (pending === 0 && !cancelled) setWeatherLoading(false);
         });
     });
     return () => {
@@ -199,7 +208,9 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         : null
     );
     setQuarterMinutesText(String(match.quarter_minutes));
-    setDeadlineText(match.vote_deadline ? new Date(match.vote_deadline).toISOString().slice(0, 16).replace('T', ' ') : '');
+    setDeadlineText(
+      match.vote_deadline ? new Date(match.vote_deadline).toISOString().slice(0, 16).replace('T', ' ') : ''
+    );
     setModalVisible(true);
   };
 
@@ -239,13 +250,35 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       quarterMinutes: Number(quarterMinutesText) || 10,
     };
 
-    if (editingMatchId) {
-      updateMatch(editingMatchId, payload);
-    } else {
-      createMatch(payload);
-    }
+    if (editingMatchId) updateMatch(editingMatchId, payload);
+    else createMatch(payload);
     setModalVisible(false);
   };
+
+  const rosterMembers: RosterMember[] = useMemo(() => {
+    if (!rosterMatch) return [];
+    return members.map((m) => {
+      const v = rosterMatch.votes.find((vote) => vote.team_member_id === m.id);
+      return {
+        id: m.id,
+        name: m.displayName,
+        position: m.skillTag ? `실력 ${m.skillTag}` : null,
+        role: m.role,
+        status: v?.status ?? 'pending',
+        isMe: m.id === activeTeam?.membershipId,
+      };
+    });
+  }, [rosterMatch, members, activeTeam]);
+
+  const rosterMatchLabel = useMemo(() => {
+    if (!rosterMatch) return '';
+    const d = new Date(rosterMatch.match_date);
+    const base = `${d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} ${d.toLocaleTimeString(
+      'ko-KR',
+      { hour: '2-digit', minute: '2-digit', hour12: false }
+    )}`;
+    return rosterMatch.location ? `${base} · ${rosterMatch.location}` : base;
+  }, [rosterMatch]);
 
   return (
     <ScreenGradient>
@@ -260,123 +293,151 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
           onAction={() => navigation.navigate('Team')}
         />
       ) : (
-        <View style={styles.body}>
+        <View style={{ flex: 1 }}>
           {weatherLoading && (
-            <View style={styles.weatherLoadingRow}>
-              <ActivityIndicator size="small" color="#4ADE80" />
-              <Text style={styles.weatherLoadingText}>날씨 조회 중...</Text>
+            <View style={styles.weatherLoading}>
+              <ActivityIndicator size="small" color={colors.green} />
+              <Text style={styles.weatherLoadingText}>날씨 조회 중…</Text>
             </View>
           )}
 
           <MonthNavigator offset={monthOffset} onChange={setMonthOffset} />
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <CalendarGrid
-              year={visibleMonth.year}
-              month={visibleMonth.month}
-              selectedDate={selectedDate}
-              markedDates={markedDates}
-              weatherByDate={calendarWeather}
-              onSelectDate={setSelectedDate}
-            />
-            <View style={styles.list}>
-            {loading && !loaded ? (
-              <ActivityIndicator style={{ marginTop: 24 }} color="#4ADE80" />
-            ) : monthMatches.length === 0 ? (
-              <EmptyState
-                emoji="🗓️"
-                title="이 달엔 등록된 경기가 없어요"
-                subtitle="홈 화면의 경기 만들기 버튼으로 새 경기를 만들어보세요"
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.calendarCard}>
+              <CalendarGrid
+                year={visibleMonth.year}
+                month={visibleMonth.month}
+                selectedDate={selectedDate}
+                markedDates={markedDates}
+                weatherByDate={calendarWeather}
+                onSelectDate={setSelectedDate}
               />
-            ) : (
-              monthMatches.map((match) => {
-                const myVote = match.votes.find((v) => v.team_member_id === activeTeam.membershipId);
-                const deadlinePassed = match.vote_deadline ? new Date(match.vote_deadline) < new Date() : false;
-                const isLocked = match.status !== 'open' || deadlinePassed;
-                const counts = {
-                  attend: match.votes.filter((v) => v.status === 'attend').length,
-                  absent: match.votes.filter((v) => v.status === 'absent').length,
-                  undecided: match.votes.filter((v) => v.status === 'undecided').length,
-                };
+            </View>
 
-                return (
-                  <View key={match.id} style={styles.card}>
-                    <View style={styles.cardHeader}>
-                      <Text style={styles.cardDate}>
-                        {new Date(match.match_date).toLocaleString('ko-KR', {
-                          month: 'long',
-                          day: 'numeric',
-                          weekday: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Text>
-                      <View style={styles.cardHeaderRight}>
-                        {isLocked && <Text style={styles.lockedTag}>투표 마감</Text>}
+            <View style={styles.list}>
+              {loading && !loaded ? (
+                <ActivityIndicator style={{ marginTop: 24 }} color={colors.green} />
+              ) : monthMatches.length === 0 ? (
+                <EmptyState
+                  emoji="🗓️"
+                  title="이 달엔 등록된 경기가 없어요"
+                  subtitle="홈 화면의 경기 만들기 버튼으로 새 경기를 만들어보세요"
+                />
+              ) : (
+                monthMatches.map((match) => {
+                  const myVote = match.votes.find((v) => v.team_member_id === activeTeam.membershipId)?.status;
+                  const deadlinePassed = match.vote_deadline ? new Date(match.vote_deadline) < new Date() : false;
+                  const isLocked = match.status !== 'open' || deadlinePassed;
+                  const attend = match.votes.filter((v) => v.status === 'attend').length;
+                  const absent = match.votes.filter((v) => v.status === 'absent').length;
+                  const pending = Math.max(0, members.length - attend - absent);
+                  const total = Math.max(1, members.length);
+                  const d = new Date(match.match_date);
+
+                  return (
+                    <View key={match.id} style={styles.card}>
+                      <View style={styles.cardHead}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          <View style={styles.titleRow}>
+                            <Text style={styles.cardTitle}>
+                              {d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}{' '}
+                              {d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </Text>
+                            <View style={[styles.chip, isLocked ? styles.chipLocked : styles.chipOpen]}>
+                              <Text style={[styles.chipText, { color: isLocked ? colors.textMuted : colors.green }]}>
+                                {isLocked ? '투표 마감' : ddayLabel(match.match_date)}
+                              </Text>
+                            </View>
+                          </View>
+                          {!!match.location && (
+                            <Pressable onPress={() => setDetailMatch(match)} hitSlop={4}>
+                              <Text style={styles.cardPlace} numberOfLines={1}>
+                                {match.location}
+                              </Text>
+                            </Pressable>
+                          )}
+                        </View>
                         {isAdmin && (
                           <Pressable
+                            hitSlop={8}
                             onPress={(e) => {
                               setActionAnchorY(e.nativeEvent.pageY);
                               setActionMatch(match);
                             }}
-                            hitSlop={8}
                           >
-                            <Ionicons name="ellipsis-vertical" size={18} color="#8A9490" />
+                            <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
                           </Pressable>
                         )}
                       </View>
-                    </View>
-                    {match.location && (
-                      <Pressable onPress={() => setDetailMatch(match)}>
-                        <Text style={styles.cardLocation} numberOfLines={1} ellipsizeMode="tail">
-                          {match.location}
-                        </Text>
-                      </Pressable>
-                    )}
 
-                    <WeatherBadge
-                      latitude={match.latitude}
-                      longitude={match.longitude}
-                      matchDateIso={match.match_date}
-                    />
+                      <WeatherBadge
+                        latitude={match.latitude}
+                        longitude={match.longitude}
+                        matchDateIso={match.match_date}
+                      />
 
-                    <Text style={styles.countsText}>
-                      참석 {counts.attend} · 불참 {counts.absent} · 미정 {counts.undecided}
-                    </Text>
-
-                    <View style={styles.voteRow}>
-                      {VOTE_OPTIONS.map((opt) => (
-                        <Pressable
-                          key={opt.status}
-                          disabled={isLocked}
-                          onPress={() => vote(match.id, opt.status)}
-                          style={({ pressed }) => [
-                            styles.voteChip,
-                            myVote?.status === opt.status && styles.voteChipActive,
-                            isLocked && styles.voteChipDisabled,
-                            pressed && !isLocked && styles.pressedOpacity,
-                          ]}
-                        >
-                          <Text style={[styles.voteChipText, myVote?.status === opt.status && styles.voteChipTextActive]}>
-                            {opt.label}
+                      <View style={{ gap: 7 }}>
+                        <View style={styles.countRow}>
+                          <Text style={styles.countText}>
+                            참석 {attend} · 불참 {absent} · 미투표 {pending}
                           </Text>
-                        </Pressable>
-                      ))}
+                          <Pressable onPress={() => setRosterMatch(match)} hitSlop={6}>
+                            <Text style={styles.rosterLink}>명단 보기 ›</Text>
+                          </Pressable>
+                        </View>
+                        <View style={styles.track}>
+                          <View style={[styles.fillAttend, { width: `${(attend / total) * 100}%` }]} />
+                          <View style={[styles.fillAbsent, { width: `${(absent / total) * 100}%` }]} />
+                        </View>
+                      </View>
+
+                      <View style={styles.voteRow}>
+                        {VOTE_OPTIONS.map((opt) => {
+                          const on = myVote === opt.status;
+                          return (
+                            <Pressable
+                              key={opt.status}
+                              disabled={isLocked}
+                              onPress={() => vote(match.id, opt.status)}
+                              style={({ pressed }) => [
+                                styles.votePill,
+                                on && opt.status === 'attend' && styles.votePillAttend,
+                                on && opt.status === 'absent' && styles.votePillAbsent,
+                                on && opt.status === 'undecided' && styles.votePillUndecided,
+                                isLocked && styles.votePillDisabled,
+                                pressed && !isLocked && styles.pressed,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.votePillText,
+                                  on && opt.status === 'attend' && { color: colors.bgRoot },
+                                  on && opt.status === 'absent' && { color: colors.textStrong },
+                                  on && opt.status === 'undecided' && { color: colors.gold },
+                                ]}
+                              >
+                                {opt.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
                     </View>
-                  </View>
-                );
-              })
-            )}
+                  );
+                })
+              )}
             </View>
           </ScrollView>
         </View>
       )}
 
+      {/* 경기 만들기/수정 */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
+            <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>
               {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 경기 {editingMatchId ? '수정' : '만들기'}
             </Text>
@@ -384,6 +445,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
             <Text style={styles.fieldLabel}>경기 시간</Text>
             <TimeWheelPicker value={timeText} onChange={setTimeText} />
 
+            <Text style={styles.fieldLabel}>장소</Text>
             <PlaceSearchModal
               value={selectedPlace}
               onSelect={(place: PlaceResult) =>
@@ -396,52 +458,64 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 })
               }
             />
+
+            <Text style={styles.fieldLabel}>쿼터 시간(분)</Text>
             <TextInput
               style={styles.input}
-              placeholder="쿼터 시간(분)"
-              placeholderTextColor="#5A625E"
+              placeholder="10"
+              placeholderTextColor={colors.placeholder}
               value={quarterMinutesText}
               onChangeText={setQuarterMinutesText}
               keyboardType="number-pad"
             />
-            <Text style={styles.fieldLabel}>인원 마감 (선택)</Text>
-            <DeadlinePicker value={deadlineText} onChange={setDeadlineText} matchDate={selectedDate} matchTime={timeText} />
 
-            <View style={styles.modalButtonRow}>
-              <Pressable style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
+            <Text style={styles.fieldLabel}>투표 마감 (선택)</Text>
+            <DeadlinePicker
+              value={deadlineText}
+              onChange={setDeadlineText}
+              matchDate={selectedDate}
+              matchTime={timeText}
+            />
+
+            <View style={styles.modalButtons}>
+              <Pressable
+                onPress={() => setModalVisible(false)}
+                style={({ pressed }) => [styles.modalCancel, pressed && styles.pressed]}
+              >
                 <Text style={styles.modalCancelText}>취소</Text>
               </Pressable>
-              <Pressable style={styles.modalCreateButton} onPress={handleSubmit}>
-                <Text style={styles.modalCreateText}>{editingMatchId ? '저장' : '만들기'}</Text>
+              <Pressable onPress={handleSubmit} style={({ pressed }) => [styles.modalSubmit, pressed && styles.pressed]}>
+                <Text style={styles.modalSubmitText}>{editingMatchId ? '저장' : '만들기'}</Text>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
 
+      {/* 수정/삭제 팝오버 */}
       <Modal visible={!!actionMatch} transparent animationType="fade" onRequestClose={() => setActionMatch(null)}>
-        <Pressable style={styles.actionOverlay} onPress={() => setActionMatch(null)}>
-          <View style={[styles.actionPopover, { top: actionAnchorY + 12 }]}>
+        <Pressable style={{ flex: 1 }} onPress={() => setActionMatch(null)}>
+          <View style={[styles.popover, { top: actionAnchorY + 12 }]}>
             <Pressable
-              style={styles.actionOption}
+              style={styles.popoverItem}
               onPress={() => {
                 if (actionMatch) handleOpenEdit(actionMatch);
                 setActionMatch(null);
               }}
             >
-              <Ionicons name="pencil-outline" size={16} color="#E7ECE9" />
-              <Text style={styles.actionOptionText}>수정</Text>
+              <Ionicons name="pencil-outline" size={16} color={colors.textStrong} />
+              <Text style={styles.popoverText}>수정</Text>
             </Pressable>
-            <View style={styles.actionDivider} />
+            <View style={styles.popoverDivider} />
             <Pressable
-              style={styles.actionOption}
+              style={styles.popoverItem}
               onPress={() => {
                 if (actionMatch) handleDelete(actionMatch.id);
                 setActionMatch(null);
               }}
             >
-              <Ionicons name="trash-outline" size={16} color="#F87171" />
-              <Text style={[styles.actionOptionText, styles.actionOptionTextDanger]}>삭제</Text>
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              <Text style={[styles.popoverText, { color: colors.danger }]}>삭제</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -458,198 +532,154 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
           longitude={detailMatch.longitude}
         />
       )}
+
+      <RosterSheet
+        visible={!!rosterMatch}
+        onClose={() => setRosterMatch(null)}
+        matchLabel={rosterMatchLabel}
+        capacity={members.length}
+        deadlineLabel={rosterMatch?.vote_deadline ? ddayLabel(rosterMatch.vote_deadline) : undefined}
+        members={rosterMembers}
+        isAdmin={isAdmin ?? false}
+      />
     </ScreenGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
+  pressed: { opacity: 0.85 },
+  errorText: { color: colors.danger, textAlign: 'center', marginTop: 8 },
+  weatherLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 },
+  weatherLoadingText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+
+  scroll: { paddingBottom: 110 },
+  calendarCard: {
+    marginHorizontal: 20,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  list: { paddingHorizontal: 20, paddingTop: 16, gap: 12 },
+
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 12,
+  },
+  cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' },
+  cardTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    fontVariant: ['tabular-nums'],
+  },
+  chip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  chipOpen: { backgroundColor: 'rgba(74,222,128,0.14)' },
+  chipLocked: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  chipText: { fontSize: 10, fontWeight: '800' },
+  cardPlace: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
+
+  countRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  countText: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
+  rosterLink: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  track: { flexDirection: 'row', height: 6, borderRadius: 3, backgroundColor: colors.divider, overflow: 'hidden' },
+  fillAttend: { backgroundColor: colors.green },
+  fillAbsent: { backgroundColor: colors.neutralFill },
+
+  voteRow: { flexDirection: 'row', gap: 8 },
+  votePill: {
     flex: 1,
-  },
-  pressedOpacity: {
-    opacity: 0.7,
-  },
-  errorText: {
-    color: '#F87171',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  weatherLoadingRow: {
-    flexDirection: 'row',
+    height: 46,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  weatherLoadingText: {
-    color: '#8A9490',
-    fontSize: 12,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 12,
-  },
-  card: {
-    backgroundColor: '#141A17',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#22302A',
-    padding: 16,
+    borderColor: '#26332D',
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cardDate: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  lockedTag: {
-    color: '#8A9490',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  cardLocation: {
-    marginTop: 4,
-    color: '#8A9490',
-    fontSize: 13,
-  },
-  countsText: {
-    marginTop: 10,
-    color: '#8A9490',
-    fontSize: 12,
-  },
-  voteRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  voteChip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    backgroundColor: '#1B231F',
-    borderWidth: 1,
-    borderColor: '#22302A',
-  },
-  voteChipActive: {
-    backgroundColor: '#4ADE80',
-    borderColor: '#4ADE80',
-  },
-  voteChipDisabled: {
-    opacity: 0.4,
-  },
-  voteChipText: {
-    color: '#8A9490',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  voteChipTextActive: {
-    color: '#0F1512',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
+  votePillAttend: { backgroundColor: colors.green, borderColor: colors.green },
+  votePillAbsent: { backgroundColor: colors.neutralFill, borderColor: '#48584F' },
+  votePillUndecided: { backgroundColor: 'rgba(210,163,76,0.16)', borderColor: '#6B5426' },
+  votePillDisabled: { opacity: 0.4 },
+  votePillText: { color: colors.textMuted, fontSize: 13.5, fontWeight: '800' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: {
-    backgroundColor: '#141A17',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderTopWidth: 1,
+    borderColor: colors.border,
     padding: 24,
-    gap: 12,
+    paddingTop: 12,
+    gap: 10,
   },
-  modalTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
+  modalHandle: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#2C3833',
+    marginBottom: 10,
   },
-  fieldLabel: {
-    color: '#8A9490',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: -4,
-  },
+  modalTitle: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginBottom: 2 },
+  fieldLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700', marginTop: 4 },
   input: {
     borderWidth: 1,
-    borderColor: '#22302A',
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#FFFFFF',
-    backgroundColor: '#0F1512',
+    color: colors.text,
+    fontSize: 14,
+    backgroundColor: colors.inputBg,
   },
-  modalButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  modalCancelButton: {
+  modalButtons: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  modalCancel: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    height: 50,
+    borderRadius: 15,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: '#26332D',
   },
-  modalCancelText: {
-    color: '#8A9490',
-    fontWeight: '600',
-  },
-  modalCreateButton: {
+  modalCancelText: { color: colors.textMuted, fontSize: 14, fontWeight: '800' },
+  modalSubmit: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    height: 50,
+    borderRadius: 15,
     alignItems: 'center',
-    backgroundColor: '#4ADE80',
+    justifyContent: 'center',
+    backgroundColor: colors.green,
   },
-  modalCreateText: {
-    color: '#0F1512',
-    fontWeight: '700',
-  },
-  actionOverlay: {
-    flex: 1,
-  },
-  actionPopover: {
+  modalSubmitText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
+
+  popover: {
     position: 'absolute',
     right: 20,
     width: 160,
-    backgroundColor: '#141A17',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     overflow: 'hidden',
-    boxShadow: '0px 8px 20px rgba(0,0,0,0.4)',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
-  actionOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  actionOptionText: {
-    color: '#E7ECE9',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actionOptionTextDanger: {
-    color: '#F87171',
-  },
-  actionDivider: {
-    height: 1,
-    backgroundColor: '#22302A',
-  },
+  popoverItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
+  popoverText: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
+  popoverDivider: { height: 1, backgroundColor: colors.border },
 });

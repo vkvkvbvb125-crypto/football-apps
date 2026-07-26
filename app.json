@@ -9,7 +9,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.futsalclub.app"
+      "bundleIdentifier": "com.futsalclub.app",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["supertoss", "kakaobank", "kbbank", "shinhan-sr-ansimclick"]
+      }
     },
     "android": {
       "package": "com.futsalclub.app",

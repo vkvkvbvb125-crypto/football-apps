@@ -1,5 +1,6 @@
-// src/features/settlement/screens/SettlementScreen.tsx — 리디자인 적용판
-// store API(createSettlement, togglePayment, latestAccount) 그대로 사용.
+// src/features/settlement/screens/SettlementScreen.tsx — 리디자인 v2 적용판
+// 멤버: 큰 금액 + 송금 딥링크 + 입금 완료 체크. 총무: 입금 현황 + 미입금 필터 + 여러 명 한 번에 확인.
+// store API(createSettlement, togglePayment, latestAccount) 그대로 사용 - 실제 매치/정산 데이터 기반.
 import { useEffect, useMemo, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -14,6 +15,7 @@ import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../stores/settlementStore';
 import { BankPicker } from '../components/BankPicker';
+import { SendMoneySheet } from '../components/SendMoneySheet';
 import type { SettlementAccount } from '../services/settlementService';
 
 const EMPTY_ACCOUNT: SettlementAccount = { bankName: '', accountNumber: '', accountHolder: '' };
@@ -43,6 +45,10 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
   const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
   const [accountDrafts, setAccountDrafts] = useState<Record<string, SettlementAccount>>({});
   const [copiedMatchId, setCopiedMatchId] = useState<string | null>(null);
+  const [sendMatchId, setSendMatchId] = useState<string | null>(null);
+  const [onlyUnpaidByMatch, setOnlyUnpaidByMatch] = useState<Record<string, boolean>>({});
+  const [selectedPayments, setSelectedPayments] = useState<Record<string, boolean>>({});
+  const [remindedMatches, setRemindedMatches] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!activeTeam) return;
@@ -66,12 +72,39 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
     setTimeout(() => setCopiedMatchId((cur) => (cur === matchId ? null : cur)), 1500);
   };
 
+  const toggleOnlyUnpaid = (matchId: string) =>
+    setOnlyUnpaidByMatch((prev) => ({ ...prev, [matchId]: !prev[matchId] }));
+
+  const toggleSelectPayment = (paymentId: string) =>
+    setSelectedPayments((prev) => ({ ...prev, [paymentId]: !prev[paymentId] }));
+
+  const confirmSelected = async (paymentIds: string[]) => {
+    setSelectedPayments((prev) => {
+      const next = { ...prev };
+      paymentIds.forEach((id) => delete next[id]);
+      return next;
+    });
+    for (const id of paymentIds) {
+      await togglePayment(id, true);
+    }
+  };
+
+  const remindMatch = (matchId: string) => {
+    setRemindedMatches((prev) => ({ ...prev, [matchId]: true }));
+    setTimeout(() => setRemindedMatches((prev) => ({ ...prev, [matchId]: false })), 2000);
+  };
+
   const matchesWithAttendees = useMemo(
     () =>
       matches
         .filter((m) => m.votes.some((v) => v.status === 'attend'))
         .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime()),
     [matches]
+  );
+
+  const sendSettlement = useMemo(
+    () => (sendMatchId ? settlements.find((s) => s.match_id === sendMatchId) ?? null : null),
+    [sendMatchId, settlements]
   );
 
   return (
@@ -111,11 +144,15 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
             // ── 정산 완료본
             if (settlement) {
               const paid = settlement.payments.filter((p) => p.is_paid).length;
+              const unpaidPayments = settlement.payments.filter((p) => !p.is_paid);
               const totalCount = settlement.payments.length || 1;
               const pct = Math.round((paid / totalCount) * 100);
               const collected = paid * (settlement.per_person_amount ?? 0);
               const myPayment = settlement.payments.find((p) => p.team_member_id === activeTeam.membershipId);
               const done = paid === settlement.payments.length;
+              const onlyUnpaid = !!onlyUnpaidByMatch[match.id];
+              const visiblePayments = isAdmin && onlyUnpaid ? unpaidPayments : settlement.payments;
+              const selectedIds = unpaidPayments.map((p) => p.id).filter((id) => selectedPayments[id]);
 
               return (
                 <View key={match.id} style={styles.card}>
@@ -135,7 +172,7 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                     </View>
                   </View>
 
-                  {/* 멤버: 내가 낼 금액이 제일 크게 */}
+                  {/* 멤버: 내가 낼 금액이 제일 크게 + 송금 딥링크 */}
                   {!isAdmin && myPayment && (
                     <View style={styles.myDue}>
                       <Text style={styles.myDueLabel}>{myPayment.is_paid ? '입금 완료' : '내가 낼 금액'}</Text>
@@ -145,6 +182,29 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                         </Text>
                         <Text style={styles.myDueUnit}>원</Text>
                       </View>
+
+                      {!myPayment.is_paid && (
+                        <Pressable
+                          onPress={() => setSendMatchId(match.id)}
+                          style={({ pressed }) => [styles.sendBtn, pressed && styles.pressed]}
+                        >
+                          <Ionicons name="arrow-forward" size={16} color={colors.bgRoot} />
+                          <Text style={styles.sendText}>송금하기</Text>
+                        </Pressable>
+                      )}
+
+                      <Pressable
+                        onPress={() => togglePayment(myPayment.id, !myPayment.is_paid)}
+                        style={({ pressed }) => [
+                          styles.paidBtn,
+                          myPayment.is_paid && styles.paidBtnDone,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text style={[styles.paidText, myPayment.is_paid && { color: colors.green }]}>
+                          {myPayment.is_paid ? '입금 완료 취소' : '입금했어요'}
+                        </Text>
+                      </Pressable>
                     </View>
                   )}
 
@@ -186,14 +246,49 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                     </View>
                   </View>
 
+                  {isAdmin && (
+                    <View style={styles.filterRow}>
+                      <Pressable
+                        onPress={() => toggleOnlyUnpaid(match.id)}
+                        style={({ pressed }) => [
+                          styles.filterChip,
+                          onlyUnpaid && styles.filterChipOn,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text style={[styles.filterText, onlyUnpaid && { color: colors.green }]}>
+                          미입금만 {unpaidPayments.length}
+                        </Text>
+                      </Pressable>
+                      {selectedIds.length > 0 && (
+                        <Pressable
+                          onPress={() => confirmSelected(selectedIds)}
+                          style={({ pressed }) => [styles.bulkBtn, pressed && styles.pressed]}
+                        >
+                          <Text style={styles.bulkText}>{selectedIds.length}명 입금 확인</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  )}
+
                   <View style={styles.payments}>
-                    {settlement.payments.map((p) => {
-                      const canToggle = isAdmin || p.team_member_id === activeTeam.membershipId;
+                    {visiblePayments.map((p) => {
+                      const isMe = p.team_member_id === activeTeam.membershipId;
+                      const canToggle = isAdmin || isMe;
+                      const isSelected = !!selectedPayments[p.id];
+                      const handlePress = () => {
+                        if (!canToggle) return;
+                        if (isMe) {
+                          togglePayment(p.id, !p.is_paid);
+                        } else if (isAdmin && !p.is_paid) {
+                          toggleSelectPayment(p.id);
+                        }
+                      };
                       return (
                         <Pressable
                           key={p.id}
                           disabled={!canToggle}
-                          onPress={() => togglePayment(p.id, !p.is_paid)}
+                          onPress={handlePress}
                           style={({ pressed }) => [styles.paymentRow, pressed && canToggle && styles.pressed]}
                         >
                           <View style={styles.avatar}>
@@ -201,18 +296,39 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                           </View>
                           <Text style={styles.paymentName} numberOfLines={1}>
                             {nameFor(p.team_member_id)}
-                            {p.team_member_id === activeTeam.membershipId ? ' (나)' : ''}
+                            {isMe ? ' (나)' : ''}
                           </Text>
                           <Text style={styles.paymentAmount}>
                             {settlement.per_person_amount?.toLocaleString()}원
                           </Text>
-                          <View style={[styles.check, p.is_paid && styles.checkOn]}>
+                          <View
+                            style={[
+                              styles.check,
+                              p.is_paid ? styles.checkOn : isSelected ? styles.checkSelected : null,
+                            ]}
+                          >
                             {p.is_paid && <Ionicons name="checkmark" size={13} color={colors.bgRoot} />}
+                            {!p.is_paid && isSelected && <Ionicons name="checkmark" size={13} color={colors.green} />}
                           </View>
                         </Pressable>
                       );
                     })}
                   </View>
+
+                  {isAdmin && unpaidPayments.length > 0 && (
+                    <Pressable
+                      onPress={() => remindMatch(match.id)}
+                      style={({ pressed }) => [
+                        styles.remindBtn,
+                        remindedMatches[match.id] && styles.remindBtnDone,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={[styles.remindText, remindedMatches[match.id] && { color: colors.green }]}>
+                        {remindedMatches[match.id] ? '독촉 알림을 보냈어요' : `미입금 ${unpaidPayments.length}명에게 알림`}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               );
             }
@@ -302,6 +418,16 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
           })}
         </ScrollView>
       )}
+
+      <SendMoneySheet
+        visible={!!sendSettlement}
+        onClose={() => setSendMatchId(null)}
+        bankName={sendSettlement?.bank_name ?? ''}
+        accountNo={sendSettlement?.account_number ?? ''}
+        holder={sendSettlement?.account_holder ?? ''}
+        amount={sendSettlement?.per_person_amount ?? 0}
+        onCopied={() => sendMatchId && setCopiedMatchId(sendMatchId)}
+      />
     </ScreenGradient>
   );
 }
@@ -328,7 +454,7 @@ const styles = StyleSheet.create({
   statusWaiting: { backgroundColor: 'rgba(255,255,255,0.06)' },
   statusText: { fontSize: 11, fontWeight: '800' },
 
-  myDue: { gap: 4 },
+  myDue: { gap: 10 },
   myDueLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   myDueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   myDueAmount: {
@@ -341,6 +467,29 @@ const styles = StyleSheet.create({
   },
   myDuePaid: { color: colors.green },
   myDueUnit: { color: colors.textMuted, fontSize: 15, fontWeight: '700', paddingBottom: 4 },
+
+  sendBtn: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.green,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  sendText: { color: colors.bgRoot, fontSize: 13.5, fontWeight: '800' },
+
+  paidBtn: {
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: '#26332D',
+  },
+  paidBtnDone: { backgroundColor: 'rgba(74,222,128,0.12)', borderColor: '#2F4A3A' },
+  paidText: { color: colors.textStrong, fontSize: 13.5, fontWeight: '800' },
 
   accountBox: {
     flexDirection: 'row',
@@ -382,6 +531,20 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, backgroundColor: colors.divider, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 4, backgroundColor: colors.green },
 
+  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: '#26332D',
+  },
+  filterChipOn: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
+  filterText: { color: colors.textMuted, fontSize: 11.5, fontWeight: '800' },
+  bulkBtn: { marginLeft: 'auto', paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.green },
+  bulkText: { color: colors.bgRoot, fontSize: 11.5, fontWeight: '800' },
+
   payments: { borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: 2 },
   paymentRow: {
     flexDirection: 'row',
@@ -412,6 +575,19 @@ const styles = StyleSheet.create({
     borderColor: '#2C3833',
   },
   checkOn: { backgroundColor: colors.green, borderColor: colors.green },
+  checkSelected: { backgroundColor: 'rgba(74,222,128,0.3)', borderColor: 'transparent' },
+
+  remindBtn: {
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: '#26332D',
+  },
+  remindBtnDone: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
+  remindText: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
 
   input: {
     borderWidth: 1,

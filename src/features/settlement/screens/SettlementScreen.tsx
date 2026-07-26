@@ -349,54 +349,68 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                 </View>
 
                 {isAdmin ? (
-                  <View style={{ gap: 10 }}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="총 비용 (원)"
-                      placeholderTextColor={colors.placeholder}
-                      keyboardType="number-pad"
-                      value={amountDrafts[match.id] ?? ''}
-                      onChangeText={(t) => setAmountDrafts((prev) => ({ ...prev, [match.id]: t }))}
-                    />
-
-                    {draftAmount > 0 && (
-                      <View style={styles.preview}>
-                        <Text style={styles.previewLabel}>1인당</Text>
-                        <Text style={styles.previewAmount}>{perPersonPreview.toLocaleString()}원</Text>
+                  <View style={{ gap: 16 }}>
+                    <View style={styles.formSection}>
+                      <View style={styles.formSectionHead}>
+                        <View style={styles.formIcon}>
+                          <Ionicons name="cash-outline" size={15} color={colors.green} />
+                        </View>
+                        <Text style={styles.formSectionTitle}>총 비용</Text>
                       </View>
-                    )}
+                      <TextInput
+                        style={styles.input}
+                        placeholder="총 비용 (원)"
+                        placeholderTextColor={colors.placeholder}
+                        keyboardType="number-pad"
+                        value={amountDrafts[match.id] ?? ''}
+                        onChangeText={(t) => setAmountDrafts((prev) => ({ ...prev, [match.id]: t }))}
+                      />
+                      {draftAmount > 0 && (
+                        <View style={styles.preview}>
+                          <Text style={styles.previewLabel}>참석 {attendeeIds.length}명 · 1인당</Text>
+                          <Text style={styles.previewAmount}>{perPersonPreview.toLocaleString()}원</Text>
+                        </View>
+                      )}
+                    </View>
 
-                    {!!latestAccount && (
-                      <Pressable
-                        onPress={() => setAccountDrafts((prev) => ({ ...prev, [match.id]: latestAccount }))}
-                        style={({ pressed }) => [styles.recentChip, pressed && styles.pressed]}
-                      >
-                        <Ionicons name="time-outline" size={13} color={colors.green} />
-                        <Text style={styles.recentText} numberOfLines={1}>
-                          최근 계좌 쓰기 · {latestAccount.bankName} {latestAccount.accountNumber}
-                        </Text>
-                      </Pressable>
-                    )}
-
-                    <BankPicker
-                      value={accountFor(match.id).bankName}
-                      onChange={(name) => updateAccountField(match.id, 'bankName', name)}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="계좌번호"
-                      placeholderTextColor={colors.placeholder}
-                      keyboardType="number-pad"
-                      value={accountFor(match.id).accountNumber}
-                      onChangeText={(t) => updateAccountField(match.id, 'accountNumber', t)}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="예금주"
-                      placeholderTextColor={colors.placeholder}
-                      value={accountFor(match.id).accountHolder}
-                      onChangeText={(t) => updateAccountField(match.id, 'accountHolder', t)}
-                    />
+                    <View style={styles.formSection}>
+                      <View style={styles.formSectionHead}>
+                        <View style={styles.formIcon}>
+                          <Ionicons name="card-outline" size={15} color={colors.green} />
+                        </View>
+                        <Text style={styles.formSectionTitle}>입금 계좌</Text>
+                        {!!latestAccount && (
+                          <Pressable
+                            onPress={() => setAccountDrafts((prev) => ({ ...prev, [match.id]: latestAccount }))}
+                            style={({ pressed }) => [styles.recentChip, pressed && styles.pressed]}
+                          >
+                            <Ionicons name="time-outline" size={12} color={colors.green} />
+                            <Text style={styles.recentText} numberOfLines={1}>
+                              최근 계좌 쓰기
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <BankPicker
+                        value={accountFor(match.id).bankName}
+                        onChange={(name) => updateAccountField(match.id, 'bankName', name)}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="계좌번호"
+                        placeholderTextColor={colors.placeholder}
+                        keyboardType="number-pad"
+                        value={accountFor(match.id).accountNumber}
+                        onChangeText={(t) => updateAccountField(match.id, 'accountNumber', t)}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="예금주"
+                        placeholderTextColor={colors.placeholder}
+                        value={accountFor(match.id).accountHolder}
+                        onChangeText={(t) => updateAccountField(match.id, 'accountHolder', t)}
+                      />
+                    </View>
 
                     <Pressable
                       disabled={!isAccountComplete(accountFor(match.id)) || draftAmount <= 0}
@@ -407,11 +421,15 @@ export function SettlementScreen({ navigation }: BottomTabScreenProps<any>) {
                         pressed && styles.pressed,
                       ]}
                     >
+                      <Ionicons name="checkmark-circle" size={17} color={colors.bgRoot} />
                       <Text style={styles.submitText}>정산 등록</Text>
                     </Pressable>
                   </View>
                 ) : (
-                  <Text style={styles.waiting}>총무가 정산을 등록하면 알려드릴게요</Text>
+                  <View style={styles.waitingBox}>
+                    <Ionicons name="hourglass-outline" size={16} color={colors.textFaint} />
+                    <Text style={styles.waiting}>총무가 정산을 등록하면 알려드릴게요</Text>
+                  </View>
                 )}
               </View>
             );
@@ -589,6 +607,24 @@ const styles = StyleSheet.create({
   remindBtnDone: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
   remindText: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
 
+  formSection: {
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  formSectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  formIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    backgroundColor: colors.greenTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  formSectionTitle: { flex: 1, color: colors.textStrong, fontSize: 12.5, fontWeight: '800' },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -615,23 +651,31 @@ const styles = StyleSheet.create({
   recentChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    maxWidth: '100%',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    gap: 4,
+    maxWidth: '45%',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     backgroundColor: '#1B231F',
   },
-  recentText: { color: colors.green, fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  recentText: { color: colors.green, fontSize: 10.5, fontWeight: '700', flexShrink: 1 },
   submit: {
-    height: 50,
-    borderRadius: 15,
+    height: 52,
+    borderRadius: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 7,
     backgroundColor: colors.green,
   },
   submitDisabled: { opacity: 0.4 },
   submitText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
+  waitingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
   waiting: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
 });

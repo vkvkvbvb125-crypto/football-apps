@@ -21,6 +21,8 @@ interface AttendanceState {
   error: string | null;
   loadMatches: () => Promise<void>;
   createMatch: (input: Omit<CreateMatchInput, 'teamId' | 'createdBy'>) => Promise<void>;
+  /** 반복 생성 등 여러 경기를 한 번에 만들 때 — 알림은 한 번만 보낸다 */
+  createMatches: (inputs: Omit<CreateMatchInput, 'teamId' | 'createdBy'>[]) => Promise<void>;
   updateMatch: (matchId: string, input: UpdateMatchInput) => Promise<void>;
   deleteMatch: (matchId: string) => Promise<void>;
   vote: (matchId: string, status: AttendanceStatus) => Promise<void>;
@@ -64,6 +66,31 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         activeTeam.team.id,
         `${activeTeam.team.name} 새 경기`,
         `${dateLabel}${input.location ? ` · ${input.location}` : ''}에 경기가 등록됐어요`,
+        myUserId
+      ).catch(() => {
+        // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
+      });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : '경기 생성에 실패했습니다.', loading: false });
+    }
+  },
+  createMatches: async (inputs) => {
+    const activeTeam = useTeamStore.getState().activeTeam;
+    if (!activeTeam || inputs.length === 0) return;
+    set({ loading: true, error: null });
+    try {
+      for (const input of inputs) {
+        await createMatchRequest({ ...input, teamId: activeTeam.team.id, createdBy: activeTeam.membershipId });
+      }
+      await get().loadMatches();
+
+      const first = inputs[0];
+      const dateLabel = new Date(first.matchDate).toLocaleString('ko-KR', { month: 'long', day: 'numeric' });
+      const myUserId = useAuthStore.getState().session?.user.id;
+      notifyTeam(
+        activeTeam.team.id,
+        `${activeTeam.team.name} 새 경기 ${inputs.length}건`,
+        `${dateLabel}부터 매주 경기가 등록됐어요`,
         myUserId
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)

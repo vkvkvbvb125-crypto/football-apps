@@ -7,6 +7,7 @@ export interface MatchWeather {
   precipitationChance?: string;
   precipitationType?: string;
   sky?: string;
+  humidity?: string;
   amWeather?: string;
   amPop?: string;
   pmWeather?: string;

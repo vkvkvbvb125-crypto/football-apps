@@ -409,6 +409,7 @@ async function fetchShortTermForecast(
       precipitationChance: valueOf('POP'),
       precipitationType: valueOf('PTY'),
       sky: valueOf('SKY'),
+      humidity: valueOf('REH'),
     },
   };
 }

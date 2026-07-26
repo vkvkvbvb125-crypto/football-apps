@@ -77,7 +77,12 @@ export function OnboardingScreen({ onDone }: Props) {
 
   return (
     <ScreenGradient>
-      <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 20 }]}>
+      <View
+        style={[
+          styles.root,
+          { paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 16) + 14 },
+        ]}
+      >
         <View style={styles.topRow}>
           <View style={styles.segments}>
             {SLIDES.map((_, i) => (
@@ -141,7 +146,8 @@ export function OnboardingScreen({ onDone }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, paddingHorizontal: 24 },
+  // height:'100%'는 부모가 flex를 안 줘도 화면 전체를 차지하게 하는 보험
+  root: { flex: 1, height: '100%', paddingHorizontal: 24 },
 
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 26 },
   segments: { flex: 1, flexDirection: 'row', gap: 5 },
@@ -150,9 +156,10 @@ const styles = StyleSheet.create({
   segmentNow: { backgroundColor: colors.green },
   skip: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
 
-  imageArea: { flex: 1, marginHorizontal: -18, minHeight: 0 },
+  // 이미지는 남는 공간만 차지하고, 하단 CTA를 절대 밀어내지 않는다
+  imageArea: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minHeight: 80, marginHorizontal: -18 },
 
-  copy: { alignItems: 'center', gap: 10, paddingBottom: 26 },
+  copy: { flexShrink: 0, alignItems: 'center', gap: 10, paddingTop: 18, paddingBottom: 22 },
   label: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(74,222,128,0.10)' },
   labelText: { color: colors.green, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
   title: {
@@ -165,7 +172,7 @@ const styles = StyleSheet.create({
   },
   sub: { color: colors.textMuted, fontSize: 14, fontWeight: '500', lineHeight: 21, textAlign: 'center' },
 
-  ctaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ctaRow: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54 },
   prev: {
     width: 54,
     height: 54,

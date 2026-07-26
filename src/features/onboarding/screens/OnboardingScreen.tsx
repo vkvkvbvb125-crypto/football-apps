@@ -1,372 +1,193 @@
-import { useRef, useState } from 'react';
-import { Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { Text } from '../../../components/nativeText';
+// src/features/onboarding/screens/OnboardingScreen.tsx — 리디자인 적용판
+// 진행 세그먼트 + 하단 고정 다음/이전 CTA. 마지막 장에서 로그인으로 넘어간다.
+import { useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useOnboardingStore } from '../stores/onboardingStore';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { FieldBackground } from '../../../components/FieldBackground';
+import { colors } from '../../../theme';
 
 const SLIDES = [
   {
-    icon: 'shield-outline',
-    title: '풋살,\n연결의 시작',
-    subtitle: '킥데이와 함께!',
+    img: require('../../../../assets/onbording-1.png'),
+    label: '킥데이 소개',
+    t1: '풋살,',
+    t2: '연결의 시작',
+    accent: true,
+    sub: '경기 찾기부터 팀 관리까지, 킥데이와 함께',
   },
   {
-    icon: 'shield-outline',
-    title: '팀을 만들고\n팀원을 초대하세요',
-    subtitle: '초대 링크 하나로 팀 구성 완료!',
+    img: require('../../../../assets/onbording-2.png'),
+    label: 'STEP 01',
+    t1: '팀을 만들고',
+    t2: '팀원을 초대하세요',
+    sub: '초대 링크 하나로 팀 구성 완료',
   },
   {
-    icon: 'stopwatch-outline',
-    title: '경기 일정을\n쉽게 관리하세요',
-    subtitle: '참가 여부와 일정 조율을 한눈에!',
+    img: require('../../../../assets/onbording-3.png'),
+    label: 'STEP 02',
+    t1: '경기 일정을',
+    t2: '쉽게 관리하세요',
+    sub: '참가 여부와 일정 조율을 한눈에',
   },
   {
-    icon: 'people-outline',
-    title: '참석 인원으로\n팀을 나눠보세요',
-    subtitle: '랜덤 분배 후 필요하면 직접 조정할 수 있어요',
+    img: require('../../../../assets/onbording-4.png'),
+    label: 'STEP 03',
+    t1: '참석 인원으로',
+    t2: '팀을 나눠보세요',
+    sub: '랜덤 분배 후 필요하면 직접 조정할 수 있어요',
   },
   {
-    icon: 'cash-outline',
-    title: '회비 정산도\n자동으로 계산해요',
-    subtitle: '총무는 입금 확인 체크만 하면 끝',
+    img: require('../../../../assets/onbording-5.png'),
+    label: 'STEP 04',
+    t1: '회비 정산도',
+    t2: '자동으로 계산해요',
+    sub: '총무는 입금 확인 체크만 하면 끝',
   },
   {
-    icon: 'shield-outline',
-    title: '킥데이와 함께\n풋살을 시작해보세요',
-    subtitle: '',
+    img: require('../../../../assets/onbording-1.png'),
+    label: 'STEP 05',
+    t1: '킥데이와 함께',
+    t2: '풋살을 시작해보세요',
+    accent: true,
+    sub: '카카오 계정으로 3초면 시작할 수 있어요',
   },
-] as const satisfies ReadonlyArray<{
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-}>;
+];
 
-interface OnboardingScreenProps {
+interface Props {
   onDone: () => void;
 }
 
-export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const markSeen = useOnboardingStore((s) => s.markSeen);
+export function OnboardingScreen({ onDone }: Props) {
   const [index, setIndex] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
+  const insets = useSafeAreaInsets();
 
-  const handleFinish = () => {
-    markSeen();
-    onDone();
+  const fades = useMemo(() => SLIDES.map((_, i) => new Animated.Value(i === 0 ? 1 : 0)), []);
+
+  const goTo = (next: number) => {
+    Animated.parallel([
+      Animated.timing(fades[index], { toValue: 0, duration: 220, useNativeDriver: true }),
+      Animated.timing(fades[next], { toValue: 1, duration: 260, useNativeDriver: true }),
+    ]).start();
+    setIndex(next);
   };
-
-  const handleScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setIndex(newIndex);
-  };
-
-  const introImageWidth = SCREEN_WIDTH;
-  const introImageHeight = introImageWidth * 1.5;
-  const introSlideMarginTop = -SCREEN_HEIGHT * 0.06;
-  const introTextMarginTop = -SCREEN_HEIGHT * 0.098;
 
   return (
     <ScreenGradient>
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
-      <ScrollView contentContainerStyle={styles.outerScrollContent}>
-      <View style={styles.skipRow}>
-        <Pressable onPress={handleFinish} hitSlop={8}>
-          <Text style={styles.skipText}>건너뛰기</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScrollEnd}
-        onScroll={handleScrollEnd}
-        scrollEventThrottle={16}
-      >
-        {SLIDES.map((slide, i) =>
-          i === 0 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-1.png')}
+      <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 20 }]}>
+        <View style={styles.topRow}>
+          <View style={styles.segments}>
+            {SLIDES.map((_, i) => (
+              <View
+                key={i}
                 style={[
-                  styles.introImage,
-                  { width: introImageWidth, height: introImageHeight, marginHorizontal: -12 },
+                  styles.segment,
+                  { flex: i === index ? 1.8 : 1 },
+                  i < index && styles.segmentPast,
+                  i === index && styles.segmentNow,
                 ]}
-                resizeMode="contain"
               />
-              <View style={[styles.introTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.introTitle}>
-                  풋살,{'\n'}
-                  <Text style={styles.titleAccent}>연결의 시작</Text>
-                </Text>
-                <Text style={styles.introSubtitle}>{slide.subtitle}</Text>
-              </View>
-            </View>
-          ) : i === 1 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-2.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
-              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>01</Text>
-                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
-                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
-                  {slide.subtitle}
-                </Text>
-              </View>
-            </View>
-          ) : i === 2 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-3.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
-              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>02</Text>
-                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
-                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
-                  {slide.subtitle}
-                </Text>
-              </View>
-            </View>
-          ) : i === 3 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-4.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
-              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>03</Text>
-                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
-                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
-                  {slide.subtitle}
-                </Text>
-              </View>
-            </View>
-          ) : i === 4 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-5.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
-              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>04</Text>
-                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
-                <Text style={[styles.subtitle, styles.centerText, styles.featureSubtitleSize]}>
-                  {slide.subtitle}
-                </Text>
-              </View>
-            </View>
-          ) : i === 5 ? (
-            <View
-              key={i}
-              style={[styles.slide, styles.introSlide, { width: SCREEN_WIDTH, marginTop: introSlideMarginTop }]}
-            >
-              <Image
-                source={require('../../../../assets/onbording-1.png')}
-                style={{ width: introImageWidth, height: introImageHeight, marginHorizontal: -12 }}
-                resizeMode="contain"
-              />
-              <View style={[styles.featureTextBlock, { marginTop: introTextMarginTop }]}>
-                <Text style={styles.stepNumber}>05</Text>
-                <Text style={[styles.title, styles.centerText, styles.featureTitleSize]}>{slide.title}</Text>
-              </View>
-            </View>
-          ) : (
-            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
-              <View style={styles.illustrationCard}>
-                <FieldBackground variant="night" />
-                <View style={styles.mainBadge}>
-                  <Ionicons name={slide.icon} size={52} color="#FFFFFF" />
-                </View>
-              </View>
-              <Text style={styles.title}>{slide.title}</Text>
-              <Text style={styles.subtitle}>{slide.subtitle}</Text>
-            </View>
-          )
-        )}
-      </ScrollView>
+            ))}
+          </View>
+          <Pressable onPress={onDone} hitSlop={8}>
+            <Text style={styles.skip}>건너뛰기</Text>
+          </Pressable>
+        </View>
 
-      <View style={styles.dots}>
-        {SLIDES.map((_, i) => (
-          <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
-        ))}
+        <View style={styles.imageArea}>
+          {SLIDES.map((s, i) => (
+            <Animated.Image
+              key={i}
+              source={s.img}
+              resizeMode="contain"
+              style={[StyleSheet.absoluteFill, { opacity: fades[i], width: '100%', height: '100%' }]}
+            />
+          ))}
+        </View>
+
+        <View style={styles.copy}>
+          <View style={styles.label}>
+            <Text style={styles.labelText}>{slide.label}</Text>
+          </View>
+          <Text style={styles.title}>
+            {slide.t1}
+            {'\n'}
+            <Text style={{ color: slide.accent ? colors.green : colors.text }}>{slide.t2}</Text>
+          </Text>
+          <Text style={styles.sub}>{slide.sub}</Text>
+        </View>
+
+        <View style={styles.ctaRow}>
+          <Pressable
+            disabled={index === 0}
+            onPress={() => goTo(Math.max(0, index - 1))}
+            style={[styles.prev, index === 0 && { opacity: 0.3 }]}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
+            onPress={() => (isLast ? onDone() : goTo(index + 1))}
+            style={({ pressed }) => [styles.next, pressed && { opacity: 0.9 }]}
+          >
+            <Text style={styles.nextText}>{isLast ? '카카오로 시작하기' : '다음'}</Text>
+          </Pressable>
+        </View>
       </View>
-
-      {isLast && (
-        <Pressable style={styles.startButton} onPress={handleFinish}>
-          <Text style={styles.startButtonText}>시작하기</Text>
-        </Pressable>
-      )}
-      </ScrollView>
-    </View>
     </ScreenGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  outerScrollContent: {
-    flexGrow: 1,
-  },
-  skipRow: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 24,
-    marginBottom: 8,
-  },
-  skipText: {
-    color: '#8A9490',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  slide: {
-    paddingHorizontal: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  introSlide: {
-    justifyContent: 'flex-start',
-    paddingHorizontal: 12,
-  },
-  illustrationCard: {
-    width: '100%',
-    maxWidth: 340,
-    maxHeight: 340,
-    aspectRatio: 1,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: '#22302A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 40,
-    overflow: 'hidden',
-  },
-  mainBadge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  introImage: {
-    marginBottom: 4,
-  },
-  introTextBlock: {
-    alignItems: 'flex-start',
-  },
-  titleAccent: {
-    color: '#4ADE80',
-  },
-  introTitle: {
-    fontSize: 40,
+  root: { flex: 1, paddingHorizontal: 24 },
+
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 26 },
+  segments: { flex: 1, flexDirection: 'row', gap: 5 },
+  segment: { height: 3, borderRadius: 2, backgroundColor: colors.border },
+  segmentPast: { backgroundColor: '#2F4A3A' },
+  segmentNow: { backgroundColor: colors.green },
+  skip: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+
+  imageArea: { flex: 1, marginHorizontal: -18, minHeight: 0 },
+
+  copy: { alignItems: 'center', gap: 10, paddingBottom: 26 },
+  label: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(74,222,128,0.10)' },
+  labelText: { color: colors.green, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
+  title: {
+    color: colors.text,
+    fontSize: 29,
     fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'left',
-    lineHeight: 42,
-  },
-  introSubtitle: {
-    marginTop: 6,
-    fontSize: 20,
-    fontWeight: '400',
-    color: '#8A9490',
-    textAlign: 'left',
-  },
-  featureTextBlock: {
-    alignItems: 'center',
-  },
-  centerText: {
+    letterSpacing: -0.8,
+    lineHeight: 37,
     textAlign: 'center',
   },
-  featureTitleSize: {
-    fontSize: 30,
-    fontWeight: '400',
-  },
-  featureSubtitleSize: {
-    fontSize: 15,
-    marginTop: 20,
-  },
-  stepNumber: {
-    color: '#4ADE80',
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'left',
-    lineHeight: 30,
-  },
-  subtitle: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#8A9490',
-    textAlign: 'left',
-  },
-  dots: {
-    flexDirection: 'row',
+  sub: { color: colors.textMuted, fontSize: 14, fontWeight: '500', lineHeight: 21, textAlign: 'center' },
+
+  ctaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  prev: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: '#26332D',
+  },
+  next: {
+    flex: 1,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: colors.green,
     alignItems: 'center',
-    marginTop: -84,
-    gap: 12,
+    justifyContent: 'center',
+    shadowColor: colors.green,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#2A342F',
-  },
-  dotActive: {
-    width: 20,
-    backgroundColor: '#4ADE80',
-  },
-  startButton: {
-    marginTop: 24,
-    marginHorizontal: 28,
-    backgroundColor: '#4ADE80',
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    boxShadow: '0px 6px 12px rgba(74,222,128,0.35)',
-  },
-  startButtonText: {
-    color: '#0F1512',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  nextText: { color: colors.bgRoot, fontSize: 15.5, fontWeight: '800' },
 });

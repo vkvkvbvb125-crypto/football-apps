@@ -12,6 +12,10 @@ export function Text({ style, ...rest }: TextProps) {
   return <RNText {...rest} style={[{ fontFamily: fontFamilyForStyle(style) }, style]} />;
 }
 
-export function TextInput({ style, ...rest }: TextInputProps) {
-  return <RNTextInput {...rest} style={[{ fontFamily: fontFamilyForStyle(style) }, style]} />;
+interface TextInputPropsWithRef extends TextInputProps {
+  ref?: React.Ref<RNTextInput>;
+}
+
+export function TextInput({ style, ref, ...rest }: TextInputPropsWithRef) {
+  return <RNTextInput ref={ref} {...rest} style={[{ fontFamily: fontFamilyForStyle(style) }, style]} />;
 }

@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../features/auth/stores/authStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
 import { useTeamStore } from '../features/team/stores/teamStore';
-import { TeamOnboardingScreen } from '../features/team/screens/TeamOnboardingScreen';
+import { TeamStartScreen } from '../features/team/screens/TeamStartScreen';
 import { useOnboardingStore } from '../features/onboarding/stores/onboardingStore';
 import { OnboardingScreen } from '../features/onboarding/screens/OnboardingScreen';
 import { MainTabNavigator } from './MainTabNavigator';
@@ -70,7 +70,7 @@ export function RootNavigator() {
         ) : !teamLoaded || teamLoading ? (
           <Stack.Screen name="TeamLoading" component={LoadingScreen} />
         ) : !activeTeam ? (
-          <Stack.Screen name="TeamOnboarding" component={TeamOnboardingScreen} />
+          <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
         ) : (
           <Stack.Screen name="Main" component={MainTabNavigator} />
         )}

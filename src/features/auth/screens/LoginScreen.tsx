@@ -1,152 +1,115 @@
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+// src/features/auth/screens/LoginScreen.tsx — 리디자인 적용판
+// 상단 56%: 로고 이미지 + 글로우, 하단: 태그라인 + 카카오 CTA
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/authStore';
-import { ScreenGradient } from '../../../components/ScreenGradient';
+import { colors } from '../../../theme';
 
 export function LoginScreen() {
   const signIn = useAuthStore((s) => s.signIn);
   const signingIn = useAuthStore((s) => s.signingIn);
   const error = useAuthStore((s) => s.error);
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // 화면 폭 100% 기준으로 키우되, 화면이 짧은 기기에서는 높이 예산(화면
-  // 높이의 65%) 안으로 자동으로 줄어들게 해서 하단 버튼/약관 문구가
-  // 화면 밖으로 밀려나지 않도록 한다. 일반적인 폰 화면에서는 두 값이
-  // 거의 같아서 지금 보이는 크기와 차이가 없다.
-  const logoWidthFromHeight = (SCREEN_HEIGHT * 0.65) / 1.5;
-  const logoWidth = Math.min(SCREEN_WIDTH, logoWidthFromHeight);
-  const logoHeight = logoWidth * 1.5;
-
   return (
-    <ScreenGradient>
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 },
-        ]}
-      >
-        <View style={styles.brand}>
-          <Image
-            source={require('../../../../assets/onbording-1.png')}
-            style={[
-              styles.logoImage,
-              { width: logoWidth, height: logoHeight, marginBottom: -logoHeight * 0.17 },
-            ]}
-            resizeMode="contain"
-          />
-          <Text style={styles.brandName}>
-            킥 <Text style={styles.brandNameAccent}>데이</Text>
+    <View style={styles.root}>
+      <View style={styles.hero}>
+        <LinearGradient
+          colors={['rgba(74,222,128,0.22)', 'transparent']}
+          style={styles.glow}
+          start={{ x: 0.5, y: 0.2 }}
+          end={{ x: 0.5, y: 1 }}
+        />
+        <Image
+          source={require('../../../../assets/onbording-1.png')}
+          resizeMode="contain"
+          style={styles.logo}
+        />
+        <LinearGradient
+          colors={['rgba(7,16,13,0.55)', 'rgba(7,16,13,0)', 'rgba(7,16,13,0.72)', colors.bgRoot]}
+          locations={[0, 0.26, 0.76, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <View style={styles.wordmark}>
+          <Text style={styles.brand}>
+            킥 <Text style={{ color: colors.green }}>데이</Text>
           </Text>
-          <Text style={styles.brandNameEn}>K I C K D A Y</Text>
-          <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
+          <Text style={styles.brandEn}>KICKDAY</Text>
         </View>
+      </View>
 
-        <View style={styles.bottom}>
-          {error && <Text style={styles.error}>{error}</Text>}
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
+        <Text style={styles.tagline}>우리 팀의 매주 그 시간</Text>
+
+        <View style={{ gap: 14, alignItems: 'center' }}>
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+          <View style={styles.hintRow}>
+            <View style={styles.dot} />
+            <Text style={styles.hint}>가입 없이 카카오 계정으로 3초 시작</Text>
+          </View>
 
           <Pressable
-            style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
             onPress={signIn}
             disabled={signingIn}
+            style={({ pressed }) => [styles.kakao, (pressed || signingIn) && styles.kakaoPressed]}
           >
-            {signingIn ? (
-              <ActivityIndicator color="#3C1E1E" />
-            ) : (
-              <View style={styles.loginButtonContent}>
-                <Ionicons name="chatbubble" size={18} color="#3C1E1E" />
-                <Text style={styles.loginButtonText}>카카오톡으로 시작하기</Text>
-              </View>
-            )}
+            <Text style={styles.kakaoText}>{signingIn ? '카카오 연결 중…' : '카카오톡으로 시작하기'}</Text>
           </Pressable>
 
-          <Text style={styles.footnote}>
-            로그인 시 <Text style={styles.footnoteLink}>이용약관</Text> 및{' '}
-            <Text style={styles.footnoteLink}>개인정보처리방침</Text>에{'\n'}동의하게 됩니다
+          <Text style={styles.terms}>
+            로그인 시 이용약관 및 개인정보처리방침에{'\n'}동의하게 됩니다
           </Text>
         </View>
-      </ScrollView>
-    </ScreenGradient>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 32,
-    paddingHorizontal: 28,
-    paddingTop: 1,
-    paddingBottom: 40,
-  },
+  root: { flex: 1, backgroundColor: colors.bgRoot },
+
+  hero: { height: '56%', overflow: 'hidden' },
+  glow: { position: 'absolute', top: '-10%', left: '-20%', right: '-20%', bottom: 0 },
+  logo: { position: 'absolute', top: '-2%', alignSelf: 'center', width: '104%', height: '104%' },
+  wordmark: { position: 'absolute', left: 0, right: 0, bottom: 4, alignItems: 'center', gap: 6, paddingHorizontal: 28 },
   brand: {
-    alignItems: 'center',
-  },
-  logoImage: {
-    marginBottom: -100,
-  },
-  brandName: {
+    color: colors.text,
     fontSize: 44,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    letterSpacing: -1,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 24,
   },
-  brandNameAccent: {
-    color: '#4ADE80',
-  },
-  brandNameEn: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4ADE80',
-    letterSpacing: 4,
-  },
-  tagline: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#8A9490',
-  },
-  bottom: {
+  brandEn: { color: colors.green, fontSize: 11.5, fontWeight: '800', letterSpacing: 4.8 },
+
+  bottom: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 28, paddingTop: 20 },
+  tagline: { color: colors.textStrong, fontSize: 15, fontWeight: '600', letterSpacing: -0.2, textAlign: 'center' },
+
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.green },
+  hint: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
+
+  errorText: { color: colors.danger, fontSize: 13, textAlign: 'center' },
+
+  kakao: {
     width: '100%',
-    alignItems: 'center',
-  },
-  loginButton: {
-    width: '100%',
-    backgroundColor: '#FEE500',
-    paddingVertical: 16,
+    height: 56,
     borderRadius: 16,
+    backgroundColor: '#FEE500',
     alignItems: 'center',
-    boxShadow: '0px 6px 12px rgba(254,229,0,0.35)',
+    justifyContent: 'center',
+    shadowColor: '#FEE500',
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
-  loginButtonPressed: {
-    opacity: 0.88,
-  },
-  loginButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  loginButtonText: {
-    color: '#3C1E1E',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  footnote: {
-    marginTop: 16,
-    color: '#8A9490',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  footnoteLink: {
-    color: '#4ADE80',
-    textDecorationLine: 'underline',
-  },
-  error: {
-    marginBottom: 12,
-    color: '#F87171',
-    textAlign: 'center',
-    fontSize: 13,
-  },
+  kakaoPressed: { backgroundColor: '#E6CF00' },
+  kakaoText: { color: '#3C1E1E', fontSize: 15.5, fontWeight: '800' },
+
+  terms: { color: colors.textDim, fontSize: 11.5, textAlign: 'center', lineHeight: 18 },
 });

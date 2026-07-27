@@ -35,7 +35,6 @@ import { resolveCapacity } from '../utils/capacity';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
 import { fetchPartnerVenues, venueMeta } from '../services/venueService';
 import type { PlaceResult } from '../services/placeService';
-import type { AttendanceStatus } from '../../../types/database';
 import type { MatchWithVotes } from '../services/attendanceService';
 
 interface SelectedPlace {

@@ -12,7 +12,7 @@ import { ScreenGradient } from '../../../components/ScreenGradient';
 import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../stores/teamStore';
 import { fetchMemberProfiles, updateSkillLevel, SKILL_LABEL, type MemberProfile } from '../services/memberProfileService';
-import { fetchTeamSettings, upsertTeamSettings, type TeamSettings } from '../services/teamSettingsService';
+import { fetchTeamSettings, upsertTeamSettings } from '../services/teamSettingsService';
 import type { FeeMode, SkillLevel } from '../../../types/database';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];

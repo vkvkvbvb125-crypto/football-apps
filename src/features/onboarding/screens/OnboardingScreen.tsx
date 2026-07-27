@@ -77,12 +77,7 @@ export function OnboardingScreen({ onDone }: Props) {
 
   return (
     <ScreenGradient navMask={false}>
-      <View
-        style={[
-          styles.root,
-          { paddingTop: insets.top + 8, paddingBottom: Math.max(insets.bottom, 16) + 14 },
-        ]}
-      >
+      <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 16) + 14 }]}>
         <View style={styles.topRow}>
           <View style={styles.segments}>
             {SLIDES.map((_, i) => (
@@ -147,7 +142,7 @@ export function OnboardingScreen({ onDone }: Props) {
 
 const styles = StyleSheet.create({
   // height:'100%'는 부모가 flex를 안 줘도 화면 전체를 차지하게 하는 보험
-  root: { flex: 1, height: '100%', paddingHorizontal: 24 },
+  root: { flex: 1, height: '100%', paddingHorizontal: 24, paddingTop: 8 },
 
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 26 },
   segments: { flex: 1, flexDirection: 'row', gap: 5 },

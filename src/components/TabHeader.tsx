@@ -1,18 +1,20 @@
+// src/components/TabHeader.tsx — 리디자인 적용판
+// 화면 제목 + 팀명 + 알림 벨(배지). 알림 목록 패널은 이 컴포넌트가 자체적으로 들고 있다
+// (전용 알림함 화면이 생기기 전까지는 여기서 조회/표시/전체 읽음 처리까지 담당).
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './nativeText';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../theme';
+import { useTeamStore } from '../features/team/stores/teamStore';
 import { useNotificationsStore } from '../features/notifications/stores/notificationsStore';
 
 interface TabHeaderProps {
   title: string;
-  titleSize?: number;
-  iconSize?: number;
 }
 
-export function TabHeader({ title, titleSize = 20, iconSize = 22 }: TabHeaderProps) {
-  const insets = useSafeAreaInsets();
+export function TabHeader({ title }: TabHeaderProps) {
+  const teamName = useTeamStore((s) => s.activeTeam?.team.name);
   const notifications = useNotificationsStore((s) => s.notifications);
   const loading = useNotificationsStore((s) => s.loading);
   const load = useNotificationsStore((s) => s.load);
@@ -32,10 +34,18 @@ export function TabHeader({ title, titleSize = 20, iconSize = 22 }: TabHeaderPro
   };
 
   return (
-    <View style={[styles.row, { paddingTop: insets.top + 10 }]}>
-      <Text style={[styles.title, { fontSize: titleSize }]}>{title}</Text>
-      <Pressable onPress={handleOpenBell} hitSlop={8} style={styles.bellWrap}>
-        <Ionicons name="notifications-outline" size={iconSize} color="#FFFFFF" />
+    <View style={styles.wrap}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>{title}</Text>
+        {!!teamName && (
+          <Text style={styles.team} numberOfLines={1}>
+            {teamName}
+          </Text>
+        )}
+      </View>
+
+      <Pressable onPress={handleOpenBell} hitSlop={10} style={styles.bell}>
+        <Ionicons name="notifications-outline" size={21} color={colors.textStrong} />
         {unreadCount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -49,7 +59,7 @@ export function TabHeader({ title, titleSize = 20, iconSize = 22 }: TabHeaderPro
             <Text style={styles.panelTitle}>알림</Text>
             <ScrollView contentContainerStyle={styles.panelList}>
               {loading && notifications.length === 0 ? (
-                <ActivityIndicator color="#4ADE80" style={styles.loadingIndicator} />
+                <ActivityIndicator color={colors.green} style={styles.loadingIndicator} />
               ) : notifications.length === 0 ? (
                 <Text style={styles.emptyText}>알림이 없어요</Text>
               ) : (
@@ -77,90 +87,59 @@ export function TabHeader({ title, titleSize = 20, iconSize = 22 }: TabHeaderPro
 }
 
 const styles = StyleSheet.create({
-  row: {
+  wrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
-  title: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  bellWrap: {
-    position: 'relative',
-  },
+  titleRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8, minWidth: 0 },
+  title: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
+  team: { color: '#5F6B66', fontSize: 12, fontWeight: '600', flexShrink: 1 },
+
+  bell: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -6,
-    minWidth: 16,
-    height: 16,
+    top: -1,
+    right: -2,
+    minWidth: 15,
+    height: 15,
+    paddingHorizontal: 3,
     borderRadius: 8,
-    backgroundColor: '#F87171',
+    backgroundColor: colors.danger,
+    borderWidth: 2,
+    borderColor: colors.bgRoot,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
   },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  overlay: {
-    flex: 1,
-  },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+
+  overlay: { flex: 1 },
   panel: {
     position: 'absolute',
-    top: 92,
+    top: 56,
     right: 16,
     width: 300,
     maxHeight: 380,
-    backgroundColor: '#141A17',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 16,
-    boxShadow: '0px 8px 20px rgba(0,0,0,0.4)',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
-  panelTitle: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  panelList: {
-    gap: 12,
-  },
-  emptyText: {
-    color: '#8A9490',
-    fontSize: 13,
-    paddingVertical: 12,
-    textAlign: 'center',
-  },
-  loadingIndicator: {
-    paddingVertical: 20,
-  },
-  item: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#22302A',
-    paddingBottom: 12,
-  },
-  itemTitle: {
-    color: '#E7ECE9',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  itemBody: {
-    marginTop: 2,
-    color: '#8A9490',
-    fontSize: 12,
-  },
-  itemTime: {
-    marginTop: 4,
-    color: '#5A625E',
-    fontSize: 11,
-  },
+  panelTitle: { color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 10 },
+  panelList: { gap: 12 },
+  emptyText: { color: colors.textMuted, fontSize: 13, paddingVertical: 12, textAlign: 'center' },
+  loadingIndicator: { paddingVertical: 20 },
+  item: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 12 },
+  itemTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
+  itemBody: { marginTop: 2, color: colors.textMuted, fontSize: 12 },
+  itemTime: { marginTop: 4, color: colors.textFaint, fontSize: 11 },
 });

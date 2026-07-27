@@ -29,7 +29,7 @@ function initialOf(name: string) {
   return name.length > 2 ? name.slice(1) : name;
 }
 
-export function TeamHomeScreen() {
+export function TeamHomeScreen({ navigation }: any) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const signOut = useAuthStore((s) => s.signOut);
   const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
@@ -186,6 +186,22 @@ export function TeamHomeScreen() {
                 </View>
               </View>
             </View>
+          )}
+
+          {/* 팀 설정 (총무) */}
+          {isAdmin && (
+            <Pressable onPress={() => navigation.navigate('TeamSettings')} style={styles.card}>
+              <View style={styles.rowCard}>
+                <View style={styles.rowIcon}>
+                  <Ionicons name="settings-outline" size={18} color={colors.green} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.rowTitle}>팀 설정</Text>
+                  <Text style={styles.rowSub}>정기모임 · 회비 · 실력 레벨 · 게스트</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </View>
+            </Pressable>
           )}
 
           {/* 팀 대표 지역 (총무) */}

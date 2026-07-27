@@ -9,6 +9,7 @@ import { TeamStartScreen } from '../features/team/screens/TeamStartScreen';
 import { useOnboardingStore } from '../features/onboarding/stores/onboardingStore';
 import { OnboardingScreen } from '../features/onboarding/screens/OnboardingScreen';
 import { MainTabNavigator } from './MainTabNavigator';
+import { TeamSettingsScreen } from '../features/team/screens/TeamSettingsScreen';
 import { registerForPushNotifications } from '../features/notifications/services/pushService';
 
 const Stack = createNativeStackNavigator();
@@ -72,7 +73,10 @@ export function RootNavigator() {
         ) : !activeTeam ? (
           <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
         ) : (
-          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <>
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="TeamSettings" component={TeamSettingsScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

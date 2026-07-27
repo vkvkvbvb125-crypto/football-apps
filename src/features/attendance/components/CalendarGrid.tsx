@@ -1,5 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+// src/features/attendance/components/CalendarGrid.tsx
+// 캘린더는 경기 유무 점(dot)만 표시한다 — 날씨는 MatchWeatherBlock에서만 다룬다
+// (예전엔 날짜 칸에 날씨 이모지 틴트 + 애니메이션을 넣었었는데, 리디자인에서 캘린더와
+// 날씨 표시를 분리하기로 하면서 뺐다).
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -9,7 +12,6 @@ interface CalendarGridProps {
   month: number; // 0-indexed
   selectedDate: Date | null;
   markedDates: Set<string>; // 'YYYY-MM-DD' keys that have a match
-  weatherByDate?: Record<string, string>; // dateKey -> 날씨 이모지 (예보 있는 날짜만)
   onSelectDate: (date: Date) => void;
 }
 
@@ -17,140 +19,7 @@ function dateKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-function weatherTint(emoji: string): string | null {
-  if (emoji === '🌧️' || emoji === '🌨️') return 'rgba(59,130,246,0.35)';
-  if (emoji === '❄️') return 'rgba(147,197,253,0.35)';
-  if (emoji === '☀️') return 'rgba(250,204,21,0.28)';
-  if (emoji === '⛅' || emoji === '☁️') return 'rgba(148,163,184,0.28)';
-  return null;
-}
-
-function WeatherEffect({ emoji }: { emoji: string }) {
-  if (emoji === '🌧️' || emoji === '🌨️') {
-    return <FallingParticles color="rgba(191,219,254,0.9)" size={2} duration={280} stagger={70} />;
-  }
-  if (emoji === '❄️') {
-    return <FallingParticles color="rgba(255,255,255,0.85)" size={4} duration={550} stagger={140} />;
-  }
-  if (emoji === '☀️') return <SunGlow />;
-  if (emoji === '⛅' || emoji === '☁️') return <CloudDrift />;
-  return null;
-}
-
-function FallingParticles({
-  color,
-  size,
-  duration,
-  stagger,
-  count = 3,
-}: {
-  color: string;
-  size: number;
-  duration: number;
-  stagger: number;
-  count?: number;
-}) {
-  const anims = useRef(Array.from({ length: count }, () => new Animated.Value(0))).current;
-
-  useEffect(() => {
-    // Animated.loop가 웹에서 단방향(0->1) 타이밍 애니메이션을 안정적으로 재시작하지
-    // 못하는 경우가 있어(리셋 없이 재실행되며 멈춤), 완료 콜백에서 값을 직접 0으로
-    // 되돌리고 다시 시작하는 방식으로 명시적으로 반복시킨다.
-    let cancelled = false;
-    const timeouts = anims.map((anim, i) => {
-      function run() {
-        if (cancelled) return;
-        anim.setValue(0);
-        Animated.timing(anim, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true }).start(
-          ({ finished }) => {
-            if (finished) run();
-          }
-        );
-      }
-      return setTimeout(run, i * stagger);
-    });
-    return () => {
-      cancelled = true;
-      timeouts.forEach(clearTimeout);
-      anims.forEach((anim) => anim.stopAnimation());
-    };
-  }, [anims, duration, stagger]);
-
-  return (
-    <View style={styles.effectContainer} pointerEvents="none">
-      {anims.map((anim, i) => {
-        const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [-6, 46] });
-        const opacity = anim.interpolate({ inputRange: [0, 0.1, 0.8, 1], outputRange: [0, 1, 1, 0] });
-        return (
-          <Animated.View
-            key={i}
-            style={[
-              styles.particle,
-              {
-                left: 8 + i * 11,
-                width: size,
-                height: size,
-                borderRadius: size / 2,
-                backgroundColor: color,
-                opacity,
-                transform: [{ translateY }],
-              },
-            ]}
-          />
-        );
-      })}
-    </View>
-  );
-}
-
-function SunGlow() {
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [anim]);
-
-  const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.15] });
-  const opacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.5] });
-
-  return (
-    <View style={styles.effectContainer} pointerEvents="none">
-      <Animated.View style={[styles.sunGlow, { opacity, transform: [{ scale }] }]} />
-    </View>
-  );
-}
-
-function CloudDrift() {
-  const anim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [anim]);
-
-  const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [-6, 6] });
-
-  return (
-    <View style={styles.effectContainer} pointerEvents="none">
-      <Animated.View style={[styles.cloud, { transform: [{ translateX }] }]} />
-    </View>
-  );
-}
-
-export function CalendarGrid({ year, month, selectedDate, markedDates, weatherByDate, onSelectDate }: CalendarGridProps) {
+export function CalendarGrid({ year, month, selectedDate, markedDates, onSelectDate }: CalendarGridProps) {
   const firstDayOfMonth = new Date(year, month, 1);
   const startWeekday = firstDayOfMonth.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -185,16 +54,11 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
             const isSelected = selectedDate && dateKey(date) === dateKey(selectedDate);
             const isToday = dateKey(date) === dateKey(today);
             const hasMatch = markedDates.has(dateKey(date));
-            const weatherEmoji = weatherByDate?.[dateKey(date)];
-            const tint = weatherEmoji ? weatherTint(weatherEmoji) : null;
             const weekday = date.getDay();
 
             return (
               <Pressable key={di} style={styles.cell} onPress={() => onSelectDate(date)}>
-                <View
-                  style={[styles.dayCircle, tint ? { backgroundColor: tint } : null, isSelected && styles.dayCircleSelected]}
-                >
-                  {tint && weatherEmoji && <WeatherEffect emoji={weatherEmoji} />}
+                <View style={[styles.dayCircle, isSelected && styles.dayCircleSelected]}>
                   <Text
                     style={[
                       styles.dayText,
@@ -206,7 +70,7 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
                     {date.getDate()}
                   </Text>
                 </View>
-                {hasMatch && !tint && <View style={styles.dot} />}
+                {hasMatch && <View style={styles.dot} />}
               </Pressable>
             );
           })}
@@ -217,22 +81,6 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, weatherBy
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#4ADE80' }]} />
           <Text style={styles.legendText}>경기 예정</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: 'rgba(59,130,246,0.9)' }]} />
-          <Text style={styles.legendText}>비</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: 'rgba(147,197,253,0.9)' }]} />
-          <Text style={styles.legendText}>눈</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: 'rgba(250,204,21,0.9)' }]} />
-          <Text style={styles.legendText}>맑음</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: 'rgba(148,163,184,0.9)' }]} />
-          <Text style={styles.legendText}>흐림</Text>
         </View>
       </View>
     </View>
@@ -281,36 +129,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  effectContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  particle: {
-    position: 'absolute',
-    top: 0,
-  },
-  sunGlow: {
-    position: 'absolute',
-    top: 5,
-    left: 5,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FACC15',
-  },
-  cloud: {
-    position: 'absolute',
-    top: 14,
-    left: 9,
-    width: 26,
-    height: 14,
-    borderRadius: 8,
-    backgroundColor: 'rgba(203,213,225,0.55)',
   },
   dayCircleSelected: {
     borderWidth: 2,

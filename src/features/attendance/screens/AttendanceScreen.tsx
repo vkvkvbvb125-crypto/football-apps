@@ -29,10 +29,11 @@ import { PlaceSearchModal } from '../components/PlaceSearchModal';
 import { RosterSheet, type RosterMember } from '../components/RosterSheet';
 import { MatchDetailCard, type WaitlistEntry } from '../components/MatchDetailCard';
 import { toMatchWeatherBlockData } from '../components/MatchWeatherBlock';
-import { ScheduleRow, resolveBadge, DEFAULT_CAPACITY } from '../components/ScheduleRow';
-import { CreateMatchSheet, type CreateMatchPayload } from '../components/CreateMatchSheet';
+import { ScheduleRow, resolveBadge } from '../components/ScheduleRow';
+import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../components/CreateMatchSheet';
 import { resolveCapacity } from '../utils/capacity';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
+import { fetchPartnerVenues, venueMeta } from '../services/venueService';
 import type { PlaceResult } from '../services/placeService';
 import type { AttendanceStatus } from '../../../types/database';
 import type { MatchWithVotes } from '../services/attendanceService';
@@ -93,10 +94,10 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const [quarterMinutesText, setQuarterMinutesText] = useState('10');
   const [deadlineText, setDeadlineText] = useState('');
   const [rosterMatch, setRosterMatch] = useState<MatchWithVotes | null>(null);
-  const [calendarWeather, setCalendarWeather] = useState<Record<string, string>>({});
   const [matchWeatherById, setMatchWeatherById] = useState<Record<string, ServiceWeather>>({});
   const [weatherDecisions, setWeatherDecisions] = useState<Record<string, 'keep' | 'indoor'>>({});
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [partnerVenues, setPartnerVenues] = useState<VenueOption[]>([]);
 
   const isAdmin = activeTeam?.role === 'admin';
 
@@ -113,71 +114,31 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
   const markedDates = useMemo(() => new Set(matches.map((m) => dateKey(new Date(m.match_date)))), [matches]);
 
-  // 캘린더 날씨 (기존 로직 그대로) + 경기별 상세 날씨(matchWeatherById)를 같은 조회로 함께 채운다.
+  // 경기별 상세 날씨(matchWeatherById) — 캘린더에는 더 이상 날씨를 표시하지 않고
+  // MatchDetailCard/ScheduleRow에서만 쓴다. 팀 대표 좌표 기반 fallback은 실제
+  // 경기가 없는 날짜엔 더 이상 조회하지 않는다(캘린더 표시가 사라졌으니 의미가 없다).
   useEffect(() => {
-    interface WeatherTarget {
-      dateKey: string;
-      matchId?: string;
-      latitude: number;
-      longitude: number;
-      matchDateIso: string;
-    }
-    const targets: WeatherTarget[] = [];
-    const today = new Date();
-    for (let i = 0; i <= 10; i++) {
-      const day = new Date(today);
-      day.setDate(day.getDate() + i);
-      const key = dateKey(day);
-      const matchOnDay = matches.find((m) => {
-        const d = new Date(m.match_date);
-        return dateKey(d) === key && m.latitude != null && m.longitude != null;
-      });
-      if (matchOnDay) {
-        targets.push({
-          dateKey: key,
-          matchId: matchOnDay.id,
-          latitude: matchOnDay.latitude as number,
-          longitude: matchOnDay.longitude as number,
-          matchDateIso: matchOnDay.match_date,
-        });
-      } else if (activeTeam?.team.home_latitude != null && activeTeam?.team.home_longitude != null) {
-        const noon = new Date(day);
-        noon.setHours(12, 0, 0, 0);
-        targets.push({
-          dateKey: key,
-          latitude: activeTeam.team.home_latitude,
-          longitude: activeTeam.team.home_longitude,
-          matchDateIso: noon.toISOString(),
-        });
-      }
-    }
+    const targets = matches
+      .filter((m) => {
+        const hours = (new Date(m.match_date).getTime() - Date.now()) / 3600000;
+        return m.latitude != null && m.longitude != null && hours <= 240 && hours >= -3;
+      })
+      .map((m) => ({ matchId: m.id, latitude: m.latitude as number, longitude: m.longitude as number, matchDateIso: m.match_date }));
+
     if (targets.length === 0) {
-      setCalendarWeather({});
       setMatchWeatherById({});
       setWeatherLoading(false);
       return;
     }
     let cancelled = false;
     let pending = targets.length;
-    setCalendarWeather({});
     setMatchWeatherById({});
     setWeatherLoading(true);
     targets.forEach((t) => {
       fetchMatchWeather(t.latitude, t.longitude, t.matchDateIso)
         .then((weather) => {
           if (cancelled || !weather.available) return;
-          const emoji =
-            weather.range === 'mid'
-              ? weather.amWeather?.includes('비') || weather.pmWeather?.includes('비')
-                ? '🌧️'
-                : '⛅'
-              : weather.precipitationType && weather.precipitationType !== '0'
-                ? '🌧️'
-                : weather.sky === '1'
-                  ? '☀️'
-                  : '⛅';
-          setCalendarWeather((prev) => ({ ...prev, [t.dateKey]: emoji }));
-          if (t.matchId) setMatchWeatherById((prev) => ({ ...prev, [t.matchId as string]: weather }));
+          setMatchWeatherById((prev) => ({ ...prev, [t.matchId]: weather }));
         })
         .catch(() => {})
         .finally(() => {
@@ -188,7 +149,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     return () => {
       cancelled = true;
     };
-  }, [matches, activeTeam]);
+  }, [matches]);
 
   const upcomingMatches = useMemo(() => {
     const startOfToday = new Date().setHours(0, 0, 0, 0);
@@ -214,7 +175,26 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       isMe: id === activeTeam?.membershipId,
     }));
 
-  const handleOpenCreate = () => setCreateSheetVisible(true);
+  const handleOpenCreate = () => {
+    setCreateSheetVisible(true);
+    // 제휴구장 테이블은 아직 데이터가 없어서 대부분 빈 배열로 돌아오지만, 실제 쿼리라서
+    // 나중에 구장 데이터를 채워 넣으면 코드 변경 없이 바로 뜬다.
+    fetchPartnerVenues(selectedDate)
+      .then((venues) =>
+        setPartnerVenues(
+          venues.map((v) => ({
+            id: v.id,
+            name: v.name,
+            isIndoor: v.isIndoor,
+            isPartner: v.isPartner,
+            meta: venueMeta(v),
+            capacity: v.maxPlayers,
+            slots: v.slots.map((s) => ({ timeRange: `${s.startTime}-${s.endTime}`, available: s.isAvailable })),
+          }))
+        )
+      )
+      .catch(() => setPartnerVenues([]));
+  };
 
   useEffect(() => {
     if (isAdmin && (route.params as { openCreate?: boolean } | undefined)?.openCreate) {
@@ -292,6 +272,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       longitude: payload.locationPending ? null : payload.longitude,
       placeCategory: payload.locationPending ? null : payload.placeCategory,
       quarterMinutes: payload.quarterMinutes,
+      locationPending: payload.locationPending,
     };
 
     if (payload.repeatWeekly && payload.repeatCount > 1) {
@@ -384,7 +365,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 month={visibleMonth.month}
                 selectedDate={selectedDate}
                 markedDates={markedDates}
-                weatherByDate={calendarWeather}
                 onSelectDate={setSelectedDate}
               />
             </View>
@@ -400,7 +380,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 const isLocked = selectedMatch.status !== 'open' || deadlinePassed;
                 const cap = resolveCapacity(
                   selectedMatch.votes,
-                  DEFAULT_CAPACITY,
+                  selectedMatch.capacity,
                   members.length,
                   activeTeam.membershipId
                 );
@@ -415,7 +395,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       daysUntil={daysUntilOf(selectedMatch.match_date)}
                       timeLabel={d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       weather={toMatchWeatherBlockData(matchWeatherById[selectedMatch.id] ?? null)}
-                      capacity={DEFAULT_CAPACITY}
+                      capacity={selectedMatch.capacity}
                       capacityResult={cap}
                       memberCount={members.length}
                       deadlineLabel={
@@ -461,10 +441,10 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 />
               ) : (
                 upcomingMatches.map((match) => {
-                  const cap = resolveCapacity(match.votes, DEFAULT_CAPACITY, members.length, activeTeam.membershipId);
+                  const cap = resolveCapacity(match.votes, match.capacity, members.length, activeTeam.membershipId);
                   const badge = resolveBadge({
                     confirmed: cap.attendCount,
-                    capacity: DEFAULT_CAPACITY,
+                    capacity: match.capacity,
                     voteDeadline: match.vote_deadline,
                     status: match.status,
                   });
@@ -485,7 +465,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       timeLabel={d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                       subLabel={subLabel}
                       confirmed={cap.attendCount}
-                      capacity={DEFAULT_CAPACITY}
+                      capacity={match.capacity}
                       badge={badge}
                       selected={dateKey(d) === dateKey(selectedDate)}
                       onPress={() => {
@@ -593,7 +573,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         visible={!!rosterMatch}
         onClose={() => setRosterMatch(null)}
         matchLabel={rosterMatchLabel}
-        capacity={DEFAULT_CAPACITY}
+        capacity={rosterMatch?.capacity ?? 12}
         deadlineLabel={rosterMatch?.vote_deadline ? ddayLabel(rosterMatch.vote_deadline) : undefined}
         members={rosterMembers}
         isAdmin={isAdmin ?? false}
@@ -605,7 +585,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         onClose={() => setCreateSheetVisible(false)}
         selectedDate={selectedDate}
         defaults={undefined}
-        venues={[]}
+        venues={partnerVenues}
         onSubmit={handleCreateSubmit}
       />
     </ScreenGradient>

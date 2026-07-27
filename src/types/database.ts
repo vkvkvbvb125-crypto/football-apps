@@ -235,7 +235,15 @@ export interface Database {
           is_available?: boolean;
         };
         Update: Partial<Database['public']['Tables']['venue_slots']['Insert']>;
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'venue_slots_venue_id_fkey';
+            columns: ['venue_id'];
+            isOneToOne: false;
+            referencedRelation: 'venues';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       waitlist: {
         Row: {

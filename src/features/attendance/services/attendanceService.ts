@@ -41,6 +41,8 @@ export interface CreateMatchInput {
   voteDeadline: string | null;
   quarterMinutes: number;
   createdBy: string;
+  locationPending?: boolean;
+  capacity?: number;
 }
 
 export async function createMatch(input: CreateMatchInput) {
@@ -55,6 +57,8 @@ export async function createMatch(input: CreateMatchInput) {
     vote_deadline: input.voteDeadline,
     quarter_minutes: input.quarterMinutes,
     created_by: input.createdBy,
+    location_pending: input.locationPending ?? false,
+    capacity: input.capacity,
   });
   if (error) throw error;
 }

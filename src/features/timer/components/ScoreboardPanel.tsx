@@ -1,13 +1,22 @@
 // src/features/timer/components/ScoreboardPanel.tsx — 리디자인 적용판
-import { useState } from 'react';
+// 점수는 AssignmentScreen에 끌어올린 상태를 그대로 받는다(controlled) — TimerPanel의
+// "스코어 기록 →" 요약과 같은 값을 공유하기 위함. 점수 자체는 DB에 저장하는 곳이 없어서
+// 이 화면을 벗어나면(경기운영 탭 이탈) 사라진다 — "경기 종료" 버튼만 실제로 matches.status를
+// completed로 바꾼다.
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { colors, radius } from '../../../theme';
 
-export function ScoreboardPanel() {
-  const [scoreA, setScoreA] = useState(0);
-  const [scoreB, setScoreB] = useState(0);
+interface Props {
+  scoreA: number;
+  scoreB: number;
+  onChangeA: (score: number) => void;
+  onChangeB: (score: number) => void;
+  isAdmin: boolean;
+  onFinish: () => void;
+}
 
+export function ScoreboardPanel({ scoreA, scoreB, onChangeA, onChangeB, isAdmin, onFinish }: Props) {
   const winner = scoreA === scoreB ? null : scoreA > scoreB ? 'A' : 'B';
 
   return (
@@ -21,20 +30,22 @@ export function ScoreboardPanel() {
           <View style={styles.col}>
             <Text style={[styles.team, { color: colors.green }]}>A팀</Text>
             <Text style={[styles.score, winner === 'B' && styles.scoreDim]}>{scoreA}</Text>
-            <View style={styles.btnRow}>
-              <Pressable
-                onPress={() => setScoreA((s) => Math.max(0, s - 1))}
-                style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
-              >
-                <Text style={styles.btnText}>−</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setScoreA((s) => s + 1)}
-                style={({ pressed }) => [styles.btn, styles.btnA, pressed && styles.pressed]}
-              >
-                <Text style={[styles.btnText, { color: colors.green }]}>+</Text>
-              </Pressable>
-            </View>
+            {isAdmin && (
+              <View style={styles.btnRow}>
+                <Pressable
+                  onPress={() => onChangeA(Math.max(0, scoreA - 1))}
+                  style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.btnText}>−</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => onChangeA(scoreA + 1)}
+                  style={({ pressed }) => [styles.btn, styles.btnA, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.btnText, { color: colors.green }]}>+</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           <Text style={styles.vs}>VS</Text>
@@ -42,33 +53,43 @@ export function ScoreboardPanel() {
           <View style={styles.col}>
             <Text style={[styles.team, { color: colors.blue }]}>B팀</Text>
             <Text style={[styles.score, winner === 'A' && styles.scoreDim]}>{scoreB}</Text>
-            <View style={styles.btnRow}>
-              <Pressable
-                onPress={() => setScoreB((s) => Math.max(0, s - 1))}
-                style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
-              >
-                <Text style={styles.btnText}>−</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setScoreB((s) => s + 1)}
-                style={({ pressed }) => [styles.btn, styles.btnB, pressed && styles.pressed]}
-              >
-                <Text style={[styles.btnText, { color: colors.blue }]}>+</Text>
-              </Pressable>
-            </View>
+            {isAdmin && (
+              <View style={styles.btnRow}>
+                <Pressable
+                  onPress={() => onChangeB(Math.max(0, scoreB - 1))}
+                  style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.btnText}>−</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => onChangeB(scoreB + 1)}
+                  style={({ pressed }) => [styles.btn, styles.btnB, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.btnText, { color: colors.blue }]}>+</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
       </View>
 
-      <Pressable
-        onPress={() => {
-          setScoreA(0);
-          setScoreB(0);
-        }}
-        style={({ pressed }) => [styles.reset, pressed && styles.pressed]}
-      >
-        <Text style={styles.resetText}>스코어 초기화</Text>
-      </Pressable>
+      {isAdmin && (
+        <>
+          <Pressable
+            onPress={() => {
+              onChangeA(0);
+              onChangeB(0);
+            }}
+            style={({ pressed }) => [styles.reset, pressed && styles.pressed]}
+          >
+            <Text style={styles.resetText}>스코어 초기화</Text>
+          </Pressable>
+
+          <Pressable onPress={onFinish} style={({ pressed }) => [styles.finish, pressed && styles.pressed]}>
+            <Text style={styles.finishText}>경기 종료 → 정산으로</Text>
+          </Pressable>
+        </>
+      )}
     </View>
   );
 }
@@ -127,4 +148,13 @@ const styles = StyleSheet.create({
     borderColor: '#26332D',
   },
   resetText: { color: colors.textStrong, fontSize: 13.5, fontWeight: '800' },
+
+  finish: {
+    height: 48,
+    borderRadius: radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.green,
+  },
+  finishText: { color: colors.bgRoot, fontSize: 13.5, fontWeight: '800' },
 });

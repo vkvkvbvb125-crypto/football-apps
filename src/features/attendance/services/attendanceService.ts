@@ -107,3 +107,8 @@ export async function updateMatchTeamCount(matchId: string, teamCount: number) {
   const { error } = await supabase.from('matches').update({ team_count: teamCount }).eq('id', matchId);
   if (error) throw error;
 }
+
+export async function updateMatchStatus(matchId: string, status: Database['public']['Tables']['matches']['Row']['status']) {
+  const { error } = await supabase.from('matches').update({ status }).eq('id', matchId);
+  if (error) throw error;
+}

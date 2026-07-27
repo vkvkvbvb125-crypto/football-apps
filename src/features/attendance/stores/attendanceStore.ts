@@ -9,10 +9,12 @@ import {
   deleteMatch as deleteMatchRequest,
   fetchMatches,
   updateMatch as updateMatchRequest,
+  updateMatchStatus as updateMatchStatusRequest,
   type CreateMatchInput,
   type MatchWithVotes,
   type UpdateMatchInput,
 } from '../services/attendanceService';
+import type { MatchStatus } from '../../../types/database';
 
 interface AttendanceState {
   matches: MatchWithVotes[];
@@ -24,6 +26,7 @@ interface AttendanceState {
   /** 반복 생성 등 여러 경기를 한 번에 만들 때 — 알림은 한 번만 보낸다 */
   createMatches: (inputs: Omit<CreateMatchInput, 'teamId' | 'createdBy'>[]) => Promise<void>;
   updateMatch: (matchId: string, input: UpdateMatchInput) => Promise<void>;
+  updateMatchStatus: (matchId: string, status: MatchStatus) => Promise<void>;
   deleteMatch: (matchId: string) => Promise<void>;
   vote: (matchId: string, status: AttendanceStatus) => Promise<void>;
 }
@@ -106,6 +109,14 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       await get().loadMatches();
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '경기 수정에 실패했습니다.', loading: false });
+    }
+  },
+  updateMatchStatus: async (matchId, status) => {
+    try {
+      await updateMatchStatusRequest(matchId, status);
+      await get().loadMatches();
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : '경기 상태 변경에 실패했습니다.' });
     }
   },
   deleteMatch: async (matchId) => {

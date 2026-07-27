@@ -39,6 +39,11 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const matches = useAttendanceStore((s) => s.matches);
   const loadMatches = useAttendanceStore((s) => s.loadMatches);
+  const updateMatchStatus = useAttendanceStore((s) => s.updateMatchStatus);
+
+  const [quarter, setQuarter] = useState(1);
+  const [scoreA, setScoreA] = useState(0);
+  const [scoreB, setScoreB] = useState(0);
 
   const assignments = useAssignmentStore((s) => s.assignments);
   const loaded = useAssignmentStore((s) => s.loaded);
@@ -68,6 +73,21 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
         .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime()),
     [matches]
   );
+
+  // 타이머/스코어는 가장 가까운 경기 하나를 기준으로 동작한다 (팀 분배는 위 목록처럼 여러 경기를 동시에 다룸)
+  const nearestMatch = useMemo(() => {
+    if (matches.length === 0) return null;
+    const now = Date.now();
+    return [...matches].sort(
+      (a, b) => Math.abs(new Date(a.match_date).getTime() - now) - Math.abs(new Date(b.match_date).getTime() - now)
+    )[0];
+  }, [matches]);
+
+  const handleFinishMatch = () => {
+    if (!nearestMatch) return;
+    updateMatchStatus(nearestMatch.id, 'completed');
+    navigation.navigate('Settlement');
+  };
 
   return (
     <ScreenGradient>
@@ -99,9 +119,28 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
       ) : (
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           {view === 'timer' ? (
-            <TimerPanel />
+            nearestMatch ? (
+              <TimerPanel
+                initialQuarterMinutes={nearestMatch.quarter_minutes}
+                quarter={quarter}
+                onQuarterEnd={() => setQuarter((q) => Math.min(4, q + 1))}
+                scoreA={scoreA}
+                scoreB={scoreB}
+                onPressScore={() => setView('score')}
+                isAdmin={!!isAdmin}
+              />
+            ) : (
+              <EmptyState emoji="⏱️" title="운영할 경기가 없어요" subtitle="일정 탭에서 경기가 등록되면 여기서 타이머를 쓸 수 있어요" />
+            )
           ) : view === 'score' ? (
-            <ScoreboardPanel />
+            <ScoreboardPanel
+              scoreA={scoreA}
+              scoreB={scoreB}
+              onChangeA={setScoreA}
+              onChangeB={setScoreB}
+              isAdmin={!!isAdmin}
+              onFinish={handleFinishMatch}
+            />
           ) : loading && !loaded ? (
             <ActivityIndicator style={{ marginTop: 40 }} color={colors.green} />
           ) : matchesWithAttendees.length === 0 ? (

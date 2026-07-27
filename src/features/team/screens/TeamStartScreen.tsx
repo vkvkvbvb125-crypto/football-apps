@@ -52,7 +52,7 @@ export function TeamStartScreen() {
   };
 
   return (
-    <ScreenGradient>
+    <ScreenGradient navMask={false}>
       <View style={styles.root}>
         <Pressable onPress={signOut} hitSlop={8} style={styles.signOutRow}>
           <Text style={styles.signOutText}>로그아웃</Text>

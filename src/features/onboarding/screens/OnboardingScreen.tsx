@@ -76,7 +76,7 @@ export function OnboardingScreen({ onDone }: Props) {
   };
 
   return (
-    <ScreenGradient>
+    <ScreenGradient navMask={false}>
       <View
         style={[
           styles.root,

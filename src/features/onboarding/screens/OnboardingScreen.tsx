@@ -76,7 +76,7 @@ export function OnboardingScreen({ onDone }: Props) {
   };
 
   return (
-    <ScreenGradient navMask={false}>
+    <ScreenGradient>
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 16) + 14 }]}>
         <View style={styles.topRow}>
           <View style={styles.segments}>

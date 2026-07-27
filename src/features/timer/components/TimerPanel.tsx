@@ -1,6 +1,13 @@
-// src/features/timer/components/TimerPanel.tsx
-// 링 타이머 + 호루라기 사운드(기존 기능)에 쿼터 진행/스코어 요약 연동을 더한 버전.
-// 총무만 조작 가능 — 팀원은 보기만 한다(공용 타이머라 여러 명이 동시에 만지면 꼬인다).
+// src/features/timer/components/TimerPanel.tsx — 타이머 가독성/터치 수정판
+// 기존 기능 100% 유지: 호루라기 사운드, 진동, ParticleSphere, 총무만 조작, 쿼터 길이 즉석 수정.
+//
+// ⚠ 수정 요약:
+// 1) 시간 표시가 30px + "00:09:32"(시:분:초)라 작고 읽기 어려웠다 → 44px, 쿼터는 분:초만
+//    (쿼터가 1시간을 넘는 경우에만 시간을 앞에 붙인다).
+// 2) 컨트롤 버튼이 height 30~32px / font 11~13px로 최소 터치 영역(44px)에 크게 미달했다
+//    → 46px 높이, flex 배치. 화면 폭 비율 하드코딩(SCREEN_WIDTH * 0.23)도 제거.
+// 3) "경기 전"에 링을 0.475로 고정하던 눈속임을 없애고 실제 잔여 비율(1.0)을 보여준다.
+// 4) 쿼터 길이 입력이 10px 회색 텍스트라 편집 가능한지 알 수 없었다 → 라벨 + 밑줄 강조.
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Vibration, View, useWindowDimensions } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -10,21 +17,20 @@ import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 import { colors } from '../../../theme';
 
-const STROKE_WIDTH = 5;
+const STROKE_WIDTH = 6;
 const PARTICLE_OVERFLOW = 60;
 
 function formatTime(totalSeconds: number) {
   const clamped = Math.max(0, totalSeconds);
-  const h = Math.floor(clamped / 3600)
-    .toString()
-    .padStart(2, '0');
+  const h = Math.floor(clamped / 3600);
   const m = Math.floor((clamped % 3600) / 60)
     .toString()
     .padStart(2, '0');
   const s = Math.floor(clamped % 60)
     .toString()
     .padStart(2, '0');
-  return `${h}:${m}:${s}`;
+  // 쿼터는 보통 10분 내외 — 시(hour)는 실제로 넘어갈 때만 표시한다
+  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
 }
 
 interface Props {
@@ -120,12 +126,10 @@ export function TimerPanel({
   };
 
   const totalSeconds = quarterMinutes * 60;
+  const isFresh = remainingSeconds === totalSeconds;
   const stateLabel =
-    remainingSeconds === 0 ? '쿼터 종료' : isRunning ? '진행중' : remainingSeconds === totalSeconds ? '경기 전' : '일시정지';
-  // ponytail: 대기 상태(경기 전)는 목표 목업처럼 절반 정도만 밝게 고정 표시.
-  // 실행/일시정지/종료 시에는 실제 남은 시간 비율을 그대로 반영.
-  const progress =
-    stateLabel === '경기 전' ? 0.475 : totalSeconds > 0 ? Math.min(1, remainingSeconds / totalSeconds) : 0;
+    remainingSeconds === 0 ? '쿼터 종료' : isRunning ? '진행 중' : isFresh ? '경기 전' : '일시정지';
+  const progress = totalSeconds > 0 ? Math.min(1, remainingSeconds / totalSeconds) : 0;
   const strokeDashoffset = circumference * (1 - progress);
 
   return (
@@ -135,7 +139,7 @@ export function TimerPanel({
           <Text style={styles.quarterText}>{quarter}쿼터</Text>
         </View>
         <Text style={styles.headSub}>
-          {totalQuarters}쿼터 중 {quarter}번째
+          쿼터 {quarterMinutes}분 · {totalQuarters}쿼터 중 {quarter}번째
         </Text>
       </View>
 
@@ -147,7 +151,15 @@ export function TimerPanel({
         </View>
 
         <Svg width={ringSize} height={ringSize}>
-          <Circle cx={ringSize / 2} cy={ringSize / 2} r={radius} stroke="#173A28" strokeOpacity={0.9} strokeWidth={STROKE_WIDTH} fill="none" />
+          <Circle
+            cx={ringSize / 2}
+            cy={ringSize / 2}
+            r={radius}
+            stroke="#173A28"
+            strokeOpacity={0.9}
+            strokeWidth={STROKE_WIDTH}
+            fill="none"
+          />
           <Circle
             cx={ringSize / 2}
             cy={ringSize / 2}
@@ -161,34 +173,56 @@ export function TimerPanel({
             transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
           />
         </Svg>
-        <View style={styles.ringCenter}>
+
+        <View style={styles.ringCenter} pointerEvents="box-none">
           <Text style={styles.stateLabel}>{stateLabel}</Text>
           <Text style={styles.timeDisplay}>{formatTime(remainingSeconds)}</Text>
           {isAdmin ? (
-            <TextInput
-              style={styles.quarterInput}
-              value={`${quarterMinutes}분`}
-              onChangeText={(text) => handleMinutesChange(text.replace(/[^0-9]/g, ''))}
-              keyboardType="number-pad"
-              editable={!isRunning}
-            />
+            <View style={styles.quarterEditRow}>
+              <TextInput
+                style={[styles.quarterInput, isRunning && styles.quarterInputLocked]}
+                value={String(quarterMinutes)}
+                onChangeText={(text) => handleMinutesChange(text.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                editable={!isRunning}
+                maxLength={3}
+              />
+              <Text style={styles.quarterUnit}>분</Text>
+            </View>
           ) : (
-            <Text style={styles.quarterInput}>{quarterMinutes}분</Text>
+            <Text style={styles.quarterStatic}>{quarterMinutes}분</Text>
           )}
         </View>
       </View>
 
       {isAdmin && (
         <View style={styles.controlRow}>
-          <Pressable style={[styles.secondaryButton, { width: SCREEN_WIDTH * 0.23 }]} onPress={handleReset}>
-            <Ionicons name="refresh-outline" size={13} color="#8A9490" />
+          <Pressable
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            onPress={handleReset}
+          >
+            <Ionicons name="refresh-outline" size={15} color={colors.textMuted} />
             <Text style={styles.secondaryButtonText}>초기화</Text>
           </Pressable>
-          <Pressable style={[styles.primaryButton, { width: SCREEN_WIDTH * 0.28 }]} onPress={handleStartPause}>
-            <Text style={styles.primaryButtonText}>{isRunning ? '일시정지' : '시작'}</Text>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              isRunning && styles.primaryButtonPause,
+              pressed && styles.pressed,
+            ]}
+            onPress={handleStartPause}
+          >
+            <Text style={[styles.primaryButtonText, isRunning && styles.primaryButtonTextPause]}>
+              {isRunning ? '일시정지' : isFresh ? '시작' : '계속'}
+            </Text>
           </Pressable>
-          <Pressable style={[styles.secondaryButton, { width: SCREEN_WIDTH * 0.23 }]} onPress={handleAddMinute}>
-            <Ionicons name="add" size={13} color="#8A9490" />
+
+          <Pressable
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            onPress={handleAddMinute}
+          >
+            <Ionicons name="add" size={15} color={colors.textMuted} />
             <Text style={styles.secondaryButtonText}>1분</Text>
           </Pressable>
         </View>
@@ -198,7 +232,7 @@ export function TimerPanel({
         <Text style={styles.scoreText}>
           A팀 {scoreA} : {scoreB} B팀
         </Text>
-        <Pressable onPress={onPressScore} hitSlop={6}>
+        <Pressable onPress={onPressScore} hitSlop={8}>
           <Text style={styles.scoreLink}>스코어 기록 →</Text>
         </Pressable>
       </View>
@@ -207,10 +241,10 @@ export function TimerPanel({
 }
 
 const styles = StyleSheet.create({
-  content: {
-    alignItems: 'center',
-  },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  content: { alignItems: 'center' },
+  pressed: { opacity: 0.85 },
+
+  head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   quarterChip: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, backgroundColor: '#1B2A22' },
   quarterText: { color: colors.green, fontSize: 11, fontWeight: '800' },
   headSub: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
@@ -235,69 +269,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stateLabel: {
-    color: '#8A9490',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  stateLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
   timeDisplay: {
-    marginTop: 6,
+    marginTop: 4,
     color: '#FFFFFF',
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 44,
+    lineHeight: 50,
+    fontWeight: '800',
+    letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
   },
+  quarterEditRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 2 },
   quarterInput: {
-    marginTop: 3,
-    color: '#8A9490',
-    fontSize: 10,
+    minWidth: 24,
+    color: colors.green,
+    fontSize: 12.5,
+    fontWeight: '700',
     textAlign: 'center',
     padding: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.greenDeep,
+    fontVariant: ['tabular-nums'],
   },
+  quarterInputLocked: { color: colors.textDim, borderBottomColor: 'transparent' },
+  quarterUnit: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
+  quarterStatic: { marginTop: 3, color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
+
   controlRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
     width: '100%',
-    marginTop: 13,
+    marginTop: 18,
   },
   secondaryButton: {
-    height: 30,
+    height: 46,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    borderRadius: 15,
-    backgroundColor: '#141A17',
+    gap: 5,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: '#26332D',
   },
-  secondaryButtonText: {
-    color: '#8A9490',
-    fontWeight: '600',
-    fontSize: 11,
-  },
+  secondaryButtonText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   primaryButton: {
-    height: 32,
-    borderRadius: 16,
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#50D978',
+    backgroundColor: colors.greenTimer,
   },
-  primaryButtonText: {
-    color: '#0F1512',
-    fontWeight: '700',
-    fontSize: 13,
+  primaryButtonPause: {
+    backgroundColor: 'rgba(210,163,76,0.16)',
+    borderWidth: 1,
+    borderColor: '#6B5426',
   },
+  primaryButtonText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
+  primaryButtonTextPause: { color: colors.gold },
+
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 16,
+    marginTop: 18,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#22302A',
+    borderTopColor: colors.divider,
   },
   scoreText: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
   scoreLink: { color: colors.green, fontSize: 11.5, fontWeight: '700' },

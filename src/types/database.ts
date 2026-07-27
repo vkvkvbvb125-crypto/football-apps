@@ -2,6 +2,10 @@ export type TeamRole = 'admin' | 'member';
 export type SkillTag = '상' | '중' | '하';
 export type MatchStatus = 'open' | 'locked' | 'completed';
 export type AttendanceStatus = 'attend' | 'absent' | 'undecided';
+/** 총무 설정. 팀 분배 균형 계산에 사용 (3 상 / 2 중 / 1 하) */
+export type SkillLevel = 1 | 2 | 3;
+export type SettlementStatus = 'open' | 'done' | 'skipped';
+export type FeeMode = 'per_match' | 'monthly';
 
 export interface Database {
   public: {
@@ -55,6 +59,8 @@ export interface Database {
           user_id: string;
           role: TeamRole;
           skill_tag: SkillTag | null;
+          position: string | null;
+          skill_level: SkillLevel;
           joined_at: string;
         };
         Insert: {
@@ -62,6 +68,8 @@ export interface Database {
           user_id: string;
           role?: TeamRole;
           skill_tag?: SkillTag | null;
+          position?: string | null;
+          skill_level?: SkillLevel;
         };
         Update: Partial<Database['public']['Tables']['team_members']['Insert']>;
         Relationships: [];
@@ -80,6 +88,9 @@ export interface Database {
           status: MatchStatus;
           quarter_minutes: number;
           team_count: number;
+          capacity: number;
+          venue_id: string | null;
+          location_pending: boolean;
           created_by: string;
           created_at: string;
         };
@@ -95,6 +106,9 @@ export interface Database {
           status?: MatchStatus;
           quarter_minutes?: number;
           team_count?: number;
+          capacity?: number;
+          venue_id?: string | null;
+          location_pending?: boolean;
           created_by: string;
         };
         Update: Partial<Database['public']['Tables']['matches']['Insert']>;
@@ -120,41 +134,158 @@ export interface Database {
         Row: {
           id: string;
           match_id: string;
+          team_id: string;
           total_amount: number;
-          per_person_amount: number | null;
-          bank_name: string;
-          account_number: string;
-          account_holder: string;
+          per_person: number;
+          surplus: number;
+          memo: string | null;
+          bank_name: string | null;
+          account_no: string | null;
+          account_holder: string | null;
+          status: SettlementStatus;
+          created_by: string | null;
           created_at: string;
+          completed_at: string | null;
         };
         Insert: {
           match_id: string;
+          team_id: string;
           total_amount: number;
-          per_person_amount?: number | null;
-          bank_name: string;
-          account_number: string;
-          account_holder: string;
+          per_person: number;
+          surplus?: number;
+          memo?: string | null;
+          bank_name?: string | null;
+          account_no?: string | null;
+          account_holder?: string | null;
+          status?: SettlementStatus;
+          created_by?: string | null;
+          completed_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['settlements']['Insert']>;
         Relationships: [];
       };
-      payments: {
+      settlement_shares: {
         Row: {
           id: string;
           settlement_id: string;
-          team_member_id: string;
-          is_paid: boolean;
-          checked_by: string | null;
-          checked_at: string | null;
+          team_member_id: string | null;
+          guest_name: string | null;
+          amount: number;
+          exempt: boolean;
+          marked_paid_at: string | null;
+          confirmed_at: string | null;
         };
         Insert: {
           settlement_id: string;
-          team_member_id: string;
-          is_paid?: boolean;
-          checked_by?: string | null;
-          checked_at?: string | null;
+          team_member_id?: string | null;
+          guest_name?: string | null;
+          amount: number;
+          exempt?: boolean;
+          marked_paid_at?: string | null;
+          confirmed_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['payments']['Insert']>;
+        Update: Partial<Database['public']['Tables']['settlement_shares']['Insert']>;
+        Relationships: [];
+      };
+      venues: {
+        Row: {
+          id: string;
+          name: string;
+          address: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          is_indoor: boolean;
+          is_partner: boolean;
+          hourly_price: number | null;
+          max_players: number | null;
+          amenities: string[];
+          used_by_teams: number;
+          created_at: string;
+        };
+        Insert: {
+          name: string;
+          address?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          is_indoor?: boolean;
+          is_partner?: boolean;
+          hourly_price?: number | null;
+          max_players?: number | null;
+          amenities?: string[];
+          used_by_teams?: number;
+        };
+        Update: Partial<Database['public']['Tables']['venues']['Insert']>;
+        Relationships: [];
+      };
+      venue_slots: {
+        Row: {
+          id: string;
+          venue_id: string;
+          slot_date: string;
+          start_time: string;
+          end_time: string;
+          is_available: boolean;
+          created_at: string;
+        };
+        Insert: {
+          venue_id: string;
+          slot_date: string;
+          start_time: string;
+          end_time: string;
+          is_available?: boolean;
+        };
+        Update: Partial<Database['public']['Tables']['venue_slots']['Insert']>;
+        Relationships: [];
+      };
+      waitlist: {
+        Row: {
+          id: string;
+          match_id: string;
+          team_member_id: string;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          match_id: string;
+          team_member_id: string;
+          position: number;
+        };
+        Update: Partial<Database['public']['Tables']['waitlist']['Insert']>;
+        Relationships: [];
+      };
+      team_settings: {
+        Row: {
+          team_id: string;
+          default_weekdays: number[];
+          default_time: string | null;
+          default_venue_id: string | null;
+          default_capacity: number;
+          fee_mode: FeeMode;
+          default_fee: number | null;
+          bank_name: string | null;
+          account_no: string | null;
+          account_holder: string | null;
+          guest_allowed: boolean;
+          guest_fee: number | null;
+          join_approval_required: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          team_id: string;
+          default_weekdays?: number[];
+          default_time?: string | null;
+          default_venue_id?: string | null;
+          default_capacity?: number;
+          fee_mode?: FeeMode;
+          default_fee?: number | null;
+          bank_name?: string | null;
+          account_no?: string | null;
+          account_holder?: string | null;
+          guest_allowed?: boolean;
+          guest_fee?: number | null;
+          join_approval_required?: boolean;
+        };
+        Update: Partial<Database['public']['Tables']['team_settings']['Insert']>;
         Relationships: [];
       };
       team_assignments: {
@@ -252,7 +383,18 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      team_member_stats: {
+        Row: {
+          team_member_id: string;
+          team_id: string;
+          attend_count: number;
+          vote_count: number;
+          attendance_rate: number | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       create_team: {
         Args: { p_name: string };

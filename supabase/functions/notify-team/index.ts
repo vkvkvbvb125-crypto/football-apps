@@ -2,20 +2,33 @@ import { withSupabase } from 'npm:@supabase/server@^1';
 
 export default {
   fetch: withSupabase({ auth: ['publishable', 'secret'] }, async (req, ctx) => {
-    const { teamId, title, body, excludeUserId } = await req.json();
+    const { teamId, title, body, excludeUserId, userIds: targetUserIds } = await req.json();
     if (!teamId || !title || !body) {
       return Response.json({ error: 'teamId, title, body가 필요합니다.' }, { status: 400 });
     }
 
-    const { data: members, error: membersError } = await ctx.supabaseAdmin
-      .from('team_members')
-      .select('user_id')
-      .eq('team_id', teamId);
-    if (membersError) {
-      return Response.json({ error: membersError.message }, { status: 400 });
+    let userIds: string[];
+    if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      // 특정 인원만 대상 (예: 미투표자 독촉) — 그래도 같은 팀 소속인지는 확인한다
+      const { data: members, error: membersError } = await ctx.supabaseAdmin
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId)
+        .in('user_id', targetUserIds);
+      if (membersError) {
+        return Response.json({ error: membersError.message }, { status: 400 });
+      }
+      userIds = (members ?? []).map((m) => m.user_id).filter((id) => id !== excludeUserId);
+    } else {
+      const { data: members, error: membersError } = await ctx.supabaseAdmin
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId);
+      if (membersError) {
+        return Response.json({ error: membersError.message }, { status: 400 });
+      }
+      userIds = (members ?? []).map((m) => m.user_id).filter((id) => id !== excludeUserId);
     }
-
-    const userIds = (members ?? []).map((m) => m.user_id).filter((id) => id !== excludeUserId);
     if (userIds.length === 0) {
       return Response.json({ sent: 0 });
     }

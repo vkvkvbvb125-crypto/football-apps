@@ -22,9 +22,16 @@ export async function registerForPushNotifications(userId: string) {
   await supabase.from('profiles').update({ push_token: tokenData.data }).eq('id', userId);
 }
 
-export async function notifyTeam(teamId: string, title: string, body: string, excludeUserId?: string) {
+export async function notifyTeam(
+  teamId: string,
+  title: string,
+  body: string,
+  excludeUserId?: string,
+  /** 지정하면 팀 전체가 아니라 이 user_id들에게만 보낸다 (예: 미투표자 독촉) */
+  userIds?: string[]
+) {
   const { error } = await supabase.functions.invoke('notify-team', {
-    body: { teamId, title, body, excludeUserId },
+    body: { teamId, title, body, excludeUserId, userIds },
   });
   if (error) throw error;
 }

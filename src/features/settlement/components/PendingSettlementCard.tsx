@@ -14,6 +14,8 @@ interface Props {
   isAdmin: boolean;
   suggestedTotal?: number;
   onCreate: () => void;
+  /** 정산 없이 종료 처리 — settlements.status='skipped' 행을 만들어 목록에서 뺀다 */
+  onSkip?: () => void;
 }
 
 export function PendingSettlementCard({
@@ -23,6 +25,7 @@ export function PendingSettlementCard({
   isAdmin,
   suggestedTotal,
   onCreate,
+  onSkip,
 }: Props) {
   const overdue = daysSince >= 3;
 
@@ -51,10 +54,17 @@ export function PendingSettlementCard({
             <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
             <Text style={styles.hintText}>총 비용만 입력하면 참석자 수로 1인당 금액을 자동 계산해요</Text>
           </View>
-          <Pressable onPress={onCreate} style={styles.cta}>
-            <Ionicons name="calculator-outline" size={17} color={colors.bgRoot} />
-            <Text style={styles.ctaText}>정산 만들기</Text>
-          </Pressable>
+          <View style={styles.ctaRow}>
+            {!!onSkip && (
+              <Pressable onPress={onSkip} style={styles.ghost}>
+                <Text style={styles.ghostText}>정산 없이 종료</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={onCreate} style={styles.cta}>
+              <Ionicons name="calculator-outline" size={17} color={colors.bgRoot} />
+              <Text style={styles.ctaText}>정산 만들기</Text>
+            </Pressable>
+          </View>
         </>
       ) : (
         <View style={styles.waitBox}>
@@ -113,7 +123,20 @@ const styles = StyleSheet.create({
   },
   hintText: { flex: 1, color: colors.textMuted, fontSize: 11.5, fontWeight: '600', lineHeight: 17 },
 
+  ctaRow: { flexDirection: 'row', gap: 8 },
+  ghost: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: '#26332D',
+  },
+  ghostText: { color: colors.textMuted, fontSize: 13, fontWeight: '800' },
   cta: {
+    flex: 1.4,
     height: 48,
     borderRadius: 14,
     flexDirection: 'row',

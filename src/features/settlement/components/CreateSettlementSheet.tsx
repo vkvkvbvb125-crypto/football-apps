@@ -1,10 +1,13 @@
 // src/features/settlement/components/CreateSettlementSheet.tsx
 // "아직 정산 등록 안 한" 경기 → 총무가 정산을 만드는 시트
 // 총액을 넣으면 1인당 금액이 자동 계산되고, 참석자만 대상으로 요청이 발송된다.
+// 1인당 금액은 settlementStore.splitAmount()와 반드시 같은 계산이어야 미리보기와 실제
+// 저장값이 어긋나지 않는다 (10원 단위 올림 + surplus는 실제로 그렇게 저장되는 값).
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors } from '../../../theme';
+import { splitAmount } from '../stores/settlementStore';
 
 export interface Attendee {
   id: string;
@@ -18,7 +21,7 @@ interface Props {
   attendees: Attendee[];
   suggestedTotal?: number;
   account: { bank: string; no: string; holder: string };
-  onSubmit: (p: { total: number; targetIds: string[] }) => void;
+  onSubmit: (p: { total: number; targetIds: string[]; memo: string }) => void;
 }
 
 const QUICK = [60000, 80000, 100000, 120000];
@@ -34,10 +37,11 @@ export function CreateSettlementSheet({
 }: Props) {
   const [totalText, setTotalText] = useState(String(suggestedTotal ?? ''));
   const [exempt, setExempt] = useState<Record<string, boolean>>({});
+  const [memo, setMemo] = useState('');
 
   const targets = useMemo(() => attendees.filter((a) => !exempt[a.id]), [attendees, exempt]);
   const total = Number(totalText.replace(/[^0-9]/g, '')) || 0;
-  const perPerson = targets.length > 0 ? Math.ceil(total / targets.length) : 0;
+  const { perPerson, surplus } = splitAmount(total, targets.length);
   const valid = total > 0 && targets.length > 0;
 
   return (
@@ -90,6 +94,9 @@ export function CreateSettlementSheet({
                 <Text style={styles.calcLabel}>1인당</Text>
                 <Text style={styles.calcBig}>{perPerson.toLocaleString()}원</Text>
               </View>
+              {surplus !== 0 && total > 0 && (
+                <Text style={styles.calcNote}>10원 단위로 올림해서 {surplus.toLocaleString()}원 남아요 · 회비로 적립돼요</Text>
+              )}
             </View>
 
             <View style={{ gap: 8 }}>
@@ -113,6 +120,17 @@ export function CreateSettlementSheet({
               </View>
             </View>
 
+            <View style={{ gap: 8 }}>
+              <Text style={styles.label}>메모 (선택)</Text>
+              <TextInput
+                style={[styles.input, { height: 46, fontSize: 14, fontWeight: '600' }]}
+                value={memo}
+                onChangeText={setMemo}
+                placeholder="구장비 + 음료"
+                placeholderTextColor={colors.placeholder}
+              />
+            </View>
+
             <View style={styles.accountBox}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.accountLabel}>입금받을 계좌</Text>
@@ -130,7 +148,7 @@ export function CreateSettlementSheet({
           <Pressable
             disabled={!valid}
             onPress={() => {
-              onSubmit({ total, targetIds: targets.map((t) => t.id) });
+              onSubmit({ total, targetIds: targets.map((t) => t.id), memo: memo.trim() });
               onClose();
             }}
             style={[styles.cta, !valid && { opacity: 0.4 }]}
@@ -215,6 +233,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   calcDivider: { height: 1, backgroundColor: 'rgba(74,222,128,0.14)' },
+  calcNote: { color: colors.gold, fontSize: 10.5, fontWeight: '600', lineHeight: 15 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   chip: {

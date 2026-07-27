@@ -1,5 +1,5 @@
-// src/features/home/screens/HomeScreen.tsx
-// 리디자인 적용본. 기존 store/service는 그대로 사용하고 UI만 교체했습니다.
+// src/features/home/screens/HomeScreen.tsx — 리디자인 v3
+// 히어로(D-day·참석 링) / 총무 모집 현황+독촉+명단 / 멤버 투표·내 회비 / 이후 일정.
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
@@ -11,9 +11,12 @@ import { ScreenGradient } from '../../../components/ScreenGradient';
 import { TabHeader } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
+import { useAuthStore } from '../../auth/stores/authStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../../settlement/stores/settlementStore';
+import { notifyTeam } from '../../notifications/services/pushService';
 import { fetchMatchWeather, weatherEmoji } from '../../attendance/services/weatherService';
+import { RosterSheet, type RosterMember } from '../../attendance/components/RosterSheet';
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 import type { AttendanceStatus } from '../../../types/database';
 
@@ -84,19 +87,23 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
   const loadMembers = useTeamStore((s) => s.loadMembers);
+  const myUserId = useAuthStore((s) => s.session?.user.id);
 
   const matches = useAttendanceStore((s) => s.matches);
   const loadMatches = useAttendanceStore((s) => s.loadMatches);
   const vote = useAttendanceStore((s) => s.vote);
 
-  const settlements = useSettlementStore((s) => s.settlements);
-  const loadSettlements = useSettlementStore((s) => s.loadSettlements);
+  const current = useSettlementStore((s) => s.current);
+  const loadSettlements = useSettlementStore((s) => s.load);
+
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [reminded, setReminded] = useState(false);
 
   useEffect(() => {
     if (!activeTeam) return;
     loadMatches();
     loadMembers();
-    loadSettlements();
+    loadSettlements(activeTeam.team.id, activeTeam.membershipId);
   }, [activeTeam?.team.id]);
 
   if (!activeTeam) return null;
@@ -116,7 +123,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const later = upcoming.slice(1, 1 + UPCOMING_LIMIT);
   const nextWeather = useMatchWeather(next);
 
-  const total = Math.max(1, members.length);
+  const capacity = next?.capacity ?? 12;
+  const total = Math.max(1, capacity);
   const attend = next ? next.votes.filter((v) => v.status === 'attend').length : 0;
   const absent = next ? next.votes.filter((v) => v.status === 'absent').length : 0;
   const pending = Math.max(0, members.length - attend - absent);
@@ -133,7 +141,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
     if (thisMonth.length === 0) return 0;
     if (isAdmin) {
       const sum = thisMonth.reduce(
-        (acc, m) => acc + m.votes.filter((v) => v.status === 'attend').length / total,
+        (acc, m) => acc + m.votes.filter((v) => v.status === 'attend').length / Math.max(1, members.length),
         0
       );
       return Math.round((sum / thisMonth.length) * 100);
@@ -142,19 +150,18 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
       m.votes.some((v) => v.team_member_id === activeTeam.membershipId && v.status === 'attend')
     ).length;
     return Math.round((mine / thisMonth.length) * 100);
-  }, [matches, isAdmin, total]);
+  }, [matches, isAdmin, members.length]);
 
-  // 회비: 총무는 내 미납액, 팀원은 미입금 인원
+  // 회비: 총무는 미입금 인원, 멤버는 내 미납액 — 지금 진행 중인 정산(current) 기준
   const dues = useMemo(() => {
-    const payments = settlements.flatMap((s) => s.payments.map((p) => ({ ...p, s })));
     if (isAdmin) {
-      const unpaid = payments.filter((p) => !p.is_paid).length;
+      const unpaid = current ? current.shares.filter((s) => !s.paid).length : 0;
       return { value: String(unpaid), unit: '명', label: '미입금' };
     }
-    const mine = payments.filter((p) => p.team_member_id === activeTeam.membershipId && !p.is_paid);
-    const amount = mine.reduce((t, p) => t + (p.s.per_person_amount ?? 0), 0);
+    const mine = current?.shares.find((s) => s.isMe);
+    const amount = mine && !mine.paid ? mine.amount : 0;
     return { value: amount.toLocaleString(), unit: '원', label: '내 미납 회비' };
-  }, [settlements, isAdmin]);
+  }, [current, isAdmin]);
 
   const voteHint =
     myVote === 'attend'
@@ -164,6 +171,41 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         : myVote === 'undecided'
           ? '미정으로 표시했어요'
           : '아직 투표하지 않았어요';
+
+  const rosterMembers: RosterMember[] = useMemo(() => {
+    if (!next) return [];
+    return members.map((m) => {
+      const v = next.votes.find((vv) => vv.team_member_id === m.id)?.status;
+      return {
+        id: m.id,
+        name: m.displayName,
+        position: m.skillTag ? `실력 ${m.skillTag}` : null,
+        role: m.role,
+        status: v ?? 'pending',
+        isMe: m.id === activeTeam?.membershipId,
+      };
+    });
+  }, [next, members, activeTeam?.membershipId]);
+
+  const remindNotVoted = () => {
+    if (!next) return;
+    const notVotedUserIds = members
+      .filter((m) => !next.votes.some((v) => v.team_member_id === m.id))
+      .map((m) => m.userId);
+    if (notVotedUserIds.length === 0) return;
+    const dateLabel = new Date(next.match_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+    notifyTeam(
+      activeTeam.team.id,
+      `${activeTeam.team.name} 참석 투표 독촉`,
+      `${dateLabel} 경기 참석 투표를 아직 안 하셨어요 — 지금 투표해주세요`,
+      myUserId,
+      notVotedUserIds
+    ).catch(() => {
+      // 알림 전송 실패는 조용히 무시
+    });
+    setReminded(true);
+    setTimeout(() => setReminded(false), 2000);
+  };
 
   return (
     <ScreenGradient>
@@ -176,11 +218,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             end={{ x: 1, y: 1 }}
             style={styles.hero}
           >
-            <Image
-              source={require('../../../../assets/축구공.png')}
-              style={styles.heroBall}
-              resizeMode="contain"
-            />
+            <Image source={require('../../../../assets/축구공.png')} style={styles.heroBall} resizeMode="contain" />
 
             <View style={styles.heroTopRow}>
               <View style={styles.ddayBadge}>
@@ -198,10 +236,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             <View style={styles.heroMain}>
               <View style={styles.heroMainLeft}>
                 <Text style={styles.heroTime}>
-                  {new Date(next.match_date).toLocaleTimeString('ko-KR', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
+                  {new Date(next.match_date).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}
                 </Text>
                 <Text style={styles.heroDate}>
                   {new Date(next.match_date).toLocaleDateString('ko-KR', {
@@ -220,14 +255,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
               <View style={styles.ring}>
                 <Svg width={RING_SIZE} height={RING_SIZE}>
-                  <Circle
-                    cx={RING_SIZE / 2}
-                    cy={RING_SIZE / 2}
-                    r={RING_R}
-                    stroke="#1E3427"
-                    strokeWidth={RING_STROKE}
-                    fill="none"
-                  />
+                  <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R} stroke="#1E3427" strokeWidth={RING_STROKE} fill="none" />
                   <Circle
                     cx={RING_SIZE / 2}
                     cy={RING_SIZE / 2}
@@ -243,7 +271,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                 </Svg>
                 <View style={styles.ringCenter}>
                   <Text style={styles.ringNum}>{attend}</Text>
-                  <Text style={styles.ringDen}>/ {members.length}명</Text>
+                  <Text style={styles.ringDen}>/ {capacity}명</Text>
                 </View>
               </View>
             </View>
@@ -259,10 +287,17 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                 </View>
                 <View style={styles.heroActionRow}>
                   <Pressable
-                    style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-                    onPress={() => navigation.navigate('Attendance')}
+                    disabled={pending === 0}
+                    style={({ pressed }) => [styles.primaryButton, pending === 0 && { opacity: 0.4 }, pressed && styles.pressed]}
+                    onPress={remindNotVoted}
                   >
-                    <Text style={styles.primaryButtonText}>참석 현황 보기</Text>
+                    <Text style={styles.primaryButtonText}>{reminded ? '알림을 보냈어요' : '독촉 알림 보내기'}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                    onPress={() => setRosterOpen(true)}
+                  >
+                    <Ionicons name="people-outline" size={19} color={colors.textStrong} />
                   </Pressable>
                   <Pressable
                     style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
@@ -360,10 +395,11 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             {later.map((m) => {
               const d = new Date(m.match_date);
               const a = m.votes.filter((v) => v.status === 'attend').length;
+              const cap = m.capacity ?? 12;
               const chip =
-                a >= members.length
+                a >= cap
                   ? { text: '정원 마감', bg: 'rgba(74,222,128,0.14)', fg: colors.green }
-                  : members.length - a <= 2
+                  : cap - a <= 2
                     ? { text: '마감 임박', bg: 'rgba(210,163,76,0.16)', fg: colors.gold }
                     : { text: '모집중', bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted };
 
@@ -376,9 +412,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                   <View style={styles.rowDate}>
                     <Text style={styles.rowMon}>{d.getMonth() + 1}월</Text>
                     <Text style={styles.rowDay}>{d.getDate()}</Text>
-                    <Text style={styles.rowDow}>
-                      {d.toLocaleDateString('ko-KR', { weekday: 'short' }).replace('요일', '')}
-                    </Text>
+                    <Text style={styles.rowDow}>{d.toLocaleDateString('ko-KR', { weekday: 'short' }).replace('요일', '')}</Text>
                   </View>
                   <View style={styles.rowDivider} />
                   <View style={styles.rowBody}>
@@ -394,7 +428,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                   </View>
                   <View style={styles.rowRight}>
                     <Text style={styles.rowCount}>
-                      {a}/{members.length}
+                      {a}/{cap}
                     </Text>
                     <View style={[styles.rowChip, { backgroundColor: chip.bg }]}>
                       <Text style={[styles.rowChipText, { color: chip.fg }]}>{chip.text}</Text>
@@ -406,6 +440,26 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </>
         )}
       </ScrollView>
+
+      {!!next && (
+        <RosterSheet
+          visible={rosterOpen}
+          onClose={() => setRosterOpen(false)}
+          matchLabel={`${new Date(next.match_date).toLocaleDateString('ko-KR', {
+            month: 'long',
+            day: 'numeric',
+            weekday: 'short',
+          })} ${new Date(next.match_date).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })}${next.location ? ` · ${next.location}` : ''}`}
+          capacity={capacity}
+          deadlineLabel={next.vote_deadline ? ddayLabel(next.vote_deadline) : undefined}
+          members={rosterMembers}
+          isAdmin={!!isAdmin}
+        />
+      )}
     </ScreenGradient>
   );
 }

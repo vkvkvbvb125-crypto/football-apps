@@ -18,6 +18,7 @@ export const colors = {
   // 강조
   green: '#4ADE80',
   greenNav: '#35F58A',
+  navIdle: '#7C8A85',
   greenTimer: '#50D978',
   greenDeep: '#2F4A3A',
   greenTint: 'rgba(74,222,128,0.10)',
@@ -37,10 +38,13 @@ export const colors = {
   gold: '#D2A34C',
   blue: '#60A5FA',
   neutralFill: '#3A4842',
+  dangerTint: 'rgba(248,113,113,0.14)', // 삭제 같은 되돌릴 수 없는 동작
+  goldTint: 'rgba(210,163,76,0.14)', // 확인 대기 배지
+  neutralTint: 'rgba(58,72,66,0.28)', // 취소 배지
 
-  // 예외
+  // 예외 — 브랜드 고정색. 로그인 버튼과 공유 버튼이 같은 값을 봐야 마크가 어긋나지 않는다
   kakao: '#FEE500',
-  kakaoText: '#3C1E1E',
+  kakaoText: '#000000',
 } as const;
 
 export const radius = {
@@ -54,8 +58,18 @@ export const radius = {
 
 export const space = [0, 4, 6, 8, 10, 12, 14, 16, 20, 24] as const;
 
+/**
+ * 떠 있는 탭바의 높이와 화면 하단에서 띄운 간격.
+ * MainTabNavigator(바를 그리는 쪽)와 useTabBarPadding(그만큼 여백을 두는 쪽)이
+ * 같은 값을 봐야 한다 — 따로 두면 바 높이를 바꿀 때 콘텐츠가 다시 가려진다.
+ */
+export const tabBar = { height: 66, gap: 10 } as const;
+
 export const font = {
   hero: { fontSize: 26, fontWeight: '800' as const, letterSpacing: -0.8 },
+  // 정산 금액 전용 — 카드에서 가장 큰 요소라 hero(26)를 재사용하면
+  // 배너 로고와 같은 위계가 되어 둘 다 약해진다.
+  amount: { fontSize: 30, fontWeight: '800' as const, letterSpacing: -1.0 },
   screenTitle: { fontSize: 21, fontWeight: '800' as const, letterSpacing: -0.4 },
   section: { fontSize: 15, fontWeight: '800' as const, letterSpacing: -0.2 },
   cardTitle: { fontSize: 14, fontWeight: '700' as const },

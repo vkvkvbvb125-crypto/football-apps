@@ -5,8 +5,18 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../theme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, tabBar } from '../theme';
+
+/**
+ * 스크롤 콘텐츠가 떠 있는 탭바에 가리지 않도록 두는 아래 여백.
+ *
+ * 화면마다 110처럼 숫자를 박아 뒀는데, 탭바는 홈 인디케이터 위로 insets.bottom만큼 더
+ * 올라가 있어서 노치 기기에서는 그만큼 모자랐다 — 마지막 줄이 탭바 뒤에 깔렸다.
+ */
+export function useTabBarPadding() {
+  return useSafeAreaInsets().bottom + tabBar.gap + tabBar.height + 16;
+}
 
 interface Props {
   children: ReactNode;
@@ -17,12 +27,27 @@ interface Props {
 export function ScreenGradient({ children, flat }: Props) {
   return (
     <View style={styles.root}>
+      {/*
+        화면 전체에 깔리는 초록 그라데이션.
+
+        예전엔 상단 260px에만 0.06짜리 글로우를 얹었는데, 그 정도로는 보이지 않는 데다
+        카드가 화면 대부분을 덮어서 남는 자리가 없었다. 전체 높이로 늘리고 위·아래를
+        모두 물들여, 카드 사이 여백마다 초록이 드러나게 한다.
+
+        카드보다 뒤에 있어야 하므로 children보다 먼저 그린다.
+      */}
       {!flat && (
         <LinearGradient
-          colors={['rgba(74,222,128,0.06)', 'rgba(7,16,13,0)']}
+          colors={[
+            'rgba(74,222,128,0.12)',
+            'rgba(74,222,128,0.05)',
+            'rgba(7,16,13,0)',
+            'rgba(74,222,128,0.07)',
+          ]}
+          locations={[0, 0.28, 0.62, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
-          style={styles.glow}
+          style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
       )}
@@ -35,5 +60,5 @@ export function ScreenGradient({ children, flat }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgRoot },
-  glow: { position: 'absolute', left: 0, right: 0, top: 0, height: 260 },
+
 });

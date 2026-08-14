@@ -1,7 +1,9 @@
-// src/features/attendance/screens/AttendanceScreen.tsx — 리디자인 v3 (캘린더 + 상세카드 + 이후 일정 목록)
+// src/features/attendance/screens/AttendanceScreen.tsx — 리디자인 v3 (캘린더 + 상세카드 + 다가오는 경기 목록)
 // 캘린더/모달 컴포넌트(CalendarGrid, TimeWheelPicker, DeadlinePicker, PlaceSearchModal)와
 // store API는 기존 그대로 사용합니다.
-// 경기 만들기는 홈 화면 버튼 → openCreate 파라미터로만 진입한다 (이 화면 자체엔 FAB 없음).
+// 참석 투표는 이 화면에만 있다 — 홈은 참여 현황만 보여주고 focusDate 파라미터로 여기 보낸다.
+// 경기 만들기는 이 화면에만 있다 — 「다가오는 경기」 헤더의 버튼과 빈 날짜의 "이 날짜에 경기 만들기".
+// 홈에는 만드는 입구를 두지 않는다(홈은 다음 경기 하나만 보여주는 자리다).
 //
 // 정원/대기명단은 utils/capacity.ts로 서버 데이터 없이 계산한다 (팀 전체 공통 DEFAULT_CAPACITY=12).
 // 실내/실외 태그는 place_category 텍스트에 "실내"가 포함되는지로 추정한다 — 정확한 실내/실외 컬럼이
@@ -11,9 +13,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
-import { ScreenGradient } from '../../../components/ScreenGradient';
+import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
@@ -32,6 +44,7 @@ import { toMatchWeatherBlockData } from '../components/MatchWeatherBlock';
 import { ScheduleRow, resolveBadge } from '../components/ScheduleRow';
 import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../components/CreateMatchSheet';
 import { resolveCapacity } from '../utils/capacity';
+import { isVotingOpen, votingLockNote } from '../utils/voting';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
 import { fetchPartnerVenues, venueMeta } from '../services/venueService';
 import type { PlaceResult } from '../services/placeService';
@@ -46,6 +59,8 @@ interface SelectedPlace {
 }
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+/** 시각을 버린 새 Date — 원본을 변형하지 않는다(Date#setHours는 제자리 변형이라 위험하다) */
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 function daysUntilOf(iso: string): number {
   const a = new Date(iso);
@@ -53,6 +68,33 @@ function daysUntilOf(iso: string): number {
   const b = new Date();
   b.setHours(0, 0, 0, 0);
   return Math.round((a.getTime() - b.getTime()) / 86400000);
+}
+
+/**
+ * 방금 만든 경기가 처음부터 잠겨 있으면 안 된다.
+ *
+ * "경기 1일 전"은 마감을 경기 날짜에서만 빼서 정한다. 그래서 오늘 경기를 오늘 만들면
+ * 마감이 어제가 되고, 아무도 한 번도 투표할 수 없는 경기가 생긴다.
+ *
+ * 지난 마감은 킥오프까지 늦춘다. 킥오프마저 지났다면(이미 시작한 경기를 뒤늦게 등록)
+ * 마감을 걸지 않는다 — 어떤 시각을 넣어도 이미 지난 시각이라 잠기기 때문이다.
+ * 이 경우 총무가 메뉴에서 직접 마감한다.
+ */
+function votableDeadline(deadlineIso: string | null, matchDateIso: string): string | null {
+  if (!deadlineIso) return null;
+  if (new Date(deadlineIso).getTime() >= Date.now()) return deadlineIso;
+  return new Date(matchDateIso).getTime() > Date.now() ? matchDateIso : null;
+}
+
+/** 수정/삭제 팝오버 높이 (항목 2개 + 구분선) — 화면 밖으로 밀리는지 판단하는 데만 쓴다 */
+const POPOVER_HEIGHT = 92;
+
+/** ⋮ 버튼 바로 아래. 아래 공간이 모자라면 버튼 위로 뒤집는다 */
+function popoverTop(anchorY: number) {
+  const screenH = Dimensions.get('window').height;
+  const below = anchorY + 12;
+  if (below + POPOVER_HEIGHT <= screenH - 16) return below;
+  return Math.max(16, anchorY - POPOVER_HEIGHT - 30);
 }
 
 function ddayLabel(iso: string) {
@@ -69,6 +111,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
   const myUserId = useAuthStore((s) => s.session?.user.id);
+  const bottomPad = useTabBarPadding();
 
   const matches = useAttendanceStore((s) => s.matches);
   const loaded = useAttendanceStore((s) => s.loaded);
@@ -195,12 +238,14 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       .catch(() => setPartnerVenues([]));
   };
 
+  // 홈에서 "투표하러 가기"로 넘어올 때 그 경기 날짜를 펴준다 —
+  // 이게 없으면 다음 경기가 오늘이 아닐 때 빈 날짜로 떨어져서 투표할 카드가 안 보인다.
   useEffect(() => {
-    if (isAdmin && (route.params as { openCreate?: boolean } | undefined)?.openCreate) {
-      handleOpenCreate();
-      navigation.setParams({ openCreate: undefined });
-    }
-  }, [route.params, isAdmin]);
+    const iso = (route.params as { focusDate?: string } | undefined)?.focusDate;
+    if (!iso) return;
+    setSelectedDate(new Date(iso));
+    navigation.setParams({ focusDate: undefined });
+  }, [route.params]);
 
   const handleOpenEdit = (match: MatchWithVotes) => {
     const d = new Date(match.match_date);
@@ -286,12 +331,19 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         return {
           ...base,
           matchDate: d.toISOString(),
-          voteDeadline: deadlineOffsetMs != null ? new Date(d.getTime() - deadlineOffsetMs).toISOString() : null,
+          voteDeadline:
+            deadlineOffsetMs != null
+              ? votableDeadline(new Date(d.getTime() - deadlineOffsetMs).toISOString(), d.toISOString())
+              : null,
         };
       });
       createMatches(inputs);
     } else {
-      createMatch({ ...base, matchDate: payload.matchDate, voteDeadline: payload.voteDeadline });
+      createMatch({
+        ...base,
+        matchDate: payload.matchDate,
+        voteDeadline: votableDeadline(payload.voteDeadline, payload.matchDate),
+      });
     }
   };
 
@@ -357,7 +409,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
           <MonthNavigator offset={monthOffset} onChange={setMonthOffset} />
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
             <View style={styles.calendarCard}>
               <CalendarGrid
                 year={visibleMonth.year}
@@ -373,10 +425,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
             ) : selectedMatch ? (
               (() => {
                 const myVote = selectedMatch.votes.find((v) => v.team_member_id === activeTeam.membershipId)?.status;
-                const deadlinePassed = selectedMatch.vote_deadline
-                  ? new Date(selectedMatch.vote_deadline) < new Date()
-                  : false;
-                const isLocked = selectedMatch.status !== 'open' || deadlinePassed;
+                const isLocked = !isVotingOpen(selectedMatch);
+                const lockNote = votingLockNote(selectedMatch, isAdmin ?? false) ?? undefined;
                 const cap = resolveCapacity(
                   selectedMatch.votes,
                   selectedMatch.capacity,
@@ -389,6 +439,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                     <MatchDetailCard
                       headline={`${d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} ${d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}`}
                       ddayLabel={ddayLabel(selectedMatch.match_date)}
+                      matchType={selectedMatch.match_type}
                       placeLabel={selectedMatch.location ?? '장소 미정'}
                       venueKind={venueKindOf(selectedMatch)}
                       daysUntil={daysUntilOf(selectedMatch.match_date)}
@@ -402,12 +453,13 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       }
                       myVote={myVote}
                       isLocked={isLocked}
+                      lockNote={lockNote}
                       isAdmin={isAdmin ?? false}
                       waitlist={waitlistEntriesFor(cap.waitlist)}
                       weatherDecision={weatherDecisions[selectedMatch.id] ?? null}
                       onVote={(status) => vote(selectedMatch.id, status)}
-                      onOpenMenu={() => {
-                        setActionAnchorY(160);
+                      onOpenMenu={(anchorY) => {
+                        setActionAnchorY(anchorY);
                         setActionMatch(selectedMatch);
                       }}
                       onPickVenue={() => handleOpenEdit(selectedMatch)}
@@ -420,23 +472,57 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                   </View>
                 );
               })()
-            ) : (
+            ) : upcomingMatches.length > 0 ? (
+              // 경기가 하나도 없을 땐 아래 "다가오는 경기" 빈 상태가 같은 말을 한다 — 두 번 쓰지 않는다
               <View style={styles.noMatchHint}>
                 <Text style={styles.noMatchHintText}>이 날짜엔 경기가 없어요</Text>
+                {/* 골랐는데 만들 방법이 없으면 막다른 길이다 — 지난 날짜는 만들 수 없으니 제외한다.
+                    Date#setHours를 직접 쓰면 state를 그 자리에서 변형시켜버리므로 시작점 복사본으로 비교한다. */}
+                {isAdmin && startOfDay(selectedDate).getTime() >= startOfDay(new Date()).getTime() && (
+                  <Pressable
+                    onPress={handleOpenCreate}
+                    style={({ pressed }) => [styles.noMatchCta, pressed && styles.pressed]}
+                  >
+                    <Ionicons name="add" size={14} color={colors.green} />
+                    <Text style={styles.noMatchCtaText}>이 날짜에 경기 만들기</Text>
+                  </Pressable>
+                )}
               </View>
-            )}
+            ) : null}
 
             <View style={styles.scheduleSection}>
               <View style={styles.scheduleHead}>
-                <Text style={styles.scheduleTitle}>이후 일정</Text>
+                {/* "이후"라고 하면 오늘 경기가 빠진 것처럼 읽힌다 — 목록은 오늘 0시부터 담는다.
+                    오늘 저녁 경기도 아직 안 치른 경기라 여기 있는 게 맞다. */}
+                <Text style={styles.scheduleTitle}>다가오는 경기</Text>
                 <Text style={styles.scheduleCount}>{upcomingMatches.length}경기</Text>
+                <View style={{ flex: 1 }} />
+                {/* 경기가 0건이어도 이 버튼은 뜬다 — 새 팀이 첫 경기를 만드는 유일한 입구다 */}
+                {isAdmin && (
+                  <Pressable
+                    onPress={handleOpenCreate}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.createChip, pressed && styles.pressed]}
+                  >
+                    <Ionicons name="add" size={14} color={colors.green} />
+                    <Text style={styles.createChipText}>경기 만들기</Text>
+                  </Pressable>
+                )}
               </View>
 
               {upcomingMatches.length === 0 ? (
+                // 새 팀이 이 앱에서 처음 보는 화면이다 — 다음에 뭘 하면 되는지 여기서 끝나야 한다
                 <EmptyState
+                  compact
                   emoji="🗓️"
                   title="아직 등록된 경기가 없어요"
-                  subtitle="홈 화면의 경기 만들기 버튼으로 새 경기를 만들어보세요"
+                  subtitle={
+                    isAdmin
+                      ? '날짜를 고르고 첫 경기를 만들어 보세요.\n만들면 팀원에게 참석 투표가 열려요'
+                      : '총무가 경기를 만들면 여기에 보여드릴게요'
+                  }
+                  actionLabel={isAdmin ? '첫 경기 만들기' : undefined}
+                  onAction={isAdmin ? handleOpenCreate : undefined}
                 />
               ) : (
                 upcomingMatches.map((match) => {
@@ -542,7 +628,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       {/* 수정/삭제 팝오버 */}
       <Modal visible={!!actionMatch} transparent animationType="fade" onRequestClose={() => setActionMatch(null)}>
         <Pressable style={{ flex: 1 }} onPress={() => setActionMatch(null)}>
-          <View style={[styles.popover, { top: actionAnchorY + 12 }]}>
+          <View style={[styles.popover, { top: popoverTop(actionAnchorY) }]}>
             <Pressable
               style={styles.popoverItem}
               onPress={() => {
@@ -597,7 +683,6 @@ const styles = StyleSheet.create({
   weatherLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 },
   weatherLoadingText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 
-  scroll: { paddingBottom: 110 },
   calendarCard: {
     marginHorizontal: 20,
     backgroundColor: colors.card,
@@ -621,11 +706,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    gap: 10,
   },
   noMatchHintText: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
+  noMatchCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
+    backgroundColor: colors.greenTint,
+  },
+  noMatchCtaText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 
   scheduleSection: { paddingHorizontal: 20, paddingTop: 22 },
   scheduleHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 10 },
+  createChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center', // 부모가 baseline 정렬이라 칩은 따로 세로 중앙을 잡아준다
+    gap: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
+    backgroundColor: colors.greenTint,
+  },
+  createChipText: { color: colors.green, fontSize: 12, fontWeight: '800' },
   scheduleTitle: { color: colors.text, fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
   scheduleCount: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
 

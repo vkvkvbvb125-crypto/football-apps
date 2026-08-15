@@ -604,7 +604,10 @@ export function TeamHomeScreen({ navigation }: any) {
 
           {/* 멤버 — 팀 정보·멤버 관리 두 탭에서 보인다 (팀원은 탭이 없어 항상) */}
           {(tab === 'home' || tab === 'members') && (
-          <View style={[styles.card, { gap: 12 }]}>
+          // 팀 홈에서는 카드 껍데기를 벗긴다. 배너 아래로 똑같은 상자만 쌓이면
+          // 화면에 리듬이 없다 — 가로로 흐르는 아바타 줄이 상자들 사이에서 숨통이 된다.
+          // (멤버 탭은 목록이 주인공이라 카드를 유지한다)
+          <View style={[tab === 'members' ? styles.card : styles.rosterStrip, { gap: 12 }]}>
             <View style={styles.sectionHead}>
               <Text style={styles.sectionTitle}>
                 {tab === 'members' ? '전체' : '멤버'} {members.length}명
@@ -1205,6 +1208,8 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: colors.text, fontSize: 13 },
 
   /** 팀 홈 가로 명단 */
+  /** 카드 없이 흐르는 멤버 줄 — 좌우 여백만 카드와 맞춘다 */
+  rosterStrip: { paddingHorizontal: 4, paddingTop: 4 },
   rosterRow: { gap: 14, paddingVertical: 2 },
   rosterItem: { width: 62, alignItems: 'center', gap: 5 },
   rosterAvatar: {

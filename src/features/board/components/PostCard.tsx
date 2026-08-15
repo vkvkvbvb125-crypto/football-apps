@@ -10,6 +10,7 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { colors, radius } from '../../../theme';
 import { relativeTime } from '../../../lib/relativeTime';
 import { CATEGORY_LABEL, resolveAuthor, type Post } from '../services/boardService';
+import { PostComments } from './PostComments';
 
 /** 접었을 때 보이는 줄 수 */
 const COLLAPSED_LINES = 6;
@@ -55,6 +56,9 @@ export function PostCard({
     if (node && node.scrollHeight > node.clientHeight + 1) setTruncatable(true);
   };
 
+  const [showComments, setShowComments] = useState(false);
+  /** 서버에서 다시 안 읽고 화면의 개수만 맞춘다 */
+  const [commentDelta, setCommentDelta] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editDraft, setEditDraft] = useState(post.body);
@@ -180,11 +184,25 @@ export function PostCard({
           />
           <Text style={styles.footText}>{post.likeCount}</Text>
         </Pressable>
-        <View style={styles.footItem}>
-          <Ionicons name="chatbubble-outline" size={14} color={colors.textDim} />
-          <Text style={styles.footText}>{post.commentCount}</Text>
-        </View>
+        <Pressable onPress={() => setShowComments((v) => !v)} style={styles.footItem} hitSlop={6}>
+          <Ionicons
+            name={showComments ? 'chatbubble' : 'chatbubble-outline'}
+            size={14}
+            color={showComments ? colors.green : colors.textDim}
+          />
+          <Text style={styles.footText}>{post.commentCount + commentDelta}</Text>
+        </Pressable>
       </View>
+
+      {showComments && (
+        <PostComments
+          postId={post.id}
+          members={members}
+          myUserId={myUserId}
+          isAdmin={isAdmin}
+          onCountChange={(d) => setCommentDelta((v) => v + d)}
+        />
+      )}
 
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
         <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>

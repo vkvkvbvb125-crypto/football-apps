@@ -826,6 +826,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: 16,
     gap: 10,
+    // SoftTint가 absoluteFill 사각형이라, 이게 없으면 둥근 모서리 밖으로 색이 삐져나온다
+    overflow: 'hidden',
   },
   cardEmpty: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
 

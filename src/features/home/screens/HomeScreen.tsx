@@ -25,7 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
-import { BentoCard, BentoRow, SoftTint, toneBorder, type BentoTone } from '../../../components/BentoCard';
+import { SoftTint, toneBorder, type BentoTone } from '../../../components/BentoCard';
 import { NotificationBell, SettingsMenu, type NotificationBellHandle } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -343,10 +343,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   };
 
   const matchDate = next ? new Date(next.match_date) : null;
-  /** 오늘 0시 기준 남은 날 */
-  const daysToNext = matchDate
-    ? Math.round((new Date(matchDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
-    : 0;
 
   /**
    * 일정 탭의 그 경기로 보낸다.
@@ -425,27 +421,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             <Text style={styles.brandSub}>풋살, 연결의 시작</Text>
           </View>
         </View>
-
-        {/*
-          벤토 줄 — 히어로 바로 아래에 작은 카드 둘.
-          세로로 같은 폭 카드만 쌓으면 리듬이 없다. 큰 히어로 다음에 반 칸 둘이 오면
-          시선이 한 번 나뉘었다가 다시 모인다.
-        */}
-        <BentoRow>
-          <BentoCard half tone="green" onPress={() => navigation.navigate('Attendance')}>
-            <Text style={styles.bentoValue}>
-              {matchDate ? (daysToNext === 0 ? '오늘' : `D-${daysToNext}`) : '—'}
-            </Text>
-            <Text style={styles.bentoLabel}>다음 경기</Text>
-          </BentoCard>
-          <BentoCard half tone="blue" onPress={() => navigation.navigate('Team')}>
-            <View style={styles.bentoValueRow}>
-              <Text style={styles.bentoValue}>{members.length}</Text>
-              <Text style={styles.bentoUnit}>명</Text>
-            </View>
-            <Text style={styles.bentoLabel}>팀원</Text>
-          </BentoCard>
-        </BentoRow>
 
         {/* 이번주 경기 */}
         <View style={styles.sectionHead}>
@@ -787,18 +762,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 const styles = StyleSheet.create({
   content: { paddingTop: 8, gap: 16 },
 
-  /** 벤토 반 칸 타일 — 숫자가 먼저 읽히도록 라벨과 3배 가까이 벌린다 */
-  bentoValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
-  bentoValue: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -1,
-    lineHeight: 32,
-    fontVariant: ['tabular-nums'],
-  },
-  bentoUnit: { color: colors.textDim, fontSize: 14, fontWeight: '700' },
-  bentoLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700', marginTop: 2 },
   pressed: { opacity: 0.85 },
 
   // ── 상단 바 ───────────────────────────────────────────────

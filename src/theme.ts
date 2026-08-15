@@ -10,21 +10,27 @@
  * 면에서 색을 빼면 남은 초록 몇 개가 저절로 눈에 꽂힌다.
  */
 export const colors = {
-  // 배경 — 무채색
-  bgRoot: '#0C0C0D',
-  bgScreen: '#131315',
-  card: '#141416',
-  cardAlt: '#101012',
-  inputBg: '#131316',
+  /*
+   * 검정이 아니라 어두운 회색이다.
+   *
+   * 처음엔 #07100D(초록기 도는 순검정)였고, 무채색으로 돌리면서 #0C0C0D로 갔는데
+   * 둘 다 "너무 꺼멓다". 순검정 근처에서는 카드끼리의 단차가 아무리 정확해도
+   * 눈이 면을 구분하지 못한다 — 사다리 전체를 위로 올린다.
+   */
+  bgRoot: '#1A1A20',
+  bgScreen: '#212128',
+  card: '#26262E',
+  cardAlt: '#222229',
+  inputBg: '#1F1F26',
 
   /** 배경에서 한 겹 떠 있는 면 (배너처럼 화면의 앵커가 되는 자리) */
-  cardRaised: '#18181A',
+  cardRaised: '#2F2F38',
 
   // 테두리 — 면 위에서 실제로 보이는 정도까지만
-  border: '#232327',
-  borderRaised: '#2A2A2E',
-  borderSoft: '#1B1B1E',
-  divider: '#202024',
+  border: '#40404A',
+  borderRaised: '#4A4A56',
+  borderSoft: '#33333C',
+  divider: '#3A3A44',
 
   // 강조
   green: '#4ADE80',

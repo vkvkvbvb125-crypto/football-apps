@@ -13,7 +13,8 @@ interface AssignmentState {
   loading: boolean;
   error: string | null;
   loadAssignments: () => Promise<void>;
-  randomize: (matchId: string) => Promise<void>;
+  /** includeAll: 참석 투표를 무시하고 팀원 전체로 나눈다 (총무가 화면에서 고른 경우) */
+  randomize: (matchId: string, includeAll?: boolean) => Promise<void>;
   moveMember: (matchId: string, teamMemberId: string) => Promise<void>;
   addGroup: (matchId: string) => Promise<void>;
   removeLastGroup: (matchId: string) => Promise<void>;
@@ -38,13 +39,23 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
       set({ loading: false });
     }
   },
-  randomize: async (matchId) => {
+  randomize: async (matchId, includeAll = false) => {
     const match = useAttendanceStore.getState().matches.find((m) => m.id === matchId);
-    const attendeeIds = (match?.votes ?? [])
-      .filter((v) => v.status === 'attend')
-      .map((v) => v.team_member_id);
-
     const members = useTeamStore.getState().members;
+
+    /**
+     * 기본은 "참석"을 찍은 사람만 나눈다.
+     *
+     * includeAll은 총무가 화면에서 직접 고른 경우다 — 급하게 잡힌 경기라 투표가 없거나,
+     * 투표와 상관없이 나오는 팀이 있다. 몰래 전원을 끼워 넣지는 않는다.
+     * 안 온다고 찍은 사람(absent)은 그때도 뺀다 — 명시적으로 안 온다고 했다.
+     */
+    const attendeeIds = includeAll
+      ? members
+          .filter((m) => !match?.votes.some((v) => v.team_member_id === m.id && v.status === 'absent'))
+          .map((m) => m.id)
+      : (match?.votes ?? []).filter((v) => v.status === 'attend').map((v) => v.team_member_id);
+
     const buckets: Record<(typeof SKILL_BUCKET_ORDER)[number], string[]> = {
       상: [],
       중: [],

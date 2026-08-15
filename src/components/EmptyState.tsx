@@ -9,11 +9,13 @@ interface Props {
   subtitle?: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** 섹션 안에 끼워 넣을 때 — 화면 전체용 여백(56)은 목록 자리에 쓰면 첫 화면 밖으로 밀린다 */
+  compact?: boolean;
 }
 
-export function EmptyState({ emoji, title, subtitle, actionLabel, onAction }: Props) {
+export function EmptyState({ emoji, title, subtitle, actionLabel, onAction, compact }: Props) {
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
       {!!emoji && (
         <View style={styles.emojiBox}>
           <Text style={styles.emoji}>{emoji}</Text>
@@ -32,6 +34,7 @@ export function EmptyState({ emoji, title, subtitle, actionLabel, onAction }: Pr
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56, paddingHorizontal: 32, gap: 10 },
+  wrapCompact: { paddingVertical: 28 },
   emojiBox: {
     width: 58,
     height: 58,

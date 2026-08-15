@@ -3,6 +3,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import {
   fetchNotifications,
   markAllNotificationsRead,
+  deleteNotification,
   type NotificationRow,
 } from '../services/notificationsService';
 
@@ -12,6 +13,8 @@ interface NotificationsState {
   loading: boolean;
   load: () => Promise<void>;
   markAllRead: () => Promise<void>;
+  /** 알림 하나 삭제 — 실패하면 목록을 되돌린다 */
+  remove: (id: string) => Promise<void>;
 }
 
 export const useNotificationsStore = create<NotificationsState>((set, get) => ({
@@ -31,6 +34,20 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       set({ loading: false });
     }
   },
+  remove: async (id) => {
+    const userId = useAuthStore.getState().session?.user.id;
+    if (!userId) return;
+    const before = get().notifications;
+    // 먼저 지우고 보낸다 — 응답을 기다리면 밀어서 삭제한 항목이 잠깐 남아 있어 어색하다
+    set({ notifications: before.filter((n) => n.id !== id) });
+    try {
+      await deleteNotification(id, userId);
+    } catch (err) {
+      set({ notifications: before }); // 실패하면 되살린다. 지운 척하고 넘어가면 안 된다
+      throw err;
+    }
+  },
+
   markAllRead: async () => {
     const userId = useAuthStore.getState().session?.user.id;
     if (!userId) return;

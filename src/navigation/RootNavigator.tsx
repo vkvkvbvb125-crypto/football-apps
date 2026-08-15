@@ -24,12 +24,12 @@ const Stack = createNativeStackNavigator();
 
 const navTheme = {
   ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: '#07100D', card: '#07100D' },
+  colors: { ...DarkTheme.colors, background: colors.bgRoot, card: colors.bgRoot },
 };
 
 function LoadingScreen() {
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0F1512' }}>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgScreen }}>
       <ActivityIndicator size="large" color="#4ADE80" />
     </View>
   );

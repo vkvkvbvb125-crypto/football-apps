@@ -104,3 +104,14 @@ export function balanceLabel(b: BalancedTeams) {
 }
 
 export const SKILL_LABEL: Record<SkillLevel, string> = { 3: '상', 2: '중', 1: '하' };
+
+/**
+ * 내 표시 이름 변경.
+ *
+ * profiles.display_name은 팀 전체가 보는 이름이다 — 팀마다 다르게 둘 수 없다.
+ * (팀별 별명이 필요해지면 team_members에 별도 컬럼을 두는 게 맞다)
+ */
+export async function updateDisplayName(userId: string, displayName: string) {
+  const { error } = await supabase.from('profiles').update({ display_name: displayName }).eq('id', userId);
+  if (error) throw error;
+}

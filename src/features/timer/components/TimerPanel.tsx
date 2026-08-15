@@ -1,5 +1,5 @@
 // src/features/timer/components/TimerPanel.tsx — 타이머 가독성/터치 수정판
-// 기존 기능 100% 유지: 호루라기 사운드, 진동, ParticleSphere, 총무만 조작, 쿼터 길이 즉석 수정.
+// 기존 기능 유지: 호루라기 사운드, 진동, 총무만 조작, 쿼터 길이 즉석 조정.
 //
 // ⚠ 수정 요약:
 // 1) 시간 표시가 30px + "00:09:32"(시:분:초)라 작고 읽기 어려웠다 → 44px, 쿼터는 분:초만
@@ -10,15 +10,17 @@
 // 4) 쿼터 길이 입력이 10px 회색 텍스트라 편집 가능한지 알 수 없었다 → 라벨 + 밑줄 강조.
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Vibration, View, useWindowDimensions } from 'react-native';
-import { Text, TextInput } from '../../../components/nativeText';
+import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
-import { ParticleSphere } from '../../assignment/components/ParticleSphere';
 import { colors } from '../../../theme';
 
 const STROKE_WIDTH = 6;
-const PARTICLE_OVERFLOW = 60;
+
+/** 쿼터 길이 범위 — 풋살은 보통 5~15분이고, 그 밖은 실수로 누른 값에 가깝다 */
+const MIN_QUARTER = 1;
+const MAX_QUARTER = 60;
 
 function formatTime(totalSeconds: number) {
   const clamped = Math.max(0, totalSeconds);
@@ -33,6 +35,16 @@ function formatTime(totalSeconds: number) {
   return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
 }
 
+/** 경기 정보 카드의 한 칸 — 라벨 위, 값 아래 */
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.infoCell}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
 interface Props {
   /** 경기 생성 시 정한 쿼터 길이(분) — 시작값으로만 쓰고 총무가 여전히 조정할 수 있다 */
   initialQuarterMinutes: number;
@@ -43,6 +55,8 @@ interface Props {
   scoreB: number;
   onPressScore: () => void;
   isAdmin: boolean;
+  /** 아래 「경기 정보」 카드에 쓰는 값들 */
+  matchInfo?: { quarterMinutes: number; totalQuarters: number; teamCount: number };
 }
 
 export function TimerPanel({
@@ -54,6 +68,7 @@ export function TimerPanel({
   scoreB,
   onPressScore,
   isAdmin,
+  matchInfo,
 }: Props) {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const ringSize = Math.min(240, SCREEN_WIDTH * 0.64);
@@ -71,14 +86,45 @@ export function TimerPanel({
     setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
+  /**
+   * 휘슬 사이 간격.
+   *
+   * 이 값이 앞선 취주의 길이도 겸한다 — 다음 재생이 seekTo(0)으로 앞 소리를 끊기 때문이다.
+   * 그래서 마지막 취주만 음원 전체(3.4초)로 울린다: 짧-짧-김.
+   * 마지막을 더 길게 만들 방법은 없다(이미 파일 전체다). 대신 이 값을 줄이면
+   * 앞의 둘이 짧아져서 마지막이 상대적으로 더 길게 들린다.
+   *
+   * 여러 방식을 시도했다가 이 방식으로 돌아왔다:
+   *  - 3600ms(소리 전체 3.4초를 다 재생) → 세 번이면 11초라 늘어졌다
+   *  - 짧게 두 번 + 길게 한 번(주심 리듬) → 긴 소리를 잘라 만들다 보니 어색했다
+   *  - 끊을 때 볼륨 페이드 → 휘슬은 세기가 일정해서 "볼륨을 줄인다"로 들렸다
+   *
+   * 짧은 취주가 필요하면 whistle-short.mp3 같은 짧은 음원을 따로 두는 게 맞다.
+   * 3.4초짜리 하나를 잘라 쓰는 한 어느 방식이든 티가 난다.
+   */
+  const WHISTLE_GAP_MS = 800;
+
+  /** 예약된 휘슬들 — 초기화하거나 화면을 벗어나면 취소한다 */
+  const whistleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const stopWhistle = () => {
+    whistleTimers.current.forEach(clearTimeout);
+    whistleTimers.current = [];
+  };
+
   const playWhistle = (times: number) => {
+    stopWhistle();
     for (let i = 0; i < times; i++) {
-      setTimeout(() => {
+      const id = setTimeout(() => {
         player.seekTo(0);
         player.play();
-      }, i * 800);
+      }, i * WHISTLE_GAP_MS);
+      whistleTimers.current.push(id);
     }
   };
+
+  // 예약만 해두고 화면을 벗어나면 엉뚱한 데서 휘슬이 울린다
+  useEffect(() => stopWhistle, []);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -111,6 +157,8 @@ export function TimerPanel({
   };
 
   const handleReset = () => {
+    // 종료 휘슬이 울리는 중에 초기화하면 남은 휘슬도 같이 멈춰야 한다
+    stopWhistle();
     setIsRunning(false);
     setRemainingSeconds(quarterMinutes * 60);
   };
@@ -129,8 +177,17 @@ export function TimerPanel({
   const isFresh = remainingSeconds === totalSeconds;
   const stateLabel =
     remainingSeconds === 0 ? '쿼터 종료' : isRunning ? '진행 중' : isFresh ? '경기 전' : '일시정지';
-  const progress = totalSeconds > 0 ? Math.min(1, remainingSeconds / totalSeconds) : 0;
-  const strokeDashoffset = circumference * (1 - progress);
+  /**
+   * 링은 "지나간 시간"만큼 찬다.
+   *
+   * 예전엔 남은 시간 비율이라 시작하면 꽉 찬 원이 점점 비었다 — 시계보다 배터리에 가까웠다.
+   * 경기가 진행될수록 차오르는 쪽이 "얼마나 왔나"를 바로 읽게 해준다.
+   */
+  // 아래로도 막는다 — "+1분"을 누르면 남은 시간이 총 시간을 넘어 비율이 음수가 되고,
+  // dashoffset이 둘레보다 커져 링이 엉뚱하게 그려진다.
+  const elapsedRatio =
+    totalSeconds > 0 ? Math.min(1, Math.max(0, (totalSeconds - remainingSeconds) / totalSeconds)) : 0;
+  const strokeDashoffset = circumference * (1 - elapsedRatio);
 
   return (
     <View style={styles.content}>
@@ -143,13 +200,9 @@ export function TimerPanel({
         </Text>
       </View>
 
+      {/* 링 안에서 돌던 입자 구(ParticleSphere)는 걷어냈다 —
+          남은 시간을 읽는 화면인데 배경이 계속 움직여서 숫자보다 먼저 눈에 들어왔다. */}
       <View style={[styles.ringSection, { width: ringSize, height: ringSize }]}>
-        <View style={[styles.particleLayer, { width: ringSize, height: ringSize }]} pointerEvents="none">
-          <View style={{ transform: [{ scaleX: (ringSize + PARTICLE_OVERFLOW) / ringSize }] }}>
-            <ParticleSphere size={ringSize} />
-          </View>
-        </View>
-
         <Svg width={ringSize} height={ringSize}>
           <Circle
             cx={ringSize / 2}
@@ -177,19 +230,43 @@ export function TimerPanel({
         <View style={styles.ringCenter} pointerEvents="box-none">
           <Text style={styles.stateLabel}>{stateLabel}</Text>
           <Text style={styles.timeDisplay}>{formatTime(remainingSeconds)}</Text>
-          {isAdmin ? (
+          {/* 쿼터 길이 조절은 시작 전에만 — 한 번 돌린 뒤에는 아래 "+1분"(추가시간)이 그 역할을 한다.
+              둘을 같이 두면 분을 더하는 버튼이 둘이 되어 무엇이 총 시간인지 알 수 없어진다.
+
+              폰에서 숫자를 직접 치게 하지 않는 이유: 칸이 좁아 누르기 힘들고, 탭해도 전체 선택이
+              안 돼 "10"에 8을 치면 108이 된다. iOS 숫자 키패드엔 완료 버튼도 없다. */}
+          {isAdmin && isFresh ? (
             <View style={styles.quarterEditRow}>
-              <TextInput
-                style={[styles.quarterInput, isRunning && styles.quarterInputLocked]}
-                value={String(quarterMinutes)}
-                onChangeText={(text) => handleMinutesChange(text.replace(/[^0-9]/g, ''))}
-                keyboardType="number-pad"
-                editable={!isRunning}
-                maxLength={3}
-              />
-              <Text style={styles.quarterUnit}>분</Text>
+              <Pressable
+                disabled={quarterMinutes <= MIN_QUARTER}
+                onPress={() => handleMinutesChange(String(quarterMinutes - 1))}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  styles.stepBtn,
+                  quarterMinutes <= MIN_QUARTER && styles.stepBtnOff,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons name="remove" size={14} color={colors.green} />
+              </Pressable>
+
+              <Text style={styles.quarterStatic}>{quarterMinutes}분</Text>
+
+              <Pressable
+                disabled={quarterMinutes >= MAX_QUARTER}
+                onPress={() => handleMinutesChange(String(quarterMinutes + 1))}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  styles.stepBtn,
+                  quarterMinutes >= MAX_QUARTER && styles.stepBtnOff,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons name="add" size={14} color={colors.green} />
+              </Pressable>
             </View>
           ) : (
+            // 시작한 뒤엔 원래 쿼터 길이를 글자로만 보여준다 — 지금 몇 분짜리인지는 알아야 한다
             <Text style={styles.quarterStatic}>{quarterMinutes}분</Text>
           )}
         </View>
@@ -218,8 +295,13 @@ export function TimerPanel({
             </Text>
           </Pressable>
 
+          {/* 추가시간 — 시작한 뒤에만 뜬다.
+              시작 전에는 링 안의 −/+ 로 쿼터 길이를 정하고, 시작한 뒤에는 이 버튼으로 더한다.
+              둘이 같이 보이면 "분을 더하는 버튼"이 둘이라 뭘 눌러야 할지 알 수 없고,
+              실제로 "쿼터 6분인데 7:00 남음" 같은 어긋난 상태가 만들어졌다. */}
           <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
+            disabled={isFresh}
+            style={({ pressed }) => [styles.secondaryButton, isFresh && styles.secondaryButtonOff, pressed && styles.pressed]}
             onPress={handleAddMinute}
           >
             <Ionicons name="add" size={15} color={colors.textMuted} />
@@ -228,14 +310,30 @@ export function TimerPanel({
         </View>
       )}
 
-      <View style={styles.scoreRow}>
-        <Text style={styles.scoreText}>
-          A팀 {scoreA} : {scoreB} B팀
-        </Text>
-        <Pressable onPress={onPressScore} hitSlop={8}>
-          <Text style={styles.scoreLink}>스코어 기록 →</Text>
-        </Pressable>
-      </View>
+      {/* 경기 정보 — 타이머만 보고 있으면 "총 몇 분짜리인지, 몇 쿼터인지"를 알 수 없다.
+          스코어 요약도 이 카드 안에 넣어 아래쪽을 카드 하나로 정리한다. */}
+      {!!matchInfo && (
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>경기 정보</Text>
+          <View style={styles.infoRow}>
+            <InfoCell label="총 경기시간" value={`${matchInfo.quarterMinutes * matchInfo.totalQuarters}분`} />
+            <InfoCell label="쿼터 시간" value={`${matchInfo.quarterMinutes}분`} />
+            <InfoCell label="쿼터 수" value={`${matchInfo.totalQuarters}쿼터`} />
+            <InfoCell label="팀 수" value={`${matchInfo.teamCount}팀`} />
+          </View>
+
+          <View style={styles.infoDivider} />
+
+          <View style={styles.scoreRow}>
+            <Text style={styles.scoreText}>
+              A팀 {scoreA} : {scoreB} B팀
+            </Text>
+            <Pressable onPress={onPressScore} hitSlop={8}>
+              <Text style={styles.scoreLink}>스코어 기록 ›</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -254,11 +352,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
-  },
-  particleLayer: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   ringCenter: {
     position: 'absolute',
@@ -279,21 +372,28 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
   },
-  quarterEditRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 2 },
-  quarterInput: {
-    minWidth: 24,
-    color: colors.green,
-    fontSize: 12.5,
-    fontWeight: '700',
+  quarterEditRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  /** −/+ 단추 — 손가락으로 누를 수 있게 28px에 hitSlop 10을 더한다 */
+  stepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.greenTint,
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
+  },
+  stepBtnOff: { opacity: 0.35 },
+  secondaryButtonOff: { opacity: 0.35 },
+  quarterStatic: {
+    minWidth: 42,
     textAlign: 'center',
-    padding: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.greenDeep,
+    color: colors.textStrong,
+    fontSize: 12.5,
+    fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
-  quarterInputLocked: { color: colors.textDim, borderBottomColor: 'transparent' },
-  quarterUnit: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
-  quarterStatic: { marginTop: 3, color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
 
   controlRow: {
     flexDirection: 'row',
@@ -331,15 +431,29 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
   primaryButtonTextPause: { color: colors.gold },
 
+  /** 경기 정보 카드 — 타이머 아래에 붙는다 */
+  infoCard: {
+    width: '100%',
+    marginTop: 18,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  infoTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '800', marginBottom: 12 },
+  infoRow: { flexDirection: 'row' },
+  infoCell: { flex: 1, gap: 5 },
+  infoLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
+  infoValue: { color: colors.text, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  infoDivider: { height: 1, backgroundColor: colors.divider, marginTop: 14 },
+
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 18,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    paddingTop: 12,
   },
   scoreText: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
   scoreLink: { color: colors.green, fontSize: 11.5, fontWeight: '700' },

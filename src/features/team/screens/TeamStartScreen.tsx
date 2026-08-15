@@ -4,7 +4,7 @@
 // 이름 입력 폼 + 실제 키보드 입력을 붙였다.
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { TextInput as RNTextInput } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
@@ -54,17 +54,8 @@ export function TeamStartScreen() {
   return (
     <ScreenGradient>
       <View style={styles.root}>
-        <Pressable onPress={signOut} hitSlop={8} style={styles.signOutRow}>
-          <Text style={styles.signOutText}>로그아웃</Text>
-        </Pressable>
-
         <View style={{ gap: 8, paddingTop: 10 }}>
           <View style={styles.greetRow}>
-            <Image
-              source={require('../../../../assets/kickday_logo.png')}
-              style={{ width: 26, height: 26 }}
-              resizeMode="contain"
-            />
             <Text style={styles.greet}>{userName}님, 반가워요</Text>
           </View>
           <Text style={styles.title}>
@@ -154,6 +145,12 @@ export function TeamStartScreen() {
             <Text style={styles.ctaText}>{loading ? '만드는 중…' : '만들기'}</Text>
           </Pressable>
         ) : null}
+
+        {/* 절대배치라 형제 중 마지막에 둬야 한다 —
+            앞에 두면 뒤따르는 콘텐츠가 위를 덮어서 눌러도 반응하지 않는다 */}
+        <Pressable onPress={signOut} hitSlop={10} style={styles.signOutRow}>
+          <Text style={styles.signOutText}>로그아웃</Text>
+        </Pressable>
       </View>
     </ScreenGradient>
   );

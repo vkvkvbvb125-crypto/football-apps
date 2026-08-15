@@ -11,7 +11,7 @@ function buildMapHtml(latitude: number, longitude: number) {
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <style>html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #0F1512; }</style>
+    <style>html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; background: #212128; }</style>
   </head>
   <body>
     <div id="map"></div>
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 320,
-    backgroundColor: '#141A17',
+    backgroundColor: '#212128',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#22302A',
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#0F1512',
+    backgroundColor: '#212128',
   },
   mapWebview: {
     flex: 1,
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 96,
     borderRadius: 12,
-    backgroundColor: '#0F1512',
+    backgroundColor: '#212128',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,

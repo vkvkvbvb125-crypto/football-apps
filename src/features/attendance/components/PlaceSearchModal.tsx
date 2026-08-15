@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#0F1512',
+    backgroundColor: '#212128',
   },
   fieldText: {
     color: '#FFFFFF',
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   card: {
     width: 320,
     maxHeight: '75%',
-    backgroundColor: '#141A17',
+    backgroundColor: '#212128',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#22302A',
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#0F1512',
+    backgroundColor: '#212128',
   },
   searchInput: {
     flex: 1,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#0F1512',
+    color: '#1A1A20',
   },
   hintText: {
     marginTop: 10,

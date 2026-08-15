@@ -11,6 +11,7 @@ import { settlementIdFromParsed } from './src/features/settlement/links';
 import { useAppFonts } from './src/lib/fonts';
 import { applyWebViewportFix } from './src/lib/webViewport';
 import { WebDebugOverlay } from './src/components/WebDebugOverlay';
+import { colors } from './src/theme';
 import { DialogHost } from './src/components/Dialog';
 
 applyWebViewportFix();
@@ -69,7 +70,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: '#07100D' }}>
+      <View style={{ flex: 1, backgroundColor: colors.bgRoot }}>
         <RootNavigator />
         {/* 확인·알림 대화상자가 그려지는 자리 (웹 전용, 네이티브에선 아무것도 안 그린다).
             네비게이터 위에 둬야 모달 위에서 물어도 가려지지 않는다 */}

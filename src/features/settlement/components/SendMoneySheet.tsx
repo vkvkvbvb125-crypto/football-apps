@@ -76,6 +76,8 @@ interface Props {
   onCopied?: () => void;
   /** 기억된 앱이 바뀌었을 때 */
   onRemember?: (appId: string | null) => void;
+  /** 실제로 송금 앱을 띄웠을 때 — 돌아왔을 때 입금 확인을 물어보려고 쓴다 */
+  onOpened?: (appName: string) => void;
 }
 
 export function SendMoneySheet({
@@ -87,10 +89,26 @@ export function SendMoneySheet({
   amount,
   onCopied,
   onRemember,
+  onOpened,
 }: Props) {
   const [pick, setPick] = useState<string>(SEND_APPS[0].id);
   const [remember, setRemember] = useState(true);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
+
+  // "다음부터 이 앱으로 바로 열기"가 저장만 되고 다시 읽히지 않아서, 체크해도 다음에
+  // 항상 첫 번째 앱(토스)이 선택돼 있었다. 열 때마다 기억된 앱을 초기 선택으로 되살린다.
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    AsyncStorage.getItem(REMEMBER_KEY).then((id) => {
+      if (cancelled) return;
+      if (id && SEND_APPS.some((a) => a.id === id)) setPick(id);
+      setRemember(!!id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   // 설치 여부 확인 (iOS는 app.json의 LSApplicationQueriesSchemes에 스킴 등록 필요)
   useEffect(() => {
@@ -137,6 +155,7 @@ export function SendMoneySheet({
     }
     try {
       await Linking.openURL(picked.buildUrl({ bankName, accountNo, amount }));
+      onOpened?.(picked.name);
     } catch {
       await copyAccount();
     }
@@ -151,7 +170,9 @@ export function SendMoneySheet({
 
           <View style={styles.head}>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={styles.title}>어떤 앱으로 보낼까요?</Text>
+              {/* Reference 「팀원④ 결제 수단 선택」. Reference는 "계좌"를 고르지만 우리는 "앱"을 고른다 —
+                  팀원의 계좌를 우리가 보관하지 않기 때문이고, 고른 앱에서 그 사람 계좌로 보내면 결과는 같다. */}
+              <Text style={styles.title}>어떻게 보낼까요?</Text>
               <Text style={styles.subtitle}>계좌·금액이 미리 입력된 송금 화면이 열려요</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={8}>
@@ -210,7 +231,10 @@ export function SendMoneySheet({
           </Pressable>
 
           <Pressable onPress={confirm} style={styles.cta}>
-            <Text style={styles.ctaText}>{pickedInstalled ? `${picked.name} 열기` : '계좌 복사하기'}</Text>
+            {/* Reference의 "10,000원 정산하기" — 금액을 버튼에 박아야 얼마를 보내는지 마지막까지 보인다 */}
+            <Text style={styles.ctaText}>
+              {pickedInstalled ? `${amount.toLocaleString()}원 보내기 · ${picked.name}` : '계좌 복사하기'}
+            </Text>
           </Pressable>
           <Text style={styles.note}>
             송금은 앱에서 본인 확인 후 완료돼요.{'\n'}보낸 뒤 “입금했어요”를 눌러주세요.

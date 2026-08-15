@@ -64,7 +64,7 @@ export function AnnouncementListModal({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F1512',
+    backgroundColor: '#212128',
   },
   header: {
     flexDirection: 'row',
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   item: {
-    backgroundColor: '#141A17',
+    backgroundColor: '#212128',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#22302A',

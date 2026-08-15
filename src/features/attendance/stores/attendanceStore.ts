@@ -69,7 +69,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         activeTeam.team.id,
         `${activeTeam.team.name} 새 경기`,
         `${dateLabel}${input.location ? ` · ${input.location}` : ''}에 경기가 등록됐어요`,
-        myUserId
+        myUserId,
+        undefined,
+        'new_match'
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
       });
@@ -94,7 +96,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         activeTeam.team.id,
         `${activeTeam.team.name} 새 경기 ${inputs.length}건`,
         `${dateLabel}부터 매주 경기가 등록됐어요`,
-        myUserId
+        myUserId,
+        undefined,
+        'new_match'
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
       });

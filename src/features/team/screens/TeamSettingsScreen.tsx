@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { colors, radius } from '../../../theme';
+import { colors, font, radius } from '../../../theme';
 import { useTeamStore } from '../stores/teamStore';
 import { fetchMemberProfiles, updateSkillLevel, SKILL_LABEL, type MemberProfile } from '../services/memberProfileService';
 import { fetchTeamSettings, upsertTeamSettings } from '../services/teamSettingsService';
@@ -123,9 +123,8 @@ export function TeamSettingsScreen({ navigation }: any) {
         <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.textStrong} />
         </Pressable>
-        <Text style={styles.headerTitle}>팀 설정</Text>
-      </View>
-
+        <Text style={styles.headerTitle}>설정</Text>
+      </View>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* 정기모임 */}
         <View style={styles.card}>
@@ -294,7 +293,7 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   cardHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  cardTitle: { color: colors.text, fontSize: 14.5, fontWeight: '800' },
+  cardTitle: { color: colors.text, ...font.section },
   cardSub: { color: colors.green, fontSize: 11.5, fontWeight: '700' },
   label: { color: colors.textDim, fontSize: 11, fontWeight: '700', marginTop: 4 },
   hint: { color: '#5F6B66', fontSize: 11, fontWeight: '600', lineHeight: 17, marginTop: 2 },

@@ -1,5 +1,5 @@
 // src/features/attendance/components/ScheduleRow.tsx
-// "이후 일정" 목록의 한 줄 — 날짜 블록 + 장소/날씨 + 참석 수 + 상태 배지
+// "다가오는 경기" 목록의 한 줄 — 날짜 블록 + 장소/날씨 + 참석 수 + 상태 배지
 //
 // 배지 규칙 (한 곳에서만 정의한다):
 //   정원 마감 : confirmed >= capacity

@@ -46,10 +46,10 @@ export function ScreenGradient({ children }: Props) {
       <LinearGradient
         colors={[
           'rgba(74,222,128,0)',
-          'rgba(74,222,128,0.04)',
-          'rgba(74,222,128,0.12)',
+          'rgba(74,222,128,0.06)',
+          'rgba(74,222,128,0.16)',
         ]}
-        locations={[0.15, 0.55, 1]}
+        locations={[0.12, 0.5, 1]}
         start={{ x: 0.15, y: 0 }}
         end={{ x: 0.85, y: 1 }}
         style={StyleSheet.absoluteFill}

@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
   card: {
     maxHeight: '85%',
-    backgroundColor: '#141A17',
+    backgroundColor: '#212128',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#0F1512',
+    backgroundColor: '#212128',
   },
   optionRow: {
     flexDirection: 'row',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ADE80',
   },
   confirmText: {
-    color: '#0F1512',
+    color: '#1A1A20',
     fontWeight: '700',
   },
 });

@@ -1,9 +1,39 @@
 // src/features/attendance/components/RosterSheet.tsx
 // 참석 명단 시트 — 필터(전체/참석/불참/미투표) + 개별 독촉 + 일괄 독촉
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+//
+// 손잡이/제목 부분을 끌어 올리면 화면 상단까지 펴지고, 내리면 원래 높이로 돌아온다.
+// 명단이 길어질수록 좁은 시트에서 스크롤만 하게 되는데, 그때 화면을 다 쓰라고 만든 것이다.
+// 제스처 라이브러리를 새로 넣지 않고 내장 PanResponder를 쓴다 — 스냅 두 개짜리에 의존성을 늘릴 이유가 없다.
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Modal,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../../components/nativeText';
 import { colors } from '../../../theme';
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+/** 이 속도 이상으로 튕기면 끈 거리와 상관없이 그 방향으로 붙인다 */
+const FLING_VY = 0.5;
+
+/**
+ * 손을 뗐을 때 펼침으로 갈지 접힘으로 갈지.
+ *
+ * 순수 함수로 빼둔 이유는 제스처를 자동으로 재현하기 어려워서다 — 판단 규칙만은 따로 검증할 수 있다.
+ */
+export function shouldExpand(endHeight: number, vy: number, collapsedH: number, expandedH: number) {
+  if (vy < -FLING_VY) return true; // 위로 튕김
+  if (vy > FLING_VY) return false; // 아래로 튕김
+  return endHeight > (collapsedH + expandedH) / 2;
+}
 
 export type VoteStatus = 'attend' | 'absent' | 'undecided' | 'pending';
 
@@ -60,6 +90,65 @@ export function RosterSheet({
   const [poked, setPoked] = useState<Record<string, boolean>>({});
   const [pokedAll, setPokedAll] = useState(false);
 
+  // ── 끌어 올리기/내리기 ──────────────────────────────────────
+  const { height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  /** 펼쳤을 때 — 상태바 아래까지 */
+  const expandedH = screenH - insets.top - 8;
+  /**
+   * 접었을 때 — 처음 열렸을 때의 자연스러운 높이를 그대로 쓴다.
+   * 숫자를 미리 정해두면 지금 보이는 위치가 바뀐다. 내리면 "원래 그 자리"로 돌아와야 한다.
+   */
+  const [collapsedH, setCollapsedH] = useState<number | null>(null);
+  const heightAnim = useRef(new Animated.Value(0)).current;
+  /** 지금 값을 동기적으로 알아야 드래그 시작점을 잡을 수 있다 (Animated.Value는 읽기가 비동기다) */
+  const currentH = useRef(0);
+  const dragStartH = useRef(0);
+
+  useEffect(() => {
+    const id = heightAnim.addListener(({ value }) => {
+      currentH.current = value;
+    });
+    return () => heightAnim.removeListener(id);
+  }, [heightAnim]);
+
+  // 닫으면 다음에 열 경기의 명단 길이에 맞춰 다시 재도록 되돌린다
+  useEffect(() => {
+    if (!visible) setCollapsedH(null);
+  }, [visible]);
+
+  const snapTo = (expand: boolean) => {
+    if (collapsedH == null) return;
+    Animated.timing(heightAnim, {
+      toValue: expand ? expandedH : collapsedH,
+      duration: 220,
+      useNativeDriver: false, // height는 네이티브 드라이버로 못 돌린다
+    }).start();
+  };
+
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        // 세로로 확실히 끌 때만 잡는다 — 탭이나 가로 움직임을 가로채면 닫기 버튼이 안 눌린다
+        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 5 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderGrant: () => {
+          heightAnim.stopAnimation();
+          dragStartH.current = currentH.current;
+        },
+        onPanResponderMove: (_e, g) => {
+          if (collapsedH == null) return;
+          // 위로 끌면 dy가 음수 — 그만큼 키운다
+          heightAnim.setValue(clamp(dragStartH.current - g.dy, collapsedH, expandedH));
+        },
+        onPanResponderRelease: (_e, g) => {
+          if (collapsedH == null) return;
+          const ended = clamp(dragStartH.current - g.dy, collapsedH, expandedH);
+          snapTo(shouldExpand(ended, g.vy, collapsedH, expandedH));
+        },
+      }),
+    [collapsedH, expandedH, heightAnim]
+  );
+
   const counts = useMemo(() => {
     const by = (k: VoteStatus) => members.filter((m) => m.status === k).length;
     return {
@@ -101,17 +190,40 @@ export function RosterSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-
-          <View style={styles.head}>
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text style={styles.title}>참석 명단</Text>
-              <Text style={styles.subtitle}>{matchLabel}</Text>
-            </View>
-            <Pressable onPress={onClose} hitSlop={8}>
-              <Text style={styles.close}>닫기</Text>
+        <Animated.View
+          style={[
+            styles.sheet,
+            // 재기 전에는 내용에 맞춰 자라게 두고(=지금 모습 그대로), 잰 뒤부터 우리가 높이를 쥔다
+            collapsedH == null ? styles.sheetAuto : { height: heightAnim, maxHeight: expandedH },
+          ]}
+          onLayout={(e) => {
+            if (collapsedH != null) return;
+            const h = e.nativeEvent.layout.height;
+            heightAnim.setValue(h);
+            currentH.current = h;
+            setCollapsedH(h);
+          }}
+        >
+          {/* 끌기는 이 위쪽 영역에서만 받는다 — 명단 위에서 받으면 스크롤을 빼앗는다 */}
+          <View {...pan.panHandlers}>
+            {/* 손잡이를 톡 눌러도 접히고 펴진다. 끌기는 5px 넘게 움직여야 잡히므로 탭과 겹치지 않는다 */}
+            <Pressable
+              onPress={() => collapsedH != null && snapTo(currentH.current < (collapsedH + expandedH) / 2)}
+              hitSlop={12}
+              accessibilityLabel="명단 시트 크기 바꾸기"
+            >
+              <View style={styles.handle} />
             </Pressable>
+
+            <View style={styles.head}>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={styles.title}>참석 명단</Text>
+                <Text style={styles.subtitle}>{matchLabel}</Text>
+              </View>
+              <Pressable onPress={onClose} hitSlop={8}>
+                <Text style={styles.close}>닫기</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.tabs}>
@@ -202,7 +314,7 @@ export function RosterSheet({
               </Pressable>
             )}
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -211,7 +323,6 @@ export function RosterSheet({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   sheet: {
-    maxHeight: '86%',
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderColor: colors.border,
@@ -220,6 +331,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 26,
   },
+  /** 높이를 재기 전 한 프레임 — 예전과 같은 상한을 그대로 써서 첫 모습이 바뀌지 않게 한다 */
+  sheetAuto: { maxHeight: '86%' },
   handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: '#2C3833', marginBottom: 12 },
 
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 20, paddingBottom: 14 },

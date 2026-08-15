@@ -4,6 +4,7 @@
 // - 날씨 (MatchWeatherBlock — D-day 규칙은 그쪽에서 처리)
 // - 참석 현황 바 + 투표 버튼 (정원 차면 "대기 신청" / "대기 N번")
 // - 대기 명단
+import { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
@@ -21,6 +22,8 @@ export interface WaitlistEntry {
 interface Props {
   headline: string; // "7월 28일 (화) 20:00"
   ddayLabel: string; // "D-2" | "TODAY"
+  /** 20260806 마이그레이션 전이면 없다 */
+  matchType?: string | null;
   placeLabel: string; // "풋살장 A구장" | "장소 미정"
   venueKind: 'indoor' | 'outdoor' | 'pending';
   daysUntil: number;
@@ -32,11 +35,14 @@ interface Props {
   deadlineLabel?: string; // "D-1"
   myVote?: AttendanceStatus | null;
   isLocked?: boolean;
+  /** 투표가 잠긴 이유 — 총무가 마감했는지, 시간이 지났는지 */
+  lockNote?: string;
   isAdmin: boolean;
   waitlist: WaitlistEntry[];
   weatherDecision?: 'keep' | 'indoor' | null;
   onVote: (status: AttendanceStatus) => void;
-  onOpenMenu?: () => void;
+  /** anchorY = ⋮ 버튼 아래쪽 화면 좌표. 팝오버를 버튼 밑에 띄우려면 이 값이 필요하다 */
+  onOpenMenu?: (anchorY: number) => void;
   onPickVenue?: () => void;
   onKeepOutdoor?: () => void;
   onFindIndoor?: () => void;
@@ -49,6 +55,7 @@ const VENUE_TAG = {
 } as const;
 
 export function MatchDetailCard(p: Props) {
+  const menuRef = useRef<View>(null);
   const tag = VENUE_TAG[p.venueKind];
   const { attendCount, absentCount, pendingCount, isFull, myWaitPosition } = p.capacityResult;
   const total = Math.max(1, p.memberCount);
@@ -94,6 +101,11 @@ export function MatchDetailCard(p: Props) {
             <View style={styles.dday}>
               <Text style={styles.ddayText}>{p.ddayLabel}</Text>
             </View>
+            {!!p.matchType && (
+              <View style={styles.typeChip}>
+                <Text style={styles.typeChipText}>{p.matchType}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.placeRow}>
             <Ionicons name="location-outline" size={12} color={colors.textMuted} />
@@ -106,7 +118,13 @@ export function MatchDetailCard(p: Props) {
           </View>
         </View>
         {p.isAdmin && (
-          <Pressable onPress={p.onOpenMenu} hitSlop={8}>
+          // 팝오버는 전체 화면 Modal 안에 절대 위치로 뜬다 — 그래서 화면 좌표(measureInWindow)가 필요하다.
+          // 카드 안 좌표나 탭 지점을 넘기면 스크롤 위치에 따라 엉뚱한 곳에 뜬다.
+          <Pressable
+            ref={menuRef}
+            onPress={() => menuRef.current?.measureInWindow((_x, y, _w, h) => p.onOpenMenu?.(y + h))}
+            hitSlop={8}
+          >
             <Ionicons name="ellipsis-vertical" size={18} color={colors.textDim} />
           </Pressable>
         )}
@@ -157,6 +175,9 @@ export function MatchDetailCard(p: Props) {
         {pill('undecided', '미정')}
       </View>
 
+      {/* 흐려진 버튼만으로는 고장인지 마감인지 알 수 없다 — 이유를 적어준다 */}
+      {p.isLocked && !!p.lockNote && <Text style={styles.lockNote}>{p.lockNote}</Text>}
+
       {p.waitlist.length > 0 && (
         <View style={styles.waitBox}>
           <View style={styles.waitHead}>
@@ -198,6 +219,14 @@ const styles = StyleSheet.create({
   },
   dday: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(74,222,128,0.14)' },
   ddayText: { color: colors.green, fontSize: 10, fontWeight: '800' },
+  typeChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  typeChipText: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   place: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600', flexShrink: 1 },
   venueTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
@@ -219,6 +248,7 @@ const styles = StyleSheet.create({
   countRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   countText: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   countMeta: { color: colors.textMuted, fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  lockNote: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: -2 },
   track: { flexDirection: 'row', height: 6, borderRadius: 3, backgroundColor: colors.divider, overflow: 'hidden' },
   fillAttend: { backgroundColor: colors.green },
   fillAbsent: { backgroundColor: colors.neutralFill },

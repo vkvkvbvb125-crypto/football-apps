@@ -88,6 +88,8 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
       const d = new Date(matchDate);
       d.setDate(d.getDate() - preset.days);
       d.setHours(23, 59, 0, 0);
+      // 이 값이 이미 지난 시각일 수 있다(오늘 경기 + "경기 1일 전").
+      // 반복 생성도 이 간격을 그대로 쓰므로, 보정은 두 경로가 만나는 handleCreateSubmit에서 한다.
       voteDeadline = d.toISOString();
     }
 

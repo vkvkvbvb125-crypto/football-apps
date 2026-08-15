@@ -21,7 +21,7 @@ import { AnnouncementDetailModal } from '../../announcements/components/Announce
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
 import { BoardPanel } from '../../board/components/BoardPanel';
-import { fetchPosts, type Post } from '../../board/services/boardService';
+import { fetchPosts, resolveAuthor, type Post } from '../../board/services/boardService';
 import { relativeTime } from '../../../lib/relativeTime';
 import { usePollsStore } from '../../polls/stores/pollsStore';
 import { PollFormModal } from '../../polls/components/PollFormModal';
@@ -714,17 +714,19 @@ export function TeamHomeScreen({ navigation }: any) {
                   <Text style={styles.sectionLink}>전체 보기 ›</Text>
                 </Pressable>
               </View>
-              {recentPosts.map((p) => (
+              {recentPosts.map((p) => {
+                const author = resolveAuthor(p, members);
+                return (
                 <Pressable
                   key={p.id}
                   onPress={() => setTab('board')}
                   style={({ pressed }) => [styles.recentPost, pressed && styles.pressed]}
                 >
                   <View style={styles.avatar}>
-                    {p.authorAvatar ? (
-                      <Image source={{ uri: p.authorAvatar }} style={styles.avatarPhoto} />
+                    {author.avatar ? (
+                      <Image source={{ uri: author.avatar }} style={styles.avatarPhoto} />
                     ) : (
-                      <Text style={styles.avatarText}>{p.authorName.slice(0, 1)}</Text>
+                      <Text style={styles.avatarText}>{author.name.slice(0, 1)}</Text>
                     )}
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
@@ -732,12 +734,13 @@ export function TeamHomeScreen({ navigation }: any) {
                       {p.body}
                     </Text>
                     <Text style={styles.recentPostMeta}>
-                      {p.authorName} · {relativeTime(p.createdAt)}
+                      {author.name} · {relativeTime(p.createdAt)}
                     </Text>
                   </View>
                   {!!p.imageUrl && <Image source={{ uri: p.imageUrl }} style={styles.recentPostThumb} />}
                 </Pressable>
-              ))}
+                );
+              })}
             </View>
           )}
 

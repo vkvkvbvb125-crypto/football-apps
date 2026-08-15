@@ -41,6 +41,17 @@ function initialOf(name: string) {
   return name.length > 2 ? name.slice(1) : name;
 }
 
+/** 팀 홈의 진입 타일. 총무만 멤버 관리로 들어간다 */
+const MEMBER_TILES = [
+  { key: 'notices' as const, icon: 'megaphone-outline', label: '공지사항' },
+  { key: 'board' as const, icon: 'chatbubbles-outline', label: '게시판' },
+  { key: 'settings' as const, icon: 'settings-outline', label: '설정' },
+];
+const ADMIN_TILES = [
+  { key: 'members' as const, icon: 'people-outline', label: '멤버 관리' },
+  ...MEMBER_TILES,
+];
+
 export function TeamHomeScreen({ navigation }: any) {
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
@@ -193,7 +204,16 @@ export function TeamHomeScreen({ navigation }: any) {
             <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
           </Pressable>
           <Text style={styles.subHeaderTitle}>
-            {tab === 'members' ? '멤버 관리' : tab === 'notices' ? '공지사항' : tab === 'board' ? '게시판' : '설정'}
+            {/* 팀원 화면에서 "관리"라고 부르면 없는 기능을 약속하는 셈이다 */}
+            {tab === 'members'
+              ? isAdmin
+                ? '멤버 관리'
+                : '멤버'
+              : tab === 'notices'
+                ? '공지사항'
+                : tab === 'board'
+                  ? '게시판'
+                  : '설정'}
           </Text>
           {/* 그 화면에서 새로 만드는 동작 — 없는 화면은 자리만 비워 제목이 가운데 오게 한다 */}
           {tab === 'notices' && isAdmin ? (
@@ -343,15 +363,15 @@ export function TeamHomeScreen({ navigation }: any) {
           {/* 기능 입구 — 팀 홈에서 각 화면으로 들어가는 유일한 길이다 */}
           {tab === 'home' && (
             <View style={styles.quickGrid}>
-              {[
-                { key: 'members' as const, icon: 'people-outline', label: '멤버 관리' },
-                { key: 'notices' as const, icon: 'megaphone-outline', label: '공지사항' },
-                { key: 'board' as const, icon: 'chatbubbles-outline', label: '게시판' },
-                { key: 'settings' as const, icon: 'settings-outline', label: '설정' },
-              ].map((q) => (
+              {/*
+                멤버 관리는 총무 타일이다 — 팀원에게 띄우면 눌러도 관리할 게 없다.
+                팀원도 명단과 초대는 그대로 쓴다: 아래 로스터의 "전체 보기 ›"가 입구다.
+              */}
+              {(isAdmin ? ADMIN_TILES : MEMBER_TILES).map((q) => (
                 <Pressable
                   key={q.key}
                   onPress={() => setTab(q.key)}
+                  // quickItem이 flex:1이라 3개든 4개든 한 줄에서 알아서 고르게 나뉜다
                   style={({ pressed }) => [styles.quickItem, pressed && styles.pressed]}
                 >
                   <Ionicons name={q.icon as any} size={20} color={colors.green} />

@@ -407,6 +407,8 @@ export interface Database {
           category?: string;
           body: string;
           image_url?: string | null;
+          /** 글을 만들 때는 넣지 않는다. 수정할 때 Update가 이 키를 쓴다 */
+          updated_at?: string | null;
         };
         Update: Partial<Database['public']['Tables']['posts']['Insert']>;
         Relationships: [];

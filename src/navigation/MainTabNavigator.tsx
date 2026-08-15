@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     borderRadius: BAR_R,
-    backgroundColor: 'rgba(38,38,46,0.94)',
+    backgroundColor: 'rgba(24,32,27,0.94)',
   },
   // paddingTop으로 밀지 않고 가운데 정렬 — 아이콘+라벨 묶음이 바 높이 안에서 위로 쏠려 있었다.
   // 높이는 박지 않는다: 바의 borderWidth 1 때문에 안쪽이 바 height보다 2px 작아서,

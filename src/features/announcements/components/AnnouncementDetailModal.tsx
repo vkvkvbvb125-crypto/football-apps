@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   card: {
     maxHeight: '80%',
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     width: 160,
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#22302A',

@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
   },
   fieldText: {
     color: '#FFFFFF',
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   card: {
     width: 300,
     maxHeight: '70%',
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#22302A',
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
   },
   confirmButton: {
     marginTop: 14,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   confirmButtonText: {
-    color: '#1A1A20',
+    color: '#0F1411',
     fontWeight: '700',
   },
   manualLink: {
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
   },
   searchInput: {
     flex: 1,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    color: '#1A1A20',
+    color: '#0F1411',
     fontSize: 12,
     fontWeight: '800',
   },

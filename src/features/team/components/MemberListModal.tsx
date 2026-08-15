@@ -141,7 +141,7 @@ export function MemberListModal({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
   },
   header: {
     flexDirection: 'row',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   item: {
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#22302A',

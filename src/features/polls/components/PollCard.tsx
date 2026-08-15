@@ -65,7 +65,7 @@ export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: Poll
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#22302A',
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     paddingHorizontal: 12,
     paddingVertical: 10,
     overflow: 'hidden',

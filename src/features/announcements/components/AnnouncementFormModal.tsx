@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   card: {
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
   },
   bodyInput: {
     minHeight: 120,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ADE80',
   },
   confirmText: {
-    color: '#1A1A20',
+    color: '#0F1411',
     fontWeight: '700',
   },
 });

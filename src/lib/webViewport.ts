@@ -23,7 +23,7 @@ export function applyWebViewportFix() {
   const style = document.createElement('style');
   style.id = 'kickday-viewport-fix';
   style.textContent = [
-    'html, body { background-color: #1A1A20; }',
+    'html, body { background-color: #0F1411; }',
     'html, body, #root { height: 100dvh; }',
   ].join('\n');
   document.head.appendChild(style);

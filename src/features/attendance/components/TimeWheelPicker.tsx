@@ -151,7 +151,7 @@ export const reelStyles = StyleSheet.create({
     fontWeight: '700',
   },
   itemTextActive: {
-    color: '#1A1A20',
+    color: '#0F1411',
   },
   colon: {
     color: '#8A9490',
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
   },
   fieldText: {
     color: '#FFFFFF',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 280,
-    backgroundColor: '#212128',
+    backgroundColor: '#161D18',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#22302A',
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ADE80',
   },
   confirmText: {
-    color: '#1A1A20',
+    color: '#0F1411',
     fontWeight: '700',
   },
 });

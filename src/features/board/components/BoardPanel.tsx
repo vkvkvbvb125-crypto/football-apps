@@ -2,19 +2,18 @@
 //
 // 팀 화면 안에 붙는 패널이다(별도 라우트가 아니라). 팀 홈 격자에서 들어오고 뒤로가기로 나간다.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { colors, radius } from '../../../theme';
-import { relativeTime } from '../../../lib/relativeTime';
 import { useTeamStore } from '../../team/stores/teamStore';
+import { PostCard } from './PostCard';
 import {
   CATEGORY_LABEL,
   createPost,
   deletePost,
   fetchPosts,
-  resolveAuthor,
   toggleLike,
   type Post,
   type PostCategory,
@@ -29,8 +28,7 @@ interface Props {
 }
 
 export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
-  // 작성자 이름·사진은 이 목록에서 읽는다 — 글에 박힌 값은 불러온 시점의 복사본이라
-  // 프로필을 바꿔도 그대로다 (resolveAuthor 참고)
+  // PostCard가 작성자 이름·사진을 여기서 찾는다 (글에 박힌 값은 불러온 시점의 복사본)
   const members = useTeamStore((s) => s.members);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,52 +174,17 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
           <Text style={styles.emptyText}>{filter ? '이 분류에 글이 없어요' : '첫 글을 남겨보세요'}</Text>
         </View>
       ) : (
-        visible.map((p) => {
-          const author = resolveAuthor(p, members);
-          return (
-          <View key={p.id} style={styles.post}>
-            <View style={styles.postHead}>
-              <View style={styles.avatar}>
-                {author.avatar ? (
-                  <Image source={{ uri: author.avatar }} style={styles.avatarPhoto} />
-                ) : (
-                  <Text style={styles.avatarText}>{author.name.slice(0, 1)}</Text>
-                )}
-              </View>
-              <View style={{ flex: 1, gap: 1 }}>
-                <Text style={styles.postAuthor}>{author.name}</Text>
-                <Text style={styles.postTime}>{relativeTime(p.createdAt)}</Text>
-              </View>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{CATEGORY_LABEL[p.category]}</Text>
-              </View>
-              {(p.authorId === myUserId || isAdmin) && (
-                <Pressable onPress={() => handleDelete(p)} hitSlop={8}>
-                  <Ionicons name="ellipsis-vertical" size={15} color={colors.textFaint} />
-                </Pressable>
-              )}
-            </View>
-
-            <Text style={styles.postBody}>{p.body}</Text>
-            {!!p.imageUrl && <Image source={{ uri: p.imageUrl }} style={styles.postImage} />}
-
-            <View style={styles.postFoot}>
-              <Pressable onPress={() => handleLike(p)} style={styles.footItem} hitSlop={6}>
-                <Ionicons
-                  name={p.likedByMe ? 'heart' : 'heart-outline'}
-                  size={15}
-                  color={p.likedByMe ? colors.danger : colors.textDim}
-                />
-                <Text style={styles.footText}>{p.likeCount}</Text>
-              </Pressable>
-              <View style={styles.footItem}>
-                <Ionicons name="chatbubble-outline" size={14} color={colors.textDim} />
-                <Text style={styles.footText}>{p.commentCount}</Text>
-              </View>
-            </View>
-          </View>
-          );
-        })
+        visible.map((p) => (
+          <PostCard
+            key={p.id}
+            post={p}
+            members={members}
+            myUserId={myUserId}
+            isAdmin={isAdmin}
+            onToggleLike={handleLike}
+            onDelete={handleDelete}
+          />
+        ))
       )}
     </View>
   );
@@ -293,35 +256,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
   emptyText: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
 
-  post: {
-    gap: 10,
-    padding: 14,
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  postHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.inputBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarPhoto: { width: '100%', height: '100%' },
-  avatarText: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
-  postAuthor: { color: colors.textStrong, fontSize: 12.5, fontWeight: '800' },
-  postTime: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600' },
-  categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.greenTint },
-  categoryBadgeText: { color: colors.green, fontSize: 10, fontWeight: '800' },
 
-  postBody: { color: colors.textBody, fontSize: 13, lineHeight: 19 },
-  postImage: { width: '100%', height: 180, borderRadius: radius.button, backgroundColor: colors.inputBg },
 
-  postFoot: { flexDirection: 'row', gap: 16, paddingTop: 2 },
-  footItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  footText: { color: colors.textDim, fontSize: 11.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

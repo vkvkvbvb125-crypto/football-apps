@@ -25,6 +25,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
+import { BentoCard, BentoRow, SoftTint, toneBorder, type BentoTone } from '../../../components/BentoCard';
 import { NotificationBell, SettingsMenu, type NotificationBellHandle } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -144,6 +145,8 @@ interface SectionCardProps {
   /** 데이터가 있을 때 그릴 내용 */
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** 무엇에 관한 카드인가 — 경기는 초록, 돈은 금, 글은 파랑 */
+  tone?: BentoTone;
 }
 
 /**
@@ -161,9 +164,11 @@ function SectionCard({
   emptyAction,
   children,
   style,
+  tone = 'plain',
 }: SectionCardProps) {
   const body = empty ? (
     <>
+      <SoftTint tone={tone} />
       <View style={emptyCentered ? styles.emptyBlock : styles.emptyLine}>
         <View style={[styles.emptyLineIcon, emptyCentered && styles.emptyBlockIcon]}>
           <Ionicons name={emptyIcon} size={emptyCentered ? 26 : 19} color={colors.green} />
@@ -176,14 +181,19 @@ function SectionCard({
       {emptyAction}
     </>
   ) : (
-    children
+    <>
+      <SoftTint tone={tone} />
+      {children}
+    </>
   );
 
+  const cardStyle = [styles.card, toneBorder(tone), style];
+
   // 빈 상태에서는 카드를 눌러도 보여줄 게 없다 — 눌림 효과도 주지 않는다
-  if (!onPress || empty) return <View style={[styles.card, style]}>{body}</View>;
+  if (!onPress || empty) return <View style={cardStyle}>{body}</View>;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, style, pressed && styles.pressed]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [cardStyle, pressed && styles.pressed]}>
       {body}
     </Pressable>
   );
@@ -333,6 +343,10 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   };
 
   const matchDate = next ? new Date(next.match_date) : null;
+  /** 오늘 0시 기준 남은 날 */
+  const daysToNext = matchDate
+    ? Math.round((new Date(matchDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
+    : 0;
 
   /**
    * 일정 탭의 그 경기로 보낸다.
@@ -412,6 +426,27 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </View>
         </View>
 
+        {/*
+          벤토 줄 — 히어로 바로 아래에 작은 카드 둘.
+          세로로 같은 폭 카드만 쌓으면 리듬이 없다. 큰 히어로 다음에 반 칸 둘이 오면
+          시선이 한 번 나뉘었다가 다시 모인다.
+        */}
+        <BentoRow>
+          <BentoCard half tone="green" onPress={() => navigation.navigate('Attendance')}>
+            <Text style={styles.bentoValue}>
+              {matchDate ? (daysToNext === 0 ? '오늘' : `D-${daysToNext}`) : '—'}
+            </Text>
+            <Text style={styles.bentoLabel}>다음 경기</Text>
+          </BentoCard>
+          <BentoCard half tone="blue" onPress={() => navigation.navigate('Team')}>
+            <View style={styles.bentoValueRow}>
+              <Text style={styles.bentoValue}>{members.length}</Text>
+              <Text style={styles.bentoUnit}>명</Text>
+            </View>
+            <Text style={styles.bentoLabel}>팀원</Text>
+          </BentoCard>
+        </BentoRow>
+
         {/* 이번주 경기 */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>이번주 경기</Text>
@@ -422,6 +457,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         </View>
 
         <SectionCard
+          tone="green"
           empty={!next || !matchDate}
           emptyIcon="calendar-outline"
           emptyCentered
@@ -585,6 +621,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </View>
         ) : (
           <SectionCard
+            tone="gold"
             empty={!current}
             emptyIcon="wallet-outline"
             /* 바로 아래 "이번달 정산"에 금액이 떠 있는데 "내역이 없습니다"라고 하면 서로 어긋난다.
@@ -657,6 +694,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         </View>
 
         <SectionCard
+          tone="blue"
           empty={announcements.length === 0}
           emptyIcon="megaphone-outline"
           emptyTitle="등록된 공지가 없습니다"
@@ -748,6 +786,19 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
 const styles = StyleSheet.create({
   content: { paddingTop: 8, gap: 16 },
+
+  /** 벤토 반 칸 타일 — 숫자가 먼저 읽히도록 라벨과 3배 가까이 벌린다 */
+  bentoValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
+  bentoValue: {
+    color: colors.text,
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 32,
+    fontVariant: ['tabular-nums'],
+  },
+  bentoUnit: { color: colors.textDim, fontSize: 14, fontWeight: '700' },
+  bentoLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700', marginTop: 2 },
   pressed: { opacity: 0.85 },
 
   // ── 상단 바 ───────────────────────────────────────────────

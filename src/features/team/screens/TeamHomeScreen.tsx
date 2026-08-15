@@ -8,6 +8,7 @@
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
 import { useEffect, useState } from 'react';
 import { Image, Pressable, Share, ScrollView, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -184,6 +185,12 @@ export function TeamHomeScreen({ navigation }: any) {
       .filter((m) => new Date(m.match_date).getTime() >= Date.now() - 3 * 60 * 60 * 1000)
       .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())[0] ?? null;
   const attendCount = nextMatch?.votes.filter((v) => v.status === 'attend').length ?? 0;
+  /** 오늘 0시 기준 남은 날 — 시각까지 빼면 저녁 경기가 "D-0"과 "D-1"을 오간다 */
+  const daysUntil = nextMatch
+    ? Math.round(
+        (new Date(nextMatch.match_date).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000
+      )
+    : 0;
 
   /** 팀 홈은 앞의 다섯만, 멤버 탭은 전체(검색어가 있으면 걸러서) */
   const visibleMembers =
@@ -242,6 +249,20 @@ export function TeamHomeScreen({ navigation }: any) {
         <View style={styles.banner}>
           {/* 잔디 배경(FieldBackground)을 걷어냈다 — 초록 줄무늬와 원형 얼룩이 이름·지표 뒤에 깔려
               글자가 배경에 묻혔다. 팀 로고가 이 카드의 색을 정해야지 배경이 정하면 안 된다. */}
+          {/*
+            엠블럼 뒤에서 번지는 초록 글로우. 홈 히어로와 같은 기법이다 —
+            쓸 만한 사진 자산이 없어서, 빛으로 무게를 만든다. RN엔 원형 그라디언트가
+            없어 대각선 LinearGradient로 근사한다.
+          */}
+          <LinearGradient
+            colors={['rgba(74,222,128,0.28)', 'rgba(74,222,128,0.07)', 'rgba(74,222,128,0)']}
+            locations={[0, 0.35, 0.7]}
+            start={{ x: 0.08, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+
           <View style={styles.bannerRow}>
             <View>
               <Pressable
@@ -398,29 +419,46 @@ export function TeamHomeScreen({ navigation }: any) {
                 <Text style={styles.sectionTitle}>다음 경기</Text>
                 <Text style={styles.sectionLink}>전체 일정 ›</Text>
               </View>
-              <View style={styles.nextMatchRow}>
-                <Ionicons name="football-outline" size={17} color={colors.green} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.nextMatchDate}>
+              {/* 큰 숫자 두 장을 나란히 — 가로로 꽉 찬 줄만 쌓으면 리듬이 안 생긴다 */}
+              <View style={styles.tileRow}>
+                <View style={styles.tile}>
+                  <Text style={styles.tileValue}>
+                    {daysUntil === 0 ? '오늘' : `D-${daysUntil}`}
+                  </Text>
+                  <Text style={styles.tileLabel}>
                     {new Date(nextMatch.match_date).toLocaleDateString('ko-KR', {
                       month: 'long',
                       day: 'numeric',
                       weekday: 'short',
-                    })}{' '}
-                    {new Date(nextMatch.match_date).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false,
                     })}
                   </Text>
-                  <Text style={styles.nextMatchPlace} numberOfLines={1}>
-                    {nextMatch.location ?? '장소 미정'}
-                  </Text>
                 </View>
-                <View style={styles.attendBadge}>
-                  <Text style={styles.attendBadgeText}>참석 {attendCount}</Text>
+                <View style={styles.tile}>
+                  <View style={styles.tileValueRow}>
+                    <Text style={styles.tileValue}>{attendCount}</Text>
+                    <Text style={styles.tileUnit}>/ {nextMatch.capacity}</Text>
+                  </View>
+                  <Text style={styles.tileLabel}>참석</Text>
                 </View>
               </View>
+
+              {/* 채워지는 막대 하나 — 숫자만으로는 "얼마나 찼는지"가 안 잡힌다 */}
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min(100, Math.round((attendCount / Math.max(1, nextMatch.capacity)) * 100))}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.nextMatchPlace} numberOfLines={1}>
+                {nextMatch.location ?? '장소 미정'} ·{' '}
+                {new Date(nextMatch.match_date).toLocaleTimeString('ko-KR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                })}
+              </Text>
             </Pressable>
           )}
 
@@ -939,9 +977,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.hero,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
-    // 배경 무늬 대신 카드색 — 로고와 초록 지표가 이 위에서 또렷하게 읽힌다
-    backgroundColor: colors.card,
+    // 화면에서 유일하게 초록 테두리를 갖는 면 — 눈이 여기서 시작하게 한다.
+    // 나머지 카드가 전부 같은 무게라 어디도 안 붙잡던 게 "밋밋하다"의 정체였다.
+    borderColor: colors.greenDeep,
+    backgroundColor: colors.cardRaised,
   },
   bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 20 },
   emblem: {
@@ -958,10 +997,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   /** 인스타 프로필처럼 로고 오른쪽에 지표 세 개 */
-  statsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
-  statItem: { flex: 1, alignItems: 'center', gap: 2 },
-  statNumber: { color: '#FFFFFF', fontSize: 17, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  statLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
+  statsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
+  statItem: { flex: 1, alignItems: 'center', gap: 0 },
+  /**
+   * 숫자와 라벨의 크기 차이가 위계를 만든다.
+   *
+   * 17 대 10.5로는 둘이 같은 덩어리로 읽혀서, 카드를 아무리 밝게 해도 눈이 멈출 곳이
+   * 생기지 않았다. 3배 가까이 벌려 숫자가 먼저 잡히게 한다.
+   */
+  statNumber: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -1,
+    lineHeight: 34,
+    fontVariant: ['tabular-nums'],
+  },
+  statLabel: { color: colors.textDim, fontSize: 10, fontWeight: '700' },
   bannerBelow: { paddingHorizontal: 20, paddingBottom: 4 },
   emblemImage: { width: '100%', height: '100%' },
   emblemInitials: { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: -0.5 },
@@ -1007,9 +1059,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 14,
     borderRadius: radius.card,
-    backgroundColor: colors.card,
+    backgroundColor: colors.cardRaised,
     borderWidth: 1,
-    borderColor: colors.greenDeep,
+    borderColor: colors.borderRaised,
   },
   quickItem: { flex: 1, alignItems: 'center', gap: 6 },
   quickLabel: { color: colors.textStrong, fontSize: 11, fontWeight: '700' },
@@ -1020,7 +1072,32 @@ const styles = StyleSheet.create({
   recentPostMeta: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600' },
   recentPostThumb: { width: 46, height: 46, borderRadius: 8, backgroundColor: colors.inputBg },
 
-  /** 다음 경기 */
+  /** 다음 경기 — 2열 타일 + 진행 막대 */
+  tileRow: { flexDirection: 'row', gap: 10 },
+  tile: {
+    flex: 1,
+    gap: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: radius.button,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tileValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  tileValue: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+    lineHeight: 30,
+    fontVariant: ['tabular-nums'],
+  },
+  tileUnit: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
+  tileLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.greenTrack, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3, backgroundColor: colors.green },
+
   nextMatchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   nextMatchDate: { color: colors.text, fontSize: 13, fontWeight: '800' },
   nextMatchPlace: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
@@ -1237,10 +1314,10 @@ const styles = StyleSheet.create({
 
   content: { padding: 20, gap: 14 },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.cardRaised,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderRaised,
     padding: 16,
   },
 

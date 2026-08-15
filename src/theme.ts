@@ -10,8 +10,18 @@ export const colors = {
   cardAlt: '#0D1512',
   inputBg: '#0C1310',
 
+  /**
+   * 배경에서 떠 보이는 카드 — 팀 화면에서 먼저 쓴다(다른 화면은 아직 card).
+   *
+   * 기존 card(#111A16)는 bgRoot 대비가 1.08:1이라 사실상 같은 색이었다. 카드가 배경에서
+   * 분리되지 않으니 화면이 검은 판 하나로 읽혔다. 1.45:1로 올려 경계를 눈이 잡게 한다.
+   */
+  cardRaised: '#24352D',
+
   // 테두리
   border: '#1E2A25',
+  /** cardRaised 위에서 실제로 보이는 테두리 (카드 대비 1.4:1). 기존 border는 1.2:1이라 안 보였다 */
+  borderRaised: '#354C40',
   borderSoft: '#161F1B',
   divider: '#1B2521',
 

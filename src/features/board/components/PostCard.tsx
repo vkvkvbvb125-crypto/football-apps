@@ -197,6 +197,7 @@ export function PostCard({
       {showComments && (
         <PostComments
           postId={post.id}
+          postAuthorId={post.authorId}
           members={members}
           myUserId={myUserId}
           isAdmin={isAdmin}

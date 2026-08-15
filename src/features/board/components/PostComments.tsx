@@ -12,6 +12,8 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { alertMessage } from '../../../components/Dialog';
 import { colors, radius } from '../../../theme';
 import { relativeTime } from '../../../lib/relativeTime';
+import { useTeamStore } from '../../team/stores/teamStore';
+import { notifyTeam } from '../../notifications/services/pushService';
 import {
   createComment,
   deleteComment,
@@ -20,8 +22,20 @@ import {
   type PostComment,
 } from '../services/boardService';
 
+/**
+ * 댓글 한 건으로 알림 받을 사람들.
+ *
+ * 지금은 글쓴이 하나뿐이라 합집합이 과해 보이지만, 멘션을 얹으면 "댓글에서 글쓴이를
+ * 멘션"할 때 같은 사람에게 두 번 울린다. 그때 고치는 것보다 자리를 잡아 두는 편이 싸다.
+ * 나 자신은 뺀다 — 내 글에 내가 단 댓글로 알림이 오면 안 된다.
+ */
+function notifyTargets(postAuthorId: string, myUserId: string): string[] {
+  return [...new Set([postAuthorId])].filter((id) => id !== myUserId);
+}
+
 interface PostCommentsProps {
   postId: string;
+  postAuthorId: string;
   members: { userId: string; displayName: string; avatarUrl: string | null }[];
   myUserId: string;
   isAdmin: boolean;
@@ -29,7 +43,15 @@ interface PostCommentsProps {
   onCountChange: (delta: number) => void;
 }
 
-export function PostComments({ postId, members, myUserId, isAdmin, onCountChange }: PostCommentsProps) {
+export function PostComments({
+  postId,
+  postAuthorId,
+  members,
+  myUserId,
+  isAdmin,
+  onCountChange,
+}: PostCommentsProps) {
+  const activeTeam = useTeamStore((s) => s.activeTeam);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -61,6 +83,17 @@ export function PostComments({ postId, members, myUserId, isAdmin, onCountChange
       setDraft(''); // 성공했을 때만 비운다
       onCountChange(1);
       await load();
+
+      const targets = notifyTargets(postAuthorId, myUserId);
+      if (targets.length > 0 && activeTeam) {
+        const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '팀원';
+        const preview = body.length > 40 ? `${body.slice(0, 40)}…` : body;
+        // 알림 실패는 삼킨다 — 댓글은 이미 달렸고, 실패한 것처럼 보이면 안 된다.
+        // kind를 안 넘긴다: 나에게 직접 온 반응이라 끄고 켜는 종류로 두지 않는다.
+        notifyTeam(activeTeam.team.id, `${myName}님이 댓글을 남겼어요`, preview, undefined, targets).catch(
+          () => {}
+        );
+      }
     } catch {
       // 입력은 그대로 둔다 — 쓴 걸 날리는 게 최악이다
       alertMessage('실패', '댓글을 남기지 못했어요');

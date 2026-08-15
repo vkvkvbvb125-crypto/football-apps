@@ -3,5 +3,6 @@
   "compilerOptions": {
     "strict": true
   },
-  "exclude": ["node_modules", "supabase/functions"]
+  "//": "scripts는 node가 직접 돌린다 — .ts 확장자 import와 node: 모듈을 쓰므로 앱 설정과 규칙이 다르다. 실행 자체가 검증이라 tsc로 또 볼 이유가 없다 (supabase/functions를 뺀 것과 같은 이유)",
+  "exclude": ["node_modules", "supabase/functions", "scripts"]
 }

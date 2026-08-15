@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    padding: 20,
     gap: 12,
     // SoftTint가 사각형이라 없으면 둥근 모서리 밖으로 샌다
     overflow: 'hidden',

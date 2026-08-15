@@ -46,6 +46,7 @@ import { RosterSheet, type RosterMember } from '../../attendance/components/Rost
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { relativeTime } from '../../../lib/relativeTime';
+import { HomeTodoList, type HomeTodo } from '../components/HomeTodoList';
 
 /** 킥오프 3시간 뒤까지는 "다음 경기"로 본다 (경기운영 탭 MATCH_GRACE_MS와 같은 기준) */
 const NEXT_MATCH_GRACE_MS = 3 * 60 * 60 * 1000;
@@ -228,6 +229,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const membershipId = activeTeam?.membershipId;
   const isAdmin = activeTeam?.role === 'admin';
+  const me = members.find((m) => m.userId === myUserId) ?? null;
+
 
   useEffect(() => {
     if (!activeTeam) return;
@@ -345,6 +348,52 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const matchDate = next ? new Date(next.match_date) : null;
 
   /**
+   * 해야 할 일 — 빈 상태를 "없다" 대신 "하면 된다"로 쓴다.
+   * 새 정보를 만들지 않는다. 전부 위에서 이미 불러온 값에서 계산한다.
+   */
+  const todos: HomeTodo[] = [];
+  if (!next && isAdmin) {
+    todos.push({
+      key: 'match',
+      icon: 'calendar-outline',
+      title: '다음 경기 일정 등록',
+      sub: '만들면 참석 투표와 알림이 자동으로 열려요',
+      tint: colors.green,
+      onPress: () => navigation.navigate('Attendance'),
+    });
+  }
+  if (pendingMatches.length > 0 && isAdmin) {
+    todos.push({
+      key: 'settle',
+      icon: 'calculator-outline',
+      title: `정산 안 한 경기 ${pendingMatches.length}건`,
+      sub: '경기가 끝났는데 회비를 아직 안 걷었어요',
+      tint: colors.gold,
+      onPress: () => navigation.navigate('Settlement'),
+    });
+  }
+  if (members.length <= 1) {
+    todos.push({
+      key: 'invite',
+      icon: 'person-add-outline',
+      title: '팀원 초대하기',
+      sub: '초대 코드를 단톡방에 공유하면 끝나요',
+      tint: colors.blue,
+      onPress: () => navigation.navigate('Team'),
+    });
+  }
+  if (me && !me.position) {
+    todos.push({
+      key: 'position',
+      icon: 'body-outline',
+      title: '내 포지션 정하기',
+      sub: '팀 분배에서 포메이션을 그릴 때 써요',
+      tint: colors.textMuted,
+      onPress: () => navigation.navigate('MySettings'),
+    });
+  }
+
+  /**
    * 일정 탭의 그 경기로 보낸다.
    *
    * 날짜를 실어 보내야 한다 — 일정 화면은 기본이 오늘이라, 다음 경기가 내일이면
@@ -377,6 +426,18 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             <NotificationBell ref={bellRef} />
             <SettingsMenu />
           </View>
+        </View>
+
+        {/*
+          인사문 — 화면을 여는 문장.
+          이 화면에서 히어로를 빼면 제일 큰 글자가 21px(상단 "홈")이라 눈이 멈출 데가
+          없었다. 28px 두 줄로 열고, 이름만 초록으로 둔다.
+        */}
+        <View style={styles.greeting}>
+          <Text style={styles.greetingLine}>안녕하세요,</Text>
+          <Text style={styles.greetingName}>
+            {me?.displayName ?? '회원'} <Text style={styles.greetingSuffix}>님</Text>
+          </Text>
         </View>
 
         {/* 공지 배너 — 아래 「최근 공지」와 같은 곳(알림 패널)으로 보낸다 */}
@@ -422,7 +483,11 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </View>
         </View>
 
-        {/* 이번주 경기 */}
+        <HomeTodoList todos={todos} />
+
+        {/* 이번주 경기 — 할 일에 "일정 등록"이 이미 떠 있으면 같은 말을 두 번 하지 않는다 */}
+        {!(todos.some((t) => t.key === 'match') && !next) && (
+          <>
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>이번주 경기</Text>
           <Pressable onPress={() => navigation.navigate('Attendance')} hitSlop={8} style={styles.sectionLinkRow}>
@@ -567,6 +632,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             </>
           )}
         </SectionCard>
+          </>
+        )}
 
         {/* 내 정산 현황 */}
         <View style={styles.sectionHead}>
@@ -762,6 +829,12 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 const styles = StyleSheet.create({
   content: { paddingTop: 8, gap: 16 },
 
+  /** 화면을 여는 문장 — 여기가 이 화면에서 가장 큰 글자다 */
+  greeting: { paddingHorizontal: 20, marginTop: 2, marginBottom: -4 },
+  greetingLine: { color: colors.textMuted, fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
+  greetingName: { color: colors.green, fontSize: 28, fontWeight: '800', letterSpacing: -0.9, lineHeight: 34 },
+  greetingSuffix: { color: colors.text, fontSize: 20, fontWeight: '700' },
+
   pressed: { opacity: 0.85 },
 
   // ── 상단 바 ───────────────────────────────────────────────
@@ -824,7 +897,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.card,
-    padding: 16,
+    padding: 20,
     gap: 10,
     // SoftTint가 absoluteFill 사각형이라, 이게 없으면 둥근 모서리 밖으로 색이 삐져나온다
     overflow: 'hidden',

@@ -1,9 +1,9 @@
-// src/components/ScreenGradient.tsx — 리디자인 적용판
-// 배경을 #07100D 단색 톤으로 통일하고, 상단에만 아주 옅은 초록 글로우를 둡니다.
+// src/components/ScreenGradient.tsx — 화면 공통 껍데기
+// 배경 단색 + 상단 안전영역. 이름에 Gradient가 남아 있지만 지금은 글로우가 없다
+// (깊이는 카드의 SoftTint가 만든다). 호출부가 많아 이름은 그대로 뒀다.
 // 상단 안전영역은 SafeAreaView(edges=['top'])가 담당한다 — 화면마다 insets.top을
 // 따로 더하지 않아도 된다 (하단은 화면별로 다르게 써야 해서 여기서 다루지 않는다).
 import type { ReactNode } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, tabBar } from '../theme';
@@ -37,24 +37,14 @@ export function ScreenGradient({ children }: Props) {
         카드보다 뒤에 있어야 하므로 children보다 먼저 그린다.
       */}
       {/*
-        배경 깊이.
+        배경 글로우는 없다.
 
-        한 번은 0.22로 너무 세서 헤더 글씨가 묻혔고, 한 번은 아예 빼서 화면이 죽었다.
-        답은 세기가 아니라 위치였다 — 글씨가 앉는 상단은 비워 두고, 아래로 갈수록
-        번지게 한다. 헤더는 깨끗하고 화면은 검은 판이 아니게 된다.
+        예전엔 배경이 순검정이라 글로우가 유일한 깊이였는데, 그 사이에 두 가지가 바뀌었다:
+        배경 자체가 초록기 도는 회색(#0F1411)이 됐고, 카드마다 소프트 그라디언트가 생겼다.
+        깊이는 이제 카드가 만든다. 배경 글로우까지 겹치면 색이 두 겹으로 쌓여 탁해진다.
+
+        되돌리려면 이 자리에 LinearGradient 하나만 다시 넣으면 된다.
       */}
-      <LinearGradient
-        colors={[
-          'rgba(74,222,128,0)',
-          'rgba(74,222,128,0.06)',
-          'rgba(74,222,128,0.16)',
-        ]}
-        locations={[0.12, 0.5, 1]}
-        start={{ x: 0.15, y: 0 }}
-        end={{ x: 0.85, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {children}

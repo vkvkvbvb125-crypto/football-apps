@@ -17,11 +17,15 @@ export interface Database {
           display_name: string;
           avatar_url: string | null;
           push_token: string | null;
+          phone: string | null;
+          dominant_foot: string | null;
           created_at: string;
         };
         Insert: {
           id: string;
           kakao_id?: string | null;
+          phone?: string | null;
+          dominant_foot?: string | null;
           display_name: string;
           avatar_url?: string | null;
           push_token?: string | null;
@@ -38,6 +42,8 @@ export interface Database {
           home_address: string | null;
           home_latitude: number | null;
           home_longitude: number | null;
+          slogan: string | null;
+          logo_url: string | null;
           created_by: string;
           created_at: string;
         };
@@ -48,6 +54,8 @@ export interface Database {
           home_address?: string | null;
           home_latitude?: number | null;
           home_longitude?: number | null;
+          slogan?: string | null;
+          logo_url?: string | null;
         };
         Update: Partial<Database['public']['Tables']['teams']['Insert']>;
         Relationships: [];
@@ -61,6 +69,10 @@ export interface Database {
           skill_tag: SkillTag | null;
           position: string | null;
           skill_level: SkillLevel;
+          jersey_number: number | null;
+          notify_new_match: boolean;
+          notify_announcement: boolean;
+          notify_deadline: boolean;
           joined_at: string;
         };
         Insert: {
@@ -70,6 +82,10 @@ export interface Database {
           skill_tag?: SkillTag | null;
           position?: string | null;
           skill_level?: SkillLevel;
+          jersey_number?: number | null;
+          notify_new_match?: boolean;
+          notify_announcement?: boolean;
+          notify_deadline?: boolean;
         };
         Update: Partial<Database['public']['Tables']['team_members']['Insert']>;
         Relationships: [];
@@ -91,6 +107,8 @@ export interface Database {
           capacity: number;
           venue_id: string | null;
           location_pending: boolean;
+          /** 20260806 마이그레이션 전 앱에서는 undefined일 수 있다 */
+          match_type?: string | null;
           created_by: string;
           created_at: string;
         };
@@ -143,6 +161,8 @@ export interface Database {
           account_no: string | null;
           account_holder: string | null;
           status: SettlementStatus;
+          /** 납부 기한 yyyy-mm-dd (20260806 마이그레이션). 총무가 안 정하면 null */
+          due_date?: string | null;
           created_by: string | null;
           created_at: string;
           completed_at: string | null;
@@ -158,6 +178,7 @@ export interface Database {
           account_no?: string | null;
           account_holder?: string | null;
           status?: SettlementStatus;
+          due_date?: string | null;
           created_by?: string | null;
           completed_at?: string | null;
         };
@@ -352,6 +373,61 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database['public']['Tables']['announcements']['Insert']>;
+        Relationships: [];
+      };
+      // 20260812_announcement_reads.sql — 공지 읽음 기록 (총무의 "N명 읽음")
+      announcement_reads: {
+        Row: {
+          announcement_id: string;
+          user_id: string;
+          read_at: string;
+        };
+        Insert: {
+          announcement_id: string;
+          user_id: string;
+        };
+        Update: Partial<Database['public']['Tables']['announcement_reads']['Insert']>;
+        Relationships: [];
+      };
+      posts: {
+        Row: {
+          id: string;
+          team_id: string;
+          author_id: string;
+          category: string;
+          body: string;
+          image_url: string | null;
+          created_at: string;
+          /** null이면 한 번도 안 고친 글 */
+          updated_at: string | null;
+        };
+        Insert: {
+          team_id: string;
+          author_id: string;
+          category?: string;
+          body: string;
+          image_url?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['posts']['Insert']>;
+        Relationships: [];
+      };
+      post_likes: {
+        Row: { post_id: string; user_id: string; created_at: string };
+        Insert: { post_id: string; user_id: string };
+        Update: Partial<Database['public']['Tables']['post_likes']['Insert']>;
+        Relationships: [];
+      };
+      post_comments: {
+        Row: { id: string; post_id: string; author_id: string; body: string; created_at: string };
+        Insert: { post_id: string; author_id: string; body: string };
+        Update: Partial<Database['public']['Tables']['post_comments']['Insert']>;
+        Relationships: [];
+      };
+      /** 글 고정 — posts를 건드리지 않고 여기에 줄을 넣고 뺀다 (총무만, RLS가 막는다) */
+      post_pins: {
+        Row: { post_id: string; pinned_by: string; created_at: string };
+        Insert: { post_id: string; pinned_by: string };
+        Update: Partial<Database['public']['Tables']['post_pins']['Insert']>;
         Relationships: [];
       };
       polls: {

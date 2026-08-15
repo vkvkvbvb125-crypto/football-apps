@@ -8,6 +8,9 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
+import { MentionInput } from '../../../components/Mention';
+import { EVERYONE, mentionedIds, toPlainText } from '../../../lib/mentions';
+import { notifyTeam } from '../../notifications/services/pushService';
 import { PostCard } from './PostCard';
 import {
   CATEGORY_LABEL,
@@ -32,6 +35,8 @@ interface Props {
 export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
   // PostCard가 작성자 이름·사진을 여기서 찾는다 (글에 박힌 값은 불러온 시점의 복사본)
   const members = useTeamStore((s) => s.members);
+  /** @자동완성 후보 — 나 자신도 남겨둔다(내 이름을 부를 일은 없지만 목록에서 빼면 더 헷갈린다) */
+  const mentionTargets = members.map((m) => ({ id: m.userId, name: m.displayName }));
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   /** null이면 전체 */
@@ -55,6 +60,34 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     load();
   }, [teamId]);
 
+  /**
+   * 지목된 사람에게 알린다.
+   *
+   * @everyone이면 팀 전원이 대상이고, 개인 지목은 거기 흡수된다 — 합집합으로 모아
+   * 중복을 없애야 같은 사람이 두 번 울리지 않는다.
+   * 알림 실패는 삼킨다. 글은 이미 올라갔고, 실패한 것처럼 보이면 안 된다.
+   */
+  const notifyMentions = (body: string) => {
+    const ids = mentionedIds(body);
+    if (ids.length === 0) return;
+    const everyone = ids.includes(EVERYONE);
+    const targets = [
+      ...new Set(everyone ? members.map((m) => m.userId) : ids.filter((id) => id !== EVERYONE)),
+    ].filter((id) => id !== myUserId);
+    if (targets.length === 0) return;
+
+    const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '팀원';
+    const plain = toPlainText(body);
+    const preview = plain.length > 40 ? `${plain.slice(0, 40)}…` : plain;
+    notifyTeam(
+      teamId,
+      everyone ? `${myName}님이 팀 전체를 불렀어요` : `${myName}님이 회원님을 언급했어요`,
+      preview,
+      undefined,
+      targets
+    ).catch(() => {});
+  };
+
   const handlePost = async () => {
     const body = draft.trim();
     if (!body) return;
@@ -64,6 +97,7 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
       setDraft('');
       setComposing(false);
       await load();
+      notifyMentions(body);
     } catch {
       alertMessage('실패', '글을 올리지 못했어요');
     } finally {
@@ -155,13 +189,12 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
               </Pressable>
             ))}
           </View>
-          <TextInput
+          <MentionInput
             style={styles.composerInput}
             value={draft}
             onChangeText={setDraft}
-            placeholder="팀원들에게 하고 싶은 말을 적어주세요"
-            placeholderTextColor={colors.textFaint}
-            multiline
+            members={mentionTargets}
+            placeholder="팀원들에게 하고 싶은 말을 적어주세요. @로 부를 수 있어요"
             autoFocus
           />
           <View style={styles.composerActions}>

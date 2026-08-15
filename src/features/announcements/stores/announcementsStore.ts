@@ -2,12 +2,15 @@ import { create } from 'zustand';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { notifyTeam } from '../../notifications/services/pushService';
+import { toPlainText } from '../../../lib/mentions';
 import {
   createAnnouncement as createAnnouncementRequest,
   deleteAnnouncement as deleteAnnouncementRequest,
   fetchAnnouncements,
   updateAnnouncement as updateAnnouncementRequest,
   type AnnouncementRow,
+  markAnnouncementsRead,
+  fetchAnnouncementReadCounts,
   type UpdateAnnouncementInput,
 } from '../services/announcementsService';
 
@@ -20,13 +23,34 @@ interface AnnouncementsState {
   createAnnouncement: (input: { title: string; body: string; isPinned: boolean }) => Promise<void>;
   updateAnnouncement: (id: string, input: UpdateAnnouncementInput) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
+  /** 공지별 읽은 사람 수 — 총무 화면의 "N명 읽음" */
+  readCounts: Record<string, number>;
+  /** 알림 패널에 공지가 보였다 → 읽음으로 남기고 집계를 다시 센다 */
+  markRead: (announcements: AnnouncementRow[]) => Promise<void>;
 }
 
 export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
   announcements: [],
+  readCounts: {},
   loaded: false,
   loading: false,
   error: null,
+  markRead: async (announcements) => {
+    const userId = useAuthStore.getState().session?.user.id;
+    const isAdmin = useTeamStore.getState().activeTeam?.role === 'admin';
+    if (!userId || announcements.length === 0) return;
+    try {
+      await markAnnouncementsRead(announcements, userId);
+      // 집계는 총무만 본다 — 팀원 화면에서까지 매번 세어올 이유가 없다
+      if (isAdmin) {
+        const counts = await fetchAnnouncementReadCounts(announcements.map((a) => a.id));
+        set({ readCounts: counts });
+      }
+    } catch {
+      // 읽음 기록은 부가 정보다 — 실패해도 알림 화면이 막히면 안 된다
+    }
+  },
+
   loadAnnouncements: async () => {
     const activeTeam = useTeamStore.getState().activeTeam;
     if (!activeTeam) return;
@@ -49,7 +73,9 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
       await get().loadAnnouncements();
 
       const myUserId = useAuthStore.getState().session?.user.id;
-      notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 공지사항`, input.title, myUserId).catch(() => {
+      // toPlainText로 감싼다 — notify-team은 받은 문자열을 그대로 알림에 넣고 푸시로도 보내서,
+      // 마커가 섞여 들어오면 잠금화면에 @[김범준](3f2a-…)가 그대로 뜬다
+      notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 공지사항`, toPlainText(input.title), myUserId, undefined, 'announcement').catch(() => {
         // 알림 전송 실패는 조용히 무시 (공지 작성 자체는 이미 성공)
       });
     } catch (err) {

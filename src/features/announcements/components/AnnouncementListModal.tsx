@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, View, Modal } from 'react-native';
 import { Text } from '../../../components/nativeText';
+import { toPlainText } from '../../../lib/mentions';
 import { Ionicons } from '@expo/vector-icons';
 import type { AnnouncementRow } from '../services/announcementsService';
 
@@ -43,7 +44,7 @@ export function AnnouncementListModal({
                   </Text>
                 </View>
                 <Text style={styles.itemBody} numberOfLines={2}>
-                  {a.body}
+                  {toPlainText(a.body)}
                 </Text>
               </Pressable>
             ))}

@@ -25,6 +25,7 @@ import { Text } from './nativeText';
 import { alertMessage, confirmAction } from './Dialog';
 import { colors, radius } from '../theme';
 import { relativeTime } from '../lib/relativeTime';
+import { toPlainText } from '../lib/mentions';
 import { SwipeToDelete } from './SwipeToDelete';
 import { useTeamStore } from '../features/team/stores/teamStore';
 import { useAuthStore } from '../features/auth/stores/authStore';
@@ -213,7 +214,8 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
                           <Text style={styles.itemTime}>{relativeTime(item.created_at)}</Text>
                         </View>
                         <Text style={styles.itemBody} numberOfLines={3}>
-                          {item.body}
+                          {/* 두 줄 미리보기라 색을 입히지 않고 @이름으로만 되돌린다 */}
+                          {toPlainText(item.body)}
                         </Text>
                         {/* 총무만 — 팀원에게는 몇 명이 읽었는지가 필요 없고, 안 읽은 사람에게
                             압박으로 읽힐 수도 있다 */}

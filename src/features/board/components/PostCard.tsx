@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, radius } from '../../../theme';
 import { relativeTime } from '../../../lib/relativeTime';
+import { parse } from '../../../lib/mentions';
 import { CATEGORY_LABEL, resolveAuthor, type Post } from '../services/boardService';
 import { PostComments } from './PostComments';
 
@@ -164,7 +165,16 @@ export function PostCard({
               if (!expanded && e.nativeEvent.lines.length >= COLLAPSED_LINES) setTruncatable(true);
             }}
           >
-            {post.body}
+            {/* 마커를 초록 이름으로. 접기(numberOfLines)가 바깥 Text에 걸려야 해서 안쪽에 조각만 넣는다 */}
+            {parse(post.body).map((piece, i) =>
+              piece.kind === 'text' ? (
+                piece.text
+              ) : (
+                <Text key={i} style={styles.mention}>
+                  @{piece.name}
+                </Text>
+              )
+            )}
           </Text>
           {truncatable && (
             <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6}>
@@ -280,6 +290,7 @@ const styles = StyleSheet.create({
 
   postBody: { color: colors.textBody, fontSize: 13, lineHeight: 19 },
   moreText: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginTop: 2 },
+  mention: { color: colors.green, fontWeight: '800' },
   postImage: { width: '100%', height: 180, borderRadius: radius.button, backgroundColor: colors.inputBg },
 
   /** 고정 배지 — 참고 화면의 주황 "운영공지" 대신 앱 초록 계열로 */

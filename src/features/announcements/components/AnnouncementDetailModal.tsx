@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
+import { MentionText } from '../../../components/Mention';
 import { Ionicons } from '@expo/vector-icons';
 import type { AnnouncementRow } from '../services/announcementsService';
 
@@ -55,7 +56,7 @@ export function AnnouncementDetailModal({
             </View>
             <ScrollView style={styles.bodyScroll}>
               <Text style={styles.title}>{announcement.title}</Text>
-              <Text style={styles.body}>{announcement.body}</Text>
+              <MentionText body={announcement.body} style={styles.body} />
             </ScrollView>
           </Pressable>
         </Pressable>

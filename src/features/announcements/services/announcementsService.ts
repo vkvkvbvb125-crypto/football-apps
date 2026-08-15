@@ -14,6 +14,40 @@ export async function fetchAnnouncements(teamId: string): Promise<AnnouncementRo
   return data ?? [];
 }
 
+/**
+ * 공지를 읽었다고 남긴다.
+ *
+ * 작성자 본인은 넣지 않는다 — 자기 공지를 읽었다고 세면 "1명 읽음"이 항상 떠서
+ * 총무가 팀원 반응을 가늠할 수 없다.
+ *
+ * upsert라 여러 번 불러도 한 줄이다(패널을 열 때마다 호출된다).
+ */
+export async function markAnnouncementsRead(announcements: AnnouncementRow[], userId: string) {
+  const rows = announcements
+    .filter((a) => a.author_id !== userId)
+    .map((a) => ({ announcement_id: a.id, user_id: userId }));
+  if (rows.length === 0) return;
+  const { error } = await supabase
+    .from('announcement_reads')
+    .upsert(rows, { onConflict: 'announcement_id,user_id', ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+/** 공지별 읽은 사람 수 — 총무 화면의 "N명 읽음" */
+export async function fetchAnnouncementReadCounts(announcementIds: string[]) {
+  if (announcementIds.length === 0) return {} as Record<string, number>;
+  const { data, error } = await supabase
+    .from('announcement_reads')
+    .select('announcement_id')
+    .in('announcement_id', announcementIds);
+  if (error) throw error;
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    counts[row.announcement_id] = (counts[row.announcement_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export interface CreateAnnouncementInput {
   teamId: string;
   authorId: string;

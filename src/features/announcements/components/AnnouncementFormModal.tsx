@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
+import { MentionInput } from '../../../components/Mention';
+import { useTeamStore } from '../../team/stores/teamStore';
 import type { AnnouncementRow } from '../services/announcementsService';
 
 interface AnnouncementFormModalProps {
@@ -11,6 +13,10 @@ interface AnnouncementFormModalProps {
 }
 
 export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: AnnouncementFormModalProps) {
+  // selector 안에서 map을 하면 매번 새 배열이 스냅샷으로 나와 무한 렌더가 된다.
+  // 스토어에서는 그대로 꺼내고, 모양 바꾸기는 밖에서 한다.
+  const members = useTeamStore((s) => s.members);
+  const mentionTargets = members.map((m) => ({ id: m.userId, name: m.displayName }));
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -40,13 +46,12 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
             value={title}
             onChangeText={setTitle}
           />
-          <TextInput
+          <MentionInput
             style={[styles.input, styles.bodyInput]}
-            placeholder="내용"
-            placeholderTextColor="#5A625E"
+            placeholder="내용 (@로 팀원을 부를 수 있어요)"
             value={body}
             onChangeText={setBody}
-            multiline
+            members={mentionTargets}
           />
 
           <View style={styles.pinRow}>

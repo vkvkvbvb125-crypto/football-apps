@@ -15,10 +15,8 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +24,7 @@ import {
 } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
+import { confirmAction } from '../../../components/Dialog';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
@@ -270,16 +269,14 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     setModalVisible(true);
   };
 
-  const handleDelete = (matchId: string) => {
-    const message = '이 경기를 취소하시겠어요? 투표/정산/분배 기록도 함께 삭제됩니다.';
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) deleteMatch(matchId);
-      return;
-    }
-    Alert.alert('경기 취소', message, [
-      { text: '아니오', style: 'cancel' },
-      { text: '취소하기', style: 'destructive', onPress: () => deleteMatch(matchId) },
-    ]);
+  const handleDelete = async (matchId: string) => {
+    const ok = await confirmAction({
+      title: '경기 취소',
+      message: '이 경기를 취소하시겠어요? 투표/정산/분배 기록도 함께 삭제됩니다.',
+      confirmLabel: '취소하기',
+      destructive: true,
+    });
+    if (ok) deleteMatch(matchId);
   };
 
   const handleEditSubmit = () => {

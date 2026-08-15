@@ -2,9 +2,10 @@
 //
 // 팀 화면 안에 붙는 패널이다(별도 라우트가 아니라). 팀 홈 격자에서 들어오고 뒤로가기로 나간다.
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { colors, radius } from '../../../theme';
 import { relativeTime } from '../../../lib/relativeTime';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -64,9 +65,7 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
       setComposing(false);
       await load();
     } catch {
-      const m = '글을 올리지 못했어요';
-      if (Platform.OS === 'web') window.alert(m);
-      else Alert.alert('실패', m);
+      alertMessage('실패', '글을 올리지 못했어요');
     } finally {
       setPosting(false);
     }
@@ -91,26 +90,20 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     }
   };
 
-  const handleDelete = (post: Post) => {
-    const run = async () => {
-      try {
-        await deletePost(post.id);
-        await load();
-      } catch {
-        const m = '글을 지우지 못했어요';
-        if (Platform.OS === 'web') window.alert(m);
-        else Alert.alert('실패', m);
-      }
-    };
-    const message = '이 글을 지울까요?';
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) run();
-      return;
+  const handleDelete = async (post: Post) => {
+    const ok = await confirmAction({
+      title: '글 삭제',
+      message: '이 글을 지울까요?',
+      confirmLabel: '삭제',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deletePost(post.id);
+      await load();
+    } catch {
+      alertMessage('실패', '글을 지우지 못했어요');
     }
-    Alert.alert('글 삭제', message, [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: run },
-    ]);
   };
 
   const visible = filter ? posts.filter((p) => p.category === filter) : posts;

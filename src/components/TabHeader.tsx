@@ -12,10 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,6 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './nativeText';
+import { alertMessage, confirmAction } from './Dialog';
 import { colors, radius } from '../theme';
 import { relativeTime } from '../lib/relativeTime';
 import { SwipeToDelete } from './SwipeToDelete';
@@ -135,9 +134,7 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
       await deleteAnnouncement(id);
       return true;
     } catch {
-      const m = '공지를 지우지 못했어요';
-      if (Platform.OS === 'web') window.alert(m);
-      else Alert.alert('삭제하지 못했어요', m);
+      alertMessage('삭제하지 못했어요', '공지를 지우지 못했어요');
       return false; // 실패하면 행을 되살린다 — 지운 척하고 넘어가면 안 된다
     }
   };
@@ -148,9 +145,7 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
     removeNotification(id)
       .then(() => true)
       .catch((e) => {
-        const message = e instanceof Error ? e.message : '알림을 지우지 못했어요';
-        if (Platform.OS === 'web') window.alert(message);
-        else Alert.alert('삭제하지 못했어요', message);
+        alertMessage('삭제하지 못했어요', e instanceof Error ? e.message : '알림을 지우지 못했어요');
         return false;
       });
 
@@ -284,25 +279,16 @@ export function SettingsMenu() {
     });
   };
 
-  const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('정말 로그아웃할까요?')) {
-        close();
-        signOut();
-      }
-      return;
-    }
-    Alert.alert('로그아웃', '정말 로그아웃할까요?', [
-      { text: '아니오', style: 'cancel' },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: () => {
-          close();
-          signOut();
-        },
-      },
-    ]);
+  const handleSignOut = async () => {
+    const ok = await confirmAction({
+      title: '로그아웃',
+      message: '정말 로그아웃할까요?',
+      confirmLabel: '로그아웃',
+      destructive: true,
+    });
+    if (!ok) return;
+    close();
+    signOut();
   };
 
   return (

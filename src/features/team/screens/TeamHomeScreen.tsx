@@ -7,7 +7,7 @@
 // 2) 다른 탭과 동일하게 TabHeader를 붙였다 — 기존 marginTop:60 하드코딩 제거.
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
 import { useEffect, useState } from 'react';
-import { Alert, Image, Platform, Pressable, Share, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, Share, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -27,6 +27,7 @@ import { usePollsStore } from '../../polls/stores/pollsStore';
 import { PollFormModal } from '../../polls/components/PollFormModal';
 import { PollCard } from '../../polls/components/PollCard';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import type { PlaceResult } from '../../attendance/services/placeService';
@@ -102,14 +103,9 @@ export function TeamHomeScreen({ navigation }: any) {
   }, [activeTeam?.team.id, myUserId]);
 
   const confirm = (title: string, message: string, onYes: () => void, confirmLabel = '삭제') => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) onYes();
-      return;
-    }
-    Alert.alert(title, message, [
-      { text: '아니오', style: 'cancel' },
-      { text: confirmLabel, style: 'destructive', onPress: onYes },
-    ]);
+    confirmAction({ title, message, confirmLabel, destructive: true }).then((ok) => {
+      if (ok) onYes();
+    });
   };
 
   if (!activeTeam) return null;
@@ -141,9 +137,7 @@ export function TeamHomeScreen({ navigation }: any) {
   const handleLeaveTeam = () => {
     confirm('팀 나가기', `${activeTeam.team.name}에서 나갈까요?`, () => {
       leaveTeam().catch((err) => {
-        const msg = err instanceof Error ? err.message : '팀을 나가지 못했어요';
-        if (Platform.OS === 'web') window.alert(msg);
-        else Alert.alert('나갈 수 없어요', msg);
+        alertMessage('나갈 수 없어요', err instanceof Error ? err.message : '팀을 나가지 못했어요');
       });
     }, '나가기');
   };
@@ -157,9 +151,7 @@ export function TeamHomeScreen({ navigation }: any) {
       await uploadTeamLogo(activeTeam.team.id, asset.uri);
       await loadMemberships(); // teams 행이 바뀌었으니 활성 팀 정보를 다시 읽는다
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '로고를 올리지 못했어요';
-      if (Platform.OS === 'web') window.alert(msg);
-      else Alert.alert('저장 실패', msg);
+      alertMessage('저장 실패', err instanceof Error ? err.message : '로고를 올리지 못했어요');
     } finally {
       setLogoUploading(false);
     }

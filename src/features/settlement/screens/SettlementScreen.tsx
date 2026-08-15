@@ -13,10 +13,8 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
-  Alert,
   AppState,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +24,7 @@ import { Text, TextInput } from '../../../components/nativeText';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -87,11 +86,7 @@ const EMPTY_ACCOUNT: AccountDraft = { bankName: '', accountNo: '', accountHolder
 
 /** 처리 거절 사유를 알린다 — 조용히 삼키면 버튼이 안 눌린 것처럼 보인다 */
 function showError(message: string) {
-  if (Platform.OS === 'web') {
-    window.alert(message);
-    return;
-  }
-  Alert.alert('처리하지 못했어요', message);
+  alertMessage('처리하지 못했어요', message);
 }
 
 /** "7/25" — 짧은 날짜 표기 */
@@ -268,17 +263,14 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
     setDefaultAccount(draft);
   };
 
-  const handleSkip = (matchId: string) => {
-    const message = '이 경기는 회비를 걷지 않고 종료할까요? 나중에 다시 정산 만들기로 되돌릴 수 없어요.';
-    const doSkip = () => skipSettlement(matchId);
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) doSkip();
-      return;
-    }
-    Alert.alert('정산 없이 종료', message, [
-      { text: '취소', style: 'cancel' },
-      { text: '종료하기', style: 'destructive', onPress: doSkip },
-    ]);
+  const handleSkip = async (matchId: string) => {
+    const ok = await confirmAction({
+      title: '정산 없이 종료',
+      message: '이 경기는 회비를 걷지 않고 종료할까요? 나중에 다시 정산 만들기로 되돌릴 수 없어요.',
+      confirmLabel: '종료하기',
+      destructive: true,
+    });
+    if (ok) skipSettlement(matchId);
   };
 
   const createSheetMatch = useMemo(

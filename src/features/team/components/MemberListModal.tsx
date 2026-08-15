@@ -1,8 +1,10 @@
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { Ionicons } from '@expo/vector-icons';
 import type { SkillTag } from '../../../types/database';
 import type { TeamMemberWithProfile } from '../services/teamService';
+import { nextPosition, positionLabel, toPosition, type Position } from '../positions';
 
 const SKILL_CYCLE: (SkillTag | null)[] = ['상', '중', '하', null];
 
@@ -22,6 +24,7 @@ interface MemberListModalProps {
   isAdmin: boolean;
   onClose: () => void;
   onChangeSkillTag: (teamMemberId: string, skillTag: SkillTag | null) => void;
+  onChangePosition: (teamMemberId: string, position: Position | null) => void;
   onPromote: (teamMemberId: string) => void;
   onRemove: (teamMemberId: string) => void;
 }
@@ -33,25 +36,25 @@ export function MemberListModal({
   isAdmin,
   onClose,
   onChangeSkillTag,
+  onChangePosition,
   onPromote,
   onRemove,
 }: MemberListModalProps) {
   const adminCount = members.filter((m) => m.role === 'admin').length;
 
-  const handleRemove = (member: TeamMemberWithProfile) => {
+  const handleRemove = async (member: TeamMemberWithProfile) => {
     if (member.role === 'admin' && adminCount <= 1) {
-      Alert.alert('내보낼 수 없어요', '마지막 총무는 내보낼 수 없어요. 먼저 다른 총무를 임명해주세요.');
+      // 예전엔 Alert.alert만 불러서 웹에서는 아무것도 안 뜨고 조용히 무시됐다
+      alertMessage('내보낼 수 없어요', '마지막 총무는 내보낼 수 없어요. 먼저 다른 총무를 임명해주세요.');
       return;
     }
-    const message = `${member.displayName}님을 팀에서 내보내시겠어요?`;
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) onRemove(member.id);
-      return;
-    }
-    Alert.alert('멤버 내보내기', message, [
-      { text: '아니오', style: 'cancel' },
-      { text: '내보내기', style: 'destructive', onPress: () => onRemove(member.id) },
-    ]);
+    const ok = await confirmAction({
+      title: '멤버 내보내기',
+      message: `${member.displayName}님을 팀에서 내보내시겠어요?`,
+      confirmLabel: '내보내기',
+      destructive: true,
+    });
+    if (ok) onRemove(member.id);
   };
 
   return (
@@ -82,6 +85,23 @@ export function MemberListModal({
                       <Text style={styles.roleBadgeText}>{m.role === 'admin' ? '총무' : '멤버'}</Text>
                     </View>
                   </View>
+                  {/* 선호 포지션 — 팀 분배에서 이 값대로 포메이션에 세운다.
+                      본인 것은 총무가 아니어도 바꿀 수 있다. 어디 서고 싶은지는 본인이 정하는 것이고,
+                      실력과 달리 남이 매기는 값이 아니다. */}
+                  <Pressable
+                    disabled={!isAdmin && !isSelf}
+                    style={({ pressed }) => [
+                      styles.posChip,
+                      !m.position && styles.posChipEmpty,
+                      pressed && (isAdmin || isSelf) && styles.pressedOpacity,
+                    ]}
+                    onPress={() => onChangePosition(m.id, nextPosition(toPosition(m.position)))}
+                  >
+                    <Text style={[styles.posChipText, !m.position && styles.posChipTextEmpty]}>
+                      {positionLabel(toPosition(m.position))}
+                    </Text>
+                  </Pressable>
+
                   <Pressable
                     disabled={!isAdmin}
                     style={({ pressed }) => [styles.skillChip, pressed && isAdmin && styles.pressedOpacity]}
@@ -209,6 +229,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  /** 선호 포지션 칩 — 정해진 값은 초록, 미지정은 조용하게 */
+  posChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(74,222,128,0.14)',
+    borderWidth: 1,
+    borderColor: '#2F4A3A',
+  },
+  posChipEmpty: { backgroundColor: '#1B231F', borderColor: '#22302A' },
+  posChipText: { color: '#4ADE80', fontSize: 12, fontWeight: '700' },
+  posChipTextEmpty: { color: '#5A625E', fontWeight: '600' },
   actionRow: {
     flexDirection: 'row',
     gap: 8,

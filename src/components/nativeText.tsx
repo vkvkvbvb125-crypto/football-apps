@@ -8,8 +8,13 @@ import { Text as RNText, TextInput as RNTextInput } from 'react-native';
 import type { TextProps, TextInputProps } from 'react-native';
 import { fontFamilyForStyle } from '../lib/fonts';
 
-export function Text({ style, ...rest }: TextProps) {
-  return <RNText {...rest} style={[{ fontFamily: fontFamilyForStyle(style) }, style]} />;
+interface TextPropsWithRef extends TextProps {
+  /** 잘렸는지 재야 하는 곳이 있다 (PostCard의 "더보기") — TextInput과 같은 방식으로 넘긴다 */
+  ref?: React.Ref<RNText>;
+}
+
+export function Text({ style, ref, ...rest }: TextPropsWithRef) {
+  return <RNText ref={ref} {...rest} style={[{ fontFamily: fontFamilyForStyle(style) }, style]} />;
 }
 
 interface TextInputPropsWithRef extends TextInputProps {

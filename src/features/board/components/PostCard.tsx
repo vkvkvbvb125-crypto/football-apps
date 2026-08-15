@@ -3,12 +3,16 @@
 // 데이터는 BoardPanel이 소유한다. 이 컴포넌트는 그리고, 눌린 것을 위로 넘긴다.
 // 작성자 이름·사진은 members에서 찾는다 — 글에 박힌 값은 불러온 시점의 복사본이라
 // 프로필을 바꿔도 안 따라온다 (resolveAuthor 참고).
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../../components/nativeText';
 import { colors, radius } from '../../../theme';
 import { relativeTime } from '../../../lib/relativeTime';
 import { CATEGORY_LABEL, resolveAuthor, type Post } from '../services/boardService';
+
+/** 접었을 때 보이는 줄 수 */
+const COLLAPSED_LINES = 6;
 
 interface PostCardProps {
   post: Post;
@@ -21,6 +25,23 @@ interface PostCardProps {
 
 export function PostCard({ post, members, myUserId, isAdmin, onToggleLike, onDelete }: PostCardProps) {
   const author = resolveAuthor(post, members);
+  const [expanded, setExpanded] = useState(false);
+  /** 실제로 잘렸을 때만 "더보기"를 띄운다 — 안 넘치는 글에 붙는 게 이 기능에서 제일 흔한 실수다 */
+  const [truncatable, setTruncatable] = useState(false);
+  const bodyRef = useRef<any>(null);
+
+  /**
+   * 웹에는 onTextLayout이 없다 (react-native-web 미구현).
+   *
+   * numberOfLines 자체는 -webkit-line-clamp로 잘 먹어서, 이 검사가 없으면 글은 잘렸는데
+   * "더보기"가 안 뜨는 상태가 된다 — 펼칠 방법이 없어서 기능이 없느니만 못하다.
+   * 잘렸는지는 실제 높이로 판단한다: 접혀 있으면 안쪽 내용이 보이는 높이보다 크다.
+   */
+  const measureOnWeb = () => {
+    if (Platform.OS !== 'web' || expanded) return;
+    const node = bodyRef.current;
+    if (node && node.scrollHeight > node.clientHeight + 1) setTruncatable(true);
+  };
 
   return (
     <View style={styles.post}>
@@ -46,7 +67,24 @@ export function PostCard({ post, members, myUserId, isAdmin, onToggleLike, onDel
         )}
       </View>
 
-      <Text style={styles.postBody}>{post.body}</Text>
+      <Text
+        ref={bodyRef}
+        style={styles.postBody}
+        numberOfLines={expanded ? undefined : COLLAPSED_LINES}
+        onLayout={measureOnWeb}
+        onTextLayout={(e) => {
+          // 네이티브 경로. 접힌 상태에서 잰 줄 수만 믿는다 — 펼친 뒤에는 항상 전체 줄 수가
+          // 나와서 짧은 글에도 "접기"가 붙어버린다
+          if (!expanded && e.nativeEvent.lines.length >= COLLAPSED_LINES) setTruncatable(true);
+        }}
+      >
+        {post.body}
+      </Text>
+      {truncatable && (
+        <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6}>
+          <Text style={styles.moreText}>{expanded ? '접기' : '더보기'}</Text>
+        </Pressable>
+      )}
       {!!post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.postImage} />}
 
       <View style={styles.postFoot}>
@@ -94,6 +132,7 @@ const styles = StyleSheet.create({
   categoryBadgeText: { color: colors.green, fontSize: 10, fontWeight: '800' },
 
   postBody: { color: colors.textBody, fontSize: 13, lineHeight: 19 },
+  moreText: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginTop: 2 },
   postImage: { width: '100%', height: 180, borderRadius: radius.button, backgroundColor: colors.inputBg },
 
   postFoot: { flexDirection: 'row', gap: 16, paddingTop: 2 },

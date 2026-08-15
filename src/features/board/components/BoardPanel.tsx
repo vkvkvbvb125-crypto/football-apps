@@ -14,7 +14,9 @@ import {
   createPost,
   deletePost,
   fetchPosts,
+  setPin,
   toggleLike,
+  updatePost,
   type Post,
   type PostCategory,
 } from '../services/boardService';
@@ -104,6 +106,26 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     }
   };
 
+  const handleEdit = async (post: Post, body: string) => {
+    try {
+      await updatePost(post.id, body);
+      await load();
+    } catch {
+      alertMessage('실패', '글을 수정하지 못했어요');
+      // 카드가 편집 모드를 유지하도록 알린다 — 쓴 걸 날리지 않는다
+      throw new Error('edit failed');
+    }
+  };
+
+  const handleTogglePin = async (post: Post) => {
+    try {
+      await setPin(post.id, myUserId, !post.isPinned);
+      await load();
+    } catch {
+      alertMessage('실패', post.isPinned ? '고정을 풀지 못했어요' : '고정하지 못했어요');
+    }
+  };
+
   const visible = filter ? posts.filter((p) => p.category === filter) : posts;
 
   return (
@@ -183,6 +205,8 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
             isAdmin={isAdmin}
             onToggleLike={handleLike}
             onDelete={handleDelete}
+            onEdit={handleEdit}
+            onTogglePin={handleTogglePin}
           />
         ))
       )}

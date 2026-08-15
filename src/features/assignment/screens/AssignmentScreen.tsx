@@ -142,7 +142,13 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
         />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.body, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[
+            styles.body,
+            { paddingBottom: bottomPad },
+            // 운영할 경기가 없으면 내용이 한 덩어리뿐이라 위에 붙고 아래로 500px 넘게 빈다.
+            // 그럴 때만 남는 공간을 채워 세로 가운데로 보낸다 (목록이 있을 땐 위에서 시작해야 한다).
+            !hasMatch && styles.bodyCentered,
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* 어느 경기를 운영 중인지는 세 탭 모두에서 보여야 한다 —
@@ -399,6 +405,7 @@ const styles = StyleSheet.create({
   segmentTextOn: { color: colors.green },
 
   body: { paddingHorizontal: 20 },
+  bodyCentered: { flexGrow: 1, justifyContent: 'center' },
   /** 어느 경기를 운영 중인지 — 세 탭 위에 항상 붙는 카드 */
   contextCard: {
     flexDirection: 'row',

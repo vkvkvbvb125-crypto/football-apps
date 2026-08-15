@@ -747,7 +747,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 8, gap: 14 },
+  content: { paddingTop: 8, gap: 16 },
   pressed: { opacity: 0.85 },
 
   // ── 상단 바 ───────────────────────────────────────────────

@@ -8,7 +8,6 @@
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
 import { useEffect, useState } from 'react';
 import { Image, Pressable, Share, ScrollView, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -249,20 +248,6 @@ export function TeamHomeScreen({ navigation }: any) {
         <View style={styles.banner}>
           {/* 잔디 배경(FieldBackground)을 걷어냈다 — 초록 줄무늬와 원형 얼룩이 이름·지표 뒤에 깔려
               글자가 배경에 묻혔다. 팀 로고가 이 카드의 색을 정해야지 배경이 정하면 안 된다. */}
-          {/*
-            엠블럼 뒤에서 번지는 초록 글로우. 홈 히어로와 같은 기법이다 —
-            쓸 만한 사진 자산이 없어서, 빛으로 무게를 만든다. RN엔 원형 그라디언트가
-            없어 대각선 LinearGradient로 근사한다.
-          */}
-          <LinearGradient
-            colors={['rgba(74,222,128,0.28)', 'rgba(74,222,128,0.07)', 'rgba(74,222,128,0)']}
-            locations={[0, 0.35, 0.7]}
-            start={{ x: 0.08, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-
           <View style={styles.bannerRow}>
             <View>
               <Pressable
@@ -395,7 +380,7 @@ export function TeamHomeScreen({ navigation }: any) {
                   // quickItem이 flex:1이라 3개든 4개든 한 줄에서 알아서 고르게 나뉜다
                   style={({ pressed }) => [styles.quickItem, pressed && styles.pressed]}
                 >
-                  <Ionicons name={q.icon as any} size={20} color={colors.green} />
+                  <Ionicons name={q.icon as any} size={20} color={colors.textStrong} />
                   <Text style={styles.quickLabel}>{q.label}</Text>
                 </Pressable>
               ))}
@@ -980,9 +965,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.hero,
     overflow: 'hidden',
     borderWidth: 1,
-    // 화면에서 유일하게 초록 테두리를 갖는 면 — 눈이 여기서 시작하게 한다.
-    // 나머지 카드가 전부 같은 무게라 어디도 안 붙잡던 게 "밋밋하다"의 정체였다.
-    borderColor: colors.greenDeep,
+    borderColor: colors.borderRaised,
     backgroundColor: colors.cardRaised,
   },
   bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 20 },
@@ -1062,9 +1045,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 14,
     borderRadius: radius.card,
-    backgroundColor: colors.cardRaised,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.borderRaised,
+    borderColor: colors.border,
   },
   quickItem: { flex: 1, alignItems: 'center', gap: 6 },
   quickLabel: { color: colors.textStrong, fontSize: 11, fontWeight: '700' },
@@ -1319,11 +1302,11 @@ const styles = StyleSheet.create({
 
   content: { padding: 20, gap: 14 },
   card: {
-    backgroundColor: colors.cardRaised,
+    backgroundColor: colors.card,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.borderRaised,
-    padding: 16,
+    borderColor: colors.border,
+    padding: 20,
   },
 
   rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },

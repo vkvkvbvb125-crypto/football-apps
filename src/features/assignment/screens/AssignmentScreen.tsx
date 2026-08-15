@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
+import { SoftTint } from '../../../components/BentoCard';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
@@ -161,6 +162,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
               }
               style={({ pressed }) => [styles.contextCard, pressed && styles.pressed]}
             >
+              <SoftTint tone="green" />
               <Ionicons name="location-outline" size={15} color={colors.green} />
               <Text style={styles.contextText} numberOfLines={1}>
                 {new Date(nearestMatch.match_date).toLocaleDateString('ko-KR', {
@@ -418,6 +420,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
+    // SoftTint가 사각형이라 없으면 둥근 모서리 밖으로 샌다
+    overflow: 'hidden',
   },
   contextText: { flex: 1, color: colors.textStrong, fontSize: 12.5, fontWeight: '700' },
   errorText: { color: colors.danger, textAlign: 'center', marginBottom: 8 },

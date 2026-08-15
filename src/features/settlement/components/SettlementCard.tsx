@@ -10,6 +10,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
+import { SoftTint } from '../../../components/BentoCard';
 import { colors, font, radius } from '../../../theme';
 
 export type SettlementCardVariant = 'active' | 'pending';
@@ -101,6 +102,8 @@ export function SettlementCard({
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.sCard, pressed && styles.pressed]}>
+      {/* 돈에 관한 카드라 금색. 화면마다 "무엇에 관한 곳인지"를 색이 말한다 */}
+      <SoftTint tone="gold" />
       {/* 1단 — 좌측 배지 = 정산 상태, 우측 텍스트 = 미납 인원.
           미납을 배지로 만들면 둘 다 배지라 무엇이 상태고 무엇이 카운트인지 구분이 안 된다. */}
       <View style={styles.sCardHead}>
@@ -190,6 +193,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 16,
     gap: 12,
+    // SoftTint가 사각형이라 없으면 둥근 모서리 밖으로 샌다
+    overflow: 'hidden',
   },
   sCardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sBadge: {

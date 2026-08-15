@@ -28,6 +28,7 @@ import { PollFormModal } from '../../polls/components/PollFormModal';
 import { PollCard } from '../../polls/components/PollCard';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
+import { SoftTint } from '../../../components/BentoCard';
 import { TabHeader } from '../../../components/TabHeader';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import type { PlaceResult } from '../../attendance/services/placeService';
@@ -251,6 +252,7 @@ export function TeamHomeScreen({ navigation }: any) {
         {/* ── 배너: 엠블럼 + 팀명 + 초대 코드 ── 팀 홈에서만 */}
         {tab === 'home' && (
         <View style={styles.banner}>
+          <SoftTint tone="green" />
           {/* 잔디 배경(FieldBackground)을 걷어냈다 — 초록 줄무늬와 원형 얼룩이 이름·지표 뒤에 깔려
               글자가 배경에 묻혔다. 팀 로고가 이 카드의 색을 정해야지 배경이 정하면 안 된다. */}
           <View style={styles.bannerRow}>

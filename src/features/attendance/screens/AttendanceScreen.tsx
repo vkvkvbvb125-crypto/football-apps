@@ -25,6 +25,7 @@ import {
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { confirmAction } from '../../../components/Dialog';
+import { SoftTint } from '../../../components/BentoCard';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
 import { colors, radius } from '../../../theme';
@@ -408,6 +409,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
           <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
             <View style={styles.calendarCard}>
+              <SoftTint tone="green" />
               <CalendarGrid
                 year={visibleMonth.year}
                 month={visibleMonth.month}

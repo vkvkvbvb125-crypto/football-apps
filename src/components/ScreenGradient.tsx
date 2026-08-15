@@ -3,6 +3,7 @@
 // 상단 안전영역은 SafeAreaView(edges=['top'])가 담당한다 — 화면마다 insets.top을
 // 따로 더하지 않아도 된다 (하단은 화면별로 다르게 써야 해서 여기서 다루지 않는다).
 import type { ReactNode } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, tabBar } from '../theme';
@@ -36,13 +37,25 @@ export function ScreenGradient({ children }: Props) {
         카드보다 뒤에 있어야 하므로 children보다 먼저 그린다.
       */}
       {/*
-        배경 글로우를 걷어냈다.
+        배경 깊이.
 
-        면을 무채색으로 돌리고 나니 초록 그라데이션이 배경만 탁하게 만들 뿐이었다.
-        두 번에 걸쳐 0.22 → 0.12로 낮춰 왔던 그 값인데, 중성 배경에서는 아예 없는
-        편이 낫다 — 초록은 강조가 필요한 자리에만 남긴다.
-        flat prop은 호출부를 건드리지 않으려고 남겨 뒀다.
+        한 번은 0.22로 너무 세서 헤더 글씨가 묻혔고, 한 번은 아예 빼서 화면이 죽었다.
+        답은 세기가 아니라 위치였다 — 글씨가 앉는 상단은 비워 두고, 아래로 갈수록
+        번지게 한다. 헤더는 깨끗하고 화면은 검은 판이 아니게 된다.
       */}
+      <LinearGradient
+        colors={[
+          'rgba(74,222,128,0)',
+          'rgba(74,222,128,0.04)',
+          'rgba(74,222,128,0.12)',
+        ]}
+        locations={[0.15, 0.55, 1]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.85, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {children}
       </SafeAreaView>

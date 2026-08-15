@@ -41,14 +41,19 @@ function initialOf(name: string) {
   return name.length > 2 ? name.slice(1) : name;
 }
 
-/** 팀 홈의 진입 타일. 총무만 멤버 관리로 들어간다 */
+/**
+ * 팀 홈의 진입 타일. 총무만 멤버 관리로 들어간다.
+ *
+ * 칸마다 아이콘 색을 달리한다 — 넷을 같은 색으로 두면 아이콘이 강조가 아니라
+ * 배경 무늬가 되고, 어디로 가는 입구인지 색으로 기억할 수도 없다.
+ */
 const MEMBER_TILES = [
-  { key: 'notices' as const, icon: 'megaphone-outline', label: '공지사항' },
-  { key: 'board' as const, icon: 'chatbubbles-outline', label: '게시판' },
-  { key: 'settings' as const, icon: 'settings-outline', label: '설정' },
+  { key: 'notices' as const, icon: 'megaphone-outline', label: '공지사항', tint: colors.gold },
+  { key: 'board' as const, icon: 'chatbubbles-outline', label: '게시판', tint: colors.blue },
+  { key: 'settings' as const, icon: 'settings-outline', label: '설정', tint: colors.textMuted },
 ];
 const ADMIN_TILES = [
-  { key: 'members' as const, icon: 'people-outline', label: '멤버 관리' },
+  { key: 'members' as const, icon: 'people-outline', label: '멤버 관리', tint: colors.green },
   ...MEMBER_TILES,
 ];
 
@@ -380,7 +385,9 @@ export function TeamHomeScreen({ navigation }: any) {
                   // quickItem이 flex:1이라 3개든 4개든 한 줄에서 알아서 고르게 나뉜다
                   style={({ pressed }) => [styles.quickItem, pressed && styles.pressed]}
                 >
-                  <Ionicons name={q.icon as any} size={20} color={colors.textStrong} />
+                  <View style={[styles.quickIcon, { backgroundColor: `${q.tint}1A` }]}>
+                    <Ionicons name={q.icon as any} size={18} color={q.tint} />
+                  </View>
                   <Text style={styles.quickLabel}>{q.label}</Text>
                 </Pressable>
               ))}
@@ -1049,7 +1056,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  quickItem: { flex: 1, alignItems: 'center', gap: 6 },
+  quickItem: { flex: 1, alignItems: 'center', gap: 7 },
+  /** 아이콘을 색 칩에 담는다 — 맨 아이콘보다 덩어리로 읽혀서 눈이 먼저 잡는다 */
+  quickIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   quickLabel: { color: colors.textStrong, fontSize: 11, fontWeight: '700' },
 
   /** 최근 게시글 미리보기 */

@@ -4,6 +4,7 @@ import { Text } from '../../../components/nativeText';
 import { MentionText } from '../../../components/Mention';
 import { Ionicons } from '@expo/vector-icons';
 import type { AnnouncementRow } from '../services/announcementsService';
+import { colors } from '../../../theme';
 
 interface AnnouncementDetailModalProps {
   announcement: AnnouncementRow | null;
@@ -39,7 +40,7 @@ export function AnnouncementDetailModal({
           <Pressable style={styles.card} onPress={() => {}}>
             <View style={styles.headerRow}>
               <View style={styles.headerLeft}>
-                {announcement.is_pinned && <Ionicons name="pin" size={13} color="#4ADE80" />}
+                {announcement.is_pinned && <Ionicons name="pin" size={13} color={colors.green} />}
                 <Text style={styles.dateText}>{dateLabel}</Text>
               </View>
               {isAdmin && (
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   },
   card: {
     maxHeight: '80%',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateText: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontSize: 12,
   },
   bodyScroll: {
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
   },
   body: {
@@ -141,10 +142,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     width: 160,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     overflow: 'hidden',
     boxShadow: '0px 8px 20px rgba(0,0,0,0.4)',
   },
@@ -165,6 +166,6 @@ const styles = StyleSheet.create({
   },
   menuDivider: {
     height: 1,
-    backgroundColor: '#22302A',
+    backgroundColor: colors.border,
   },
 });

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { SkillTag } from '../../../types/database';
 import type { TeamMemberWithProfile } from '../services/teamService';
 import { nextPosition, positionLabel, toPosition, type Position } from '../positions';
+import { colors } from '../../../theme';
 
 const SKILL_CYCLE: (SkillTag | null)[] = ['상', '중', '하', null];
 
@@ -141,7 +142,7 @@ export function MemberListModal({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   header: {
     flexDirection: 'row',
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
   },
   pressedOpacity: {
@@ -165,10 +166,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   item: {
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 14,
     gap: 10,
   },
@@ -181,12 +182,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#4ADE80',
+    color: colors.green,
     fontWeight: '700',
     fontSize: 15,
   },
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   itemSelfTag: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontWeight: '400',
     fontSize: 12,
   },
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   roleBadgeText: {
     color: '#8A9490',
@@ -220,9 +221,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
   },
   skillChipText: {
     color: '#E7ECE9',
@@ -234,18 +235,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(74,222,128,0.14)',
+    backgroundColor: 'rgba(34,197,94,0.14)',
     borderWidth: 1,
-    borderColor: '#2F4A3A',
+    borderColor: colors.greenDeep,
   },
-  posChipEmpty: { backgroundColor: '#1B231F', borderColor: '#22302A' },
-  posChipText: { color: '#4ADE80', fontSize: 12, fontWeight: '700' },
-  posChipTextEmpty: { color: '#5A625E', fontWeight: '600' },
+  posChipEmpty: { backgroundColor: colors.cardRaised, borderColor: colors.border },
+  posChipText: { color: colors.green, fontSize: 12, fontWeight: '700' },
+  posChipTextEmpty: { color: colors.placeholder, fontWeight: '600' },
   actionRow: {
     flexDirection: 'row',
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: '#22302A',
+    borderTopColor: colors.border,
     paddingTop: 10,
   },
   actionButton: {
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   actionButtonText: {
     color: '#8A9490',

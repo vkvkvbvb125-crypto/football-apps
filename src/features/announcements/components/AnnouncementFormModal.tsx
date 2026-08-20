@@ -4,6 +4,7 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { MentionInput } from '../../../components/Mention';
 import { useTeamStore } from '../../team/stores/teamStore';
 import type { AnnouncementRow } from '../services/announcementsService';
+import { colors } from '../../../theme';
 
 interface AnnouncementFormModalProps {
   visible: boolean;
@@ -42,7 +43,7 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
           <TextInput
             style={styles.input}
             placeholder="제목"
-            placeholderTextColor="#5A625E"
+            placeholderTextColor={colors.placeholder}
             value={title}
             onChangeText={setTitle}
           />
@@ -59,7 +60,7 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
             <Switch
               value={isPinned}
               onValueChange={setIsPinned}
-              trackColor={{ false: '#22302A', true: '#4ADE80' }}
+              trackColor={{ false: colors.border, true: colors.green }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   card: {
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -93,18 +94,18 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   bodyInput: {
     minHeight: 120,
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   cancelText: {
     color: '#8A9490',
@@ -142,10 +143,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   confirmText: {
-    color: '#0F1411',
+    color: colors.bgRoot,
     fontWeight: '700',
   },
 });

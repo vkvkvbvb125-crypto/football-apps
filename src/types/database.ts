@@ -468,6 +468,28 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['poll_responses']['Insert']>;
         Relationships: [];
       };
+      /**
+       * 경기 스코어. 키가 (match_id, squad_label)이라 팀이 3~5개로 늘어도
+       * 컬럼이 아니라 행이 늘어난다 — squad_label은 team_assignments.group_label과 같은 값.
+       */
+      match_scores: {
+        Row: {
+          match_id: string;
+          squad_label: string;
+          score: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          match_id: string;
+          squad_label: string;
+          score?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['match_scores']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: {
       team_member_stats: {

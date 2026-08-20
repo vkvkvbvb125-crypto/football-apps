@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   titleRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8, minWidth: 0 },
   title: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
-  team: { color: '#5F6B66', fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  team: { color: colors.textFaint, fontSize: 12, fontWeight: '600', flexShrink: 1 },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: 14 },
 
   bell: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenTint,
   },
   menuRowTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  menuRowSub: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
+  menuRowSub: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
 
   /** 항목마다 카드 — 구분선만 있으면 어디까지가 한 알림인지 흐릿하다 */
   item: {
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   /** 안 읽은 것만 초록 테두리 — 배경까지 바꾸면 목록이 얼룩덜룩해진다 */
-  itemNew: { borderColor: '#2F4A3A' },
+  itemNew: { borderColor: colors.greenDeep },
 
   itemIcon: {
     width: 32,
@@ -475,12 +475,12 @@ const styles = StyleSheet.create({
   itemBody: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
   itemTime: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
   /** 총무만 보는 읽음 집계 — 본문보다 작고 흐리게, 눈에 먼저 들어오면 안 된다 */
-  readCount: { color: colors.textDim, fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+  readCount: { color: colors.textDim, fontSize: 10, fontWeight: '700', marginTop: 2 },
 
   /** "이전 알림" — 새 알림과 지난 것 사이 구분 */
   groupLabel: {
     color: colors.textDim,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '800',
     marginTop: 10,
     marginBottom: 8,

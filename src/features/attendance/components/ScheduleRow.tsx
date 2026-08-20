@@ -11,9 +11,10 @@
 //   1) match.capacity (컬럼을 추가했다면)
 //   2) venue.capacity (제휴구장 정원)
 //   3) DEFAULT_CAPACITY (팀 설정값 없을 때의 최종 폴백)
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors } from '../../../theme';
+import { DateBlock, RowCard } from '../../../components/Surface';
+import { colors, font, radius } from '../../../theme';
 
 export const DEFAULT_CAPACITY = 12;
 
@@ -37,9 +38,9 @@ export function resolveBadge(p: {
 }
 
 const BADGE_TONE: Record<MatchBadge, { bg: string; fg: string }> = {
-  '정원 마감': { bg: 'rgba(74,222,128,0.14)', fg: colors.green },
+  '정원 마감': { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
   '마감 임박': { bg: 'rgba(210,163,76,0.16)', fg: colors.gold },
-  '투표 마감': { bg: 'rgba(255,255,255,0.05)', fg: '#6F7B76' },
+  '투표 마감': { bg: 'rgba(255,255,255,0.05)', fg: colors.textDim },
   '모집중': { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
 };
 
@@ -70,53 +71,36 @@ export function ScheduleRow({
 }: Props) {
   const tone = BADGE_TONE[badge];
   return (
-    <Pressable onPress={onPress} style={[styles.row, selected && styles.rowOn]}>
-      <View style={styles.dateBlock}>
-        <Text style={styles.month}>{monthLabel}</Text>
-        <Text style={styles.day}>{dayLabel}</Text>
-        <Text style={styles.dow}>{dowLabel}</Text>
-      </View>
-      <View style={styles.divider} />
-      <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-        <Text style={styles.time}>{timeLabel}</Text>
-        <Text style={styles.sub} numberOfLines={1}>
-          {subLabel}
-        </Text>
-      </View>
-      <View style={{ alignItems: 'flex-end', gap: 4 }}>
-        <Text style={styles.count}>
-          {confirmed}/{capacity}
-        </Text>
-        <View style={[styles.badge, { backgroundColor: tone.bg }]}>
-          <Text style={[styles.badgeText, { color: tone.fg }]}>{badge}</Text>
-        </View>
-      </View>
-    </Pressable>
+    <View style={styles.wrap}>
+      <RowCard
+        left={<DateBlock month={monthLabel} day={dayLabel} dow={dowLabel} />}
+        divider
+        title={timeLabel}
+        sub={subLabel}
+        selected={selected}
+        onPress={onPress}
+        accessibilityLabel={`${monthLabel} ${dayLabel}일 ${timeLabel} ${subLabel}`}
+        right={
+          <View style={styles.right}>
+            <Text style={styles.count}>
+              {confirmed}/{capacity}
+            </Text>
+            <View style={[styles.badge, { backgroundColor: tone.bg }]}>
+              <Text style={[styles.badgeText, { color: tone.fg }]}>{badge}</Text>
+            </View>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
+// 껍데기·날짜 블록·본문은 전부 RowCard/DateBlock이 갖는다.
+// 여기 남은 건 이 화면에만 있는 우측 칸(정원 카운트 + 상태 배지)뿐이다.
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 16,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  rowOn: { backgroundColor: 'rgba(74,222,128,0.06)', borderColor: '#2F4A3A' },
-  dateBlock: { width: 42, alignItems: 'center', gap: 1 },
-  month: { color: colors.green, fontSize: 10, fontWeight: '800' },
-  day: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
-  dow: { color: colors.textDim, fontSize: 10, fontWeight: '700' },
-  divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
-  time: { color: colors.textStrong, fontSize: 13.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  sub: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
-  count: { color: colors.text, fontSize: 12.5, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  badgeText: { fontSize: 10, fontWeight: '800' },
+  wrap: { marginBottom: 10 },
+  right: { alignItems: 'flex-end', gap: 4 },
+  count: { ...font.meta, ...font.num, color: colors.text, fontWeight: '800' },
+  badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.chip },
+  badgeText: { ...font.micro },
 });

@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   },
   emoji: { fontSize: 26 },
   title: { color: colors.text, fontSize: 15, fontWeight: '800', letterSpacing: -0.2, textAlign: 'center' },
-  subtitle: { color: colors.textMuted, fontSize: 12.5, fontWeight: '500', lineHeight: 19, textAlign: 'center' },
+  subtitle: { color: colors.textMuted, fontSize: 12, fontWeight: '500', lineHeight: 19, textAlign: 'center' },
   action: {
     marginTop: 8,
     height: 46,
@@ -58,5 +58,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: { color: colors.bgRoot, fontSize: 13.5, fontWeight: '800' },
+  actionText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
 });

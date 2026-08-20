@@ -15,6 +15,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius } from '../../../theme';
 import { splitAmount } from '../stores/settlementStore';
+import { canCreateSettlement, createCtaLabel } from '../account';
 
 export interface Attendee {
   id: string;
@@ -34,6 +35,14 @@ interface Props {
    * 이 경로가 없으면 지난 경기가 "정산 미등록"으로 목록에 영원히 쌓인다.
    */
   onSkip?: () => void;
+  /**
+   * 「변경 ›」 — 계좌 관리로 보낸다.
+   *
+   * 예전엔 onClose였다. 시트만 닫히고 사용자는 정산 내역 목록으로 돌아왔다 —
+   * 계좌를 등록하러 눌렀는데 등록할 화면이 안 나오니 길이 끊겼다.
+   * 특히 버튼이 「입금 계좌를 먼저 등록해주세요」로 막고 있을 때 유일한 탈출구다.
+   */
+  onEditAccount?: () => void;
 }
 
 export function CreateSettlementSheet({
@@ -45,12 +54,21 @@ export function CreateSettlementSheet({
   account,
   onSubmit,
   onSkip,
+  onEditAccount,
 }: Props) {
   const [totalText, setTotalText] = useState(String(suggestedTotal ?? ''));
 
   const total = Number(totalText.replace(/[^0-9]/g, '')) || 0;
   const { perPerson, surplus } = splitAmount(total, attendees.length);
-  const valid = total > 0 && attendees.length > 0;
+  /*
+   * 계좌까지 본다.
+   *
+   * 여기선 금액만 보고 valid를 정했는데, 정작 제출을 받는 화면은 계좌가 비면 조용히
+   * return 했다. 그래서 「계좌 미등록」인 채로 버튼이 켜져 있고, 눌러도 아무 일이
+   * 없었다. 판정을 account.ts 한 곳으로 모아 둘이 어긋날 수 없게 한다.
+   */
+  const gate = { total, attendeeCount: attendees.length, account };
+  const valid = canCreateSettlement(gate);
 
   // Reference는 "120,000원"처럼 천 단위가 끊긴 상태로 보여준다 — 입력 중에도 같게 맞춘다
   const totalDisplay = total > 0 ? total.toLocaleString() : '';
@@ -74,15 +92,28 @@ export function CreateSettlementSheet({
             {/* 금액 카드 — 총 정산 금액 / 1인당 금액 / 참여 인원 */}
             <View style={styles.card}>
               <Text style={styles.cardLabel}>총 정산 금액</Text>
+              {/*
+                「원」이 숫자에 붙어 있어야 한다.
+                입력칸에 flex: 1을 주고 있어서 남은 폭을 전부 먹었고, 원이 카드
+                오른쪽 끝으로 밀려나 "120,000 ......... 원"이 됐다. 금액과 단위가
+                떨어져 있으면 한 덩어리로 안 읽힌다.
+
+                입력칸은 스스로 글자만큼 좁아지지 못한다(웹에서는 <input>의 기본 폭이
+                잡힌다). 그래서 같은 글꼴의 유령 텍스트를 흐름에 두어 폭을 정하게 하고,
+                그 위에 입력칸을 겹친다 — 자릿수가 늘면 상자도 같이 늘어난다.
+              */}
               <View style={styles.amountRow}>
-                <TextInput
-                  style={styles.amountInput}
-                  value={totalDisplay}
-                  onChangeText={(t) => setTotalText(t.replace(/[^0-9]/g, ''))}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor={colors.placeholder}
-                />
+                <View style={styles.amountBox}>
+                  <Text style={styles.amountGhost}>{totalDisplay || '0'}</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={totalDisplay}
+                    onChangeText={(t) => setTotalText(t.replace(/[^0-9]/g, ''))}
+                    keyboardType="number-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.placeholder}
+                  />
+                </View>
                 <Text style={styles.amountUnit}>원</Text>
               </View>
 
@@ -115,7 +146,7 @@ export function CreateSettlementSheet({
                     {account.holder ? ` (${account.holder})` : ''}
                   </Text>
                 </View>
-                <Pressable onPress={onClose} hitSlop={8} style={styles.accountEditRow}>
+                <Pressable onPress={onEditAccount ?? onClose} hitSlop={8} style={styles.accountEditRow}>
                   <Text style={styles.accountEdit}>변경</Text>
                   <Ionicons name="chevron-forward" size={14} color={colors.green} />
                 </Pressable>
@@ -133,7 +164,8 @@ export function CreateSettlementSheet({
             }}
             style={({ pressed }) => [styles.cta, !valid && styles.ctaOff, pressed && valid && styles.pressed]}
           >
-            <Text style={styles.ctaText}>{valid ? '정산 링크 생성' : '총 비용을 입력해주세요'}</Text>
+            {/* 못 누르는 이유를 버튼이 직접 말한다 — 금액인지 계좌인지 */}
+            <Text style={styles.ctaText}>{createCtaLabel(gate)}</Text>
           </Pressable>
           <Text style={styles.note}>참석자에게 알림이 가고, 각자 송금 화면에서 바로 보낼 수 있어요</Text>
 
@@ -175,6 +207,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
@@ -183,14 +216,25 @@ const styles = StyleSheet.create({
   cardLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 
   amountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  /** 폭은 유령 텍스트가 정한다 — 입력칸은 그 위에 겹친다 */
+  amountBox: { minWidth: 30 },
+  amountGhost: {
+    color: 'transparent',
+    ...font.amount,
+    fontVariant: ['tabular-nums'],
+  },
   amountInput: {
-    flex: 1,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
     color: colors.text,
     ...font.amount,
     fontVariant: ['tabular-nums'],
     padding: 0,
   },
-  amountUnit: { color: colors.textStrong, fontSize: 18, fontWeight: '700' },
+  amountUnit: { color: colors.textStrong, fontSize: 17, fontWeight: '700' },
 
   cardDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: -16 },
 
@@ -204,7 +248,7 @@ const styles = StyleSheet.create({
   accountBank: { color: colors.text, fontSize: 14, fontWeight: '700' },
   accountNo: { color: colors.textMuted, fontSize: 13, fontWeight: '500', fontVariant: ['tabular-nums'] },
   accountEditRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  accountEdit: { color: colors.green, fontSize: 12.5, fontWeight: '800' },
+  accountEdit: { color: colors.green, fontSize: 12, fontWeight: '800' },
 
   // ── CTA ───────────────────────────────────────────────
   cta: {

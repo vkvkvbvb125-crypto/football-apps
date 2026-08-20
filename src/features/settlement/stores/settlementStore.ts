@@ -45,6 +45,8 @@ export interface Settlement {
  */
 export interface PendingMatch {
   matchId: string;
+  /** ISO. 카드의 「경기 상세」가 일정 탭에서 이 날짜를 열려면 필요하다 */
+  matchDate: string;
   title: string;
   /** "20:00 · 풋살몬스터" — 같은 날 경기가 둘일 때 카드를 구분하려면 시간이 있어야 한다 */
   where: string;
@@ -177,6 +179,7 @@ export const useSettlementStore = create<State>((set, get) => ({
           const d = new Date(m.match_date);
           return {
             matchId: m.id,
+            matchDate: m.match_date,
             // 진행중 카드의 settlementTitle()·settlementPlace()와 같은 표기 —
             // 나란히 놓였을 때 어긋나면 같은 경기인지 아닌지 알 수 없다
             title: `${d.getMonth() + 1}월 ${d.getDate()}일 경기`,

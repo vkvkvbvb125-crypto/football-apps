@@ -2,6 +2,7 @@
 // Reference 「팀원③ 정산 내역」의 요약 표와, 「총무⑥ / 팀원⑤ 정산 완료」 화면.
 //
 // 두 완료 화면은 문구와 항목만 다르고 생김새가 같다 — 한 컴포넌트에 넣고 내용을 받는다.
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
@@ -64,10 +65,42 @@ export function SettlementDonePanel({
 }
 
 const styles = StyleSheet.create({
-  box: {
-    borderRadius: radius.card,
+  myDueBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
+    backgroundColor: colors.greenTint,
+  },
+  myDueLabel: { color: colors.textBody, fontSize: 13, fontWeight: '700' },
+  myDueValue: { color: colors.green, fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
+
+  breakBox: {
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
+    paddingHorizontal: 14,
+  },
+  breakHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 46 },
+  breakHeadText: { color: colors.textBody, fontSize: 13, fontWeight: '700' },
+  breakRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 38 },
+  breakRowFirst: { borderTopWidth: 1, borderTopColor: colors.divider },
+  breakName: { flex: 1, color: colors.textBody, fontSize: 13, fontWeight: '600', minWidth: 0 },
+  breakNameMe: { color: colors.text, fontWeight: '800' },
+  breakAmount: { color: colors.textStrong, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  breakState: { width: 32, textAlign: 'right', color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  breakStateOn: { color: colors.green },
+  breakExempt: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+
+  box: {
+    borderRadius: radius.card,
     backgroundColor: colors.inputBg,
     paddingHorizontal: 14,
     paddingVertical: 4,
@@ -82,7 +115,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  rowLabel: { color: colors.textDim, fontSize: 12.5, fontWeight: '700' },
+  rowLabel: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
   rowValue: { color: colors.textStrong, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
   rowValueStrong: { color: colors.green, fontSize: 15 },
 
@@ -98,17 +131,76 @@ const styles = StyleSheet.create({
     borderColor: colors.green,
     marginBottom: 2,
   },
-  doneTitle: { color: colors.green, fontSize: 15.5, fontWeight: '800', textAlign: 'center' },
+  doneTitle: { color: colors.green, fontSize: 15, fontWeight: '800', textAlign: 'center' },
   doneSub: { color: colors.textDim, fontSize: 12, fontWeight: '600', textAlign: 'center' },
 
   doneCta: {
     alignSelf: 'stretch',
-    height: 50,
-    borderRadius: radius.button,
+    height: 52,
+    borderRadius: radius.pill,
     backgroundColor: colors.green,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
-  doneCtaText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
+  doneCtaText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
 });
+
+/**
+ * 「내 정산 금액」 — 위 요약 줄들의 결론.
+ *
+ * 요약 박스가 총액·1인당·인원·이름을 나열하고 나면, 정작 "그래서 내가 얼마"가
+ * 그 넷과 같은 무게로 섞여 버린다. 한 줄만 떼어 초록 테두리로 감싼다 —
+ * 화면에서 초록은 「지금 중요한 것」에만 쓴다는 규칙 그대로다.
+ */
+export function MyDueRow({ amount, paid }: { amount: number; paid?: boolean }) {
+  return (
+    <View style={styles.myDueBox}>
+      <Text style={styles.myDueLabel}>{paid ? '입금 완료' : '내 정산 금액'}</Text>
+      <Text selectable style={styles.myDueValue}>
+        {amount.toLocaleString()}원
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * 「상세 내역 보기」 — 누가 얼마를 내고 누가 냈는지.
+ *
+ * 접어 둔다. 정산을 여는 사람 대부분은 자기 금액만 확인하고 닫는데, 12명짜리 목록이
+ * 늘 펼쳐져 있으면 그 한 줄을 찾으러 스크롤해야 한다. 필요할 때만 편다.
+ */
+export function DetailBreakdown({ rows }: { rows: { id: string; name: string; amount: number; paid: boolean; exempt: boolean; isMe?: boolean }[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.breakBox}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={open ? '상세 내역 접기' : '상세 내역 보기'}
+        style={({ pressed }) => [styles.breakHead, pressed && { opacity: 0.8 }]}
+      >
+        <Text style={styles.breakHeadText}>상세 내역 보기</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+      </Pressable>
+
+      {open &&
+        rows.map((r, i) => (
+          <View key={r.id} style={[styles.breakRow, i === 0 && styles.breakRowFirst]}>
+            <Text style={[styles.breakName, r.isMe && styles.breakNameMe]} numberOfLines={1}>
+              {r.name}
+              {r.isMe ? ' (나)' : ''}
+            </Text>
+            {r.exempt ? (
+              <Text style={styles.breakExempt}>면제</Text>
+            ) : (
+              <>
+                <Text style={styles.breakAmount}>{r.amount.toLocaleString()}원</Text>
+                <Text style={[styles.breakState, r.paid && styles.breakStateOn]}>{r.paid ? '완료' : '미납'}</Text>
+              </>
+            )}
+          </View>
+        ))}
+    </View>
+  );
+}

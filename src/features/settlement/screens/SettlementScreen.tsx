@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
   AppState,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -26,7 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
-import { colors, radius } from '../../../theme';
+import { colors, font, radius, shadow } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore, type Settlement } from '../stores/settlementStore';
@@ -36,14 +37,18 @@ import { useSettlementRealtime } from '../hooks/useSettlementRealtime';
 import { fetchTeamSettings, upsertTeamSettings } from '../../team/services/teamSettingsService';
 import { notifyTeam } from '../../notifications/services/pushService';
 import { BankPicker } from '../components/BankPicker';
-import { SendMoneySheet } from '../components/SendMoneySheet';
+import { SendMoneySheet, getRememberedSendApp } from '../components/SendMoneySheet';
+import { SEND_APPS, directSend } from '../sendApps';
 import { SettlementCard } from '../components/SettlementCard';
 import { CreateSettlementSheet } from '../components/CreateSettlementSheet';
+import { SettleTargetsSheet } from '../components/SettleTargetsSheet';
+import { isAccountComplete as accountComplete } from '../account';
 import { SettlementDetailSettings } from '../components/SettlementDetailSettings';
 import { ShareLinkSheet } from '../components/ShareLinkSheet';
 import { SettlementEmpty } from '../components/SettlementEmpty';
 import { SettlementProgressPanel } from '../components/SettlementProgressPanel';
-import { SettlementDonePanel, SummaryBox, SummaryRow } from '../components/SettlementSummary';
+import { DetailBreakdown, MyDueRow, SettlementDonePanel, SummaryBox, SummaryRow } from '../components/SettlementSummary';
+import { GreenFill } from '../../../components/Surface';
 
 /** "보낸 시간" — 날짜까지 적어야 어제 보낸 건지 오늘인지 구분된다 */
 function sentAtLabel(iso: string | null) {
@@ -89,16 +94,6 @@ function showError(message: string) {
   alertMessage('처리하지 못했어요', message);
 }
 
-/** "7/25" — 짧은 날짜 표기 */
-function shortDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-function formatDueDate(iso: string) {
-  return shortDate(iso);
-}
-
 export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any>) {
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
@@ -139,6 +134,8 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
   /** 송금 앱으로 나간 뒤 돌아오면 여기에 앱 이름이 담긴다 — 입금 확인을 한 번 물어보려고 */
   const [sentVia, setSentVia] = useState<string | null>(null);
   const [pendingReturn, setPendingReturn] = useState<string | null>(null);
+  /** 기억해 둔 송금 앱 이름 — 버튼에 박아서 어디로 나가는지 누르기 전에 보이게 한다 */
+  const [sendAppName, setSendAppName] = useState<string | null>(null);
 
   // 정산 링크(kickday://settlement/{id})로 들어왔다 — 해당 정산 상세를 연다.
   // 목록이 아직 안 불렸어도 detailTarget만 세워두면 로드가 끝나는 순간 모달이 뜬다.
@@ -172,6 +169,40 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
     });
     return () => sub.remove();
   }, [pendingReturn]);
+
+  // 시트가 닫힐 때도 다시 읽는다 — 거기서 앱을 바꾸거나 기억을 껐을 수 있다.
+  useEffect(() => {
+    let cancelled = false;
+    getRememberedSendApp().then((id) => {
+      if (!cancelled) setSendAppName(SEND_APPS.find((a) => a.id === id)?.name ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sendOpen]);
+
+  /**
+   * 송금 버튼. 기억해 둔 앱이 있으면 선택 시트를 건너뛰고 곧장 그 앱을 연다.
+   *
+   * 시트에 「다음부터 이 앱으로 바로 열기」가 있는데 정작 여기서 항상 시트를 띄우고 있었다 —
+   * 체크해도 매번 같은 시트를 한 번 더 지나야 했으니 약속이 지켜지지 않았다.
+   * 열 수 없으면(앱 삭제·스킴 변경) 조용히 시트로 떨어뜨려 계좌 복사까지 갈 길을 남긴다.
+   */
+  const openSendMoney = useCallback(async () => {
+    const target = directSend(await getRememberedSendApp(), {
+      bankName: current?.bankName,
+      accountNo: current?.accountNo,
+      amount: current?.shares.find((s) => s.isMe)?.amount ?? 0,
+    });
+    if (!target) return setSendOpen(true);
+    try {
+      if (!(await Linking.canOpenURL(target.url))) return setSendOpen(true);
+      await Linking.openURL(target.url);
+      setPendingReturn(target.app.name);
+    } catch {
+      setSendOpen(true);
+    }
+  }, [current]);
 
   useEffect(() => {
     if (!activeTeam) return;
@@ -216,7 +247,9 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
   }, [defaultAccount, current, past]);
 
   const nameFor = (teamMemberId: string | null) => members.find((m) => m.id === teamMemberId)?.displayName ?? '멤버';
-  const isAccountComplete = (a: AccountDraft) => !!a.bankName.trim() && !!a.accountNo.trim() && !!a.accountHolder.trim();
+  // 판정은 account.ts가 갖는다 — 시트의 버튼 활성 조건과 반드시 같아야 한다
+  const isAccountComplete = (a: AccountDraft) =>
+    accountComplete({ bank: a.bankName, no: a.accountNo, holder: a.accountHolder });
 
   /** 카드/상세 헤더에 쓸 제목·장소 — utils.ts의 공용 규칙(홈 카드와 동일) */
   const titleOf = (s: Settlement) => settlementTitle(s, matches);
@@ -285,12 +318,32 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
    * 버튼이 영구히 잠겼다 — 총무가 정산을 아예 만들 수 없는 막다른 길이었다.
    * 전원으로 채운 뒤 안 온 사람을 시트에서 탭해 면제하는 쪽이 실제 사용 흐름에 맞다.
    */
-  const settleCandidates = useMemo(() => {
-    if (!createSheetMatch) return [];
-    const voted = createSheetMatch.votes.filter((v) => v.status === 'attend').map((v) => v.team_member_id);
-    const ids = voted.length > 0 ? voted : members.map((m) => m.id);
-    return ids.map((id) => ({ id, name: members.find((m) => m.id === id)?.displayName ?? '멤버' }));
-  }, [createSheetMatch, members]);
+  /*
+   * 정산 시트와 「참석자 N명」 미리보기가 반드시 같은 목록을 봐야 한다 —
+   * 따로 계산하면 미리보기에서 본 사람과 실제로 청구되는 사람이 갈린다.
+   */
+  const candidatesFor = useCallback(
+    (match: (typeof matches)[number] | null | undefined) => {
+      if (!match) return { list: [] as { id: string; name: string }[], fromAllMembers: false };
+      const voted = match.votes.filter((v) => v.status === 'attend').map((v) => v.team_member_id);
+      const fromAllMembers = voted.length === 0;
+      const ids = fromAllMembers ? members.map((m) => m.id) : voted;
+      return {
+        list: ids.map((id) => ({ id, name: members.find((m) => m.id === id)?.displayName ?? '멤버' })),
+        fromAllMembers,
+      };
+    },
+    [members]
+  );
+
+  const settleCandidates = useMemo(() => candidatesFor(createSheetMatch).list, [candidatesFor, createSheetMatch]);
+
+  const [targetsMatchId, setTargetsMatchId] = useState<string | null>(null);
+  const targetsMatch = useMemo(
+    () => (targetsMatchId ? matches.find((m) => m.id === targetsMatchId) ?? null : null),
+    [targetsMatchId, matches]
+  );
+  const targetsView = useMemo(() => candidatesFor(targetsMatch), [candidatesFor, targetsMatch]);
 
   const hasAnySettlement = !!current || past.length > 0 || pendingMatches.length > 0;
 
@@ -389,6 +442,9 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
                   statusLabel={m.daysSince >= 3 ? `${m.daysSince}일 지남` : '정산 미등록'}
                   onPress={() => isAdmin && setCreateSheetMatchId(m.matchId)}
                   onPrimaryAction={isAdmin ? () => setCreateSheetMatchId(m.matchId) : undefined}
+                  // 정산이 없으니 정산 상세도 없다 — 대신 "누구한테 나뉘나"를 미리 본다
+                  onOpenTargets={() => setTargetsMatchId(m.matchId)}
+                  targetCount={m.attendCount}
                 />
               ))}
 
@@ -403,7 +459,7 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
                 amount={current.totalAmount}
                 perPerson={current.perPerson}
                 onPress={() => setDetailTarget('current')}
-                onPrimaryAction={() => setSendOpen(true)}
+                onPrimaryAction={openSendMoney}
                 onShare={() => handleShare(current)}
               />
             )}
@@ -436,6 +492,8 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
       <SettlementDetailModal
         visible={!!detailSettlement}
         settlement={detailSettlement}
+        title={detailSettlement ? titleOf(detailSettlement) : ''}
+        sendAppName={sendAppName}
         isCurrent={isDetailCurrent}
         isAdmin={!!isAdmin}
         copied={copied}
@@ -448,7 +506,7 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         onToggleSelectShare={toggleSelectShare}
         onConfirmSelected={confirmSelected}
         onMarkPaid={(id, on) => markPaid(id, on)}
-        onSendMoney={() => setSendOpen(true)}
+        onSendMoney={openSendMoney}
         onRemindUnpaid={() => current && remindUnpaid(current)}
         onComplete={() => current && completeSettlement(current.id)}
         onConfirmSentVia={(id) => {
@@ -468,6 +526,41 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         }}
       />
 
+      {/*
+        카톡 링크로 막 들어온 순간 — 목록이 아직 안 왔으면 상세 모달은 null을 돌려주므로
+        받은 사람은 자기가 누른 링크와 상관없어 보이는 정산 목록을 먼저 본다.
+        불러오는 중인지, 못 찾은 건지를 그 자리에서 말해준다.
+      */}
+      <Modal
+        visible={!!detailTarget && !detailSettlement}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetailTarget(null)}
+      >
+        <View style={styles.linkStatusOverlay}>
+          <View style={styles.linkStatus}>
+            {!loaded ? (
+              <>
+                <ActivityIndicator color={colors.green} />
+                <Text style={styles.linkStatusText}>정산 내역을 불러오는 중이에요</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.linkStatusTitle}>정산을 찾을 수 없어요</Text>
+                <Text style={styles.linkStatusText}>이미 완료됐거나 다른 팀의 정산일 수 있어요</Text>
+                <Pressable
+                  onPress={() => setDetailTarget(null)}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.linkStatusBtn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.linkStatusBtnText}>확인</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <SendMoneySheet
         visible={sendOpen}
         onClose={() => setSendOpen(false)}
@@ -477,6 +570,27 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         amount={current?.shares.find((s) => s.isMe)?.amount ?? 0}
         onCopied={() => setCopied(true)}
         onOpened={(appName) => setPendingReturn(appName)}
+      />
+
+      <SettleTargetsSheet
+        visible={!!targetsMatch}
+        onClose={() => setTargetsMatchId(null)}
+        matchLabel={
+          targetsMatch
+            ? `${new Date(targetsMatch.match_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 경기`
+            : ''
+        }
+        targets={targetsView.list}
+        fromAllMembers={targetsView.fromAllMembers}
+        onCreate={
+          isAdmin && targetsMatch
+            ? () => {
+                const id = targetsMatch.id;
+                setTargetsMatchId(null);
+                setCreateSheetMatchId(id);
+              }
+            : undefined
+        }
       />
 
       <CreateSettlementSheet
@@ -490,6 +604,10 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
             : ''
         }
         attendees={settleCandidates}
+        onEditAccount={() => {
+          setCreateSheetMatchId(null);
+          setOuterTab('account');
+        }}
         onSkip={
           isAdmin && createSheetMatch
             ? () => {
@@ -609,8 +727,8 @@ function AccountManageTab({
 
       {!editing && account ? (
         <View style={styles.accountManageCard}>
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text style={styles.accountManageBank}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text selectable style={styles.accountManageBank}>
               {account.bankName} {account.accountNo}
             </Text>
             <Text style={styles.accountManageHolder}>{account.accountHolder}</Text>
@@ -676,6 +794,10 @@ function AccountManageTab({
 interface SettlementDetailModalProps {
   visible: boolean;
   settlement: Settlement | null;
+  /** 경기 제목 — 카드와 같은 규칙(utils.settlementTitle). 어느 경기의 정산인지 알려준다 */
+  title: string;
+  /** 기억해 둔 송금 앱 이름. 없으면 버튼은 앱 선택 시트를 연다 */
+  sendAppName: string | null;
   isCurrent: boolean;
   isAdmin: boolean;
   copied: boolean;
@@ -705,6 +827,8 @@ interface SettlementDetailModalProps {
 function SettlementDetailModal({
   visible,
   settlement,
+  title,
+  sendAppName,
   isCurrent,
   isAdmin,
   copied,
@@ -741,36 +865,36 @@ function SettlementDetailModal({
         <View style={[styles.sheet, styles.detailSheet]}>
           <View style={styles.handle} />
           <View style={styles.detailHead}>
-            <View style={{ flex: 1, gap: 3 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              {/* memo는 총무가 남기는 선택 메모다 — 제목 자리에 두면 카톡으로 들어온 사람이
+                  어느 경기인지 알 수 없다. 카드와 같은 규칙의 경기 제목을 먼저 보여준다. */}
               <Text style={styles.cardTitle} numberOfLines={1}>
-                {settlement.memo || '정산 상세'}
+                {title || settlement.memo || '정산 상세'}
               </Text>
               <Text style={styles.cardSub}>
                 참석 {settlement.shares.length}명 · 1인당 {settlement.perPerson.toLocaleString()}원
               </Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable onPress={onClose} hitSlop={16} accessibilityRole="button" accessibilityLabel="정산 상세 닫기">
               <Text style={styles.close}>닫기</Text>
             </Pressable>
           </View>
 
           <ScrollView contentContainerStyle={{ gap: 14 }} showsVerticalScrollIndicator={false}>
-            {/* Reference 「팀원③ 정산 내역」 — 내 금액 앞에 전체 그림을 먼저 보여준다.
-                얼마를 왜 내는지 모르는 채로 금액만 보면 따질 방법이 없다. */}
-            {isCurrent && myShare && (
-              <SummaryBox>
-                <SummaryRow label="총 정산 금액" value={`${settlement.totalAmount.toLocaleString()}원`} />
-                <SummaryRow label="1인당 금액" value={`${settlement.perPerson.toLocaleString()}원`} />
-                <SummaryRow label="참여 인원" value={`${settlement.shares.length}명`} />
-                <SummaryRow label="본인 이름" value={myShare.guestName ?? nameFor(myShare.teamMemberId)} />
-              </SummaryBox>
-            )}
+            {/*
+              카톡 링크로 들어온 사람이 알고 싶은 건 딱 하나 — 얼마를 내야 하는가.
+              전에는 이 숫자 위에 4행짜리 요약표가 먼저 있어서, 정작 핵심 숫자가 두 번째 블록으로
+              밀렸다(1인당 금액은 헤더·요약표·여기까지 세 번 나왔다). 순서를 뒤집는다.
 
+              요약표를 없애지는 않았다 — 「얼마를 왜 내는지 모르는 채로 금액만 보면 따질 방법이 없다」는
+              Reference 「팀원③ 정산 내역」의 이유는 그대로 유효하다. 근거를 지우는 게 아니라 숫자 뒤로 옮긴다.
+            */}
             {isCurrent && myShare && (!isAdmin || !myShare.paid) && (
               <View style={styles.myDue}>
                 <Text style={styles.myDueLabel}>{myShare.paid ? '입금 완료' : '내 정산 금액'}</Text>
                 <View style={styles.myDueRow}>
-                  <Text style={[styles.myDueAmount, myShare.paid && styles.myDuePaid]}>
+                  {/* 복사 버튼을 따로 붙일 만큼 옮겨적을 일이 잦은 값이다 — 길게 눌러 선택되게 둔다 */}
+                  <Text selectable style={[styles.myDueAmount, myShare.paid && styles.myDuePaid]}>
                     {myShare.amount.toLocaleString()}
                   </Text>
                   <Text style={styles.myDueUnit}>원</Text>
@@ -781,6 +905,7 @@ function SettlementDetailModal({
                     <Text style={styles.returnText}>{sentVia}에서 송금을 마치셨나요?</Text>
                     <Pressable
                       onPress={() => onConfirmSentVia(myShare.id)}
+                      accessibilityRole="button"
                       style={({ pressed }) => [styles.returnBtn, pressed && styles.pressed]}
                     >
                       <Text style={styles.returnBtnText}>네, 보냈어요</Text>
@@ -788,31 +913,81 @@ function SettlementDetailModal({
                   </View>
                 )}
 
+                {/* 이 화면의 유일한 강조 버튼. 기억해 둔 앱이 있으면 이름을 박아
+                    누르기 전에 어디로 나가는지 보이게 한다. */}
                 {!myShare.paid && (
-                  <Pressable onPress={onSendMoney} style={({ pressed }) => [styles.sendBtn, pressed && styles.pressed]}>
+                  <Pressable
+                    onPress={onSendMoney}
+                    accessibilityRole="button"
+                    accessibilityLabel={sendAppName ? `${sendAppName}로 송금하기` : '송금할 앱 고르기'}
+                    style={({ pressed }) => [styles.sendBtn, pressed && styles.pressed]}
+                  >
+            <GreenFill />
                     <Ionicons name="arrow-forward" size={16} color={colors.bgRoot} />
-                    <Text style={styles.sendText}>송금하기</Text>
+                    <Text style={styles.sendText}>{sendAppName ? `송금하기 · ${sendAppName}` : '송금하기'}</Text>
                   </Pressable>
                 )}
 
+                {/*
+                  「입금했어요」는 송금 뒤에 누르는 자기 신고다. 송금 버튼과 같은 크기로 붙어 있으니
+                  처음 온 사람이 아무것도 안 보내고 먼저 누를 수 있었다 — 강조를 걷어 텍스트로 내린다.
+                  없애지는 않는다: 창구·타 계좌로 이미 보낸 사람에게는 이게 유일한 길이다.
+                  이미 눌렀을 때는 버튼이 아니라 상태 표시라서 면을 그대로 둔다.
+                */}
                 <Pressable
                   onPress={() => onMarkPaid(myShare.id, !myShare.markedPaid)}
-                  style={({ pressed }) => [styles.paidBtn, myShare.markedPaid && styles.paidBtnDone, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [
+                    myShare.markedPaid ? styles.paidBtnDone : styles.paidLink,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <Text style={[styles.paidText, myShare.markedPaid && { color: colors.green }]}>
+                  <Text style={myShare.markedPaid ? styles.paidDoneText : styles.paidLinkText}>
                     {myShare.markedPaid ? '입금했어요 · 총무 확인 대기' : '입금했어요'}
                   </Text>
                 </Pressable>
               </View>
             )}
 
+            {/*
+              요약 표 — 총액부터 본인 이름까지.
+              isCurrent 조건을 뗐다. 끝난 정산을 열었을 때 숫자가 하나도 안 나와서
+              "이 정산이 얼마였더라"를 확인할 길이 없었다. 지난 내역도 내역이다.
+            */}
+            {!!myShare && (
+              <SummaryBox>
+                <SummaryRow label="총 정산 금액" value={`${settlement.totalAmount.toLocaleString()}원`} />
+                <SummaryRow label="1인당 금액" value={`${settlement.perPerson.toLocaleString()}원`} />
+                <SummaryRow label="참여 인원" value={`${settlement.shares.length}명`} />
+                <SummaryRow label="본인 이름" value={myShare.guestName ?? nameFor(myShare.teamMemberId)} />
+              </SummaryBox>
+            )}
+
+            {/* 위 넷의 결론 — 그래서 내가 얼마. 같은 무게로 섞이지 않게 떼어 낸다 */}
+            {!!myShare && !myShare.exempt && <MyDueRow amount={myShare.amount} paid={myShare.paid} />}
+
+            {/* 누가 얼마를 내고 누가 냈는지. 접어 두고 필요할 때만 편다 */}
+            <DetailBreakdown
+              rows={settlement.shares.map((sh) => ({
+                id: sh.id,
+                name: sh.guestName ?? nameFor(sh.teamMemberId),
+                amount: sh.amount,
+                paid: sh.paid,
+                exempt: sh.exempt,
+                isMe: sh.id === myShare?.id,
+              }))}
+            />
+
             <Pressable
               onPress={() => settlement.accountNo && onCopyAccount(settlement.accountNo)}
+              accessibilityRole="button"
+              accessibilityLabel="입금 계좌번호 복사"
               style={({ pressed }) => [styles.accountBox, pressed && styles.pressed]}
             >
-              <View style={{ flex: 1, gap: 2 }}>
+              <View style={{ flex: 1, gap: 4 }}>
                 <Text style={styles.accountLabel}>입금 계좌</Text>
-                <Text style={styles.accountText}>
+                {/* 계좌번호는 복사 버튼이 옆에 따로 있을 만큼 복사 수요가 명백한 데이터다 */}
+                <Text selectable style={styles.accountText}>
                   {settlement.bankName} {settlement.accountNo}
                 </Text>
                 <Text style={styles.accountHolder}>예금주 {settlement.accountHolder}</Text>
@@ -915,6 +1090,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 4,
     borderRadius: radius.button,
+    borderCurve: 'continuous',
     backgroundColor: '#0E1512',
     borderWidth: 1,
     borderColor: colors.border,
@@ -922,15 +1098,16 @@ const styles = StyleSheet.create({
   segmentItem: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 11,
+    borderRadius: radius.control, // 11 리터럴
+    borderCurve: 'continuous',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  segmentItemOn: { backgroundColor: '#1B2A22', borderColor: colors.greenDeep },
-  segmentText: { color: '#7C8A85', fontSize: 12.5, fontWeight: '800' },
+  segmentItemOn: { backgroundColor: colors.greenTint, borderColor: colors.greenDeep },
+  segmentText: { ...font.meta, color: colors.navIdle, fontWeight: '800' }, // 12.5 → 램프 12, #7C8A85 = navIdle
   segmentTextOn: { color: colors.green },
-  tabEmpty: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600', textAlign: 'center', paddingVertical: 32 },
+  tabEmpty: { ...font.meta, color: colors.textFaint, textAlign: 'center', paddingVertical: 32 },
 
   // ── 전체/진행중/완료 필터 칩 (활성만 알약, 나머진 텍스트) ──
   tabRow: {
@@ -941,71 +1118,89 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 12,
   },
-  tabChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
+  // 알약(pill)은 borderCurve를 주지 않는다 — 연속 곡률은 모서리가 있는 사각형에만 의미가 있다
+  tabChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
   tabChipOn: { backgroundColor: colors.green },
-  tabChipText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  tabChipText: { ...font.body, color: colors.textMuted, fontWeight: '700' },
   tabChipTextOn: { color: colors.bgRoot, fontWeight: '800' },
-  tabFilterBtn: {
-    marginLeft: 'auto',
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: '#26332D',
-  },
 
   // 진행중/완료 카드 자체 스타일은 components/SettlementCard.tsx로 옮겼다 (홈 화면과 공용).
 
   // ── 시트 공통 ─────────────────────────────────────────────
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   sheet: {
+    ...shadow.overlay,
     maxHeight: '86%',
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderColor: colors.border,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    borderCurve: 'continuous',
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 26,
+    paddingBottom: 24, // 26 → 4pt 그리드
     gap: 14,
   },
-  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: '#2C3833', marginBottom: 4 },
-  close: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.neutralFill, marginBottom: 4 },
+  close: { ...font.body, color: colors.textMuted, fontWeight: '700' },
+
+  // ── 딥링크 진입 상태 (불러오는 중 / 못 찾음) ───────────────
+  linkStatusOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'center', padding: 32 },
+  linkStatus: {
+    ...shadow.overlay,
+    gap: 10,
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderCurve: 'continuous',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  linkStatusTitle: { ...font.section, color: colors.text },
+  linkStatusText: { ...font.meta, color: colors.textMuted, textAlign: 'center' },
+  linkStatusBtn: {
+    minHeight: 44,
+    alignSelf: 'stretch',
+    marginTop: 4,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.green,
+  },
+  linkStatusBtnText: { ...font.cardTitle, color: colors.bgRoot, fontWeight: '800' },
 
   // 상세 모달
   detailSheet: { gap: 10 },
   detailHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  cardTitle: { color: colors.text, fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
-  cardSub: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  cardTitle: { ...font.section, color: colors.text },
+  cardSub: { ...font.meta, color: colors.textMuted },
 
   myDue: { gap: 10 },
-  myDueLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
+  // textDim(#6F7B76)은 카드 면(#18201B) 위에서 3.78:1 — 11px 본문에 WCAG AA(4.5:1) 미달이다.
+  // textMuted는 같은 팔레트 안에서 5.33:1로 통과한다. 38px 숫자가 무엇인지 말해주는 라벨이라
+  // 여기서 읽히지 않으면 금액만 덩그러니 남는다.
+  myDueLabel: { ...font.meta, color: colors.textMuted, fontWeight: '700' },
   myDueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
-  myDueAmount: {
-    color: colors.text,
-    fontSize: 38,
-    fontWeight: '800',
-    letterSpacing: -1.4,
-    lineHeight: 42,
-    fontVariant: ['tabular-nums'],
-  },
+  myDueAmount: { ...font.amountLg, ...font.num, color: colors.text }, // 38 리터럴 → 램프
   myDuePaid: { color: colors.green },
-  myDueUnit: { color: colors.textMuted, fontSize: 15, fontWeight: '700', paddingBottom: 4 },
+  myDueUnit: { ...font.section, color: colors.textMuted, fontWeight: '700', paddingBottom: 4 },
 
   sendBtn: {
+    overflow: 'hidden', // GreenFill을 모서리 안에 가둔다
     height: 48,
-    borderRadius: 14,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
     backgroundColor: colors.green,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8, // 7 → 4pt 그리드
   },
-  sendText: { color: colors.bgRoot, fontSize: 13.5, fontWeight: '800' },
+  sendText: { ...font.cardTitle, color: colors.bgRoot, fontWeight: '800' },
 
   returnRow: {
     flexDirection: 'row',
@@ -1014,30 +1209,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: radius.chip,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.greenDeep,
     backgroundColor: colors.greenTint,
   },
-  returnText: { flex: 1, color: colors.textBody, fontSize: 12, fontWeight: '700' },
+  returnText: { ...font.meta, flex: 1, color: colors.textBody, fontWeight: '700' },
   returnBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
     borderRadius: radius.pill,
     backgroundColor: colors.green,
   },
-  returnBtnText: { color: colors.bgRoot, fontSize: 12, fontWeight: '800' },
+  returnBtnText: { ...font.meta, color: colors.bgRoot, fontWeight: '800' },
 
-  paidBtn: {
-    height: 46,
-    borderRadius: 14,
+  // 강조를 걷은 「입금했어요」 — 면도 테두리도 없이 텍스트만. 높이는 44를 지킨다.
+  paidLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  paidLinkText: { ...font.body, color: colors.textMuted, fontWeight: '700' },
+
+  // 이미 눌러 「총무 확인 대기」가 된 상태 — 버튼이 아니라 상태 표시라 면을 유지한다
+  paidBtnDone: {
+    minHeight: 46,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(34,197,94,0.12)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.greenDeep,
   },
-  paidBtnDone: { backgroundColor: 'rgba(74,222,128,0.12)', borderColor: '#2F4A3A' },
-  paidText: { color: colors.textStrong, fontSize: 13.5, fontWeight: '800' },
+  paidDoneText: { ...font.cardTitle, color: colors.green, fontWeight: '800' },
 
   accountBox: {
     flexDirection: 'row',
@@ -1045,52 +1247,59 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 13,
+    borderRadius: radius.control, // 13 리터럴
+    borderCurve: 'continuous',
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
   },
-  accountLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
-  accountText: { color: colors.textStrong, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  accountHolder: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
+  // 위 myDueLabel과 같은 이유로 textDim에서 올린다 — 계좌를 눈으로 확인하는 자리라 더 중요하다
+  accountLabel: { ...font.label, color: colors.textMuted },
+  accountText: { ...font.body, ...font.num, color: colors.textStrong, fontWeight: '700' },
+  accountHolder: { ...font.meta, color: colors.textMuted }, // 11.5 → 램프 12
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    height: 36,
-    paddingHorizontal: 13,
-    borderRadius: 11,
+    justifyContent: 'center',
+    gap: 4, // 5 → 4pt 그리드
+    height: 46,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill, // 11 리터럴
+    borderCurve: 'continuous',
     backgroundColor: colors.green,
   },
-  copyBtnDone: { backgroundColor: '#1B2A22', borderWidth: 1, borderColor: colors.greenDeep },
-  copyText: { color: colors.bgRoot, fontSize: 12.5, fontWeight: '800' },
+  copyBtnDone: { backgroundColor: colors.greenTint, borderWidth: 1, borderColor: colors.greenDeep },
+  copyText: { ...font.meta, color: colors.bgRoot, fontWeight: '800' },
 
-
-  bulkBtn: { marginLeft: 'auto', paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999, backgroundColor: colors.green },
-  bulkText: { color: colors.bgRoot, fontSize: 11.5, fontWeight: '800' },
-
-
+  bulkBtn: {
+    marginLeft: 'auto',
+    paddingHorizontal: 12, // 13 → 4pt 그리드
+    paddingVertical: 8, // 9 → 4pt 그리드
+    borderRadius: radius.pill,
+    backgroundColor: colors.green,
+  },
+  bulkText: { ...font.meta, color: colors.bgRoot, fontWeight: '800' },
 
   remindBtn: {
     height: 46,
-    borderRadius: 14,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
-  remindBtnDone: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
-  remindText: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
+  remindBtnDone: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
+  remindText: { ...font.body, color: colors.textStrong, fontWeight: '800' },
 
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: colors.text,
-    fontSize: 14,
+    fontSize: font.cardTitle.fontSize,
     backgroundColor: colors.inputBg,
   },
 
@@ -1104,22 +1313,26 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   accountModal: {
+    ...shadow.overlay,
     backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    borderCurve: 'continuous',
     borderTopWidth: 1,
     borderColor: colors.border,
     padding: 20,
     gap: 10,
   },
-  accountModalTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
-  accountModalSub: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 4 },
-  accountModalClose: { marginTop: 8, alignItems: 'center' },
-  accountModalCloseText: { color: colors.green, fontSize: 12.5, fontWeight: '700' },
+  // 16은 램프에 없는 사이값이었다 — 시트 제목은 섹션 제목과 같은 위계다
+  accountModalTitle: { ...font.section, color: colors.text },
+  accountModalSub: { ...font.meta, color: colors.textMuted, marginBottom: 4 },
+  accountModalClose: { minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+  accountModalCloseText: { ...font.meta, color: colors.green, fontWeight: '700' },
 
   // ── 계좌 관리 탭 ──────────────────────────────────────────
-  accountSectionLabel: { color: colors.textDim, fontSize: 12, fontWeight: '700', marginBottom: 8 },
+  accountSectionLabel: { ...font.meta, color: colors.textDim, fontWeight: '700', marginBottom: 8 },
   accountManageCard: {
+    ...shadow.card,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -1127,39 +1340,44 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    borderCurve: 'continuous',
+    padding: 20,
   },
-  accountManageBank: { color: colors.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  accountManageHolder: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
-  accountEditLink: { color: colors.green, fontSize: 12.5, fontWeight: '800' },
+  accountManageBank: { ...font.section, ...font.num, color: colors.text },
+  accountManageHolder: { ...font.meta, color: colors.textMuted },
+  accountEditLink: { ...font.meta, color: colors.green, fontWeight: '800' },
   accountEditCard: {
+    ...shadow.card,
     gap: 10,
     backgroundColor: colors.card,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    borderCurve: 'continuous',
+    padding: 20,
   },
   accountCancelBtn: {
     flex: 1,
     height: 46,
-    borderRadius: 14,
+    borderRadius: radius.pill,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
-  accountCancelText: { color: colors.textMuted, fontSize: 13.5, fontWeight: '800' },
+  accountCancelText: { ...font.cardTitle, color: colors.textMuted, fontWeight: '800' },
   accountSaveBtn: {
     flex: 1,
     height: 46,
-    borderRadius: 14,
+    borderRadius: radius.pill,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.green,
   },
-  accountSaveText: { color: colors.bgRoot, fontSize: 13.5, fontWeight: '800' },
+  accountSaveText: { ...font.cardTitle, color: colors.bgRoot, fontWeight: '800' },
   accountNotice: { marginTop: 16, gap: 4, paddingHorizontal: 4 },
-  accountNoticeText: { color: colors.textFaint, fontSize: 11.5, fontWeight: '600' },
+  accountNoticeText: { ...font.meta, color: colors.textFaint },
 });

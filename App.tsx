@@ -10,7 +10,6 @@ import { useAuthStore } from './src/features/auth/stores/authStore';
 import { settlementIdFromParsed } from './src/features/settlement/links';
 import { useAppFonts } from './src/lib/fonts';
 import { applyWebViewportFix } from './src/lib/webViewport';
-import { WebDebugOverlay } from './src/components/WebDebugOverlay';
 import { colors } from './src/theme';
 import { DialogHost } from './src/components/Dialog';
 
@@ -76,9 +75,6 @@ export default function App() {
             네비게이터 위에 둬야 모달 위에서 물어도 가려지지 않는다 */}
         <DialogHost />
         <StatusBar style="light" />
-        {/* 웹 빌드에만 존재 — 실기기 Safari를 Mac 없이 원격 디버깅할 방법이 없어 임시로 넣었다.
-            확인이 끝나면 이 줄과 import, WebDebugOverlay.tsx를 지운다. */}
-        {Platform.OS === 'web' && <WebDebugOverlay />}
       </View>
     </SafeAreaProvider>
   );

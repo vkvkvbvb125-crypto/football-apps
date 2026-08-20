@@ -12,7 +12,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePendingSettlementStore } from '../features/settlement/stores/pendingSettlementStore';
 import { Text } from '../components/nativeText';
-import { colors, tabBar } from '../theme';
+import { colors, shadow, tabBar, zIndex } from '../theme';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
@@ -21,7 +21,8 @@ import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
 
 const Tab = createBottomTabNavigator();
 
-const ACTIVE = colors.greenNav;
+/** 활성 탭 — 아이콘·라벨·가운데 링이 모두 이 하나를 쓴다 */
+const ACTIVE = colors.greenBright;
 const IDLE = colors.navIdle;
 /** 탭바를 화면 하단에서 띄우는 간격 — 홈 인디케이터가 있으면 그만큼 더 올린다.
  *  높이/간격은 theme의 tabBar가 원본이다 (화면 스크롤 여백이 같은 값을 본다) */
@@ -29,9 +30,16 @@ const BAR_GAP = tabBar.gap;
 const BAR_SIDE = 8;
 const BAR_H = tabBar.height;
 const BAR_R = 22;
-/** 가운데 탭: 공을 담는 원형 링과 그 안의 공 */
-const RING = 56;
-const BALL = 44;
+/*
+ * 가운데 탭: 공을 담는 원형 링과 그 안의 공.
+ *
+ * 56/38에서 한 단 키웠다(+7%) — 경기운영이 앱의 핵심이라 존재감을 조금 더 준다.
+ * glow는 안 늘린다. 검정 원 + 초록 공, 그 패턴만으로 이미 다른 탭과 구분된다.
+ *
+ * RING_LIFT는 안 건드려도 된다. 감싸는 칸이 justifyContent:'center'라
+ * 링의 세로 중심이 (칸 중심 + RING_LIFT/2)로 정해진다 — RING 값과 무관하다.
+ */
+const RING = 60;
 /**
  * 링을 바 세로 중앙에 맞추는 보정값. React Navigation이 아이콘을 감싸는 컨테이너에
  * 자체 여백을 넣어서 바 높이만으로는 계산이 안 맞는다 — 실제 렌더를 재서 맞춘 값이다.
@@ -40,6 +48,11 @@ const RING_LIFT = 27;
 
 function tabLabel(title: string) {
   return ({ color }: { color: string }) => <Text style={[styles.label, { color }]}>{title}</Text>;
+}
+
+/** 옆 탭 아이콘 — 현재 탭 표시는 색(ACTIVE/IDLE)만으로 한다 */
+function tabIcon(name: keyof typeof Ionicons.glyphMap) {
+  return ({ color }: { color: string }) => <Ionicons name={name} size={22} color={color} />;
 }
 
 /**
@@ -91,7 +104,7 @@ export function MainTabNavigator() {
         component={HomeScreen}
         options={{
           tabBarLabel: tabLabel('홈'),
-          tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={20} color={color} />,
+          tabBarIcon: tabIcon('home-outline'),
         }}
       />
       <Tab.Screen
@@ -99,7 +112,7 @@ export function MainTabNavigator() {
         component={AttendanceScreen}
         options={{
           tabBarLabel: tabLabel('일정'),
-          tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={20} color={color} />,
+          tabBarIcon: tabIcon('calendar-outline'),
         }}
       />
       <Tab.Screen
@@ -109,6 +122,8 @@ export function MainTabNavigator() {
           // 시안대로 가운데는 라벨 없이 공만 — 대신 공이 다른 아이콘보다 크다
           tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => <BallIcon focused={focused} />,
+          // 옆 탭들의 세로 정렬(styles.item)을 여기엔 걸지 않는다 — 위 주석 참고
+          tabBarItemStyle: styles.itemCenter,
         }}
       />
       <Tab.Screen
@@ -116,7 +131,7 @@ export function MainTabNavigator() {
         component={SettlementScreen}
         options={{
           tabBarLabel: tabLabel('정산'),
-          tabBarIcon: ({ color }) => <Ionicons name="card-outline" size={20} color={color} />,
+          tabBarIcon: tabIcon('card-outline'),
         }}
       />
       <Tab.Screen
@@ -124,7 +139,7 @@ export function MainTabNavigator() {
         component={TeamHomeScreen}
         options={{
           tabBarLabel: tabLabel('팀'),
-          tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={20} color={color} />,
+          tabBarIcon: tabIcon('people-outline'),
         }}
       />
     </Tab.Navigator>
@@ -132,24 +147,51 @@ export function MainTabNavigator() {
 }
 
 const styles = StyleSheet.create({
+  /*
+   * 떠 있는 탭바 — 카드 시스템의 값을 그대로 쓴다.
+   *
+   * 여기만 자기 값을 갖고 있었다: 테두리 rgba(85,110,108,0.35), 면 rgba(24,32,27,0.94),
+   * 레거시 shadow prop, borderCurve 없음. 그중 면은 예전 card(#18201B) 기준이라
+   * 팔레트를 Deep Black으로 내린 뒤에도 혼자 밝은 채로 남아 있었다.
+   * 카드 28곳을 통일하면서 탭바만 빠져 있었던 셈이다.
+   *
+   * 테두리는 greenLine — 밝은 초록의 25% 알파다. solid 초록으로 두르니 바 전체가
+   * 강조 버튼처럼 읽혀서, 선은 잡히되 면적을 주장하지 않는 세기로 내렸다.
+   * 초록의 몫은 가운데 공(브랜드)과 활성 탭(상태) 둘이고, 테두리는 그 둘을
+   * 담는 틀이라 물러나 있어야 한다.
+   *
+   * borderTopWidth: 0 도 지웠다. RN에서 방향별 값이 borderWidth를 이기니까
+   * borderWidth: 1을 줘도 윗변만 0으로 남는데, 콘텐츠와 맞닿아 실제로 눈에 걸리는
+   * 변이 바로 그 윗변이다. (React Navigation 기본 hairline을 없애려던 값인데,
+   * 지금은 바가 떠 있는 알약이라 기본 hairline 자체가 없다.)
+   */
   bar: {
+    ...shadow.overlay,
     position: 'absolute',
     left: BAR_SIDE,
     right: BAR_SIDE,
     height: BAR_H,
     borderRadius: BAR_R,
-    borderTopWidth: 0,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: 'rgba(85,110,108,0.35)',
+    borderColor: colors.greenLine,
+    // 콘텐츠가 바 뒤로 스크롤되므로 쌓임 순서를 값으로 못 박는다 (DOM 순서에 기대지 않는다)
+    zIndex: zIndex.tabBar,
     backgroundColor: 'transparent',
-    elevation: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 6 },
     paddingBottom: 0,
     paddingTop: 0,
   },
+  /*
+   * 면은 불투명하다.
+   *
+   * rgba(20,26,23,0.94)였다 — "내용이 바 뒤로 지나가는 게 보여야 떠 있는 것처럼 읽힌다"는
+   * 이유였는데, 6%는 생각보다 많이 샜다. 바 영역 픽셀을 1,425점 떠 보니 250점 넘게
+   * 기준색에서 벗어나 있었고 가장 밝은 점이 #4ADE80 그대로였다 —
+   * 흰 글자는 0.94×20 + 0.06×255 = 34로, 검정(19) 위에서 확실히 보인다.
+   * 홈의 「계좌 송금」과 팀의 「최근 공지」가 탭 아이콘 사이에 끼어 보이던 게 이것이다.
+   *
+   * 떠 있는 느낌은 투명도가 아니라 테두리·그림자·좌우 8px 여백이 만든다. 그건 그대로다.
+   */
   barBg: {
     position: 'absolute',
     left: 0,
@@ -157,35 +199,51 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     borderRadius: BAR_R,
-    backgroundColor: 'rgba(24,32,27,0.94)',
+    borderCurve: 'continuous',
+    backgroundColor: colors.card,
   },
-  // paddingTop으로 밀지 않고 가운데 정렬 — 아이콘+라벨 묶음이 바 높이 안에서 위로 쏠려 있었다.
-  // 높이는 박지 않는다: 바의 borderWidth 1 때문에 안쪽이 바 height보다 2px 작아서,
-  // 같은 값을 주면 항목이 바 밖으로 삐져나가 라벨 아랫단이 잘렸다.
-  item: { justifyContent: 'center' },
+  /*
+   * 아이콘+라벨 묶음을 바 세로 한가운데로.
+   *
+   * justifyContent만으로는 안 됐다 — 항목에 높이가 없으면 가운데를 잴 상자가 없고,
+   * React Navigation이 얹는 자체 세로 패딩이 묶음을 위로 밀어 올린다.
+   *
+   * 높이를 박되 BAR_H가 아니라 BAR_H - 2다. 바의 borderWidth 1이 위아래로 2px을
+   * 먹어서 안쪽이 그만큼 좁다 — 예전에 BAR_H를 그대로 줬다가 항목이 바 밖으로
+   * 삐져나가 라벨 아랫단이 잘렸다. paddingVertical: 0으로 기본 패딩도 지운다.
+   *
+   * 가운데 공 탭에는 걸지 않는다(itemCenter로 따로 준다). RING_LIFT는 예전 레이아웃을
+   * 실제로 재서 맞춘 값이라, 여기에 높이를 박으면 기준이 달라져 공이 아래로 밀린다.
+   */
+  item: { height: BAR_H - 2, paddingVertical: 0, justifyContent: 'center' },
+  /** 가운데 탭 — 라벨이 없고 ring이 marginTop으로 자리를 잡는다. 손대지 않는다 */
+  itemCenter: { justifyContent: 'center' },
   label: { fontSize: 10, fontWeight: '700', marginTop: 3 },
 
-  // 공을 담는 원형 링 — 바 세로 한가운데
+  /*
+   * 공을 담는 원형 링 — 앱 아이콘과 같은 문법이다.
+   * 면은 거의 검정(bgRoot)이고 빛나는 건 두른 선 하나뿐이다.
+   * 예전엔 면이 card(#141A17)라 바 배경에서 뜬 회색 원처럼 보였다.
+   */
   ring: {
     width: RING,
     height: RING,
     borderRadius: RING / 2,
     borderWidth: 1.5,
-    borderColor: 'rgba(100,140,135,0.5)',
-    backgroundColor: colors.card,
+    borderColor: 'rgba(34,197,94,0.22)',
+    backgroundColor: colors.bgRoot,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: RING_LIFT,
   },
-  // 가운데 탭은 라벨이 없어서 색만으로는 현재 탭인지 알 수 없다 — 링으로 표시한다
-  ringOn: {
-    borderColor: ACTIVE,
-    shadowColor: ACTIVE,
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  ball: { width: 38, height: 38 },
+  /*
+   * 가운데 탭은 라벨이 없어서 색만으로는 현재 탭인지 알 수 없다 — 링이 그 표시다.
+   *
+   * glow를 절제한다(스펙 08절). 예전 0.45/12px는 탭바 위에 초록 안개가 끼어
+   * 옆 탭 라벨까지 물들였다. 아이콘의 halo도 심 바로 옆에서만 밝고 금방 사라진다.
+   */
+  ringOn: { borderColor: ACTIVE, boxShadow: `0 0 7px ${colors.greenGlow}` },
+  ball: { width: 41, height: 41 },
   // 시안에서 공은 어느 탭에 있든 늘 선명하다 — 활성 표시는 두른 링이 맡는다
   ballIdle: { opacity: 0.9 },
 });

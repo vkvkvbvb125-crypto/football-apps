@@ -53,6 +53,8 @@ export interface TeamMemberWithProfile {
   position: string | null;
   /** 팀 안에서만 유일한 등번호 (0~999). 안 정했으면 null */
   jerseyNumber: number | null;
+  /** 가입 시각(ISO) — 참석률 분모를 「그 경기 시점의 멤버 수」로 잡는 데 쓴다 */
+  joinedAt: string | null;
   /** 알림 설정 — 이 팀에서 받을 알림 종류 */
   notifyNewMatch: boolean;
   notifyAnnouncement: boolean;
@@ -108,6 +110,7 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMemberWithPr
       skillTag: m.skill_tag,
       position: m.position ?? null,
       jerseyNumber: m.jersey_number ?? null,
+      joinedAt: m.joined_at ?? null,
       notifyNewMatch: m.notify_new_match ?? true,
       notifyAnnouncement: m.notify_announcement ?? true,
       notifyDeadline: m.notify_deadline ?? true,

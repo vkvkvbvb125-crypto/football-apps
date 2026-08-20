@@ -1,5 +1,5 @@
 // src/features/home/screens/HomeScreen.tsx — 시안 적용판
-// 구성: 공지 배너 / 히어로 카드 / 이번주 경기 / 내 정산 현황 / 최근 공지.
+// 구성: 공지 배너 / 히어로 카드 / 이번주 경기 / 팀 정산 현황 / 최근 공지.
 // 홈에서는 투표하지 않는다. 참여 현황만 보여주고 투표는 일정 탭으로 보낸다 —
 // 홈은 다음 경기 하나만 다루기 때문에, 여기서 투표하면 그 경기 말고는 찍을 방법이 없어진다.
 // 경기 카드 하단은 버튼 이름만 역할에 따라 갈린다(총무: 경기 관리 / 팀원: 투표하러 가기).
@@ -27,7 +27,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { SoftTint, toneBorder, type BentoTone } from '../../../components/BentoCard';
 import { NotificationBell, SettingsMenu, type NotificationBellHandle } from '../../../components/TabHeader';
-import { colors, radius } from '../../../theme';
+import { Card, GreenFill, RowCard, StatRow, StatTile } from '../../../components/Surface';
+import { colors, font, radius, shadow } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
@@ -39,6 +40,7 @@ import { SettlementCard } from '../../settlement/components/SettlementCard';
 import { SendMoneySheet } from '../../settlement/components/SendMoneySheet';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
+import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { notifyTeam } from '../../notifications/services/pushService';
 import { fetchMatchWeather, weatherEmoji, weatherLabel } from '../../attendance/services/weatherService';
@@ -46,7 +48,7 @@ import { RosterSheet, type RosterMember } from '../../attendance/components/Rost
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { relativeTime } from '../../../lib/relativeTime';
-import { HomeTodoList, type HomeTodo } from '../components/HomeTodoList';
+import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
 
 /** 킥오프 3시간 뒤까지는 "다음 경기"로 본다 (경기운영 탭 MATCH_GRACE_MS와 같은 기준) */
 const NEXT_MATCH_GRACE_MS = 3 * 60 * 60 * 1000;
@@ -62,8 +64,14 @@ const HERO_IMG_RATIO = 512 / 512;
 const HERO_ZOOM = 1.55;
 /** 원본에서 공 중심의 세로 위치(0~1). 이 지점을 히어로 세로 중앙에 맞춘다 */
 const HERO_FOCUS_Y = 0.33;
-/** 공이 카드 오른쪽 밖으로 걸치는 비율 — 오른쪽 끝이 카드 테두리에 잘려 나가는 느낌을 낸다 */
-const HERO_OVERHANG = -0.04;
+/*
+ * 공이 카드 오른쪽 밖으로 걸치는 비율.
+ *
+ * -0.04였다 — 음수라 밖으로 걸치는 게 아니라 안쪽으로 4% 들어와 있었다. 그래서 공이
+ * 카드 한복판까지 차지했고 왼쪽 글자 자리가 좁아졌다. 배너가 커 보인 원인은 높이(112)가
+ * 아니라 이것이다. 양수로 뒤집어 오른쪽 1/3이 카드 밖으로 나가게 한다.
+ */
+const HERO_OVERHANG = 0.33;
 /** 참고 이미지처럼 공은 또렷하게 — 흐릿하게 누르지 않는다 */
 const HERO_OPACITY = 1;
 
@@ -169,7 +177,7 @@ function SectionCard({
 }: SectionCardProps) {
   const body = empty ? (
     <>
-      <SoftTint tone={tone} />
+      <SoftTint tone={tone === 'plain' ? 'green' : tone} radius={radius.card} />
       <View style={emptyCentered ? styles.emptyBlock : styles.emptyLine}>
         <View style={[styles.emptyLineIcon, emptyCentered && styles.emptyBlockIcon]}>
           <Ionicons name={emptyIcon} size={emptyCentered ? 26 : 19} color={colors.green} />
@@ -183,7 +191,16 @@ function SectionCard({
     </>
   ) : (
     <>
-      <SoftTint tone={tone} />
+      {/*
+        tone이 plain이어도 초록 결은 깐다.
+        SoftTint(plain)은 null을 반환해서, 지금까지 홈 카드 대부분이 면이 밋밋했다 —
+        정산 카드에만 결이 있어서 같은 목록에 다른 재질이 섞인 것처럼 보였다.
+
+        테두리는 건드리지 않는다. toneBorder에는 원래 tone을 그대로 넘긴다 —
+        기본값까지 초록 테두리가 되면 「모든 카드 Green Border」(§19 금지)가 된다.
+        면의 결은 공통, 테두리 색은 뜻이 있을 때만.
+      */}
+      <SoftTint tone={tone === 'plain' ? 'green' : tone} radius={radius.card} />
       {children}
     </>
   );
@@ -203,6 +220,8 @@ function SectionCard({
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const hero = heroLayout(useWindowDimensions().width);
   const bottomPad = useTabBarPadding();
+  /** 공지 작성 — 팀 화면에서 옮겨 왔다 (총무만) */
+  const [noticeFormOpen, setNoticeFormOpen] = useState(false);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const hasMultipleTeams = useTeamStore((s) => s.memberships.length > 1);
   const members = useTeamStore((s) => s.members);
@@ -214,10 +233,10 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const current = useSettlementStore((s) => s.current);
   const past = useSettlementStore((s) => s.past);
-  const pendingMatches = useSettlementStore((s) => s.pendingMatches);
   const loadSettlements = useSettlementStore((s) => s.load);
 
   const announcements = useAnnouncementsStore((s) => s.announcements);
+  const createAnnouncement = useAnnouncementsStore((s) => s.createAnnouncement);
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
 
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -229,8 +248,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const membershipId = activeTeam?.membershipId;
   const isAdmin = activeTeam?.role === 'admin';
-  const me = members.find((m) => m.userId === myUserId) ?? null;
-
 
   useEffect(() => {
     if (!activeTeam) return;
@@ -310,13 +327,27 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const unpaidAmount = shares.filter((s) => !s.paid).reduce((t, s) => t + s.amount, 0);
   const openCount = current ? 1 : 0;
   // useMemo를 쓰지 않는다 — 이 아래는 조기 리턴 뒤라 훅을 두면 렌더마다 훅 개수가 달라진다
-  const thisMonthNow = new Date();
-  const thisMonthTotal = [...(current ? [current] : []), ...past]
-    .filter((s) => {
-      const d = new Date(s.createdAt);
-      return d.getFullYear() === thisMonthNow.getFullYear() && d.getMonth() === thisMonthNow.getMonth();
-    })
-    .reduce((t, s) => t + s.totalAmount, 0);
+  /*
+   * 팀 참석률. 정의는 attendanceRate 유틸이 갖는다 — 팀 화면도 같은 함수를 쓴다.
+   * 이번 달 「이미 치른」 경기만 세고, 분모는 그 경기 시점의 멤버 수다.
+   */
+  const teamRate = monthlyAttendanceRate(
+    matches.map((m) => ({
+      matchDate: m.match_date,
+      attendCount: m.votes.filter((v) => v.status === 'attend').length,
+    })),
+    members
+  );
+
+  /*
+   * 홈에 띄울 「지금 처리할 정산」 한 건 — 가장 오래 방치된 미납.
+   *
+   * 없으면 줄 자체를 그리지 않는다. 「모두 정산 완료」 같은 문구를 넣지 않는 건
+   * 할 일이 없을 때 자리를 비우는 게 낫기 때문이다.
+   */
+  const oldestUnpaid = [...(current ? [current] : []), ...past]
+    .filter((st) => st.shares.some((sh) => !sh.paid))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0] ?? null;
 
   /** 정산 링크를 팀에 공유 — 정산 탭과 같은 메시지를 쓴다 (links.ts) */
   const handleShare = () => {
@@ -347,51 +378,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const matchDate = next ? new Date(next.match_date) : null;
 
-  /**
-   * 해야 할 일 — 빈 상태를 "없다" 대신 "하면 된다"로 쓴다.
-   * 새 정보를 만들지 않는다. 전부 위에서 이미 불러온 값에서 계산한다.
-   */
-  const todos: HomeTodo[] = [];
-  if (!next && isAdmin) {
-    todos.push({
-      key: 'match',
-      icon: 'calendar-outline',
-      title: '다음 경기 일정 등록',
-      sub: '만들면 참석 투표와 알림이 자동으로 열려요',
-      tint: colors.green,
-      onPress: () => navigation.navigate('Attendance'),
-    });
-  }
-  if (pendingMatches.length > 0 && isAdmin) {
-    todos.push({
-      key: 'settle',
-      icon: 'calculator-outline',
-      title: `정산 안 한 경기 ${pendingMatches.length}건`,
-      sub: '경기가 끝났는데 회비를 아직 안 걷었어요',
-      tint: colors.gold,
-      onPress: () => navigation.navigate('Settlement'),
-    });
-  }
-  if (members.length <= 1) {
-    todos.push({
-      key: 'invite',
-      icon: 'person-add-outline',
-      title: '팀원 초대하기',
-      sub: '초대 코드를 단톡방에 공유하면 끝나요',
-      tint: colors.blue,
-      onPress: () => navigation.navigate('Team'),
-    });
-  }
-  if (me && !me.position) {
-    todos.push({
-      key: 'position',
-      icon: 'body-outline',
-      title: '내 포지션 정하기',
-      sub: '팀 분배에서 포메이션을 그릴 때 써요',
-      tint: colors.textMuted,
-      onPress: () => navigation.navigate('MySettings'),
-    });
-  }
 
   /**
    * 일정 탭의 그 경기로 보낸다.
@@ -428,30 +414,20 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </View>
         </View>
 
-        {/*
-          인사문 — 화면을 여는 문장.
-          이 화면에서 히어로를 빼면 제일 큰 글자가 21px(상단 "홈")이라 눈이 멈출 데가
-          없었다. 28px 두 줄로 열고, 이름만 초록으로 둔다.
-        */}
-        <View style={styles.greeting}>
-          <Text style={styles.greetingLine}>안녕하세요,</Text>
-          <Text style={styles.greetingName}>
-            {me?.displayName ?? '회원'} <Text style={styles.greetingSuffix}>님</Text>
-          </Text>
-        </View>
-
         {/* 공지 배너 — 아래 「최근 공지」와 같은 곳(알림 패널)으로 보낸다 */}
         {!!topNotice && (
           <Pressable
             onPress={() => bellRef.current?.open()}
+            accessibilityRole="button"
+            accessibilityLabel={`공지: ${topNotice.title}`}
             style={({ pressed }) => [styles.noticeBar, pressed && styles.pressed]}
           >
-            <Ionicons name="megaphone-outline" size={19} color={colors.green} />
+            <Ionicons name="megaphone-outline" size={15} color={colors.green} />
             <Text style={styles.noticeTag}>공지</Text>
             <Text style={styles.noticeText} numberOfLines={1}>
               {topNotice.title}
             </Text>
-            <Ionicons name="chevron-forward" size={17} color={colors.textDim} />
+            <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
           </Pressable>
         )}
 
@@ -461,7 +437,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               RN엔 원형(radial) 그라디언트가 없어 대각선 LinearGradient로 근사한다 —
               로그인 화면 히어로 글로우와 같은 기법. */}
           <LinearGradient
-            colors={['rgba(74,222,128,0.45)', 'rgba(74,222,128,0.1)', 'rgba(74,222,128,0)']}
+            colors={['rgba(34,197,94,0.45)', 'rgba(34,197,94,0.1)', 'rgba(34,197,94,0)']}
             locations={[0, 0.3, 0.6]}
             start={{ x: 0.9, y: 0.05 }}
             end={{ x: 0.05, y: 1 }}
@@ -483,24 +459,31 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </View>
         </View>
 
-        <HomeTodoList todos={todos} />
-
-        {/* 이번주 경기 — 할 일에 "일정 등록"이 이미 떠 있으면 같은 말을 두 번 하지 않는다 */}
-        {!(todos.some((t) => t.key === 'match') && !next) && (
-          <>
+        {/* 이번주 경기.
+            예전엔 「할 일」에 "일정 등록"이 떠 있으면 이 섹션을 통째로 숨겼다 — 같은 말을
+            두 번 하지 않으려는 조건이었다. 할 일 목록을 걷어냈으니 겹칠 상대가 없어
+            항상 그린다. 경기가 없을 때는 아래 SectionCard의 빈 상태가 안내를 맡는다. */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>이번주 경기</Text>
-          <Pressable onPress={() => navigation.navigate('Attendance')} hitSlop={8} style={styles.sectionLinkRow}>
+          <Pressable
+            onPress={() => navigation.navigate('Attendance')}
+            accessibilityRole="link"
+            accessibilityLabel="경기 일정 전체보기"
+            style={styles.sectionLinkRow}
+          >
             <Text style={styles.sectionLink}>전체보기</Text>
-            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
           </Pressable>
         </View>
 
+        {/* 틴트 없음 — theme.ts 「면은 무채색, 초록은 아껴서」. 카드 면을 물들이면
+            정작 강조해야 할 버튼·활성탭·핵심 숫자의 초록이 묻힌다. */}
         <SectionCard
-          tone="green"
           empty={!next || !matchDate}
           emptyIcon="calendar-outline"
-          emptyCentered
+          /* emptyCentered를 뗐다 — 아이콘 56 + 제목 + 설명 + 버튼 4단이 화면에서 가장 큰
+             요소였다. 빈 상태가 실제 데이터가 있을 때보다 자리를 더 먹으면 안 된다.
+             한 줄(19px 아이콘 + 제목·설명) + 버튼으로 줄인다. */
           emptyTitle="예정된 경기가 없습니다"
           emptySub={
             isAdmin ? '일정 탭에서 새 경기를 만들 수 있어요' : '팀장이 경기를 등록하면 여기에 표시됩니다'
@@ -512,6 +495,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             isAdmin ? (
               <Pressable
                 onPress={() => navigation.navigate('Attendance')}
+                accessibilityRole="button"
+                accessibilityLabel="일정으로 가기"
                 style={({ pressed }) => [styles.attendBtn, styles.emptyBtn, pressed && styles.pressed]}
               >
                 <Ionicons name="calendar-outline" size={18} color={colors.green} />
@@ -530,6 +515,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             <>
               <Pressable
                 onPress={goToMatchSchedule}
+                accessibilityRole="button"
+                accessibilityLabel="다음 경기 일정 보기"
                 style={({ pressed }) => [styles.matchHead, pressed && styles.pressed]}
               >
               <View style={styles.dateBox}>
@@ -574,7 +561,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                 )}
               </View>
 
-              <Ionicons name="chevron-forward" size={19} color={colors.textDim} />
+              <Ionicons name="chevron-forward" size={19} color={colors.textMuted} />
             </Pressable>
 
             <View style={styles.cardDivider} />
@@ -586,18 +573,23 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               <Text style={styles.statsRate}>참여율 {attendRate}%</Text>
             </View>
 
+            {/* 아이콘 셋에 숫자만 붙어 있어서 「0명 1명 0명」이 각각 무엇인지 알 수 없었다.
+                사람·빈원·엑스로 참석/미정/불참을 구분하라는 건 무리다 — 글자로 적는다. */}
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Ionicons name="person-outline" size={17} color={colors.green} />
-                <Text style={styles.statText}>{attendCount}명</Text>
+                <Ionicons name="person-outline" size={16} color={colors.green} />
+                <Text style={styles.statLabel}>참석</Text>
+                <Text style={styles.statText}>{attendCount}</Text>
               </View>
               <View style={styles.statItem}>
-                <Ionicons name="ellipse-outline" size={17} color={colors.textMuted} />
-                <Text style={styles.statText}>{undecidedCount}명</Text>
+                <Ionicons name="ellipse-outline" size={16} color={colors.textMuted} />
+                <Text style={styles.statLabel}>미정</Text>
+                <Text style={styles.statText}>{undecidedCount}</Text>
               </View>
               <View style={styles.statItem}>
-                <Ionicons name="close-circle" size={17} color={colors.danger} />
-                <Text style={styles.statText}>{absentCount}명</Text>
+                <Ionicons name="close-circle" size={16} color={colors.danger} />
+                <Text style={styles.statLabel}>불참</Text>
+                <Text style={styles.statText}>{absentCount}</Text>
               </View>
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${attendRate}%` }]} />
@@ -607,6 +599,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             <View style={styles.cardBtnRow}>
               <Pressable
                 onPress={() => setRosterOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="참여 현황 보기"
                 style={({ pressed }) => [styles.ghostBtn, pressed && styles.pressed]}
               >
                 <Text style={styles.ghostBtnText}>참여 현황 보기</Text>
@@ -616,8 +610,11 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               {(isAdmin || voteOpen) && (
                 <Pressable
                   onPress={goToMatchSchedule}
+                  accessibilityRole="button"
+                  accessibilityLabel={isAdmin ? '경기 관리' : myVote ? '투표 변경하기' : '투표하러 가기'}
                   style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
                 >
+            <GreenFill />
                   <Ionicons name={isAdmin ? 'people' : 'checkmark-circle'} size={17} color={colors.bgRoot} />
                   {/* 이미 찍은 사람에게 "투표하러 가기"는 안 한 것처럼 읽힌다 */}
                   <Text style={styles.primaryBtnText}>
@@ -632,38 +629,74 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             </>
           )}
         </SectionCard>
-          </>
-        )}
 
-        {/* 내 정산 현황 */}
+        {/* 팀 정산 현황 — 내용이 팀 전체 합계라 「내」가 아니다 */}
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>내 정산 현황</Text>
-          <Pressable onPress={() => navigation.navigate('Settlement')} hitSlop={8} style={styles.sectionLinkRow}>
+          <Text style={styles.sectionTitle}>팀 정산 현황</Text>
+          <Pressable
+            onPress={() => navigation.navigate('Settlement')}
+            accessibilityRole="link"
+            accessibilityLabel="정산 전체보기"
+            style={styles.sectionLinkRow}
+          >
             <Text style={styles.sectionLink}>전체보기</Text>
-            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
           </Pressable>
         </View>
 
-        {current && isAdmin ? (
-          /* ── 총무: 정산 탭과 같은 카드(배지+링+빠른 액션) — 홈에서도 바로 송금/공유할 수 있게 */
+        {/*
+          Bento 타일 셋 — 진행중 / 미납 금액 / 이번달 정산.
+          예전엔 이 숫자들이 「정산 내역이 없습니다」 빈 카드 바닥에 붙어 있어서, 정산이 하나라도
+          생기면 통째로 사라졌다. 이번 달 흐름은 진행 중인 정산이 있든 없든 궁금한 값이다.
+          빈 카드에서 떼어내 항상 서 있는 타일로 만든다 — 큰 빈 카드도 같이 사라진다.
+        */}
+        <View style={styles.bentoRow}>
+          <StatRow>
+            <Card tier="bento" style={{ flex: 1 }}>
+              <StatTile label="진행중" value={`${openCount}건`} accent={openCount > 0} />
+            </Card>
+            <Card tier="bento" style={{ flex: 1 }}>
+              <StatTile label="미납 금액" value={`${unpaidAmount.toLocaleString()}원`} accent={unpaidAmount > 0} />
+            </Card>
+            {/*
+              「이번달」은 금액이었다. 미납 금액과 자주 같은 값이 됐다 — 이번 달 정산이
+              한 건이고 아무도 안 냈으면 둘이 정확히 같다. 킥데이의 기본 상태가 그렇다.
+              돈 지표 둘에 활동 지표 하나를 두면 세 칸이 서로 다른 것을 말한다.
+              계산은 attendanceRate 유틸이 갖는다 — 팀 화면 통계와 같은 함수를 써야
+              같은 팀에서 값이 갈리지 않는다.
+            */}
+            <Card tier="bento" style={{ flex: 1 }}>
+              <StatTile label="이번 달 참석률" value={formatRate(teamRate)} accent={(teamRate.rate ?? 0) >= 0.7} />
+            </Card>
+          </StatRow>
+        </View>
+
+        {/*
+          정산 탭과 똑같은 카드(배지 + 링 + 액션 아이콘 3개)가 홈에 그대로 들어와 있었다.
+          홈에서 계좌 송금·카톡 공유까지 할 수 있게 한 배려였는데, 결과는 같은 카드가
+          두 화면에 있고 홈이 정산 탭의 축소판이 되는 것이었다.
+
+          홈은 「지금 뭘 해야 하는가」를 말하는 자리다. 그래서 한 줄만 남긴다 —
+          가장 오래 방치된 미납 한 건. 액션 셋은 정산 탭에만 둔다.
+          미납이 없으면 이 줄은 아예 그리지 않는다.
+        */}
+        {oldestUnpaid ? (
           <View style={styles.settlementCardWrap}>
-            <SettlementCard
-              title={settlementTitle(current, matches)}
-              place={settlementPlace(current, matches)}
-              attendCount={current.shares.length}
-              statusLabel="진행중"
-              unpaidCount={unpaidCount}
-              pct={current.shares.length ? paidCount / current.shares.length : 0}
-              amount={current.totalAmount}
-              perPerson={current.perPerson}
+            <RowCard
+              title={settlementTitle(oldestUnpaid, matches)}
+              sub={`${oldestUnpaid.shares.filter((sh) => !sh.paid).length}명 미납 · ${oldestUnpaid.totalAmount.toLocaleString()}원`}
+              left={
+                <View style={styles.emptyLineIcon}>
+                  <Ionicons name="wallet-outline" size={19} color={colors.green} />
+                </View>
+              }
+              right={<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
               onPress={() => navigation.navigate('Settlement')}
-              onPrimaryAction={() => setSendOpen(true)}
-              onShare={handleShare}
+              accessibilityLabel="정산 탭에서 처리하기"
             />
           </View>
         ) : (
           <SectionCard
-            tone="gold"
             empty={!current}
             emptyIcon="wallet-outline"
             /* 바로 아래 "이번달 정산"에 금액이 떠 있는데 "내역이 없습니다"라고 하면 서로 어긋난다.
@@ -674,23 +707,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                 ? '지난 정산은 전체보기에서 볼 수 있어요'
                 : '경기 후 정산 내역이 여기에 표시됩니다'
             }
-            emptyAction={
-              /* 빈 상태에도 숫자는 보여준다 — 화면이 죽지 않고, 이번 달 흐름을 알 수 있다 */
-              <View style={styles.miniStatRow}>
-                <View style={styles.miniStat}>
-                  <Text style={styles.miniStatLabel}>진행중</Text>
-                  <Text style={styles.miniStatValue}>{openCount}건</Text>
-                </View>
-                <View style={styles.miniStat}>
-                  <Text style={styles.miniStatLabel}>미납 금액</Text>
-                  <Text style={styles.miniStatValue}>{unpaidAmount.toLocaleString()}원</Text>
-                </View>
-                <View style={styles.miniStat}>
-                  <Text style={styles.miniStatLabel}>이번달 정산</Text>
-                  <Text style={styles.miniStatValue}>{thisMonthTotal.toLocaleString()}원</Text>
-                </View>
-              </View>
-            }
+            /* emptyAction을 뗐다 — 그 안에 있던 숫자 셋이 위 Bento 타일로 나갔다.
+               숫자가 빠진 빈 카드는 한 줄짜리 안내면 충분하다(스펙: 큰 빈 카드 금지). */
             onPress={() => navigation.navigate('Settlement')}
           >
             {current && myShare ? (
@@ -729,36 +747,81 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
             따로 공지 목록을 띄우면 같은 내용을 두 화면으로 나눠 보게 된다. */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>최근 공지</Text>
-          <Pressable onPress={() => bellRef.current?.open()} hitSlop={8} style={styles.sectionLinkRow}>
+          {/*
+            공지를 쓰는 입구가 여기로 왔다.
+            팀 화면의 4버튼 그리드(멤버 관리·공지사항·게시판·설정)를 걷어내면서,
+            총무가 공지를 작성할 유일한 길이 사라졌다. 읽는 자리와 쓰는 자리가
+            같은 게 자연스럽다 — 팀 화면은 멤버만 남긴다.
+          */}
+          {isAdmin && (
+            <Pressable
+              onPress={() => setNoticeFormOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="공지 작성"
+              hitSlop={10}
+              style={styles.noticeAdd}
+            >
+              <Ionicons name="add" size={18} color={colors.green} />
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => bellRef.current?.open()}
+            accessibilityRole="link"
+            accessibilityLabel="공지 전체보기"
+            style={styles.sectionLinkRow}
+          >
             <Text style={styles.sectionLink}>전체보기</Text>
-            <Ionicons name="chevron-forward" size={15} color={colors.textDim} />
+            <Ionicons name="chevron-forward" size={15} color={colors.textMuted} />
           </Pressable>
         </View>
 
+        {/* 틴트 없음(plain) — 공지 줄마다 초록 점이 이미 붙어 있어서 카드 면까지 물들이면
+            초록이 두 겹이 된다. 여기선 배경 그라데이션만 비쳐 보이게 둔다. */}
         <SectionCard
-          tone="blue"
+          tone="plain"
           empty={announcements.length === 0}
           emptyIcon="megaphone-outline"
           emptyTitle="등록된 공지가 없습니다"
           emptySub="새로운 공지가 등록되면 여기에 표시됩니다"
         >
+          {/*
+            줄들을 한 겹으로 묶는다.
+
+            전에는 세 Pressable이 카드의 직계 자식이라 카드 gap(10)이 줄 사이에 끼어들었다.
+            구분선도 줄을 가르는데 gap까지 벌리니, 선이 위 글자에서 18px·아래 글자에서 8px로
+            한쪽에 붙었다 — 가운데가 아니라 어긋나 보였다. 가르는 건 선 하나면 된다.
+
+            marginVertical로 카드 여백을 10 당긴다. 안 당기면 카드 위아래가 20+8=28인데
+            줄 사이는 17이라, 목록 첫 줄과 끝 줄만 붕 뜬다.
+          */}
+          <View style={styles.noticeList}>
           {announcements.slice(0, 3).map((a, i) => (
             <Pressable
               key={a.id}
               onPress={() => bellRef.current?.open()}
-              style={({ pressed }) => [styles.noticeRow, i > 0 && styles.noticeRowDivided, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`공지: ${a.title}`}
+              style={i > 0 && styles.noticeRowDivided}
             >
-              <View style={styles.noticeDot} />
-              <Text style={styles.noticeRowText} numberOfLines={1}>
-                {a.title}
-              </Text>
-              <Text style={styles.noticeTime}>{relativeTime(a.created_at)}</Text>
+              {/* 카드 안이라 flat — 껍데기는 감싸는 SectionCard가 갖는다.
+                  일정 목록과 같은 [앵커 | 본문 | 상태] 리듬만 가져온다. */}
+              <RowCard
+                flat
+                left={<View style={styles.noticeDot} />}
+                title={a.title}
+                right={<Text style={styles.noticeTime}>{relativeTime(a.created_at)}</Text>}
+              />
             </Pressable>
           ))}
+          </View>
         </SectionCard>
 
-        {/* 경기가 없을 때만 — 화면 아래를 비워두지 않고 다음 행동을 안내한다 */}
-        {!next &&
+        {/*
+          경기가 없을 때만, 그리고 경기를 세 번 넘게 만들어 본 팀에는 띄우지 않는다.
+          「경기를 만들면 투표·날씨·정산이 자동으로 생성돼요」는 처음 쓰는 사람에게 하는 말이다.
+          이미 여러 번 만들어 본 총무에게는 아는 이야기를 화면 한 칸을 써서 반복하는 셈이다.
+        */}
+        {!next && matches.length < 3 &&
           (isAdmin ? (
             <View style={styles.tipCard}>
               <Image source={HERO_IMG} style={styles.tipBall} resizeMode="contain" />
@@ -768,6 +831,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           ) : (
             <Pressable
               onPress={() => navigation.navigate('Team')}
+              accessibilityRole="button"
+              accessibilityLabel="친구 초대하기"
               style={({ pressed }) => [styles.card, styles.inviteCard, pressed && styles.pressed]}
             >
               <View style={styles.emptyLineIcon}>
@@ -777,7 +842,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                 <Text style={styles.emptyLineTitle}>친구 초대하기</Text>
                 <Text style={styles.emptyLineSub}>친구를 초대하고 함께 풋살을 즐겨보세요!</Text>
               </View>
-              <Ionicons name="chevron-forward" size={17} color={colors.textDim} />
+              <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
             </Pressable>
           ))}
       </ScrollView>
@@ -785,6 +850,15 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
       {/* 공지 목록 모달은 걷어냈다 — 홈의 공지를 누르면 알림 패널이 열리고,
           그 패널이 공지와 알림을 시간순으로 함께 보여준다. 목록을 두 벌 두지 않는다.
           (작성·수정·삭제는 팀 탭이 담당한다) */}
+      <AnnouncementFormModal
+        visible={noticeFormOpen}
+        editing={null}
+        onClose={() => setNoticeFormOpen(false)}
+        onSubmit={(input) => {
+          createAnnouncement(input);
+          setNoticeFormOpen(false);
+        }}
+      />
       <AnnouncementDetailModal
         announcement={noticeDetail}
         isAdmin={false}
@@ -830,10 +904,6 @@ const styles = StyleSheet.create({
   content: { paddingTop: 8, gap: 16 },
 
   /** 화면을 여는 문장 — 여기가 이 화면에서 가장 큰 글자다 */
-  greeting: { paddingHorizontal: 20, marginTop: 2, marginBottom: -4 },
-  greetingLine: { color: colors.textMuted, fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
-  greetingName: { color: colors.green, fontSize: 28, fontWeight: '800', letterSpacing: -0.9, lineHeight: 34 },
-  greetingSuffix: { color: colors.text, fontSize: 20, fontWeight: '700' },
 
   pressed: { opacity: 0.85 },
 
@@ -846,7 +916,7 @@ const styles = StyleSheet.create({
   },
   topBarTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8, minWidth: 0 },
   topBarTitle: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
-  topBarTeam: { color: '#5F6B66', fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  topBarTeam: { color: colors.textFaint, fontSize: 12, fontWeight: '600', flexShrink: 1 },
   topBarIcons: { flexDirection: 'row', alignItems: 'center', gap: 14 },
 
   // ── 히어로 카드 ───────────────────────────────────────────
@@ -860,49 +930,94 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroImage: { position: 'absolute', right: 0 },
-  heroText: { paddingHorizontal: 22, gap: 6 },
+  /*
+   * 글자는 카드 폭의 55%까지만.
+   * 공이 오른쪽에서 들어오므로, 좁은 화면에서 워드마크가 공 위로 겹치는 걸 막는다.
+   */
+  heroText: { paddingHorizontal: 22, gap: 6, maxWidth: '55%' },
   brand: { color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -1.2 },
-  brandSub: { color: colors.textBody, fontSize: 13.5, fontWeight: '600' },
+  brandSub: { color: colors.textBody, fontSize: 13, fontWeight: '600' },
 
-  // ── 공지 배너 ─────────────────────────────────────────────
+  /*
+   * ── 공지 티커 ────────────────────────────────────────────
+   *
+   * 카드였다 (paddingVertical 15 + 19px 아이콘 = 약 62px, card 면 + card 반경).
+   * 그래서 화면 맨 위가 [공지 카드] → [배너] → [경기 카드]로 카드 셋이 연달아 붙었고,
+   * 셋 다 같은 무게라 어디를 먼저 봐야 할지가 없었다.
+   *
+   * 공지는 "무슨 일이 있다"만 알리고 누르면 알림 패널로 보내는 통로다 — 배너·경기 카드보다
+   * 아래여야 한다. 그래서 카드에서 줄로 내린다:
+   *   높이   62 → 46 (§3의 44~52 구간)
+   *   면     card → cardAlt (한 단 가라앉힌다)
+   *   반경   card(18) → control(12), 아이콘 19 → 15
+   * 테두리는 남긴다. 없애면 배경과 붙어서 누를 수 있는 줄로 안 보인다.
+   */
   noticeBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 8,
     marginHorizontal: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
+    minHeight: 46,
+    paddingHorizontal: 14,
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
+    backgroundColor: colors.cardAlt,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  noticeTag: { color: colors.green, fontSize: 13.5, fontWeight: '800' },
-  noticeText: { flex: 1, color: colors.textStrong, fontSize: 13, fontWeight: '600' },
+  noticeTag: { color: colors.green, fontSize: 12, fontWeight: '800' },
+  noticeText: { flex: 1, color: colors.textBody, fontSize: 12, fontWeight: '600' },
 
   // ── 공통 ──────────────────────────────────────────────────
-  sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.4 },
+  // 17을 손으로 박아 두고 있었다 — 값은 font.title과 같다. 토큰을 보게 바꾼다
+  // (일정 탭이 15로 갈라져 있던 것도 원본이 한 곳이 아니어서였다).
+  sectionTitle: { ...font.title, color: colors.text },
   sectionLink: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  sectionLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  // 「전체보기」 세 개가 홈에서 다른 탭으로 가는 주 통로인데 표적이 18px이었다
+  // (hitSlop 8을 붙여도 34px). 여백으로 44를 만든다 — 오른쪽 정렬은 그대로 유지된다.
+  /** 「최근 공지」 헤더의 + — 제목과 전체보기 사이. 표적 44 확보 */
+  noticeAdd: {
+    width: 30, height: 30, borderRadius: radius.pill,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.greenDeep, backgroundColor: colors.greenTint,
+    marginLeft: 8,
+  },
+  sectionLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 44, paddingLeft: 12 },
+  /*
+   * 제목과 그 아래 카드 사이를 좁힌다.
+   *
+   * 이 행은 44px이다 — 위 sectionLinkRow가 「전체보기」 표적을 44로 만드느라 그렇다.
+   * 그런데 제목은 17px이라 세로 중앙에 놓이면서 제목 아래에 11px이 남고, 거기에
+   * content의 gap 16이 붙어 27px이 됐다. 제목 위(31px)와 거의 같아서 제목이
+   * 자기 카드에 붙지 않고 두 섹션 사이에 떠 있었다.
+   *
+   * gap을 줄이는 건 답이 아니다 — 그러면 섹션 사이 간격까지 같이 좁아진다.
+   * 음수 marginBottom으로 아래쪽만 깎는다. 16보다 작게 잡아서(-6 → 10 남음)
+   * 카드가 헤더 상자를 파고들지 않는다. 「전체보기」 표적은 44 그대로다.
+   *
+   * 처음엔 -10(17px)까지 깎았는데 이번엔 제목이 카드에 붙어 버렸다. 27 → 17 → 21.
+   */
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginHorizontal: 20,
     marginTop: 4,
+    marginBottom: -6,
   },
   card: {
+    ...shadow.card,
     marginHorizontal: 20,
     backgroundColor: colors.card,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.card,
+    borderCurve: 'continuous',
     padding: 20,
     gap: 10,
-    // SoftTint가 absoluteFill 사각형이라, 이게 없으면 둥근 모서리 밖으로 색이 삐져나온다
-    overflow: 'hidden',
+    // overflow:'hidden'을 뗐다 — SoftTint(사각 absoluteFill)를 막으려고 있던 건데
+    // 틴트를 걷어낸 뒤로는 넘칠 자식이 없고, 이게 있으면 카드 그림자까지 같이 잘린다.
   },
-  cardEmpty: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
 
   emptyLine: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   emptyLineIcon: {
@@ -912,28 +1027,25 @@ const styles = StyleSheet.create({
     // 아이콘만 초록으로 두면 회색 원 안에서 떠 보인다 — 받침도 같은 계열로 깔아준다
     backgroundColor: colors.greenTint,
     borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.18)',
+    borderColor: 'rgba(34,197,94,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyLineTitle: { color: colors.textStrong, fontSize: 13.5, fontWeight: '700' },
-  emptyLineSub: { color: colors.textDim, fontSize: 12, fontWeight: '500' },
+  emptyLineTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
+  emptyLineSub: { color: colors.textMuted, fontSize: 12, fontWeight: '500' }, // textDim은 card 위 3.78:1
 
   // 가운데 정렬 변형 — 아이콘이 위로 가고 글자가 커진다
   emptyBlock: { alignItems: 'center', gap: 12, paddingVertical: 12 },
   emptyBlockIcon: { width: 58, height: 58, borderRadius: 18 },
   emptyBlockText: { alignItems: 'center', gap: 5 },
-  emptyBlockTitle: { fontSize: 15.5, color: colors.text },
-  emptyBlockSub: { fontSize: 12.5, textAlign: 'center' },
+  emptyBlockTitle: { fontSize: 15, color: colors.text },
+  emptyBlockSub: { fontSize: 12, textAlign: 'center' },
 
   // 팀원 빈 상태의 안내 배너 — 버튼처럼 생겼지만 누르는 게 아니다
   emptyNoteBtn: { borderStyle: 'dashed', gap: 7 },
-  emptyNoteText: { color: colors.green, fontSize: 12.5, fontWeight: '700' },
+  emptyNoteText: { color: colors.green, fontSize: 12, fontWeight: '700' },
 
   // 미정산이 쌓여 있는 상태 — 빈 상태가 아니라 밀린 할 일이라 색을 달리 쓴다
-  walletIconTodo: { backgroundColor: 'rgba(210,163,76,0.12)' },
-  todoLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  todoLinkText: { color: colors.gold, fontSize: 12.5, fontWeight: '700' },
 
   // ── 경기 카드 ─────────────────────────────────────────────
   matchCard: {
@@ -942,6 +1054,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     padding: 16,
     gap: 12,
   },
@@ -965,11 +1078,11 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     fontVariant: ['tabular-nums'],
   },
-  dateDow: { color: colors.textMuted, fontSize: 11.5, fontWeight: '700' },
+  dateDow: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
 
   matchInfo: { flex: 1, gap: 6, minWidth: 0 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  matchTime: { color: colors.text, fontSize: 19, fontWeight: '800', letterSpacing: -0.5 },
+  matchTime: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.5 },
   typeChip: {
     paddingHorizontal: 9,
     paddingVertical: 3,
@@ -978,7 +1091,7 @@ const styles = StyleSheet.create({
     borderColor: colors.greenDeep,
     backgroundColor: colors.greenTint,
   },
-  typeChipText: { color: colors.green, fontSize: 11.5, fontWeight: '800' },
+  typeChipText: { color: colors.green, fontSize: 11, fontWeight: '800' },
   matchPlace: { color: colors.textStrong, fontSize: 14, fontWeight: '600' },
   weatherRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   weatherItem: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
@@ -997,24 +1110,19 @@ const styles = StyleSheet.create({
     borderColor: colors.green,
     backgroundColor: 'transparent',
   },
-  attendBtnOn: { backgroundColor: colors.green, borderColor: colors.green },
   attendText: { color: colors.green, fontSize: 17, fontWeight: '800' },
-  attendTextOn: { color: colors.bgRoot },
   /** 경기 카드 안 가로 구분선 */
   cardDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: -16 },
 
-  countRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  countItem: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  countDot: { width: 8, height: 8, borderRadius: 4 },
-  countText: { color: colors.textBody, fontSize: 13.5, fontWeight: '600' },
 
   // ── 총무: 참여 현황 ───────────────────────────────────────
   statsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statsTitle: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   statsRate: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  statItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statText: { color: colors.text, fontSize: 14.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  statText: { color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   progressTrack: {
     flex: 1,
     height: 6,
@@ -1028,8 +1136,8 @@ const styles = StyleSheet.create({
   cardBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ghostBtn: {
     flex: 1,
-    height: 48,
-    borderRadius: radius.button,
+    height: 46,
+    borderRadius: radius.pill,
     backgroundColor: colors.cardAlt,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1040,21 +1148,8 @@ const styles = StyleSheet.create({
   /** 버튼이 없는 이유를 적는 자리 (예: 투표 마감) */
   cardNote: { color: colors.textMuted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
-  // 카드 안 3열 숫자 요약 (1인당·완료·대기 / 진행중·미납·이번달)
-  miniStatRow: {
-    flexDirection: 'row',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  miniStat: { flex: 1, alignItems: 'center', gap: 4 },
-  miniStatLabel: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
-  miniStatValue: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-  },
+  /** 정산 Bento 타일 줄 — 카드 안이 아니라 화면에 직접 선다 */
+  bentoRow: { paddingHorizontal: 20 },
 
   // 경기가 없을 때만 나오는 안내 카드
   tipCard: {
@@ -1068,14 +1163,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   tipBall: { position: 'absolute', right: -18, bottom: -22, width: 96, height: 96, opacity: 0.18 },
-  tipTitle: { color: colors.green, fontSize: 13.5, fontWeight: '800' },
-  tipBody: { color: colors.textBody, fontSize: 12.5, fontWeight: '500', lineHeight: 19, paddingRight: 60 },
+  tipTitle: { color: colors.green, fontSize: 13, fontWeight: '800' },
+  tipBody: { color: colors.textBody, fontSize: 12, fontWeight: '500', lineHeight: 19, paddingRight: 60 },
   inviteCard: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   primaryBtn: {
+    overflow: 'hidden', // GreenFill을 모서리 안에 가둔다
     flex: 1,
     flexDirection: 'row',
-    height: 48,
-    borderRadius: radius.button,
+    height: 46,
+    borderRadius: radius.pill,
     backgroundColor: colors.green,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1087,7 +1183,7 @@ const styles = StyleSheet.create({
   // 카드 껍데기는 SectionCard가 styles.card로 그린다 — 여기엔 행동 버튼 여백만 남는다
   emptyBtn: { marginTop: 4 },
 
-  // ── 내 정산 현황 ──────────────────────────────────────────
+  // ── 팀 정산 현황 ──────────────────────────────────────────
   // SettlementCard는 정산 탭의 리스트(자체 좌우 패딩 있는 ScrollView) 안에서 쓰도록
   // marginHorizontal 없이 만들어져 있다 — 홈에서는 이 래퍼로 카드 여백을 맞춘다.
   settlementCardWrap: { marginHorizontal: 20 },
@@ -1095,15 +1191,15 @@ const styles = StyleSheet.create({
   walletIcon: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: radius.pill,
     backgroundColor: colors.greenTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dueLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
+  dueLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   dueAmount: {
     color: colors.text,
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
@@ -1118,9 +1214,10 @@ const styles = StyleSheet.create({
 
   // ── 최근 공지 ─────────────────────────────────────────────
   noticeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  /** 카드 여백(20)을 10 당겨 목록 위아래를 줄 사이 간격(17)에 맞춘다 */
+  noticeList: { marginVertical: -10 },
   noticeRowDivided: { borderTopWidth: 1, borderTopColor: colors.borderSoft },
   noticeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
-  noticeRowText: { flex: 1, color: colors.textStrong, fontSize: 13.5, fontWeight: '600' },
   noticeTime: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 
 });

@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import { HOURS, MINUTES, Wheel, pad, reelStyles } from './TimeWheelPicker';
+import { colors } from '../../../theme';
 
 function parseTime(value: string, fallback: { hour: number; minute: number }) {
   const timePart = value.trim().split(' ')[1];
@@ -64,7 +65,7 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
   return (
     <>
       <Pressable style={styles.field} onPress={handleOpen}>
-        <Ionicons name="flag-outline" size={16} color={isSet ? '#4ADE80' : '#5A625E'} />
+        <Ionicons name="flag-outline" size={16} color={isSet ? colors.green : colors.placeholder} />
         <Text style={[styles.fieldText, !isSet && styles.fieldTextPlaceholder]}>{formatDisplay(value)}</Text>
       </Pressable>
 
@@ -72,7 +73,7 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
         <View style={styles.overlay}>
           <View style={styles.card}>
             <View style={styles.titleRow}>
-              <Ionicons name="flag-outline" size={16} color="#4ADE80" />
+              <Ionicons name="flag-outline" size={16} color={colors.green} />
               <Text style={styles.title}>마감 설정</Text>
             </View>
             <Text style={styles.hint}>경기 시작({matchTime}) 전까지만 마감을 설정할 수 있어요</Text>
@@ -116,11 +117,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   fieldText: {
     color: '#FFFFFF',
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fieldTextPlaceholder: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontWeight: '400',
   },
   overlay: {
@@ -139,10 +140,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 280,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 20,
     gap: 12,
   },
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   cancelText: {
     color: '#8A9490',
@@ -194,10 +195,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   confirmText: {
-    color: '#0F1411',
+    color: colors.bgRoot,
     fontWeight: '700',
   },
 });

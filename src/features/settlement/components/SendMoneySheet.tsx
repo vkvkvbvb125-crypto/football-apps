@@ -8,62 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { colors } from '../../../theme';
+// 앱 목록과 딥링크 조립은 react-native를 타지 않는 ../sendApps.ts에 있다 — 그래야 검증할 수 있다
+import { SEND_APPS } from '../sendApps';
 
 const REMEMBER_KEY = 'kickday.sendApp';
-
-export interface SendApp {
-  id: string;
-  name: string;
-  mark: string;
-  bg: string;
-  fg: string;
-  tag?: string;
-  meta: string;
-  /** 계좌/금액을 채운 딥링크. 앱별로 지원 범위가 다르다. */
-  buildUrl: (p: { bankName: string; accountNo: string; amount: number }) => string;
-}
-
-/** 스킴은 프로젝트에서 실기기 테스트 후 확정하세요. */
-export const SEND_APPS: SendApp[] = [
-  {
-    id: 'toss',
-    name: '토스',
-    mark: 'T',
-    bg: 'rgba(49,116,255,0.14)',
-    fg: '#5B94FF',
-    tag: '가장 빠름',
-    meta: '계좌·금액 자동 입력',
-    buildUrl: ({ bankName, accountNo, amount }) =>
-      `supertoss://send?bank=${encodeURIComponent(bankName)}&accountNo=${accountNo}&amount=${amount}`,
-  },
-  {
-    id: 'kakaobank',
-    name: '카카오뱅크',
-    mark: 'k',
-    bg: 'rgba(254,229,0,0.16)',
-    fg: '#FEE500',
-    meta: '계좌·금액 자동 입력',
-    buildUrl: ({ accountNo, amount }) => `kakaobank://transfer?accountNo=${accountNo}&amount=${amount}`,
-  },
-  {
-    id: 'kb',
-    name: 'KB국민은행',
-    mark: 'KB',
-    bg: 'rgba(255,188,0,0.12)',
-    fg: '#E0A82E',
-    meta: '계좌 자동 입력 · 금액 직접 확인',
-    buildUrl: ({ accountNo }) => `kbbank://transfer?accountNo=${accountNo}`,
-  },
-  {
-    id: 'shinhan',
-    name: '신한은행',
-    mark: 'S',
-    bg: 'rgba(0,101,180,0.14)',
-    fg: '#5D9FD6',
-    meta: '계좌 자동 입력 · 금액 직접 확인',
-    buildUrl: ({ accountNo }) => `shinhan-sr-ansimclick://transfer?accountNo=${accountNo}`,
-  },
-];
 
 interface Props {
   visible: boolean;
@@ -263,11 +211,11 @@ const styles = StyleSheet.create({
     paddingBottom: 26,
     gap: 14,
   },
-  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: '#2C3833', marginBottom: 4 },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.neutralFill, marginBottom: 4 },
 
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   title: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  subtitle: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
+  subtitle: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   close: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
 
   target: {
@@ -280,10 +228,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  targetLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
-  targetAccount: { color: colors.textStrong, fontSize: 12.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  targetLabel: { color: colors.textDim, fontSize: 10, fontWeight: '700' },
+  targetAccount: { color: colors.textStrong, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   targetHolder: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
-  amount: { color: colors.text, fontSize: 19, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
+  amount: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
 
   appRow: {
     flexDirection: 'row',
@@ -295,19 +243,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  appRowOn: { backgroundColor: 'rgba(74,222,128,0.07)', borderColor: '#2F4A3A' },
+  appRowOn: { backgroundColor: 'rgba(34,197,94,0.07)', borderColor: colors.greenDeep },
   appRowOff: { opacity: 0.55 },
   appIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   appMark: { fontSize: 12, fontWeight: '800' },
   appNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  appName: { color: colors.textStrong, fontSize: 13.5, fontWeight: '700' },
-  appTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: 'rgba(74,222,128,0.14)' },
-  appTagText: { color: colors.green, fontSize: 9.5, fontWeight: '800' },
+  appName: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
+  appTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: 'rgba(34,197,94,0.14)' },
+  appTagText: { color: colors.green, fontSize: 10, fontWeight: '800' },
   appMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
 
   check: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: colors.green },
-  checkOff: { borderWidth: 1.5, borderColor: '#2C3833' },
+  checkOff: { borderWidth: 1.5, borderColor: colors.neutralFill },
   checkMark: { color: colors.bgRoot, fontSize: 11, fontWeight: '800' },
 
   rememberRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -322,5 +270,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
-  note: { color: '#5F6B66', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
+  note: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
 });

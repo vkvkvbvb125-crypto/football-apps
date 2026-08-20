@@ -67,7 +67,7 @@ const LABEL: Record<VoteStatus, string> = {
 };
 
 const TONE: Record<VoteStatus, { bg: string; fg: string }> = {
-  attend: { bg: 'rgba(74,222,128,0.14)', fg: colors.green },
+  attend: { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
   absent: { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
   undecided: { bg: 'rgba(210,163,76,0.16)', fg: colors.gold },
   pending: { bg: 'rgba(210,163,76,0.10)', fg: colors.gold },
@@ -333,11 +333,11 @@ const styles = StyleSheet.create({
   },
   /** 높이를 재기 전 한 프레임 — 예전과 같은 상한을 그대로 써서 첫 모습이 바뀌지 않게 한다 */
   sheetAuto: { maxHeight: '86%' },
-  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: '#2C3833', marginBottom: 12 },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.neutralFill, marginBottom: 12 },
 
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 20, paddingBottom: 14 },
   title: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
-  subtitle: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
+  subtitle: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   close: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
 
   tabs: {
@@ -352,8 +352,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: 'transparent' },
-  tabOn: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
-  tabText: { color: '#7C8A85', fontSize: 11.5, fontWeight: '800' },
+  tabOn: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
+  tabText: { color: '#7C8A85', fontSize: 11, fontWeight: '800' },
   tabTextOn: { color: colors.green },
 
   list: { paddingHorizontal: 20 },
@@ -366,18 +366,18 @@ const styles = StyleSheet.create({
     borderBottomColor: '#161F1B',
   },
   avatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  avatarAttend: { backgroundColor: 'rgba(74,222,128,0.14)' },
+  avatarAttend: { backgroundColor: 'rgba(34,197,94,0.14)' },
   avatarDefault: { backgroundColor: '#1E2A25' },
   avatarText: { fontSize: 11, fontWeight: '800' },
 
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { color: colors.textStrong, fontSize: 13.5, fontWeight: '700' },
+  name: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
   adminBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, backgroundColor: 'rgba(210,163,76,0.14)' },
-  adminBadgeText: { color: colors.gold, fontSize: 9.5, fontWeight: '800' },
+  adminBadgeText: { color: colors.gold, fontSize: 10, fontWeight: '800' },
   meta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
 
   statusChip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 10.5, fontWeight: '800' },
+  statusText: { fontSize: 10, fontWeight: '800' },
 
   poke: {
     paddingHorizontal: 10,
@@ -385,13 +385,13 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
-  pokeDone: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: 'transparent' },
-  pokeText: { color: '#C9D3CF', fontSize: 10.5, fontWeight: '800' },
+  pokeDone: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: 'transparent' },
+  pokeText: { color: '#C9D3CF', fontSize: 10, fontWeight: '800' },
 
   empty: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { color: '#5F6B66', fontSize: 12.5, fontWeight: '600' },
+  emptyText: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
 
   footer: {
     flexDirection: 'row',
@@ -413,6 +413,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.green,
   },
-  pokeAllDone: { backgroundColor: 'rgba(74,222,128,0.12)', borderWidth: 1, borderColor: '#2F4A3A' },
+  pokeAllDone: { backgroundColor: 'rgba(34,197,94,0.12)', borderWidth: 1, borderColor: colors.greenDeep },
   pokeAllText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
 });

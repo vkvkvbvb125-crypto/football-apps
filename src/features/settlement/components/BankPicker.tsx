@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../theme';
 
 interface Bank {
   name: string;
@@ -66,7 +67,7 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
-        <Ionicons name="business-outline" size={16} color={value ? '#4ADE80' : '#5A625E'} />
+        <Ionicons name="business-outline" size={16} color={value ? colors.green : colors.placeholder} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value || '은행 선택'}</Text>
       </Pressable>
 
@@ -86,7 +87,7 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
                 <TextInput
                   style={styles.manualInput}
                   placeholder="은행명을 입력하세요"
-                  placeholderTextColor="#5A625E"
+                  placeholderTextColor={colors.placeholder}
                   value={manualText}
                   onChangeText={setManualText}
                   autoFocus
@@ -105,11 +106,11 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
                 <Text style={styles.title}>은행 선택</Text>
 
                 <View style={styles.searchRow}>
-                  <Ionicons name="search" size={15} color="#5A625E" />
+                  <Ionicons name="search" size={15} color={colors.placeholder} />
                   <TextInput
                     style={styles.searchInput}
                     placeholder="은행 검색"
-                    placeholderTextColor="#5A625E"
+                    placeholderTextColor={colors.placeholder}
                     value={query}
                     onChangeText={setQuery}
                     autoFocus
@@ -157,11 +158,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   fieldText: {
     color: '#FFFFFF',
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fieldTextPlaceholder: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontWeight: '400',
   },
   overlay: {
@@ -181,15 +182,15 @@ const styles = StyleSheet.create({
   card: {
     width: 300,
     maxHeight: '70%',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 20,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 14,
@@ -202,25 +203,25 @@ const styles = StyleSheet.create({
   },
   manualInput: {
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   confirmButton: {
     marginTop: 14,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   confirmButtonDisabled: {
     opacity: 0.4,
   },
   confirmButtonText: {
-    color: '#0F1411',
+    color: colors.bgRoot,
     fontWeight: '700',
   },
   manualLink: {
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#22302A',
+    borderTopColor: colors.border,
   },
   manualLinkText: {
     color: '#8A9490',
@@ -243,11 +244,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   searchInput: {
     flex: 1,
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    color: '#0F1411',
+    color: colors.bgRoot,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyText: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontSize: 13,
     textAlign: 'center',
     paddingVertical: 20,

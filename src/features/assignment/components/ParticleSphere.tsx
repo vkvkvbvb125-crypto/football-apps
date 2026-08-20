@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { colors } from '../../../theme';
 
 const PARTICLE_COUNT = 70;
 const DEFAULT_SPHERE_RADIUS = 130;
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     overflow: 'hidden',
   },
   center: {

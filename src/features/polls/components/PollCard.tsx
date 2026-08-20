@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import type { PollWithResponses } from '../services/pollsService';
+import { colors } from '../../../theme';
 
 interface PollCardProps {
   poll: PollWithResponses;
@@ -65,11 +66,11 @@ export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: Poll
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     gap: 10,
   },
   pressedOpacity: {
@@ -96,21 +97,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#22302A',
-    backgroundColor: '#161D18',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     paddingHorizontal: 12,
     paddingVertical: 10,
     overflow: 'hidden',
   },
   optionSelected: {
-    borderColor: '#4ADE80',
+    borderColor: colors.green,
   },
   optionFill: {
     position: 'absolute',
     top: 0,
     left: 0,
     bottom: 0,
-    backgroundColor: 'rgba(74,222,128,0.2)',
+    backgroundColor: 'rgba(34,197,94,0.2)',
   },
   optionText: {
     flex: 1,
@@ -119,14 +120,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionTextSelected: {
-    color: '#4ADE80',
+    color: colors.green,
   },
   optionCount: {
     color: '#8A9490',
     fontSize: 12,
   },
   footer: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontSize: 11,
   },
 });

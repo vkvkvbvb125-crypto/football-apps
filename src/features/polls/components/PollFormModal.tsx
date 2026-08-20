@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../theme';
 
 interface PollFormModalProps {
   visible: boolean;
@@ -53,7 +54,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
           <TextInput
             style={styles.input}
             placeholder="질문"
-            placeholderTextColor="#5A625E"
+            placeholderTextColor={colors.placeholder}
             value={question}
             onChangeText={setQuestion}
           />
@@ -63,7 +64,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
               <TextInput
                 style={[styles.input, styles.optionInput]}
                 placeholder={`선택지 ${i + 1}`}
-                placeholderTextColor="#5A625E"
+                placeholderTextColor={colors.placeholder}
                 value={option}
                 onChangeText={(text) =>
                   setOptions((prev) => prev.map((o, idx) => (idx === i ? text : o)))
@@ -79,7 +80,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
 
           {options.length < 6 && (
             <Pressable style={styles.addOptionButton} onPress={handleAddOption}>
-              <Ionicons name="add" size={16} color="#4ADE80" />
+              <Ionicons name="add" size={16} color={colors.green} />
               <Text style={styles.addOptionText}>선택지 추가</Text>
             </Pressable>
           )}
@@ -87,7 +88,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
           <TextInput
             style={styles.input}
             placeholder="마감시간 (선택, YYYY-MM-DD HH:mm)"
-            placeholderTextColor="#5A625E"
+            placeholderTextColor={colors.placeholder}
             value={deadlineText}
             onChangeText={setDeadlineText}
           />
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   },
   card: {
     maxHeight: '85%',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -122,18 +123,18 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   optionRow: {
     flexDirection: 'row',
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   addOptionText: {
-    color: '#4ADE80',
+    color: colors.green,
     fontWeight: '600',
     fontSize: 13,
   },
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   cancelText: {
     color: '#8A9490',
@@ -175,10 +176,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   confirmText: {
-    color: '#0F1411',
+    color: colors.bgRoot,
     fontWeight: '700',
   },
 });

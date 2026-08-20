@@ -7,10 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
-import { SoftTint } from '../../../components/BentoCard';
 import { EmptyState } from '../../../components/EmptyState';
+import { useScoreStore } from '../../timer/stores/scoreStore';
 import { TabHeader } from '../../../components/TabHeader';
-import { colors, radius } from '../../../theme';
+import { colors, radius, shadow } from '../../../theme';
 import { FormationView } from '../components/FormationView';
 import { formationFor } from '../../team/positions';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -19,6 +19,7 @@ import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
+import { SoftTint } from '../../../components/BentoCard';
 
 type View3 = 'timer' | 'assign' | 'score';
 const TABS: { key: View3; label: string }[] = [
@@ -27,7 +28,10 @@ const TABS: { key: View3; label: string }[] = [
   { key: 'score', label: '스코어' },
 ];
 
-const GROUP_COLOR = [colors.green, colors.blue, colors.gold, '#C084FC', '#F87171'];
+// 팀 구분용 색 — 서로 구별되기만 하면 되는 범주색이다.
+// 5번째로 colors.danger(#F87171)를 쓰고 있었는데, 앱의 다른 곳에서 그 색은 삭제·오류를 뜻한다.
+// 5팀으로 나눈 순간 멀쩡한 한 팀이 경고색을 뒤집어썼다 — 상태색과 겹치지 않는 색으로 바꾼다.
+const GROUP_COLOR = [colors.green, colors.blue, colors.gold, '#C084FC', '#F472B6'];
 
 /** 쿼터 수 — 경기마다 다르게 정하는 기능이 아직 없어 앱 전체가 4쿼터를 쓴다 */
 const TOTAL_QUARTERS = 4;
@@ -54,8 +58,19 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const updateMatchStatus = useAttendanceStore((s) => s.updateMatchStatus);
 
   const [quarter, setQuarter] = useState(1);
-  const [scoreA, setScoreA] = useState(0);
-  const [scoreB, setScoreB] = useState(0);
+  /*
+   * 점수는 스토어가 갖는다.
+   *
+   * useState 둘이었고 서버에 쓰지도 읽지도 않았다 — 앱을 껐다 켜면 사라졌다.
+   * 화면 로컬로 두지 않는 건 곧 홈의 「최근 경기 결과」, 정산(경기 종료 흐름),
+   * 팀 탭 개인 기록의 득점이 같은 값을 읽기 때문이다. 화면마다 fetch하면 값이 갈린다.
+   */
+  const scoreOf = useScoreStore((st) => st.scoreOf);
+  const setScore = useScoreStore((st) => st.setScore);
+  const loadScores = useScoreStore((st) => st.loadScores);
+  const scoreError = useScoreStore((st) => st.error);
+  const clearScoreError = useScoreStore((st) => st.clearError);
+  const scoreMap = useScoreStore((st) => st.byMatch);
 
   const assignments = useAssignmentStore((s) => s.assignments);
   const loaded = useAssignmentStore((s) => s.loaded);
@@ -104,6 +119,14 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   // 절대 시간차로 고르면 지난 경기가 뽑혀서 끝난 경기의 타이머를 돌리게 된다.
   const nearestMatch = liveMatches[0] ?? null;
 
+  // 화면에 들어오면 저장된 점수를 되찾는다 — 없으면 0에서 시작한다
+  useEffect(() => {
+    if (nearestMatch) loadScores(nearestMatch.id);
+  }, [nearestMatch?.id]);
+
+  const scoreA = nearestMatch ? (scoreMap[nearestMatch.id]?.A ?? 0) : 0;
+  const scoreB = nearestMatch ? (scoreMap[nearestMatch.id]?.B ?? 0) : 0;
+
   // 경기 종료 → 정산 생성까지 한 번에 잇는다 (settlement-flow.md 총무 플로우).
   // 정산 탭에 떨궈만 두면 총무가 목록에서 그 경기를 다시 찾아 눌러야 했다.
   const handleFinishMatch = () => {
@@ -124,6 +147,9 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
               <Pressable
                 key={t.key}
                 onPress={() => setView(t.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={t.label}
                 style={({ pressed }) => [styles.segmentItem, on && styles.segmentItemOn, pressed && styles.pressed]}
               >
                 <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{t.label}</Text>
@@ -146,8 +172,17 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
           contentContainerStyle={[
             styles.body,
             { paddingBottom: bottomPad },
-            // 운영할 경기가 없으면 내용이 한 덩어리뿐이라 위에 붙고 아래로 500px 넘게 빈다.
-            // 그럴 때만 남는 공간을 채워 세로 가운데로 보낸다 (목록이 있을 땐 위에서 시작해야 한다).
+            /*
+             * 세로 가운데 정렬은 「운영할 경기가 없을 때」에만.
+             *
+             * 한때 타이머·스코어에도 걸었다. 아래가 40~70% 비어 보인다는 이유였는데,
+             * 가운데 정렬은 빈 공간을 없애는 게 아니라 위아래로 나눠 가질 뿐이다 —
+             * 아래가 줄어든 만큼 세그먼트 탭과 내용 사이가 벌어져서, 탭을 눌렀는데
+             * 내용이 화면 한참 아래에서 시작하는 꼴이 됐다.
+             *
+             * 아래가 비는 건 그 화면에 담을 게 그것뿐이라는 뜻이지 정렬 문제가 아니다.
+             * 내용은 위에서 시작하는 게 맞다.
+             */
             !hasMatch && styles.bodyCentered,
           ]}
           showsVerticalScrollIndicator={false}
@@ -160,9 +195,10 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
               onPress={() =>
                 navigation.navigate('Attendance', { focusDate: new Date(nearestMatch.match_date).toISOString() })
               }
+              accessibilityRole="button"
+              accessibilityLabel="이 경기를 일정에서 보기"
               style={({ pressed }) => [styles.contextCard, pressed && styles.pressed]}
             >
-              <SoftTint tone="green" />
               <Ionicons name="location-outline" size={15} color={colors.green} />
               <Text style={styles.contextText} numberOfLines={1}>
                 {new Date(nearestMatch.match_date).toLocaleDateString('ko-KR', {
@@ -177,7 +213,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                 })}
                 {nearestMatch.location ? ` · ${nearestMatch.location}` : ''}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </Pressable>
           )}
 
@@ -215,10 +251,12 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
             <ScoreboardPanel
               scoreA={scoreA}
               scoreB={scoreB}
-              onChangeA={setScoreA}
-              onChangeB={setScoreB}
+              onChangeA={(v) => setScore(nearestMatch.id, 'A', v)}
+              onChangeB={(v) => setScore(nearestMatch.id, 'B', v)}
               isAdmin={!!isAdmin}
               onFinish={handleFinishMatch}
+              saveError={scoreError}
+              onDismissError={clearScoreError}
             />
           ) : loading && !loaded ? (
             <ActivityIndicator style={{ marginTop: 40 }} color={colors.green} />
@@ -237,6 +275,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
                 return (
                   <View key={match.id} style={styles.card}>
+                    {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
+                    <SoftTint tone="green" radius={radius.card} />
                     <View style={styles.cardHead}>
                       <View style={{ flex: 1, gap: 3 }}>
                         <Text style={styles.cardTitle}>
@@ -251,6 +291,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                       {isAdmin && (
                         <Pressable
                           onPress={() => randomize(match.id, noVotes)}
+                          accessibilityRole="button"
+                          accessibilityLabel={mine.length > 0 ? '팀 다시 분배' : '팀 분배'}
                           style={({ pressed }) => [styles.shuffleChip, pressed && styles.pressed]}
                         >
                           <Ionicons name="shuffle" size={13} color={colors.green} />
@@ -276,27 +318,34 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                         const isLast = gi === labels.length - 1;
                         return (
                           <View key={group} style={styles.groupCol}>
+                            {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
+                            <SoftTint tone="green" radius={radius.card} />
                             <View style={[styles.groupHead, { backgroundColor: `${tint}17` }]}>
                               <Text style={[styles.groupTitle, { color: tint }]}>{group}팀</Text>
                               <Text style={[styles.groupCount, { color: tint }]}>{list.length}명</Text>
                               {isAdmin && isLast && labels.length > 2 && (
-                                <Pressable onPress={() => removeLastGroup(match.id)} hitSlop={8}>
-                                  <Ionicons name="trash-outline" size={13} color={colors.textMuted} />
+                                // 13px 아이콘 + hitSlop 8 = 약 29px으로 화면에서 가장 작은 표적이었다.
+                                // 되돌리기 없는 삭제라 오히려 가장 넉넉해야 한다.
+                                <Pressable
+                                  onPress={() => removeLastGroup(match.id)}
+                                  hitSlop={14}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${group}팀 삭제`}
+                                >
+                                  <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
                                 </Pressable>
                               )}
                             </View>
 
                             <View style={styles.groupBody}>
                               {list.length === 0 ? (
-                                // 빈 팀도 카드 높이를 유지한다 — "비어 있음" 한 줄이면 칸이 찌그러져
-                                // 옆 팀과 높이가 안 맞고, 여기에 넣으라는 안내도 안 된다
+                                /*
+                                 * 한 줄로 끝낸다. 조작법("이름을 탭하면 다음 팀으로 이동해요")은
+                                 * 이미 카드 맨 아래 footHint가 한 번 말한다 — 빈 칸마다 되풀이하면
+                                 * 같은 문장이 화면에 다섯 번 뜨고, 그러느라 칸이 96px씩 부풀었다.
+                                 */
                                 <View style={styles.groupEmptyBox}>
-                                  <View style={styles.groupEmptyIcon}>
-                                    <Ionicons name="person-add-outline" size={14} color={colors.textDim} />
-                                  </View>
-                                  <Text style={styles.groupEmpty}>
-                                    {isAdmin ? '이름을 탭해서\n여기로 옮기세요' : '아직 배정된\n선수가 없어요'}
-                                  </Text>
+                                  <Text style={styles.groupEmpty}>비어 있음</Text>
                                 </View>
                               ) : (
                                 list.map((a) => {
@@ -306,8 +355,13 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                                     <Pressable
                                       key={a.team_member_id}
                                       disabled={!isAdmin}
-                                      hitSlop={4}
                                       onPress={() => moveMember(match.id, a.team_member_id)}
+                                      accessibilityRole={isAdmin ? 'button' : undefined}
+                                      accessibilityLabel={
+                                        isAdmin
+                                          ? `${nameFor(a.team_member_id)}, 탭하면 다음 팀으로 이동`
+                                          : nameFor(a.team_member_id)
+                                      }
                                       style={({ pressed }) => [
                                         styles.playerRow,
                                         isMe && styles.playerRowMe,
@@ -360,6 +414,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                         {labels.length < 5 && (
                           <Pressable
                             onPress={() => addGroup(match.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel="팀 추가"
                             style={({ pressed }) => [styles.addGroup, pressed && styles.pressed]}
                           >
                             <Ionicons name="add" size={15} color={colors.green} />
@@ -402,36 +458,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  segmentItemOn: { backgroundColor: '#1B2A22', borderColor: colors.greenDeep },
-  segmentText: { color: '#7C8A85', fontSize: 12.5, fontWeight: '800' },
+  segmentItemOn: { backgroundColor: colors.greenTint, borderColor: colors.greenDeep },
+  segmentText: { color: colors.navIdle, fontSize: 12, fontWeight: '800' }, // #7C8A85 하드코딩 = navIdle
   segmentTextOn: { color: colors.green },
 
   body: { paddingHorizontal: 20 },
   bodyCentered: { flexGrow: 1, justifyContent: 'center' },
   /** 어느 경기를 운영 중인지 — 세 탭 위에 항상 붙는 카드 */
   contextCard: {
+    ...shadow.card,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginBottom: 12,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 16,
     borderRadius: radius.card,
-    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    // SoftTint가 사각형이라 없으면 둥근 모서리 밖으로 샌다
-    overflow: 'hidden',
+    borderCurve: 'continuous',
+    backgroundColor: colors.card,
   },
-  contextText: { flex: 1, color: colors.textStrong, fontSize: 12.5, fontWeight: '700' },
+  contextText: { flex: 1, color: colors.textStrong, fontSize: 12, fontWeight: '700' },
   errorText: { color: colors.danger, textAlign: 'center', marginBottom: 8 },
 
   card: {
+    ...shadow.card,
     backgroundColor: colors.card,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    borderCurve: 'continuous',
+    padding: 20,
     gap: 14,
   },
   cardHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
@@ -439,7 +497,7 @@ const styles = StyleSheet.create({
   cardSub: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   noVoteNote: {
     color: colors.gold,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '600',
     lineHeight: 17,
     backgroundColor: colors.goldTint,
@@ -450,18 +508,19 @@ const styles = StyleSheet.create({
   shuffleChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#1B2A22',
+    minHeight: 46, // 33px이었다 — 이 카드의 주 동작인데 화면에서 가장 누르기 어려웠다
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.greenTint,
     borderWidth: 1,
     borderColor: '#2A3A32',
   },
   shuffleText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 
   formationBlock: { marginTop: 14, gap: 8 },
-  formationTitle: { color: colors.textStrong, fontSize: 12.5, fontWeight: '800' },
+  formationTitle: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
   groups: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   groupCol: {
     flexBasis: '47%',
@@ -483,19 +542,29 @@ const styles = StyleSheet.create({
   },
   groupTitle: { fontSize: 13, fontWeight: '800', flex: 1 },
   groupCount: { fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  groupBody: { paddingVertical: 4, minHeight: 96 },
-  /** 빈 팀 — 아이콘 + 안내. 옆 팀과 높이가 어긋나지 않게 최소 높이를 준다 */
-  groupEmptyBox: { alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 18, paddingHorizontal: 8 },
-  groupEmptyIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  /*
+   * minHeight: 96이 있었다. "빈 팀도 높이를 유지해야 옆 팀과 어긋나지 않는다"는 이유였는데,
+   * groups가 flexDirection:'row'라 기본 alignItems가 stretch다 — 한 줄 안의 칸들은
+   * 어차피 제일 큰 칸에 맞춰 늘어난다. minHeight는 그걸 이미 해결된 문제에 두 번 건 셈이고,
+   * 정작 「전부 비어 있을 때」(=분배 전, 이 화면을 여는 대부분의 순간) 5개 칸이
+   * 96px씩 쌓여 화면을 빈 상자로 채웠다.
+   *
+   * 떼면 채워진 팀 옆의 빈 팀은 stretch로 여전히 높이가 맞고, 전부 비었을 땐 같이 낮아진다.
+   */
+  groupBody: { paddingVertical: 4 },
+  /** 빈 팀 — 한 줄. 28px 아이콘 원과 두 줄 안내는 이 상태가 차지할 자리가 아니었다 */
+  groupEmptyBox: { justifyContent: 'center', minHeight: 34, paddingHorizontal: 13 },
+  // textFaint(#5F6B66)는 cardAlt(#151B17) 위에서 3.15:1 — 11px 안내문에 AA(4.5:1) 미달이다
+  groupEmpty: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+  // 이름을 탭해 팀을 옮기는 게 이 화면의 핵심 동작인데 행 높이가 40px이었다
+  playerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.inputBg,
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
   },
-  groupEmpty: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
-  playerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 11, paddingVertical: 8 },
   avatar: {
     width: 24,
     height: 24,
@@ -504,9 +573,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#8FA69C', fontSize: 10, fontWeight: '800' },
-  playerName: { flex: 1, color: colors.textStrong, fontSize: 12.5, fontWeight: '600' },
-  playerTag: { color: colors.textFaint, fontSize: 10, fontWeight: '800' },
+  avatarText: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
+  playerName: { flex: 1, color: colors.textStrong, fontSize: 12, fontWeight: '600' },
+  playerTag: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
 
   // 내 이름을 목록에서 눈으로 찾아야 했다 — 배경/아바타/글씨색으로 바로 눈에 띄게 한다
   playerRowMe: { backgroundColor: colors.greenTint },
@@ -515,14 +584,15 @@ const styles = StyleSheet.create({
   playerNameMe: { color: colors.text, fontWeight: '800' },
 
   cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  footHint: { color: colors.textFaint, fontSize: 11, fontWeight: '600', flex: 1 },
+  footHint: { color: colors.textMuted, fontSize: 11, fontWeight: '600', flex: 1 },
   addGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 999,
+    minHeight: 46,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.greenDeep,
   },

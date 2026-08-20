@@ -2,6 +2,7 @@ import { Linking, Modal, Platform, Pressable, StyleSheet, View } from 'react-nat
 import { Text } from '../../../components/nativeText';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../theme';
 
 const KAKAO_MAPS_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_MAPS_JS_KEY;
 
@@ -47,7 +48,7 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
   if (Platform.OS === 'web') {
     return (
       <Pressable style={styles.webFallback} onPress={openDirections}>
-        <Ionicons name="map-outline" size={20} color="#4ADE80" />
+        <Ionicons name="map-outline" size={20} color={colors.green} />
         <Text style={styles.webFallbackText}>지도 미리보기는 앱에서 볼 수 있어요{'\n'}여기를 눌러 카카오맵으로 열기</Text>
       </Pressable>
     );
@@ -116,10 +117,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 320,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 20,
     gap: 8,
   },
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   placeName: {
@@ -144,10 +145,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   categoryTagText: {
-    color: '#4ADE80',
+    color: colors.green,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   mapWebview: {
     flex: 1,
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 96,
     borderRadius: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,

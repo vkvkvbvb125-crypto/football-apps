@@ -4,6 +4,7 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { searchPlaces, type PlaceResult } from '../services/placeService';
+import { colors } from '../../../theme';
 
 const CATEGORIES = ['풋살장', '축구장', '운동장', '체육관'];
 
@@ -78,7 +79,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
-        <Ionicons name="location-outline" size={16} color={value ? '#4ADE80' : '#5A625E'} />
+        <Ionicons name="location-outline" size={16} color={value ? colors.green : colors.placeholder} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value?.name ?? '장소 검색'}</Text>
       </Pressable>
 
@@ -88,11 +89,11 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
             <Text style={styles.title}>경기 장소 검색</Text>
 
             <View style={styles.searchRow}>
-              <Ionicons name="search" size={15} color="#5A625E" />
+              <Ionicons name="search" size={15} color={colors.placeholder} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="장소명으로 검색"
-                placeholderTextColor="#5A625E"
+                placeholderTextColor={colors.placeholder}
                 value={query}
                 onChangeText={setQuery}
                 autoFocus
@@ -115,7 +116,7 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
               <Text style={styles.hintText}>위치 권한이 없어서 내 주변이 아닌 전국 검색 결과가 나와요</Text>
             )}
 
-            {loading && <ActivityIndicator style={styles.loading} color="#4ADE80" />}
+            {loading && <ActivityIndicator style={styles.loading} color={colors.green} />}
             {!loading && error && <Text style={styles.emptyText}>{error}</Text>}
             {!loading && !error && query.trim() === '' && (
               <Text style={styles.emptyText}>카테고리를 선택하거나 검색해보세요</Text>
@@ -156,11 +157,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   fieldText: {
     color: '#FFFFFF',
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fieldTextPlaceholder: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontWeight: '400',
   },
   overlay: {
@@ -180,15 +181,15 @@ const styles = StyleSheet.create({
   card: {
     width: 320,
     maxHeight: '75%',
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 20,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 14,
@@ -198,11 +199,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   searchInput: {
     flex: 1,
@@ -220,13 +221,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
   },
   chipActive: {
-    backgroundColor: '#4ADE80',
-    borderColor: '#4ADE80',
+    backgroundColor: colors.green,
+    borderColor: colors.green,
   },
   chipText: {
     color: '#8A9490',
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chipTextActive: {
-    color: '#0F1411',
+    color: colors.bgRoot,
   },
   hintText: {
     marginTop: 10,
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
   placeRow: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#1B231F',
+    borderBottomColor: colors.cardRaised,
   },
   placeRowTop: {
     flexDirection: 'row',
@@ -267,10 +268,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   categoryTagText: {
-    color: '#4ADE80',
+    color: colors.green,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -280,7 +281,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   emptyText: {
-    color: '#5A625E',
+    color: colors.placeholder,
     fontSize: 13,
     textAlign: 'center',
     paddingVertical: 20,

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { fetchMatchWeather, weatherEmoji, weatherLabel, type MatchWeather } from '../services/weatherService';
+import { colors } from '../../../theme';
 
 interface WeatherBadgeProps {
   latitude: number | null;
@@ -115,9 +116,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
   },
   emoji: {
     fontSize: 26,
@@ -147,9 +148,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
   },
   unavailableText: {
     color: '#8A9490',

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../theme';
 
 export const ITEM_HEIGHT = 44;
 const VISIBLE_COUNT = 3;
@@ -143,25 +144,25 @@ export const reelStyles = StyleSheet.create({
     borderRadius: 12,
   },
   pillActive: {
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   itemText: {
-    color: '#5A625E',
-    fontSize: 18,
+    color: colors.placeholder,
+    fontSize: 17,
     fontWeight: '700',
   },
   itemTextActive: {
-    color: '#0F1411',
+    color: colors.bgRoot,
   },
   colon: {
     color: '#8A9490',
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
     marginHorizontal: 8,
   },
   caption: {
     marginTop: 12,
-    color: '#4ADE80',
+    color: colors.green,
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
@@ -193,7 +194,7 @@ export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
   return (
     <>
       <Pressable style={styles.field} onPress={handleOpen}>
-        <Ionicons name="time-outline" size={16} color="#4ADE80" />
+        <Ionicons name="time-outline" size={16} color={colors.green} />
         <Text style={styles.fieldText}>{value}</Text>
       </Pressable>
 
@@ -231,11 +232,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
   },
   fieldText: {
     color: '#FFFFFF',
@@ -250,16 +251,16 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 280,
-    backgroundColor: '#161D18',
+    backgroundColor: colors.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#22302A',
+    borderColor: colors.border,
     padding: 20,
     gap: 16,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#1B231F',
+    backgroundColor: colors.cardRaised,
   },
   cancelText: {
     color: '#8A9490',
@@ -283,10 +284,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   confirmText: {
-    color: '#0F1411',
+    color: colors.bgRoot,
     fontWeight: '700',
   },
 });

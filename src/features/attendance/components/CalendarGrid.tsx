@@ -7,6 +7,7 @@
 // 날짜 원이 잘렸다. 카드 껍데기는 부모가 갖고, 이 컴포넌트는 내용만 그린다.
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
+import { colors } from '../../../theme';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   weekdayText: {
     flex: 1,
     textAlign: 'center',
-    color: '#5A625E',
+    color: colors.placeholder,
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 8,
@@ -116,38 +117,44 @@ const styles = StyleSheet.create({
   weekdayTextSaturday: { color: '#7093C8' },
 
   weekRow: { flexDirection: 'row' },
+  /*
+   * 한 행이 48px(원 38 + 위아래 5)이라 6주치면 288px, 카드 전체로는 화면의 절반을 넘었다.
+   * 그 안에 담긴 정보는 날짜와 초록 점 몇 개가 전부고, 정작 보려는 경기 상세와
+   * 다가오는 경기 목록은 스크롤 밖으로 밀려 있었다. 행을 40px로 줄여 6주 기준 48px을 돌려준다.
+   * 원은 34px까지만 줄인다 — 그 아래로 가면 두 자리 날짜와 선택 테두리가 답답해진다.
+   */
   cell: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 3,
   },
   dayCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayCircleToday: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
   dayCircleSelected: {
-    backgroundColor: 'rgba(74,222,128,0.16)',
+    backgroundColor: 'rgba(34,197,94,0.16)',
     borderWidth: 1,
-    borderColor: '#4ADE80',
+    borderColor: colors.green,
   },
-  dayText: { color: '#C9D3CF', fontSize: 13.5, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  dayText: { color: '#C9D3CF', fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
   dayTextToday: { color: '#FFFFFF', fontWeight: '800' },
-  dayTextSelected: { color: '#4ADE80', fontWeight: '800' },
+  dayTextSelected: { color: colors.green, fontWeight: '800' },
 
   dot: {
     marginTop: 3,
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.green,
   },
   // 자리를 유지해서 점 유무로 행 높이가 흔들리지 않게 한다
   dotHidden: { backgroundColor: 'transparent' },
@@ -161,6 +168,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#1B2521',
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
-  legendText: { color: '#6F7B76', fontSize: 10.5, fontWeight: '600' },
+  legendDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green },
+  legendText: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
 });

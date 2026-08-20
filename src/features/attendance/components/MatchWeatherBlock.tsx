@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  noneText: { color: '#5F6B66', fontSize: 11.5, fontWeight: '600' },
+  noneText: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
 
   box: {
     flexDirection: 'row',
@@ -209,11 +209,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
   iconAlert: { backgroundColor: 'rgba(96,165,250,0.12)' },
-  emoji: { fontSize: 19 },
+  emoji: { fontSize: 21 },
   tempRow: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   temp: {
     color: colors.text,
-    fontSize: 19,
+    fontSize: 21,
     fontWeight: '800',
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   note: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   noteAlert: { backgroundColor: 'rgba(96,165,250,0.14)' },
   noteMuted: { backgroundColor: 'rgba(255,255,255,0.05)' },
-  noteText: { color: colors.textDim, fontSize: 10.5, fontWeight: '800' },
+  noteText: { color: colors.textDim, fontSize: 10, fontWeight: '800' },
 
   advice: {
     gap: 10,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(96,165,250,0.18)',
   },
   adviceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  adviceText: { flex: 1, color: '#9FC2E8', fontSize: 11.5, fontWeight: '600', lineHeight: 17 },
+  adviceText: { flex: 1, color: '#9FC2E8', fontSize: 11, fontWeight: '600', lineHeight: 17 },
   adviceCta: { flexDirection: 'row', gap: 8 },
   keep: {
     flex: 1,
@@ -244,19 +244,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
-  keepText: { color: '#C9D3CF', fontSize: 12.5, fontWeight: '800' },
+  keepText: { color: colors.textBody, fontSize: 12, fontWeight: '800' },
+  /*
+   * 파랑이었다. 비·눈을 파랑으로 쓰는 건 날씨 의미색이라 그대로 두지만(위 아이콘·「우천 주의」 배지),
+   * 이건 상태가 아니라 총무가 누르는 동작이다. 앱에서 「누르면 뭔가 일어나는 것」은 전부 초록인데
+   * 여기만 파란 버튼이 나와서, 초록 앱 안에 다른 앱 조각이 낀 것처럼 읽혔다.
+   * 색은 무엇에 관한 것인지가 아니라 무엇을 하는 것인지를 따라간다.
+   */
   indoor: {
     flex: 1,
     height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(96,165,250,0.14)',
+    backgroundColor: colors.greenTint,
     borderWidth: 1,
-    borderColor: '#2F4560',
+    borderColor: colors.greenDeep,
   },
-  indoorText: { color: '#60A5FA', fontSize: 12.5, fontWeight: '800' },
+  indoorText: { color: colors.green, fontSize: 12, fontWeight: '800' },
   decided: { color: '#9FC2E8', fontSize: 11, fontWeight: '800' },
 });

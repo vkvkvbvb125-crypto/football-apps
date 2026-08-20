@@ -9,10 +9,10 @@
 // 3) "경기 전"에 링을 0.475로 고정하던 눈속임을 없애고 실제 잔여 비율(1.0)을 보여준다.
 // 4) 쿼터 길이 입력이 10px 회색 텍스트라 편집 가능한지 알 수 없었다 → 라벨 + 밑줄 강조.
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Vibration, View, useWindowDimensions } from 'react-native';
+import { AppState, Pressable, StyleSheet, Vibration, View, useWindowDimensions } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { colors } from '../../../theme';
 
@@ -77,8 +77,28 @@ export function TimerPanel({
 
   const [quarterMinutes, setQuarterMinutes] = useState(initialQuarterMinutes);
   const [remainingSeconds, setRemainingSeconds] = useState(quarterMinutes * 60);
+  /*
+   * 「+1분」으로 늘린 추가시간의 합.
+   *
+   * 이게 없으면 총 시간이 쿼터 길이에 고정돼서, 시간을 더한 순간 남은 시간이 총 시간을
+   * 넘어선다. 그럼 지난 비율이 음수가 되고 링이 통째로 사라졌다.
+   * 추가시간은 경기가 길어진 것이지 이미 흐른 시간이 되돌아간 게 아니므로,
+   * 분자(지난 시간)가 아니라 분모(총 시간)가 같이 커져야 맞다.
+   */
+  const [addedSeconds, setAddedSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /*
+   * 끝나는 시각(epoch ms). 돌고 있을 때만 값이 있다.
+   *
+   * 예전엔 1초마다 remainingSeconds를 1씩 깎았다. 그러면 브라우저·OS가 백그라운드에서
+   * 타이머를 늦추거나 멈출 때 시간이 실제보다 덜 흐른다 — 경기 중에 폰을 주머니에 넣는
+   * 건 늘 있는 일이라, 돌아와 보면 남은 시간이 틀려 있었다.
+   *
+   * 이제 tick은 화면을 다시 그릴 뿐이고, 남은 시간은 항상 endsAt - now로 계산한다.
+   * throttle이 걸려도 복귀하는 순간 옳은 값이 나온다.
+   */
+  const endsAtRef = useRef<number | null>(null);
 
   const player = useAudioPlayer(require('../../../../assets/sounds/whistle.mp3'));
 
@@ -126,33 +146,59 @@ export function TimerPanel({
   // 예약만 해두고 화면을 벗어나면 엉뚱한 데서 휘슬이 울린다
   useEffect(() => stopWhistle, []);
 
+  /** endsAt으로부터 남은 초 — 음수는 0으로 */
+  const secondsLeft = () =>
+    endsAtRef.current == null ? remainingSeconds : Math.max(0, Math.round((endsAtRef.current - Date.now()) / 1000));
+
   useEffect(() => {
     if (!isRunning) return;
-    intervalRef.current = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          Vibration.vibrate(500);
-          playWhistle(3);
-          setIsRunning(false);
-          onQuarterEnd();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // 시작·재개하는 순간 도착 시각을 못 박는다
+    if (endsAtRef.current == null) endsAtRef.current = Date.now() + remainingSeconds * 1000;
+
+    const tick = () => {
+      const left = secondsLeft();
+      setRemainingSeconds(left);
+      if (left <= 0) {
+        endsAtRef.current = null;
+        Vibration.vibrate(500);
+        playWhistle(3);
+        setIsRunning(false);
+        onQuarterEnd();
+      }
+    };
+    tick();
+    intervalRef.current = setInterval(tick, 500);
+
+    /*
+     * 백그라운드에서 돌아오면 즉시 다시 계산한다.
+     * interval이 살아 있어도 다음 tick까지 최대 0.5초 옛 숫자가 보이는데,
+     * 3분 잠갔다 켠 직후에 옛 숫자가 스치면 시간이 안 간 것처럼 보인다.
+     */
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') tick();
+    });
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      sub.remove();
     };
   }, [isRunning]);
 
-  // 쿼터가 바뀌면(다음 쿼터로 넘어가면) 새 쿼터 길이로 리셋
+  // 쿼터가 바뀌면(다음 쿼터로 넘어가면) 새 쿼터 길이로 리셋 — 추가시간도 같이 털어낸다
   useEffect(() => {
     setIsRunning(false);
+    endsAtRef.current = null;
     setRemainingSeconds(quarterMinutes * 60);
+    setAddedSeconds(0);
   }, [quarter]);
 
   const handleStartPause = () => {
-    if (!isRunning) playWhistle(1);
+    if (isRunning) {
+      // 일시정지 — 남은 시간을 확정해 두고 도착 시각은 버린다
+      setRemainingSeconds(secondsLeft());
+      endsAtRef.current = null;
+    } else {
+      playWhistle(1);
+    }
     setIsRunning((r) => !r);
   };
 
@@ -160,20 +206,30 @@ export function TimerPanel({
     // 종료 휘슬이 울리는 중에 초기화하면 남은 휘슬도 같이 멈춰야 한다
     stopWhistle();
     setIsRunning(false);
+    endsAtRef.current = null;
     setRemainingSeconds(quarterMinutes * 60);
+    setAddedSeconds(0);
   };
 
   const handleMinutesChange = (text: string) => {
     const value = Number(text) || 0;
     setQuarterMinutes(value);
-    if (!isRunning) setRemainingSeconds(value * 60);
+    // 시작 전에 쿼터 길이를 다시 정하는 건 새 판을 짜는 것 — 쌓인 추가시간은 의미가 없다
+    if (!isRunning) {
+      endsAtRef.current = null;
+      setRemainingSeconds(value * 60);
+      setAddedSeconds(0);
+    }
   };
 
   const handleAddMinute = () => {
+    setAddedSeconds((prev) => prev + 60);
     setRemainingSeconds((prev) => prev + 60);
+    // 돌고 있는 중이면 도착 시각도 같이 밀어야 한다 — 안 그러면 다음 tick이 되돌린다
+    if (endsAtRef.current != null) endsAtRef.current += 60_000;
   };
 
-  const totalSeconds = quarterMinutes * 60;
+  const totalSeconds = quarterMinutes * 60 + addedSeconds;
   const isFresh = remainingSeconds === totalSeconds;
   const stateLabel =
     remainingSeconds === 0 ? '쿼터 종료' : isRunning ? '진행 중' : isFresh ? '경기 전' : '일시정지';
@@ -183,8 +239,14 @@ export function TimerPanel({
    * 예전엔 남은 시간 비율이라 시작하면 꽉 찬 원이 점점 비었다 — 시계보다 배터리에 가까웠다.
    * 경기가 진행될수록 차오르는 쪽이 "얼마나 왔나"를 바로 읽게 해준다.
    */
-  // 아래로도 막는다 — "+1분"을 누르면 남은 시간이 총 시간을 넘어 비율이 음수가 되고,
-  // dashoffset이 둘레보다 커져 링이 엉뚱하게 그려진다.
+  /*
+   * clamp는 남겨 둔다 — 다만 이제 이건 안전망이지 대책이 아니다.
+   *
+   * 예전엔 totalSeconds가 쿼터 길이에 고정돼 있어서 "+1분"을 누르면 남은 시간이
+   * 총 시간을 넘었고, 음수가 된 비율이 여기서 0으로 잘리면서 링이 통째로 사라졌다.
+   * clamp가 "링이 엉뚱하게 그려지는" 증상만 덮고 원인(분모가 안 자라는 것)은 놔둔 셈이다.
+   * totalSeconds가 추가시간을 품게 된 지금은 이 식이 음수가 될 일이 없다.
+   */
   const elapsedRatio =
     totalSeconds > 0 ? Math.min(1, Math.max(0, (totalSeconds - remainingSeconds) / totalSeconds)) : 0;
   const strokeDashoffset = circumference * (1 - elapsedRatio);
@@ -202,22 +264,67 @@ export function TimerPanel({
 
       {/* 링 안에서 돌던 입자 구(ParticleSphere)는 걷어냈다 —
           남은 시간을 읽는 화면인데 배경이 계속 움직여서 숫자보다 먼저 눈에 들어왔다. */}
+      {/*
+        링은 앱 아이콘의 심(seam)과 같은 역할이다 — 검정 면 위에서 이것만 빛난다.
+        멈춰 있을 때와 도는 동안을 색으로 가른다(스펙 11절): 멈춰 있으면 심이 식어 있고,
+        도는 동안에만 밝은 네온이 되고 아주 약한 halo가 바깥으로 번진다.
+        예전엔 상태와 무관하게 늘 같은 초록이라, 화면만 보고는 도는 중인지 알 수 없었다.
+      */}
       <View style={[styles.ringSection, { width: ringSize, height: ringSize }]}>
         <Svg width={ringSize} height={ringSize}>
+          {/*
+            채워지는 호를 단색이 아니라 그라디언트로 긋는다.
+
+            아이콘 공의 심은 한 색이 아니다 — 밝게 타는 지점에서 그늘진 면 쪽으로
+            떨어진다. 단색 stroke는 그 결이 없어서 초록 철사처럼 보였다.
+            시작점(12시, 갓 지난 시간)이 깊고 끝(현재 지점)이 밝아서, 진행하는 끝이
+            타오르는 것처럼 읽힌다.
+          */}
+          <Defs>
+            <SvgGradient id="timerArc" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={colors.greenCore} />
+              <Stop offset="1" stopColor={isRunning ? colors.greenBright : colors.green} />
+            </SvgGradient>
+          </Defs>
           <Circle
             cx={ringSize / 2}
             cy={ringSize / 2}
             r={radius}
-            stroke="#173A28"
-            strokeOpacity={0.9}
+            stroke={colors.greenTrack}
             strokeWidth={STROKE_WIDTH}
             fill="none"
           />
+          {/*
+            도는 동안의 halo.
+
+            처음엔 컨테이너 View에 boxShadow를 걸었는데, 그 View는 SVG를 담는 정사각형이라
+            빛이 원이 아니라 네모로 그려졌다 — 타이머를 시작하면 화면에 사각형이 떠올랐다.
+            그림자는 원이 아니라 컨테이너 경계를 따라간다.
+
+            대신 같은 호를 굵게 한 번 더 긋는다. 경로가 같으니 사각형이 나올 수가 없고,
+            아직 지나지 않은 구간에는 빛이 없어서 "탄 자리만 밝다"는 아이콘의 결과도 맞는다.
+            채워지는 호보다 먼저 그려야 뒤에 깔린다.
+          */}
+          {isRunning && (
+            <Circle
+              cx={ringSize / 2}
+              cy={ringSize / 2}
+              r={radius}
+              stroke={colors.green}
+              strokeWidth={STROKE_WIDTH * 3}
+              strokeOpacity={0.16}
+              strokeLinecap="round"
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={strokeDashoffset}
+              fill="none"
+              transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+            />
+          )}
           <Circle
             cx={ringSize / 2}
             cy={ringSize / 2}
             r={radius}
-            stroke="#50D978"
+            stroke={isRunning ? 'url(#timerArc)' : colors.greenDeep}
             strokeWidth={STROKE_WIDTH}
             strokeLinecap="round"
             strokeDasharray={`${circumference} ${circumference}`}
@@ -343,9 +450,9 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
 
   head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  quarterChip: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, backgroundColor: '#1B2A22' },
+  quarterChip: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.greenTint },
   quarterText: { color: colors.green, fontSize: 11, fontWeight: '800' },
-  headSub: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
+  headSub: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
 
   ringSection: {
     alignSelf: 'center',
@@ -390,7 +497,7 @@ const styles = StyleSheet.create({
     minWidth: 42,
     textAlign: 'center',
     color: colors.textStrong,
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
@@ -412,7 +519,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
   secondaryButtonText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   primaryButton: {
@@ -428,7 +535,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#6B5426',
   },
-  primaryButtonText: { color: colors.bgRoot, fontSize: 14.5, fontWeight: '800' },
+  primaryButtonText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
   primaryButtonTextPause: { color: colors.gold },
 
   /** 경기 정보 카드 — 타이머 아래에 붙는다 */
@@ -444,7 +551,7 @@ const styles = StyleSheet.create({
   infoTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '800', marginBottom: 12 },
   infoRow: { flexDirection: 'row' },
   infoCell: { flex: 1, gap: 5 },
-  infoLabel: { color: colors.textDim, fontSize: 10.5, fontWeight: '700' },
+  infoLabel: { color: colors.textDim, fontSize: 10, fontWeight: '700' },
   infoValue: { color: colors.text, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
   infoDivider: { height: 1, backgroundColor: colors.divider, marginTop: 14 },
 
@@ -455,6 +562,6 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 12,
   },
-  scoreText: { color: colors.textDim, fontSize: 11.5, fontWeight: '600' },
-  scoreLink: { color: colors.green, fontSize: 11.5, fontWeight: '700' },
+  scoreText: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
+  scoreLink: { color: colors.green, fontSize: 11, fontWeight: '700' },
 });

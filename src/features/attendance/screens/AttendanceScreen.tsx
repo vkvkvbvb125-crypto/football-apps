@@ -25,10 +25,9 @@ import {
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { confirmAction } from '../../../components/Dialog';
-import { SoftTint } from '../../../components/BentoCard';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
-import { colors, radius } from '../../../theme';
+import { colors, font, radius, shadow } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useAttendanceStore } from '../stores/attendanceStore';
@@ -97,9 +96,18 @@ function popoverTop(anchorY: number) {
   return Math.max(16, anchorY - POPOVER_HEIGHT - 30);
 }
 
+/*
+ * 경기 카드 우상단 배지.
+ *
+ * 지난 경기를 D+1로 적고 있었다. D-2는 "이틀 남았다"로 바로 읽히는데 D+1은
+ * "하루 지났다"인지 "하루 뒤"인지 헷갈린다 — 지나간 경기라는 사실이 배지의 요점인데
+ * 그게 안 드러났다. 지난 것은 며칠인지가 아니라 끝났다는 것이 정보다.
+ */
 function ddayLabel(iso: string) {
   const diff = daysUntilOf(iso);
-  return diff === 0 ? 'TODAY' : diff > 0 ? `D-${diff}` : `D+${-diff}`;
+  if (diff > 0) return `D-${diff}`;
+  if (diff === 0) return 'TODAY';
+  return '종료';
 }
 
 function monthOffsetFor(date: Date): number {
@@ -218,6 +226,19 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     }));
 
   const handleOpenCreate = () => {
+    /*
+     * 「경기 만들기」는 캘린더에서 고른 날짜로 만든다.
+     *
+     * 그런데 이 버튼은 「다가오는 경기」 헤더에 있는 전체 동작이라, 사용자는 지금 어떤
+     * 날짜가 골라져 있는지 신경 쓰지 않는다. 어제 경기 카드를 보다가 누르면 어제로
+     * 만들어지고, 그 경기는 만들자마자 「다가오는 경기」에서 빠진다 —
+     * "오늘로 만들었는데 일정이 없다고 뜬다"가 이 경로다.
+     *
+     * 지난 날짜가 골라져 있으면 오늘로 옮긴다. 캘린더 선택도 같이 움직여서
+     * 시트에 적히는 날짜와 화면이 어긋나지 않는다.
+     */
+    const today = startOfDay(new Date());
+    if (startOfDay(selectedDate).getTime() < today.getTime()) setSelectedDate(today);
     setCreateSheetVisible(true);
     // 제휴구장 테이블은 아직 데이터가 없어서 대부분 빈 배열로 돌아오지만, 실제 쿼리라서
     // 나중에 구장 데이터를 채워 넣으면 코드 변경 없이 바로 뜬다.
@@ -306,7 +327,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     setModalVisible(false);
   };
 
-  const handleCreateSubmit = (payload: CreateMatchPayload) => {
+  const handleCreateSubmit = async (payload: CreateMatchPayload) => {
     const base = {
       location: payload.locationPending ? '' : (payload.locationText ?? ''),
       address: payload.locationPending ? null : payload.address,
@@ -335,14 +356,13 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
               : null,
         };
       });
-      createMatches(inputs);
-    } else {
-      createMatch({
-        ...base,
-        matchDate: payload.matchDate,
-        voteDeadline: votableDeadline(payload.voteDeadline, payload.matchDate),
-      });
+      return createMatches(inputs);
     }
+    return createMatch({
+      ...base,
+      matchDate: payload.matchDate,
+      voteDeadline: votableDeadline(payload.voteDeadline, payload.matchDate),
+    });
   };
 
   const setWeatherDecision = (match: MatchWithVotes, decision: 'keep' | 'indoor') => {
@@ -409,7 +429,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
           <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
             <View style={styles.calendarCard}>
-              <SoftTint tone="green" />
               <CalendarGrid
                 year={visibleMonth.year}
                 month={visibleMonth.month}
@@ -464,10 +483,9 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       onPickVenue={() => handleOpenEdit(selectedMatch)}
                       onKeepOutdoor={() => setWeatherDecision(selectedMatch, 'keep')}
                       onFindIndoor={() => setWeatherDecision(selectedMatch, 'indoor')}
+                      // 카드 밖에 떠 있던 「명단 보기」를 카드 푸터로 넣었다 (MatchDetailCard 참고)
+                      onOpenRoster={() => setRosterMatch(selectedMatch)}
                     />
-                    <Pressable onPress={() => setRosterMatch(selectedMatch)} hitSlop={6} style={styles.rosterLinkRow}>
-                      <Text style={styles.rosterLinkText}>명단 보기 ›</Text>
-                    </Pressable>
                   </View>
                 );
               })()
@@ -480,6 +498,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 {isAdmin && startOfDay(selectedDate).getTime() >= startOfDay(new Date()).getTime() && (
                   <Pressable
                     onPress={handleOpenCreate}
+                    accessibilityRole="button"
+                    accessibilityLabel="이 날짜에 경기 만들기"
                     style={({ pressed }) => [styles.noMatchCta, pressed && styles.pressed]}
                   >
                     <Ionicons name="add" size={14} color={colors.green} />
@@ -494,13 +514,24 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 {/* "이후"라고 하면 오늘 경기가 빠진 것처럼 읽힌다 — 목록은 오늘 0시부터 담는다.
                     오늘 저녁 경기도 아직 안 치른 경기라 여기 있는 게 맞다. */}
                 <Text style={styles.scheduleTitle}>다가오는 경기</Text>
-                <Text style={styles.scheduleCount}>{upcomingMatches.length}경기</Text>
+                {/*
+                  0은 적지 않는다.
+                  「다가오는 경기 0경기」가 떠 있는데 바로 위 상세 카드에 경기가 보이면
+                  모순으로 읽힌다 — 상세 카드는 캘린더에서 고른 날짜를 보여주고 목록은
+                  다가오는 것만 담기 때문이다. 없다는 말은 바로 아래 빈 상태가 이미 한다.
+                */}
+                {upcomingMatches.length > 0 && (
+                  <Text style={styles.scheduleCount}>{upcomingMatches.length}경기</Text>
+                )}
                 <View style={{ flex: 1 }} />
                 {/* 경기가 0건이어도 이 버튼은 뜬다 — 새 팀이 첫 경기를 만드는 유일한 입구다 */}
                 {isAdmin && (
                   <Pressable
                     onPress={handleOpenCreate}
-                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="경기 만들기"
+                    // 상자는 36인데 눌리는 범위는 44 — createChip 주석 참고
+                    hitSlop={{ top: 4, bottom: 4 }}
                     style={({ pressed }) => [styles.createChip, pressed && styles.pressed]}
                   >
                     <Ionicons name="add" size={14} color={colors.green} />
@@ -510,17 +541,27 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
               </View>
 
               {upcomingMatches.length === 0 ? (
-                // 새 팀이 이 앱에서 처음 보는 화면이다 — 다음에 뭘 하면 되는지 여기서 끝나야 한다
+                /*
+                  같은 0이라도 뜻이 둘이다.
+                  경기가 하나도 없는 것과, 만든 경기가 전부 지난 것은 다른 상태인데
+                  둘 다 "아직 등록된 경기가 없어요"로 적고 있었다. 경기를 다섯 개 만들어 둔
+                  사람에게 하나도 없다고 말하니 방금 만든 게 사라진 것처럼 보였다.
+                  (upcomingMatches는 오늘 0시 이후만 담는다 — 어제 경기는 여기 안 들어온다.)
+                */
                 <EmptyState
                   compact
                   emoji="🗓️"
-                  title="아직 등록된 경기가 없어요"
+                  title={matches.length === 0 ? '아직 등록된 경기가 없어요' : '다가오는 경기가 없어요'}
                   subtitle={
-                    isAdmin
-                      ? '날짜를 고르고 첫 경기를 만들어 보세요.\n만들면 팀원에게 참석 투표가 열려요'
-                      : '총무가 경기를 만들면 여기에 보여드릴게요'
+                    matches.length > 0
+                      ? `지난 경기 ${matches.length}개는 위 달력에서 볼 수 있어요.${
+                          isAdmin ? '\n새 경기는 날짜를 고르고 만들면 돼요' : ''
+                        }`
+                      : isAdmin
+                        ? '날짜를 고르고 첫 경기를 만들어 보세요.\n만들면 팀원에게 참석 투표가 열려요'
+                        : '총무가 경기를 만들면 여기에 보여드릴게요'
                   }
-                  actionLabel={isAdmin ? '첫 경기 만들기' : undefined}
+                  actionLabel={isAdmin ? (matches.length === 0 ? '첫 경기 만들기' : '새 경기 만들기') : undefined}
                   onAction={isAdmin ? handleOpenCreate : undefined}
                 />
               ) : (
@@ -612,11 +653,18 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
             <View style={styles.modalButtons}>
               <Pressable
                 onPress={() => setModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="수정 취소"
                 style={({ pressed }) => [styles.modalCancel, pressed && styles.pressed]}
               >
                 <Text style={styles.modalCancelText}>취소</Text>
               </Pressable>
-              <Pressable onPress={handleEditSubmit} style={({ pressed }) => [styles.modalSubmit, pressed && styles.pressed]}>
+              <Pressable
+                onPress={handleEditSubmit}
+                accessibilityRole="button"
+                accessibilityLabel="경기 수정 저장"
+                style={({ pressed }) => [styles.modalSubmit, pressed && styles.pressed]}
+              >
                 <Text style={styles.modalSubmitText}>저장</Text>
               </Pressable>
             </View>
@@ -629,7 +677,9 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         <Pressable style={{ flex: 1 }} onPress={() => setActionMatch(null)}>
           <View style={[styles.popover, { top: popoverTop(actionAnchorY) }]}>
             <Pressable
-              style={styles.popoverItem}
+              style={({ pressed }) => [styles.popoverItem, pressed && styles.pressed]}
+              accessibilityRole="menuitem"
+              accessibilityLabel="경기 수정"
               onPress={() => {
                 if (actionMatch) handleOpenEdit(actionMatch);
                 setActionMatch(null);
@@ -640,7 +690,9 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
             </Pressable>
             <View style={styles.popoverDivider} />
             <Pressable
-              style={styles.popoverItem}
+              style={({ pressed }) => [styles.popoverItem, pressed && styles.pressed]}
+              accessibilityRole="menuitem"
+              accessibilityLabel="경기 삭제"
               onPress={() => {
                 if (actionMatch) handleDelete(actionMatch.id);
                 setActionMatch(null);
@@ -683,37 +735,41 @@ const styles = StyleSheet.create({
   weatherLoadingText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 
   calendarCard: {
+    ...shadow.card,
     marginHorizontal: 20,
     backgroundColor: colors.card,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
+    borderCurve: 'continuous',
     paddingVertical: 8,
-    overflow: 'hidden',
   },
 
-  detailWrap: { paddingHorizontal: 20, paddingTop: 16, gap: 8 },
-  rosterLinkRow: { alignSelf: 'flex-end', paddingHorizontal: 2 },
-  rosterLinkText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  // gap 8은 떠 있던 「명단 보기」 줄과의 간격이었다 — 그 줄이 카드 안으로 들어가 자식이 하나뿐이다
+  detailWrap: { paddingHorizontal: 20, paddingTop: 16 },
 
   noMatchHint: {
+    ...shadow.card,
     marginHorizontal: 20,
     marginTop: 16,
-    padding: 16,
+    padding: 20,
     borderRadius: radius.card,
-    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
+    borderCurve: 'continuous',
+    backgroundColor: colors.card,
     alignItems: 'center',
     gap: 10,
   },
-  noMatchHintText: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
+  // textFaint(#5F6B66)는 card(#18201B) 위 3.2:1로 AA 미달 — 날짜를 골랐을 때 뜨는 유일한 설명이다
+  noMatchHintText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   noMatchCta: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 46,
+    paddingHorizontal: 14,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.greenDeep,
@@ -722,25 +778,49 @@ const styles = StyleSheet.create({
   noMatchCtaText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 
   scheduleSection: { paddingHorizontal: 20, paddingTop: 22 },
-  scheduleHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 10 },
+  /*
+   * 제목과 목록 사이가 34px이었다.
+   *
+   * 이 행의 높이는 제일 큰 자식인 칩이 정한다. 칩이 46이고 제목은 15px(줄 상자 22)인데
+   * baseline 정렬이라 제목이 행 위쪽에 붙는다 — 제목 아래로 24px이 그냥 빈다.
+   * 거기에 marginBottom 10이 더해진 값이었다.
+   *
+   * 칩을 36으로 낮춰 죽은 공간을 12로 줄이고(제목이 17이 된 뒤 값), marginBottom은 8.
+   * 합 20px — 홈의 섹션 헤더(21px)와 같은 간격이다.
+   */
+  scheduleHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 8 },
   createChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     alignSelf: 'center', // 부모가 baseline 정렬이라 칩은 따로 세로 중앙을 잡아준다
-    gap: 4,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    gap: 5,
+    /*
+     * 46이었다 — 12px 글씨를 담기엔 두꺼워서 섹션 헤더에서 칩이 제목을 눌렀다.
+     * 46은 원래 31에서 올린 값인데, 그때 문제는 표적이 작다는 것이었지
+     * 칩이 얇다는 게 아니었다. 그래서 상자는 36으로 낮추고 모자란 8px은
+     * hitSlop으로 채운다 — 눌리는 범위는 44 그대로고 보이는 것만 얇아진다.
+     */
+    minHeight: 36,
+    // 13이었다 — 높이를 46에서 36으로 내리니 좌우가 상대적으로 좁아 보였다.
+    // 알약은 양 끝이 둥글어서 같은 여백이라도 사각 버튼보다 좁게 읽힌다.
+    paddingHorizontal: 16,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.greenDeep,
     backgroundColor: colors.greenTint,
   },
   createChipText: { color: colors.green, fontSize: 12, fontWeight: '800' },
-  scheduleTitle: { color: colors.text, fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
-  scheduleCount: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
+  /*
+   * 15였다 — 홈의 섹션 제목은 17이라 탭을 옮기면 같은 층의 제목이 작아졌다.
+   * font.title(17)이 그 층의 토큰이다. font.section(15)은 카드 제목 쪽이라 여기 쓸 게 아니었다.
+   */
+  scheduleTitle: { ...font.title, color: colors.text },
+  scheduleCount: { color: colors.textMuted, fontSize: 12, fontWeight: '700' }, // textDim은 화면 배경 위 3.9:1
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: {
+    ...shadow.overlay,
     backgroundColor: colors.card,
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
@@ -755,11 +835,12 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#2C3833',
+    backgroundColor: colors.neutralFill,
     marginBottom: 10,
   },
-  modalTitle: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginBottom: 2 },
-  fieldLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700', marginTop: 4 },
+  modalTitle: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3, marginBottom: 2 },
+  // 폼 라벨은 대비를 양보할 자리가 아니다 — textDim은 card 위 3.78:1로 AA 미달이었다
+  fieldLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', marginTop: 4 },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -773,19 +854,19 @@ const styles = StyleSheet.create({
   modalButtons: { flexDirection: 'row', gap: 10, marginTop: 10 },
   modalCancel: {
     flex: 1,
-    height: 50,
-    borderRadius: 15,
+    height: 52,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
   modalCancelText: { color: colors.textMuted, fontSize: 14, fontWeight: '800' },
   modalSubmit: {
     flex: 1,
-    height: 50,
-    borderRadius: 15,
+    height: 52,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.green,
@@ -798,6 +879,7 @@ const styles = StyleSheet.create({
     width: 160,
     backgroundColor: colors.card,
     borderRadius: 14,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',

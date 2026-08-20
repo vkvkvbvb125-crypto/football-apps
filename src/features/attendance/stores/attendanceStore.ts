@@ -22,9 +22,15 @@ interface AttendanceState {
   loading: boolean;
   error: string | null;
   loadMatches: () => Promise<void>;
-  createMatch: (input: Omit<CreateMatchInput, 'teamId' | 'createdBy'>) => Promise<void>;
+  /**
+   * 만들어졌으면 true.
+   *
+   * 예전엔 Promise<void>라 실패해도 부르는 쪽이 알 수 없었다 — 시트는 무조건 닫히고
+   * 목록은 그대로였다. "만들었는데 업데이트가 안 된다"로 보이는 게 이 경로다.
+   */
+  createMatch: (input: Omit<CreateMatchInput, 'teamId' | 'createdBy'>) => Promise<boolean>;
   /** 반복 생성 등 여러 경기를 한 번에 만들 때 — 알림은 한 번만 보낸다 */
-  createMatches: (inputs: Omit<CreateMatchInput, 'teamId' | 'createdBy'>[]) => Promise<void>;
+  createMatches: (inputs: Omit<CreateMatchInput, 'teamId' | 'createdBy'>[]) => Promise<boolean>;
   updateMatch: (matchId: string, input: UpdateMatchInput) => Promise<void>;
   updateMatchStatus: (matchId: string, status: MatchStatus) => Promise<void>;
   deleteMatch: (matchId: string) => Promise<void>;
@@ -51,7 +57,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   },
   createMatch: async (input) => {
     const activeTeam = useTeamStore.getState().activeTeam;
-    if (!activeTeam) return;
+    if (!activeTeam) return false;
     set({ loading: true, error: null });
     try {
       await createMatchRequest({ ...input, teamId: activeTeam.team.id, createdBy: activeTeam.membershipId });
@@ -75,13 +81,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
       });
+      return true;
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '경기 생성에 실패했습니다.', loading: false });
+      return false;
     }
   },
   createMatches: async (inputs) => {
     const activeTeam = useTeamStore.getState().activeTeam;
-    if (!activeTeam || inputs.length === 0) return;
+    if (!activeTeam || inputs.length === 0) return false;
     set({ loading: true, error: null });
     try {
       for (const input of inputs) {
@@ -102,8 +110,10 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
       });
+      return true;
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '경기 생성에 실패했습니다.', loading: false });
+      return false;
     }
   },
   updateMatch: async (matchId, input) => {

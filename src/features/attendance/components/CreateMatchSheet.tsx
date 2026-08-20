@@ -48,7 +48,11 @@ interface Props {
   /** team_settings 기반 기본값 (없으면 undefined) */
   defaults?: { weekdayLabel: string; time: string; venueName: string } | null;
   venues: VenueOption[];
-  onSubmit: (p: CreateMatchPayload) => void;
+  /**
+   * 만들어졌으면 true를 돌려준다 — 그때만 시트를 닫는다.
+   * 예전엔 void였고 시트가 곧바로 닫혀서, 실패해도 "닫혔으니 됐겠지"로 보였다.
+   */
+  onSubmit: (p: CreateMatchPayload) => Promise<boolean> | boolean;
 }
 
 const DEADLINE_PRESETS = [
@@ -77,7 +81,7 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
     weekday: 'short',
   })})`;
 
-  const submit = () => {
+  const submit = async () => {
     const matchDate = new Date(selectedDate);
     const [h, m] = time.split(':').map(Number);
     matchDate.setHours(h || 0, m || 0, 0, 0);
@@ -93,7 +97,7 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
       voteDeadline = d.toISOString();
     }
 
-    onSubmit({
+    const ok = await onSubmit({
       matchDate: matchDate.toISOString(),
       venueId: pendingPlace ? null : mode === 'partner' ? venueId : null,
       locationText: pendingPlace ? null : mode === 'search' ? (searchPlace?.name ?? null) : (venue?.name ?? null),
@@ -107,10 +111,22 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
       repeatWeekly: repeat,
       repeatCount: repeat ? 12 : 1,
     });
-    onClose();
+    // 실패하면 열어 둔다 — 화면의 오류 문구와 입력값이 같이 남아야 다시 시도할 수 있다
+    if (ok) onClose();
   };
 
-  const canSubmit = pendingPlace || (mode === 'partner' ? !!venueId : !!searchPlace);
+  /*
+   * 지난 날짜로는 만들 수 없다.
+   *
+   * 막을 게 없었다 — 어제 날짜로도 만들어졌고, 만들어진 경기는 곧바로 「다가오는 경기」
+   * 필터(오늘 0시 이후) 밖으로 떨어져 화면에서 사라졌다. 사용자에게는 저장이 안 된
+   * 것처럼 보인다. 버튼이 이유를 말하고 막는 게 맞다.
+   * 오늘은 허용한다 — 오늘 저녁 경기를 오늘 아침에 만드는 건 흔한 일이다.
+   */
+  const isPastDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime()
+    < new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+  const placeReady = pendingPlace || (mode === 'partner' ? !!venueId : !!searchPlace);
+  const canSubmit = placeReady && !isPastDate;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -311,7 +327,14 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
           </ScrollView>
 
           <Pressable disabled={!canSubmit} onPress={submit} style={[styles.cta, !canSubmit && { opacity: 0.4 }]}>
-            <Text style={styles.ctaText}>{repeat ? '12경기 만들고 알림 보내기' : '경기 만들고 알림 보내기'}</Text>
+            {/* 못 누르는 이유를 버튼이 직접 말한다 */}
+            <Text style={styles.ctaText}>
+              {isPastDate
+                ? '지난 날짜에는 만들 수 없어요'
+                : repeat
+                  ? '12경기 만들고 알림 보내기'
+                  : '경기 만들고 알림 보내기'}
+            </Text>
           </Pressable>
           <Text style={styles.note}>만들면 팀원 전체에게 알림이 발송돼요</Text>
         </View>
@@ -334,14 +357,14 @@ const styles = StyleSheet.create({
     paddingBottom: 26,
     gap: 14,
   },
-  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: '#2C3833', marginBottom: 4 },
+  handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.neutralFill, marginBottom: 4 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: { flex: 1, color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  title: { flex: 1, color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
   close: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
 
   label: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  hint: { color: '#5F6B66', fontSize: 11, fontWeight: '600' },
+  hint: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
 
   defaultBox: {
     flexDirection: 'row',
@@ -349,9 +372,9 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 13,
     borderRadius: 14,
-    backgroundColor: 'rgba(74,222,128,0.07)',
+    backgroundColor: 'rgba(34,197,94,0.07)',
     borderWidth: 1,
-    borderColor: '#2F4A3A',
+    borderColor: colors.greenDeep,
   },
   defaultBoxOff: { backgroundColor: colors.inputBg, borderColor: colors.divider },
   defaultTitle: { color: colors.green, fontSize: 12, fontWeight: '800' },
@@ -375,10 +398,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: '#26332D',
+    borderColor: colors.border,
   },
   pendingToggleOn: { backgroundColor: 'rgba(210,163,76,0.16)', borderColor: '#6B5426' },
-  pendingToggleText: { color: colors.textMuted, fontSize: 10.5, fontWeight: '800' },
+  pendingToggleText: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
 
   warn: {
     flexDirection: 'row',
@@ -390,7 +413,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(210,163,76,0.22)',
   },
-  warnText: { flex: 1, color: '#E3C489', fontSize: 11.5, fontWeight: '600', lineHeight: 17 },
+  warnText: { flex: 1, color: '#E3C489', fontSize: 11, fontWeight: '600', lineHeight: 17 },
 
   tabs: {
     flexDirection: 'row',
@@ -402,24 +425,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 11, borderWidth: 1, borderColor: 'transparent' },
-  tabOn: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
-  tabText: { color: '#7C8A85', fontSize: 12.5, fontWeight: '800' },
+  tabOn: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
+  tabText: { color: '#7C8A85', fontSize: 12, fontWeight: '800' },
 
   venueCard: { padding: 13, borderRadius: 14, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.divider },
-  venueCardOn: { backgroundColor: 'rgba(74,222,128,0.07)', borderColor: '#2F4A3A' },
+  venueCardOn: { backgroundColor: 'rgba(34,197,94,0.07)', borderColor: colors.greenDeep },
   venueHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   venueNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  venueName: { color: colors.text, fontSize: 13.5, fontWeight: '800' },
+  venueName: { color: colors.text, fontSize: 13, fontWeight: '800' },
   venueTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
-  venueTagText: { fontSize: 9.5, fontWeight: '800' },
+  venueTagText: { fontSize: 10, fontWeight: '800' },
   venueMeta: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
 
   slotWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingTop: 10 },
   slot: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
-  slotOpen: { backgroundColor: 'rgba(74,222,128,0.08)', borderColor: '#2F4A3A' },
+  slotOpen: { backgroundColor: 'rgba(34,197,94,0.08)', borderColor: colors.greenDeep },
   slotClosed: { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors.divider },
   slotPicked: { backgroundColor: colors.green, borderColor: colors.green },
-  slotText: { fontSize: 10.5, fontWeight: '800' },
+  slotText: { fontSize: 10, fontWeight: '800' },
   slotTextClosed: { color: '#4A544F', textDecorationLine: 'line-through' },
 
   preset: {
@@ -431,7 +454,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  presetOn: { backgroundColor: 'rgba(74,222,128,0.10)', borderColor: '#2F4A3A' },
+  presetOn: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
   presetText: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
 
   repeatRow: {
@@ -444,17 +467,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  repeatRowOn: { backgroundColor: 'rgba(74,222,128,0.07)', borderColor: '#2F4A3A' },
+  repeatRowOn: { backgroundColor: 'rgba(34,197,94,0.07)', borderColor: colors.greenDeep },
   repeatCheck: { width: 20, height: 20, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   repeatTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
   repeatSub: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
 
   check: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: colors.green },
-  checkOff: { borderWidth: 1.5, borderColor: '#2C3833' },
+  checkOff: { borderWidth: 1.5, borderColor: colors.neutralFill },
   checkMark: { color: colors.bgRoot, fontSize: 11, fontWeight: '800' },
 
   cta: { height: 52, borderRadius: 16, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
-  note: { color: '#5F6B66', fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  note: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });

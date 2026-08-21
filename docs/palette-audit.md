@@ -79,3 +79,39 @@ node scripts/palette-scan.mjs
 - 색·타이포·간격은 `src/theme.ts` 토큰만 쓴다
 - 토큰에 없는 값이 필요하면 **먼저 토큰을 추가**하고 `design.md`에 반영
 - 예외는 B(브랜드 고정색)뿐이며, 그 이유를 주석에 남긴다
+
+
+---
+
+# 부록 — DB 오류 원문 노출
+
+팔레트와 별개지만 같은 성격(같은 실수가 여러 파일에 흩어짐)이라 여기 적어 둔다.
+
+스토어가 `catch`에서 `err.message`를 그대로 `error`에 세우면 화면에 Postgres 원문이 뜬다:
+
+```
+duplicate key value violates unique constraint "matches_team_date_uniq"
+```
+
+총무가 읽을 문장이 아니고, 테이블·제약 이름이 노출된다.
+
+## 정리 완료
+
+`attendanceStore` 6곳 → `src/lib/dbError.ts`의 `toUserMessage()`.
+아는 코드(23505/23503/23502/42501/PGRST301/네트워크)는 번역하고 나머지는
+「문제가 생겼어요. 잠시 후 다시 시도해주세요」로 감싼다. **원문은 콘솔에만 남긴다.**
+
+## 남은 곳 — 24건
+
+| 파일 | 건수 |
+|---|---|
+| `teamStore.ts` | 10 |
+| `assignmentStore.ts` | 5 |
+| `pollsStore.ts` | 4 |
+| `announcementsStore.ts` | 4 |
+| `settlementStore.ts` | 2 |
+| `authStore.ts` | 1 |
+
+**권고**: 같은 `toUserMessage()`로 치환. 단순 치환이라 회귀 위험이 낮고, 화면마다
+뜻이 있는 코드만 두 번째 인자로 넘기면 된다. 예: 정산은 23505가
+「이미 정산이 있어요」, 팀은 「이미 가입한 팀이에요」.

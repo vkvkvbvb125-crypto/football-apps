@@ -71,6 +71,14 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
   const [searchPlace, setSearchPlace] = useState<PlaceResult | null>(null);
   const [deadlineIdx, setDeadlineIdx] = useState(1);
   const [repeat, setRepeat] = useState(false);
+  /*
+   * 제출 중 잠금.
+   *
+   * canSubmit은 「장소를 골랐나」만 본다. onSubmit을 await하는 동안 버튼이 계속 눌려서
+   * 같은 요청이 두 번 갔다 — 실제로 9초 차로 같은 경기가 두 건 만들어졌다.
+   * 성공했을 때만 시트를 닫도록 바꾼 뒤로 그 창이 오히려 길어졌다(예전엔 호출 직후 닫혔다).
+   */
+  const [submitting, setSubmitting] = useState(false);
 
   const venue = useMemo(() => venues.find((v) => v.id === venueId) ?? null, [venues, venueId]);
 
@@ -82,6 +90,16 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
   })})`;
 
   const submit = async () => {
+    if (submitting) return; // 이벤트가 두 번 들어와도 한 번만
+    setSubmitting(true);
+    try {
+      await runSubmit();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const runSubmit = async () => {
     const matchDate = new Date(selectedDate);
     const [h, m] = time.split(':').map(Number);
     matchDate.setHours(h || 0, m || 0, 0, 0);
@@ -126,7 +144,7 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
   const isPastDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime()
     < new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
   const placeReady = pendingPlace || (mode === 'partner' ? !!venueId : !!searchPlace);
-  const canSubmit = placeReady && !isPastDate;
+  const canSubmit = placeReady && !isPastDate && !submitting;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -329,11 +347,13 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
           <Pressable disabled={!canSubmit} onPress={submit} style={[styles.cta, !canSubmit && { opacity: 0.4 }]}>
             {/* 못 누르는 이유를 버튼이 직접 말한다 */}
             <Text style={styles.ctaText}>
-              {isPastDate
-                ? '지난 날짜에는 만들 수 없어요'
-                : repeat
-                  ? '12경기 만들고 알림 보내기'
-                  : '경기 만들고 알림 보내기'}
+              {submitting
+                ? '만드는 중…'
+                : isPastDate
+                  ? '지난 날짜에는 만들 수 없어요'
+                  : repeat
+                    ? '12경기 만들고 알림 보내기'
+                    : '경기 만들고 알림 보내기'}
             </Text>
           </Pressable>
           <Text style={styles.note}>만들면 팀원 전체에게 알림이 발송돼요</Text>

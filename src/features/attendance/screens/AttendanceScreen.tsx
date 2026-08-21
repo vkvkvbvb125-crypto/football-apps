@@ -43,6 +43,7 @@ import { toMatchWeatherBlockData } from '../components/MatchWeatherBlock';
 import { ScheduleRow, resolveBadge } from '../components/ScheduleRow';
 import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../components/CreateMatchSheet';
 import { resolveCapacity } from '../utils/capacity';
+import { createResultLabel } from '../utils/createResult';
 import { isVotingOpen, votingLockNote } from '../utils/voting';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
 import { fetchPartnerVenues, venueMeta } from '../services/venueService';
@@ -128,6 +129,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const loadMatches = useAttendanceStore((s) => s.loadMatches);
   const createMatch = useAttendanceStore((s) => s.createMatch);
   const createMatches = useAttendanceStore((s) => s.createMatches);
+  const lastCreateResult = useAttendanceStore((s) => s.lastCreateResult);
+  const clearCreateResult = useAttendanceStore((s) => s.clearCreateResult);
   const updateMatch = useAttendanceStore((s) => s.updateMatch);
   const deleteMatch = useAttendanceStore((s) => s.deleteMatch);
   const vote = useAttendanceStore((s) => s.vote);
@@ -426,6 +429,18 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
           <MonthNavigator offset={monthOffset} onChange={setMonthOffset} />
           {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+          {/*
+            반복 생성 결과 — 건너뛴 건 실패가 아니라서 오류(빨강)로 띄우지 않는다.
+            총무가 궁금한 건 개수가 아니라 「어느 날짜가 빠졌나」다. 셋까지는 날짜를
+            적고, 그보다 많으면 화면이 문장으로 덮이므로 개수로 요약한다.
+          */}
+          {!!lastCreateResult && (
+            <Pressable onPress={clearCreateResult} accessibilityRole="button" style={styles.createNote}>
+              <Ionicons name="checkmark-circle-outline" size={15} color={colors.green} />
+              <Text style={styles.createNoteText}>{createResultLabel(lastCreateResult)}</Text>
+            </Pressable>
+          )}
 
           <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
             <View style={styles.calendarCard}>
@@ -731,6 +746,22 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   errorText: { color: colors.danger, textAlign: 'center', marginTop: 8 },
+  /** 반복 생성 결과 — 오류가 아니라 알림이라 초록 */
+  createNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: 20,
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
+    backgroundColor: colors.greenTint,
+  },
+  createNoteText: { flex: 1, color: colors.textBody, fontSize: 12, fontWeight: '600' },
   weatherLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 },
   weatherLoadingText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 

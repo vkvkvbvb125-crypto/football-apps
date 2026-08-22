@@ -7,6 +7,7 @@ import {
   fetchPolls,
   type PollWithResponses,
 } from '../services/pollsService';
+import { toUserMessage } from '../../../lib/dbError';
 
 interface PollsState {
   polls: PollWithResponses[];
@@ -32,7 +33,7 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       const polls = await fetchPolls(activeTeam.team.id);
       set({ polls, loaded: true });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '투표를 불러오지 못했습니다.', loaded: true });
+      set({ error: toUserMessage(err, {}, 'loadPolls'), loaded: true });
     } finally {
       set({ loading: false });
     }
@@ -45,7 +46,7 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       await createPollRequest({ ...input, teamId: activeTeam.team.id, authorId: activeTeam.membershipId });
       await get().loadPolls();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '투표 생성에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, { '23505': '같은 투표가 이미 있어요' }, 'createPoll'), loading: false });
     }
   },
   deletePoll: async (id) => {
@@ -54,7 +55,7 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       await deletePollRequest(id);
       await get().loadPolls();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '투표 삭제에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, {}, 'deletePoll'), loading: false });
     }
   },
   vote: async (pollId, optionIndex) => {
@@ -64,7 +65,7 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       await castPollVoteRequest(pollId, activeTeam.membershipId, optionIndex);
       await get().loadPolls();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '투표에 실패했습니다.' });
+      set({ error: toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote') });
     }
   },
 }));

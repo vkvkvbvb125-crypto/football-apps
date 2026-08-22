@@ -7,6 +7,7 @@
 import { create } from 'zustand';
 import { fetchScores, upsertScore } from '../services/scoreService';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { toUserMessage } from '../../../lib/dbError';
 
 /** matchId → { 'A': 2, 'B': 1 } */
 type ScoreMap = Record<string, Record<string, number>>;
@@ -57,7 +58,7 @@ export const useScoreStore = create<ScoreState>((set, get) => ({
     } catch (e) {
       set((s) => ({
         byMatch: { ...s.byMatch, [matchId]: { ...(s.byMatch[matchId] ?? {}), [squadLabel]: prev } },
-        error: e instanceof Error ? e.message : '점수를 저장하지 못했어요',
+        error: toUserMessage(e, {}, 'setScore'),
       }));
     }
   },

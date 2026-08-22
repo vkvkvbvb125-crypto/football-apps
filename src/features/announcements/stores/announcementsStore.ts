@@ -13,6 +13,7 @@ import {
   fetchAnnouncementReadCounts,
   type UpdateAnnouncementInput,
 } from '../services/announcementsService';
+import { toUserMessage } from '../../../lib/dbError';
 
 interface AnnouncementsState {
   announcements: AnnouncementRow[];
@@ -59,7 +60,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
       const announcements = await fetchAnnouncements(activeTeam.team.id);
       set({ announcements, loaded: true });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '공지사항을 불러오지 못했습니다.', loaded: true });
+      set({ error: toUserMessage(err, {}, 'loadAnnouncements'), loaded: true });
     } finally {
       set({ loading: false });
     }
@@ -79,7 +80,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
         // 알림 전송 실패는 조용히 무시 (공지 작성 자체는 이미 성공)
       });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '공지사항 작성에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, { '23505': '같은 공지가 이미 있어요' }, 'createAnnouncement'), loading: false });
     }
   },
   updateAnnouncement: async (id, input) => {
@@ -88,7 +89,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
       await updateAnnouncementRequest(id, input);
       await get().loadAnnouncements();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '공지사항 수정에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, {}, 'updateAnnouncement'), loading: false });
     }
   },
   deleteAnnouncement: async (id) => {
@@ -97,7 +98,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
       await deleteAnnouncementRequest(id);
       await get().loadAnnouncements();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '공지사항 삭제에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, {}, 'deleteAnnouncement'), loading: false });
     }
   },
 }));

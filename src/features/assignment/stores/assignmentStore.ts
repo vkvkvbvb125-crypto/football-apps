@@ -4,6 +4,7 @@ import { updateMatchTeamCount } from '../../attendance/services/attendanceServic
 import { useTeamStore } from '../../team/stores/teamStore';
 import { fetchAssignments, groupLabelsFor, saveAssignments, updateAssignment } from '../services/assignmentService';
 import type { Database } from '../../../types/database';
+import { toUserMessage } from '../../../lib/dbError';
 
 type AssignmentRow = Database['public']['Tables']['team_assignments']['Row'];
 
@@ -34,7 +35,7 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
       const assignments = await fetchAssignments(matchIds);
       set({ assignments, loaded: true });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '팀분배를 불러오지 못했습니다.', loaded: true });
+      set({ error: toUserMessage(err, {}, 'loadAssignments'), loaded: true });
     } finally {
       set({ loading: false });
     }
@@ -84,7 +85,7 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
       await saveAssignments(matchId, assignments);
       await get().loadAssignments();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '팀분배에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, { '23505': '이미 배정된 선수가 있어요' }, 'randomize'), loading: false });
     }
   },
   moveMember: async (matchId, teamMemberId) => {
@@ -97,7 +98,7 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
       await updateAssignment(matchId, teamMemberId, nextLabel);
       await get().loadAssignments();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '조정에 실패했습니다.' });
+      set({ error: toUserMessage(err, {}, 'moveMember') });
     }
   },
   addGroup: async (matchId) => {
@@ -107,7 +108,7 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
       await updateMatchTeamCount(matchId, match.team_count + 1);
       await useAttendanceStore.getState().loadMatches();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '팀 추가에 실패했습니다.' });
+      set({ error: toUserMessage(err, { '23505': '이미 있는 팀이에요' }, 'addGroup') });
     }
   },
   removeLastGroup: async (matchId) => {
@@ -129,7 +130,7 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
       await useAttendanceStore.getState().loadMatches();
       await get().loadAssignments();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '팀 삭제에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, {}, 'removeLastGroup'), loading: false });
     }
   },
 }));

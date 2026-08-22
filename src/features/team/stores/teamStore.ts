@@ -18,6 +18,7 @@ import {
   type TeamMemberWithProfile,
 } from '../services/teamService';
 import type { SkillTag } from '../../../types/database';
+import { toUserMessage } from '../../../lib/dbError';
 
 interface TeamState {
   memberships: TeamMembership[];
@@ -56,7 +57,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       set({ memberships, activeTeam: memberships[0] ?? null, loaded: true });
       get().loadMembers();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '팀 정보를 불러오지 못했습니다.', loaded: true });
+      set({ error: toUserMessage(err, {}, 'loadMemberships'), loaded: true });
     } finally {
       set({ loading: false });
     }
@@ -77,7 +78,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await createTeamRequest(name);
       await get().loadMemberships();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '팀 생성에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, { '23505': '같은 이름의 팀이 이미 있어요' }, 'createTeam'), loading: false });
     }
   },
   joinTeam: async (inviteCode) => {
@@ -87,7 +88,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await get().loadMemberships();
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : '팀 가입에 실패했습니다. 초대코드를 확인하세요.',
+        error: toUserMessage(err, { '23505': '이미 가입한 팀이에요' }, 'joinTeam'),
         loading: false,
       });
     }
@@ -100,7 +101,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await updateTeamHomeLocationRequest(activeTeam.team.id, location);
       await get().loadMemberships();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '대표 지역 설정에 실패했습니다.', loading: false });
+      set({ error: toUserMessage(err, {}, 'updateHomeLocation'), loading: false });
     }
   },
   updateMemberSkillTag: async (teamMemberId, skillTag) => {
@@ -108,7 +109,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await updateMemberSkillTagRequest(teamMemberId, skillTag);
       await get().loadMembers();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '실력태그 변경에 실패했습니다.' });
+      set({ error: toUserMessage(err, {}, 'updateMemberSkillTag') });
     }
   },
   updateMemberPosition: async (teamMemberId, position) => {
@@ -116,7 +117,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await updateMemberPositionRequest(teamMemberId, position);
       await get().loadMembers();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '포지션 변경에 실패했습니다.' });
+      set({ error: toUserMessage(err, {}, 'updateMemberPosition') });
     }
   },
   updateMemberJersey: async (teamMemberId, jerseyNumber) => {
@@ -137,7 +138,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await updateTeamSloganRequest(activeTeam.team.id, slogan);
       await get().loadMemberships();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '슬로건을 바꾸지 못했습니다.' });
+      set({ error: toUserMessage(err, {}, 'updateSlogan') });
     }
   },
   /**
@@ -163,7 +164,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await updateNotifyPrefRequest(teamMemberId, column, value);
       await get().loadMembers();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '알림 설정을 바꾸지 못했습니다.' });
+      set({ error: toUserMessage(err, {}, 'updateNotifyPref') });
     }
   },
   promoteToAdmin: async (teamMemberId) => {
@@ -171,7 +172,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await updateMemberRoleRequest(teamMemberId, 'admin');
       await get().loadMembers();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '총무 임명에 실패했습니다.' });
+      set({ error: toUserMessage(err, { '42501': '총무만 할 수 있어요' }, 'promoteToAdmin') });
     }
   },
   removeMember: async (teamMemberId) => {
@@ -185,7 +186,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       await removeMemberRequest(teamMemberId);
       await get().loadMembers();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : '멤버 내보내기에 실패했습니다.' });
+      set({ error: toUserMessage(err, { '42501': '총무만 할 수 있어요' }, 'removeMember') });
     }
   },
   reset: () => set({ memberships: [], activeTeam: null, members: [], loaded: false, error: null }),

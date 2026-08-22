@@ -73,7 +73,15 @@ function readableError(err: unknown) {
   if (/JWT|token.*(expired|invalid)|invalid.*token/i.test(raw)) {
     return '링크가 만료되었거나 이미 사용되었어요. 비밀번호 찾기를 다시 시도해주세요';
   }
-  return raw || '로그인에 실패했습니다.';
+  /*
+   * 여기까지 왔으면 우리가 모르는 오류다.
+   *
+   * raw를 그대로 돌려주고 있었다 — Supabase 원문은 영어라서 화면에 그대로 뜬다
+   * ("AuthApiError: Database error saving new user" 같은 문장을 사용자가 본다).
+   * 원문은 콘솔에 남기고 화면에는 무엇을 해야 하는지만 말한다.
+   */
+  if (raw) console.error('[auth]', raw);
+  return '로그인에 실패했어요. 잠시 후 다시 시도해주세요';
 }
 
 export const useAuthStore = create<AuthState>((set) => {

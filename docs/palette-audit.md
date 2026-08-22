@@ -115,3 +115,19 @@ duplicate key value violates unique constraint "matches_team_date_uniq"
 **권고**: 같은 `toUserMessage()`로 치환. 단순 치환이라 회귀 위험이 낮고, 화면마다
 뜻이 있는 코드만 두 번째 인자로 넘기면 된다. 예: 정산은 23505가
 「이미 정산이 있어요」, 팀은 「이미 가입한 팀이에요」.
+
+
+---
+
+# 부록 — 확인 방법에 관한 교훈
+
+**RLS가 걸린 테이블의 전수 확인은 앱 경로(anon key)로 하지 않는다. 대시보드 SQL을 쓴다.**
+
+`matches`에 `unique(team_id, match_date)`를 걸기 전, 앱의 anon key + 로그인 세션으로
+REST를 조회해 "중복 0"이라고 판단했다. 제약 생성은 실패했다 — 다른 팀에 중복이 있었다.
+
+`matches`의 SELECT 정책은 `is_team_member(team_id)`다. 앱 경로로 조회하면 **내가 속한
+팀의 행만** 돌아온다. 없는 게 아니라 안 보이는 것인데 그걸 "없다"로 읽었다.
+
+스키마 전체를 대상으로 하는 검사(중복·정합성·마이그레이션 사전 확인)는 RLS를 우회하는
+경로로 해야 한다. 대시보드 SQL Editor 또는 service_role.

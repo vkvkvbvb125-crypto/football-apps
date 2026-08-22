@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { supabase } from '../../../lib/supabase';
 import { whereLabel } from '../utils';
+import { toUserMessage } from '../../../lib/dbError';
 
 export interface ShareRow {
   id: string;
@@ -191,7 +192,7 @@ export const useSettlementStore = create<State>((set, get) => ({
 
       set({ current, past, pendingMatches, loaded: true });
     } catch (e: any) {
-      set({ error: e.message ?? '정산을 불러오지 못했어요', loaded: true });
+      set({ error: toUserMessage(e, {}, 'db'), loaded: true });
     } finally {
       set({ loading: false });
     }

@@ -48,6 +48,38 @@ assert.equal(createResultLabel({ created: 0, skipped: ['2026-09-03'] }), '모두
 
 // ── 에러 번역 ──────────────────────────────────────────────────
 {
+  /*
+   * 어떤 스토어도 DB 원문을 화면으로 내보내지 않는다.
+   *
+   * catch가 err.message를 그대로 error에 세우면 「duplicate key value violates
+   * unique constraint ...」가 총무에게 보인다. 총무는 그걸 앱이 고장난 것으로 읽는다.
+   * 26곳이 그 상태였다 — 한 곳을 고쳐도 나머지가 남아 있으면 같은 일이 다시 난다.
+   */
+  const STORES = [
+    'src/features/attendance/stores/attendanceStore.ts',
+    'src/features/announcements/stores/announcementsStore.ts',
+    'src/features/assignment/stores/assignmentStore.ts',
+    'src/features/polls/stores/pollsStore.ts',
+    'src/features/team/stores/teamStore.ts',
+    'src/features/settlement/stores/settlementStore.ts',
+    'src/features/timer/stores/scoreStore.ts',
+  ];
+  for (const f of STORES) {
+    const src = read(f);
+    // error에 원문을 싣는 형태
+    assert.ok(!/error: err instanceof Error \? err\.message/.test(src), `${f}: DB 원문이 화면으로 나간다`);
+    assert.ok(!/error: e instanceof Error \? e\.message/.test(src), `${f}: DB 원문이 화면으로 나간다`);
+    assert.ok(!/error:\s*e\.message \?\?/.test(src), `${f}: DB 원문이 화면으로 나간다`);
+    // 에러를 세우는 스토어라면 번역을 거쳐야 한다
+    if (/set\(\{[^}]*error:/.test(src)) {
+      assert.ok(/toUserMessage\(/.test(src), `${f}: 에러 번역을 안 쓴다`);
+    }
+  }
+  // 인증은 Supabase 원문(영어)을 매칭에만 쓰고 화면엔 안 내보낸다
+  const auth = read('src/features/auth/stores/authStore.ts');
+  assert.ok(!/return raw \|\|/.test(auth), 'authStore가 영어 원문을 그대로 돌려준다');
+  assert.ok(/console\.error\('\[auth\]'/.test(auth), 'authStore가 원문을 콘솔에 안 남긴다');
+
   const s = read('src/lib/dbError.ts');
   for (const code of ['23505', '23503', '23502', '42501']) {
     assert.ok(s.includes(`'${code}'`), `${code} 처리가 없다`);

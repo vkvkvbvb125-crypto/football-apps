@@ -119,7 +119,13 @@ export function MainTabNavigator() {
         name="Assignment"
         component={AssignmentScreen}
         options={{
-          // 시안대로 가운데는 라벨 없이 공만 — 대신 공이 다른 아이콘보다 크다
+          /*
+            가운데만 라벨이 없다.
+            일관성으로는 붙이는 게 맞지만 공간이 안 나온다 — 링 60 + 라벨 15 = 75px인데
+            바는 66px이다. 넣으려면 공을 44px로 줄이거나(지난 라운드에 키운 걸 되돌린다)
+            바 위로 18px 삐져나오게 해야 한다(뒤 콘텐츠와 겹친다).
+            공 크기와 바 안에 머무는 쪽을 택했다. 맥락은 공 그림이 맡는다.
+          */
           tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => <BallIcon focused={focused} />,
           // 옆 탭들의 세로 정렬(styles.item)을 여기엔 걸지 않는다 — 위 주석 참고

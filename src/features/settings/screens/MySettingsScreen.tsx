@@ -35,6 +35,7 @@ export function MySettingsScreen({ navigation }: any) {
   const updateMemberPosition = useTeamStore((s) => s.updateMemberPosition);
   const updateMemberSkillTag = useTeamStore((s) => s.updateMemberSkillTag);
   const updateMemberJersey = useTeamStore((s) => s.updateMemberJersey);
+  const updateNotifyPref = useTeamStore((s) => s.updateNotifyPref);
 
   const me = members.find((m) => m.id === activeTeam?.membershipId) ?? null;
 
@@ -314,6 +315,41 @@ export function MySettingsScreen({ navigation }: any) {
           </View>
         )}
 
+        {/*
+          알림 설정 — 팀 화면에서 옮겨 왔다.
+
+          team_members.notify_* 에 저장되는 개인 설정인데 팀 화면의 설정 탭에 있었고,
+          그 탭 입구(4버튼 그리드)를 걷어내면서 도달 불가가 됐다. 알림을 끌 방법이
+          아예 없는 상태였다. 계정에 딸린 값이라 자리는 여기가 맞다.
+        */}
+        {!!me && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>알림</Text>
+            {(
+              [
+                { col: 'notify_new_match' as const, label: '새 일정 알림', on: me.notifyNewMatch },
+                { col: 'notify_announcement' as const, label: '공지 알림', on: me.notifyAnnouncement },
+                { col: 'notify_deadline' as const, label: '참석 마감 알림', on: me.notifyDeadline },
+              ]
+            ).map((row) => (
+              <Pressable
+                key={row.col}
+                onPress={() => updateNotifyPref(me.id, row.col, !row.on)}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: row.on }}
+                style={({ pressed }) => [styles.toggleRow, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.toggleLabel}>{row.label}</Text>
+                <View style={[styles.toggle, row.on && styles.toggleOn]}>
+                  <View style={[styles.toggleKnob, row.on && styles.toggleKnobOn]} />
+                </View>
+              </Pressable>
+            ))}
+            <Text style={styles.notifyHint}>이 팀에서 오는 알림만 조절해요. 다른 팀은 따로 설정합니다</Text>
+          </View>
+        )}
+
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>계정</Text>
           <Text style={styles.accountEmail}>{session?.user.email ?? ''}</Text>
@@ -328,6 +364,16 @@ export function MySettingsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  toggleLabel: { color: colors.textBody, fontSize: 14, fontWeight: '600' },
+  toggle: {
+    width: 42, height: 24, borderRadius: radius.pill, padding: 2,
+    backgroundColor: colors.neutralFill, justifyContent: 'center',
+  },
+  toggleOn: { backgroundColor: colors.green },
+  toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bgRoot },
+  toggleKnobOn: { alignSelf: 'flex-end' },
+  notifyHint: { color: colors.textMuted, fontSize: 11, fontWeight: '600', marginTop: 4 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -343,30 +389,29 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
     gap: 8,
   },
   cardTitle: { color: colors.textStrong, fontSize: 14, fontWeight: '800', marginBottom: 4 },
-  label: { color: colors.textDim, fontSize: 11.5, fontWeight: '700' },
+  label: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   hint: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
 
   /** 프로필 사진 */
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 6 },
   photo: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.inputBg },
   photoEmpty: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
-  removePhoto: { color: colors.danger, fontSize: 11.5, fontWeight: '700' },
+  removePhoto: { color: colors.danger, fontSize: 11, fontWeight: '700' },
 
   nameRow: { flexDirection: 'row', gap: 8 },
   input: {
     flex: 1,
     height: 46,
     paddingHorizontal: 14,
-    borderRadius: radius.button,
+    borderRadius: radius.pill,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
     color: colors.text,
     fontSize: 14,
   },
@@ -387,15 +432,13 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 999,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   chipOn: { backgroundColor: colors.greenTint, borderColor: colors.greenDeep },
   chipLocked: { opacity: 0.5 },
   chipText: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
   chipTextOn: { color: colors.green, fontWeight: '800' },
 
-  accountEmail: { color: colors.textDim, fontSize: 12.5, fontWeight: '600' },
+  accountEmail: { color: colors.textDim, fontSize: 12, fontWeight: '600' },
   signOut: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,7 +446,7 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 46,
     marginTop: 6,
-    borderRadius: radius.button,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
   },

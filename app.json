@@ -35,6 +35,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/KickDay_icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B0F0D"
+        }
+      ],
       "expo-web-browser",
       [
         "expo-notifications",

@@ -1,25 +1,12 @@
 // src/features/team/services/teamSettingsService.ts
 // team_settings: 정기모임 기본값 / 회비 / 게스트 / 가입 승인. 팀당 한 행 (없으면 아직 설정 안 한 것).
 import { supabase } from '../../../lib/supabase';
-import type { Database, FeeMode } from '../../../types/database';
+import type { Database } from '../../../types/database';
+import { diffSettings, hhmm, settingsToRow, type TeamSettings } from '../utils/teamSettingsPatch';
+
+export { diffSettings, hhmm, settingsToRow, type TeamSettings };
 
 type Row = Database['public']['Tables']['team_settings']['Row'];
-
-export interface TeamSettings {
-  teamId: string;
-  defaultWeekdays: number[];
-  defaultTime: string | null;
-  defaultVenueId: string | null;
-  defaultCapacity: number;
-  feeMode: FeeMode;
-  defaultFee: number | null;
-  bankName: string | null;
-  accountNo: string | null;
-  accountHolder: string | null;
-  guestAllowed: boolean;
-  guestFee: number | null;
-  joinApprovalRequired: boolean;
-}
 
 function mapRow(r: Row): TeamSettings {
   return {
@@ -46,21 +33,26 @@ export async function fetchTeamSettings(teamId: string): Promise<TeamSettings | 
   return data ? mapRow(data) : null;
 }
 
+const COLUMN: Record<keyof Omit<TeamSettings, 'teamId'>, string> = {
+  defaultWeekdays: 'default_weekdays',
+  defaultTime: 'default_time',
+  defaultVenueId: 'default_venue_id',
+  defaultCapacity: 'default_capacity',
+  feeMode: 'fee_mode',
+  defaultFee: 'default_fee',
+  bankName: 'bank_name',
+  accountNo: 'account_no',
+  accountHolder: 'account_holder',
+  guestAllowed: 'guest_allowed',
+  guestFee: 'guest_fee',
+  joinApprovalRequired: 'join_approval_required',
+};
+
 export async function upsertTeamSettings(teamId: string, patch: Partial<Omit<TeamSettings, 'teamId'>>) {
-  const { error } = await supabase.from('team_settings').upsert({
-    team_id: teamId,
-    default_weekdays: patch.defaultWeekdays,
-    default_time: patch.defaultTime,
-    default_venue_id: patch.defaultVenueId,
-    default_capacity: patch.defaultCapacity,
-    fee_mode: patch.feeMode,
-    default_fee: patch.defaultFee,
-    bank_name: patch.bankName,
-    account_no: patch.accountNo,
-    account_holder: patch.accountHolder,
-    guest_allowed: patch.guestAllowed,
-    guest_fee: patch.guestFee,
-    join_approval_required: patch.joinApprovalRequired,
-  });
+  const row = settingsToRow(teamId, patch);
+  // team_id뿐이면 바뀐 게 없다 — 빈 upsert로 updated_at만 흔들 이유가 없다
+  if (Object.keys(row).length === 1) return;
+
+  const { error } = await supabase.from('team_settings').upsert(row);
   if (error) throw error;
 }

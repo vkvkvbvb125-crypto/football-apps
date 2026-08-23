@@ -4,15 +4,19 @@
 // team_settings 테이블에 upsert된다. 원본 핸드오프엔 "팀 삭제" 위험 구역이 있었는데
 // 실제로는 navigation.goBack()만 하고 아무것도 지우지 않는 가짜 버튼이었다 — 팀 삭제를
 // 되돌릴 수 없게 실제로 처리하려면 별도 RPC/cascade 설계가 필요해서 여기선 뺐다.
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { colors, font, radius } from '../../../theme';
 import { useTeamStore } from '../stores/teamStore';
+import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
+import type { PlaceResult } from '../../attendance/services/placeService';
 import { fetchMemberProfiles, updateSkillLevel, SKILL_LABEL, type MemberProfile } from '../services/memberProfileService';
-import { fetchTeamSettings, upsertTeamSettings } from '../services/teamSettingsService';
+import { fetchTeamSettings, upsertTeamSettings, diffSettings, hhmm } from '../services/teamSettingsService';
+import type { TeamSettings } from '../services/teamSettingsService';
+import { toUserMessage } from '../../../lib/dbError';
 import type { FeeMode, SkillLevel } from '../../../types/database';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -21,11 +25,14 @@ const TIMES = ['19:00', '20:00', '21:00'];
 
 export function TeamSettingsScreen({ navigation }: any) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
+  const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
   const teamId = activeTeam?.team.id;
 
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [weekdays, setWeekdays] = useState<Record<number, boolean>>({});
   const [time, setTime] = useState<string | null>(null);
   const [capacity, setCapacity] = useState('12');
@@ -39,32 +46,47 @@ export function TeamSettingsScreen({ navigation }: any) {
   const [approval, setApproval] = useState(false);
   const [members, setMembers] = useState<MemberProfile[]>([]);
 
-  useEffect(() => {
+  const baseRef = useRef<TeamSettings | null>(null);
+
+  const load = useCallback(async () => {
     if (!teamId) return;
-    (async () => {
-      try {
-        const [settings, profiles] = await Promise.all([fetchTeamSettings(teamId), fetchMemberProfiles(teamId)]);
-        if (settings) {
-          setWeekdays(Object.fromEntries(settings.defaultWeekdays.map((d) => [d, true])));
-          setTime(settings.defaultTime?.slice(0, 5) ?? null);
-          setCapacity(String(settings.defaultCapacity));
-          setFeeMode(settings.feeMode);
-          setFee(settings.defaultFee != null ? String(settings.defaultFee) : '');
-          setBank(settings.bankName ?? '');
-          setAccountNo(settings.accountNo ?? '');
-          setHolder(settings.accountHolder ?? '');
-          setGuestAllowed(settings.guestAllowed);
-          setGuestFee(settings.guestFee != null ? String(settings.guestFee) : '');
-          setApproval(settings.joinApprovalRequired);
-        }
-        setMembers(profiles);
-      } catch {
-        // 처음 설정하는 팀이면 team_settings 행이 아예 없을 수 있음 — 기본값 그대로 둔다
-      } finally {
-        setLoaded(true);
+    setLoadError(null);
+    // 설정과 멤버는 따로 받는다.
+    // 예전엔 Promise.all이었다 — 멤버 쿼리가 400을 내면 설정 setter가 한 줄도 실행되지
+    // 않은 채 catch로 빠졌고, 폼은 빈 기본값으로 떴다. 그 상태로 저장하면 계좌가 날아갔다.
+    try {
+      const settings = await fetchTeamSettings(teamId);
+      baseRef.current = settings && { ...settings, defaultTime: hhmm(settings.defaultTime) };
+      if (settings) {
+        setWeekdays(Object.fromEntries(settings.defaultWeekdays.map((d) => [d, true])));
+        setTime(hhmm(settings.defaultTime));
+        setCapacity(String(settings.defaultCapacity));
+        setFeeMode(settings.feeMode);
+        setFee(settings.defaultFee != null ? String(settings.defaultFee) : '');
+        setBank(settings.bankName ?? '');
+        setAccountNo(settings.accountNo ?? '');
+        setHolder(settings.accountHolder ?? '');
+        setGuestAllowed(settings.guestAllowed);
+        setGuestFee(settings.guestFee != null ? String(settings.guestFee) : '');
+        setApproval(settings.joinApprovalRequired);
       }
-    })();
+      // settings === null은 "아직 설정 안 한 팀" — 오류가 아니다. 기본값 그대로 둔다.
+    } catch (err) {
+      setLoadError(toUserMessage(err, {}, 'loadTeamSettings'));
+    }
+
+    // 명단은 부가 정보 — 실패해도 설정 화면은 쓸 수 있어야 한다
+    try {
+      setMembers(await fetchMemberProfiles(teamId));
+    } catch (err) {
+      console.error('[loadMemberProfiles]', err);
+    }
+    setLoaded(true);
   }, [teamId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const setLevel = async (m: MemberProfile, level: SkillLevel) => {
     setMembers((prev) => prev.map((p) => (p.id === m.id ? { ...p, skillLevel: level } : p)));
@@ -76,32 +98,52 @@ export function TeamSettingsScreen({ navigation }: any) {
   };
 
   const handleSave = async () => {
-    if (!teamId) return;
-    setSaving(true);
-    try {
-      await upsertTeamSettings(teamId, {
-        defaultWeekdays: Object.keys(weekdays)
-          .filter((k) => weekdays[Number(k)])
-          .map(Number),
-        defaultTime: time,
-        defaultCapacity: Number(capacity) || 12,
-        feeMode,
-        defaultFee: fee ? Number(fee) : null,
-        bankName: bank || null,
-        accountNo: accountNo || null,
-        accountHolder: holder || null,
-        guestAllowed,
-        guestFee: guestFee ? Number(guestFee) : null,
-        joinApprovalRequired: approval,
-      });
+    // 못 읽은 상태를 덮어쓰지 않는다 — 이게 마지막 방어선이다
+    if (!teamId || loadError) return;
+
+    const next: Partial<Omit<TeamSettings, 'teamId'>> = {
+      defaultWeekdays: Object.keys(weekdays)
+        .filter((k) => weekdays[Number(k)])
+        .map(Number)
+        .sort((a, b) => a - b),
+      defaultTime: time,
+      defaultCapacity: Number(capacity) || 12,
+      feeMode,
+      defaultFee: fee ? Number(fee) : null,
+      bankName: bank || null,
+      accountNo: accountNo || null,
+      accountHolder: holder || null,
+      guestAllowed,
+      guestFee: guestFee ? Number(guestFee) : null,
+      joinApprovalRequired: approval,
+    };
+
+    const base = baseRef.current;
+    const patch = diffSettings(next, base);
+
+    setSaveError(null);
+    if (Object.keys(patch).length === 0) {
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await upsertTeamSettings(teamId, patch);
+      baseRef.current = { ...(base ?? ({} as TeamSettings)), ...next, teamId };
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } catch (err) {
+      setSaveError(toUserMessage(err, {}, 'saveTeamSettings'));
     } finally {
       setSaving(false);
     }
   };
 
+
   const selectedDays = Object.keys(weekdays).filter((k) => weekdays[Number(k)]);
+
 
   if (!loaded) {
     return (
@@ -124,9 +166,37 @@ export function TeamSettingsScreen({ navigation }: any) {
           <Ionicons name="chevron-back" size={22} color={colors.textStrong} />
         </Pressable>
         <Text style={styles.headerTitle}>설정</Text>
-      </View>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* 정기모임 */}
+        {/*
+          팀 대표 지역 — 팀 화면 설정 탭에서 옮겨 왔다.
+
+          경기 없는 날의 예상 날씨를 이 좌표로 조회한다. 활동 지역(region_code)과는
+          다른 값이다 — 저쪽은 매칭에서 구/군 단위로 거르는 코드고 이쪽은 날씨용 지점이다.
+          둘 다 필요해서 통합하지 않는다.
+        */}
+        <View style={styles.card}>
+          <View style={styles.cardHead}>
+            <Text style={styles.cardTitle}>팀 대표 지역</Text>
+            <Text style={styles.cardSub}>{activeTeam?.team.home_place_name ?? '미설정'}</Text>
+          </View>
+          <PlaceSearchModal
+            value={activeTeam?.team.home_place_name ? { name: activeTeam.team.home_place_name } : null}
+            onSelect={(place: PlaceResult) =>
+              updateHomeLocation({
+                placeName: place.name,
+                address: place.address,
+                latitude: place.latitude,
+                longitude: place.longitude,
+              })
+            }
+          />
+          <Text style={styles.hint}>경기 없는 날의 예상 날씨를 이 위치 기준으로 보여줘요</Text>
+        </View>
+
+
         <View style={styles.card}>
           <View style={styles.cardHead}>
             <Text style={styles.cardTitle}>정기모임</Text>
@@ -271,9 +341,25 @@ export function TeamSettingsScreen({ navigation }: any) {
           </Text>
         </View>
 
-        <Pressable onPress={handleSave} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.6 }]}>
-          <Text style={styles.saveBtnText}>{saving ? '저장 중…' : saved ? '저장됐어요' : '저장'}</Text>
-        </Pressable>
+        {loadError ? (
+          // 저장 버튼을 아예 치운다. 이 상태의 폼은 DB가 아니라 기본값을 보여주고 있어서,
+          // 누르는 순간 멀쩡한 값이 지워진다.
+          <View style={styles.loadErr}>
+            <Text style={styles.loadErrTitle}>설정을 불러오지 못했어요</Text>
+            <Text style={styles.loadErrBody} selectable>{loadError}</Text>
+            <Text style={styles.loadErrBody}>지금 저장하면 저장돼 있던 값이 지워질 수 있어 저장을 잠갔어요.</Text>
+            <Pressable onPress={load} style={styles.retryBtn} accessibilityRole="button">
+              <Text style={styles.retryText}>다시 시도</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            {saveError && <Text style={styles.saveErr} selectable>{saveError}</Text>}
+            <Pressable onPress={handleSave} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.6 }]}>
+              <Text style={styles.saveBtnText}>{saving ? '저장 중…' : saved ? '저장됐어요' : '저장'}</Text>
+            </Pressable>
+          </>
+        )}
       </ScrollView>
     </ScreenGradient>
   );
@@ -281,8 +367,30 @@ export function TeamSettingsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingVertical: 12 },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  headerTitle: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
   scroll: { padding: 20, paddingBottom: 60, gap: 14 },
+
+  loadErr: {
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    padding: 16,
+    gap: 8,
+  },
+  loadErrTitle: { color: colors.danger, ...font.section },
+  loadErrBody: { color: colors.textDim, fontSize: 12, fontWeight: '600', lineHeight: 18 },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.inputBg,
+  },
+  retryText: { color: colors.text, fontSize: 12, fontWeight: '800' },
+  saveErr: { color: colors.danger, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   card: {
     backgroundColor: colors.card,
@@ -294,9 +402,9 @@ const styles = StyleSheet.create({
   },
   cardHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   cardTitle: { color: colors.text, ...font.section },
-  cardSub: { color: colors.green, fontSize: 11.5, fontWeight: '700' },
+  cardSub: { color: colors.green, fontSize: 11, fontWeight: '700' },
   label: { color: colors.textDim, fontSize: 11, fontWeight: '700', marginTop: 4 },
-  hint: { color: '#5F6B66', fontSize: 11, fontWeight: '600', lineHeight: 17, marginTop: 2 },
+  hint: { color: colors.textFaint, fontSize: 11, fontWeight: '600', lineHeight: 17, marginTop: 2 },
 
   row: { flexDirection: 'row', gap: 5 },
   chip: {
@@ -309,8 +417,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   chipOn: { backgroundColor: colors.green, borderColor: colors.green },
-  chipSoft: { backgroundColor: 'rgba(74,222,128,0.12)', borderColor: '#2F4A3A' },
-  chipText: { color: colors.textMuted, fontSize: 12.5, fontWeight: '800' },
+  chipSoft: { backgroundColor: 'rgba(34,197,94,0.12)', borderColor: colors.greenDeep },
+  chipText: { color: colors.textMuted, fontSize: 12, fontWeight: '800' },
   chipTextOn: { color: colors.bgRoot },
 
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -334,7 +442,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.text,
-    fontSize: 13.5,
+    fontSize: 13,
   },
   unit: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
 
@@ -348,8 +456,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   segItem: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10 },
-  segItemOn: { backgroundColor: 'rgba(74,222,128,0.10)', borderWidth: 1, borderColor: '#2F4A3A' },
-  segText: { color: '#7C8A85', fontSize: 12.5, fontWeight: '800' },
+  segItemOn: { backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 1, borderColor: colors.greenDeep },
+  segText: { color: '#7C8A85', fontSize: 12, fontWeight: '800' },
 
   memberRow: {
     flexDirection: 'row',
@@ -367,7 +475,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#8FA69C', fontSize: 10.5, fontWeight: '800' },
+  avatarText: { color: '#8FA69C', fontSize: 10, fontWeight: '800' },
   memberName: { flex: 1, color: colors.textStrong, fontSize: 13, fontWeight: '700' },
   lvBtn: {
     width: 34,
@@ -380,7 +488,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   lvBtnOn: { backgroundColor: colors.green, borderColor: colors.green },
-  lvBtnText: { color: colors.textDim, fontSize: 11.5, fontWeight: '800' },
+  lvBtnText: { color: colors.textDim, fontSize: 11, fontWeight: '800' },
 
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   toggleTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },

@@ -17,17 +17,25 @@ export interface MemberProfile {
 }
 
 export async function fetchMemberProfiles(teamId: string): Promise<MemberProfile[]> {
-  const { data, error } = await supabase
-    .from('team_members')
-    .select(
-      `id, user_id, role, position, skill_level,
-       profiles ( display_name ),
-       team_member_stats ( attendance_rate )`
-    )
-    .eq('team_id', teamId)
-    .order('role', { ascending: true });
+  // 참석률은 임베드로 못 가져온다.
+  //
+  // team_member_stats는 집계 뷰라 FK가 없고, PostgREST는 FK가 있어야 관계를 추론한다.
+  // 이 뷰를 select 안에 임베드하면 늘 PGRST200 400이 났다 — 즉 이 함수는
+  // 여태 한 번도 성공한 적이 없다. 팀 설정의 실력 레벨 목록이 비어 있던 이유다.
+  // 두 번 나눠 받아서 JS에서 붙인다.
+  const [{ data, error }, { data: stats }] = await Promise.all([
+    supabase
+      .from('team_members')
+      .select('id, user_id, role, position, skill_level, profiles ( display_name )')
+      .eq('team_id', teamId)
+      .order('role', { ascending: true }),
+    supabase.from('team_member_stats').select('team_member_id, attendance_rate').eq('team_id', teamId),
+  ]);
 
   if (error) throw error;
+
+  // 참석률은 부가 정보다 — 뷰가 비어도 명단은 나와야 한다
+  const rateOf = new Map((stats ?? []).map((s: any) => [s.team_member_id, s.attendance_rate]));
 
   return (data ?? []).map((m: any) => ({
     id: m.id,
@@ -36,7 +44,7 @@ export async function fetchMemberProfiles(teamId: string): Promise<MemberProfile
     role: m.role,
     position: m.position,
     skillLevel: (m.skill_level ?? 2) as SkillLevel,
-    attendanceRate: m.team_member_stats?.attendance_rate ?? null,
+    attendanceRate: rateOf.get(m.id) ?? null,
   }));
 }
 

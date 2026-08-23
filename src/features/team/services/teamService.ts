@@ -78,6 +78,43 @@ export async function updateTeamSlogan(teamId: string, slogan: string | null) {
   if (error) throw error;
 }
 
+/**
+ * 팀 프로필 — 활동 지역 · 평균 인원 · 실력.
+ *
+ * 정기 요일·시간은 여기 없다. team_settings.default_weekdays/default_time이 이미
+ * 그 값이고 배열이라 「매주 화·목」을 표현할 수 있다. teams에 단일 int로 또 두면
+ * 같은 뜻의 저장소가 둘이 되고 총무가 두 곳에 같은 걸 입력하게 된다.
+ *
+ * 전부 optional이다 — 보낸 칸만 UPDATE에 실린다. 세 필드가 각자 즉시 저장되는데
+ * 매번 여섯 칸을 다 보내면, 화면이 들고 있는 낡은 값이 남의 최신 값을 덮는다.
+ * team_settings에서 계좌가 그렇게 지워졌다.
+ */
+export interface TeamProfileInput {
+  regionCode?: string | null;
+  regionLabel?: string | null;
+  avgHeadcount?: number | null;
+  skillLevel?: 'beginner' | 'intermediate' | 'advanced' | null;
+}
+
+const PROFILE_COLUMN: Record<keyof TeamProfileInput, string> = {
+  regionCode: 'region_code',
+  regionLabel: 'region_label',
+  avgHeadcount: 'avg_headcount',
+  skillLevel: 'skill_level',
+};
+
+export async function updateTeamProfile(teamId: string, p: TeamProfileInput) {
+  const patch: Database['public']['Tables']['teams']['Update'] = {};
+  for (const [key, value] of Object.entries(p)) {
+    if (value === undefined) continue;
+    (patch as Record<string, unknown>)[PROFILE_COLUMN[key as keyof TeamProfileInput]] = value;
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await supabase.from('teams').update(patch).eq('id', teamId);
+  if (error) throw error;
+}
+
 export async function updateTeamHomeLocation(teamId: string, location: TeamHomeLocation) {
   const { error } = await supabase
     .from('teams')

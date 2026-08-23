@@ -44,6 +44,13 @@ export interface Database {
           home_longitude: number | null;
           slogan: string | null;
           logo_url: string | null;
+          /* 팀 프로필 — 매칭을 열 때 쓸 데이터를 미리 모은다 (20260822) */
+          region_code: string | null;
+          region_label: string | null;
+          avg_headcount: number | null;
+          skill_level: 'beginner' | 'intermediate' | 'advanced' | null;
+          /** 매칭 공개 여부 — UI 없음 */
+          open_to_match: boolean;
           created_by: string;
           created_at: string;
         };
@@ -56,6 +63,11 @@ export interface Database {
           home_longitude?: number | null;
           slogan?: string | null;
           logo_url?: string | null;
+          region_code?: string | null;
+          region_label?: string | null;
+          avg_headcount?: number | null;
+          skill_level?: 'beginner' | 'intermediate' | 'advanced' | null;
+          open_to_match?: boolean;
         };
         Update: Partial<Database['public']['Tables']['teams']['Insert']>;
         Relationships: [];

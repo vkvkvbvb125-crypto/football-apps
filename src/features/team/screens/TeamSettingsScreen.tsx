@@ -12,6 +12,10 @@ import { ScreenGradient } from '../../../components/ScreenGradient';
 import { colors, font, radius } from '../../../theme';
 import { useTeamStore } from '../stores/teamStore';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
+import { RegionPickerModal } from '../components/RegionPickerModal';
+import { regionLabelOf } from '../regions';
+import { recentAvgHeadcount } from '../../attendance/utils/attendanceRate';
+import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import type { PlaceResult } from '../../attendance/services/placeService';
 import { fetchMemberProfiles, updateSkillLevel, SKILL_LABEL, type MemberProfile } from '../services/memberProfileService';
 import { fetchTeamSettings, upsertTeamSettings, diffSettings, hhmm } from '../services/teamSettingsService';
@@ -22,16 +26,25 @@ import type { FeeMode, SkillLevel } from '../../../types/database';
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 // team_settings.default_weekdays는 0=월…6=일로 저장 (DB 스키마 comment 기준)
 const TIMES = ['19:00', '20:00', '21:00'];
+const SKILL_OPTIONS = [
+  ['beginner', '입문'],
+  ['intermediate', '중급'],
+  ['advanced', '상급'],
+] as const;
 
 export function TeamSettingsScreen({ navigation }: any) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
+  const updateTeamProfile = useTeamStore((s) => s.updateTeamProfile);
+  const matches = useAttendanceStore((s) => s.matches);
   const teamId = activeTeam?.team.id;
 
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [headcount, setHeadcount] = useState('');
+  const [profileError, setProfileError] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [weekdays, setWeekdays] = useState<Record<number, boolean>>({});
   const [time, setTime] = useState<string | null>(null);
@@ -74,6 +87,9 @@ export function TeamSettingsScreen({ navigation }: any) {
     } catch (err) {
       setLoadError(toUserMessage(err, {}, 'loadTeamSettings'));
     }
+
+    const saved = useTeamStore.getState().activeTeam?.team.avg_headcount;
+    setHeadcount(saved != null ? String(saved) : '');
 
     // 명단은 부가 정보 — 실패해도 설정 화면은 쓸 수 있어야 한다
     try {
@@ -144,6 +160,35 @@ export function TeamSettingsScreen({ navigation }: any) {
 
   const selectedDays = Object.keys(weekdays).filter((k) => weekdays[Number(k)]);
 
+  const team = activeTeam?.team;
+  const profileFilled = !!(team?.region_code && team?.avg_headcount && team?.skill_level);
+
+  // 자동 계산값은 placeholder로만 보여준다 — 총무가 안 건드린 값이 DB에 들어가면
+  // 나중에 사람이 넣은 값인지 앱이 넣은 값인지 구분할 방법이 없다.
+  // 「12」만 뜨면 이미 저장된 값처럼 보이므로 출처를 같이 적는다.
+  const autoHeadcount = recentAvgHeadcount(
+    matches.map((m) => ({
+      matchDate: m.match_date,
+      attendCount: m.votes.filter((v) => v.status === 'attend').length,
+    }))
+  );
+  const headcountHint = autoHeadcount == null ? '평균 인원' : `${autoHeadcount} (최근 경기 평균)`;
+
+  /** 즉시 저장이라 저장 버튼이 없다 — 실패를 알릴 자리가 여기밖에 없다 */
+  const saveProfile = async (input: Parameters<typeof updateTeamProfile>[0]) => {
+    setProfileError(!(await updateTeamProfile(input)));
+  };
+
+  const saveHeadcount = () => {
+    const next = headcount.trim() === '' ? null : Number(headcount);
+    // CHECK 제약이 1~99다. 범위 밖이면 DB가 거절하니 보내기 전에 되돌린다.
+    if (next != null && (!Number.isFinite(next) || next < 1 || next > 99)) {
+      setHeadcount(team?.avg_headcount != null ? String(team.avg_headcount) : '');
+      return;
+    }
+    if (next === (team?.avg_headcount ?? null)) return;
+    saveProfile({ avgHeadcount: next });
+  };
 
   if (!loaded) {
     return (
@@ -196,6 +241,61 @@ export function TeamSettingsScreen({ navigation }: any) {
           <Text style={styles.hint}>경기 없는 날의 예상 날씨를 이 위치 기준으로 보여줘요</Text>
         </View>
 
+
+        {/*
+          팀 프로필 — 활동 지역 · 평균 인원 · 실력.
+
+          아래 「정기모임」 카드와 달리 저장 버튼이 없다. 셋 다 고르는 입력이고,
+          저장 버튼 쪽 diff에 필드를 더 얹으면 그만큼 덮어쓸 표면이 늘어난다.
+
+          정기 요일·시간은 여기 없다 — 바로 아래 카드가 이미 그것이다.
+        */}
+        <View style={styles.card}>
+          <View style={styles.cardHead}>
+            <Text style={styles.cardTitle}>팀 프로필</Text>
+            <Text style={styles.cardSub}>{profileFilled ? '작성됨' : '미작성'}</Text>
+          </View>
+
+          <Text style={styles.label}>활동 지역</Text>
+          <RegionPickerModal
+            value={team?.region_code ?? null}
+            onSelect={(code) => saveProfile({ regionCode: code, regionLabel: regionLabelOf(code) })}
+          />
+
+          <Text style={styles.label}>평균 인원</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={headcount}
+              onChangeText={setHeadcount}
+              onBlur={saveHeadcount}
+              onSubmitEditing={saveHeadcount}
+              keyboardType="number-pad"
+              placeholder={headcountHint}
+              placeholderTextColor={colors.placeholder}
+            />
+            <Text style={styles.unit}>명</Text>
+          </View>
+
+          <Text style={styles.label}>실력</Text>
+          <View style={styles.row}>
+            {SKILL_OPTIONS.map(([value, text]) => {
+              const on = team?.skill_level === value;
+              return (
+                <Pressable
+                  key={value}
+                  onPress={() => saveProfile({ skillLevel: on ? null : value })}
+                  style={[styles.chip, on && styles.chipSoft]}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.chipText, on && { color: colors.green }]}>{text}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {profileError && <Text style={styles.saveErr}>저장하지 못했어요. 잠시 후 다시 시도해주세요</Text>}
+          <Text style={styles.hint}>나중에 팀 대 팀 매칭을 열 때 상대 팀이 보는 정보예요. 지금은 어디에도 공개되지 않아요.</Text>
+        </View>
 
         <View style={styles.card}>
           <View style={styles.cardHead}>

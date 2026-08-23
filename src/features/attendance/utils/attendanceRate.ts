@@ -135,3 +135,28 @@ export function memberAttendanceRate(
 export function formatMemberRate(r: AttendanceRate): string {
   return r.rate == null ? '-' : `${MEMBER_RATE_MONTHS}개월 ${Math.round(r.rate * 100)}%`;
 }
+
+// ── 평균 인원 ──────────────────────────────────────────────
+//
+// 팀 프로필의 「평균 인원」 입력칸에 자동 계산값을 placeholder로 띄운다.
+// 저장은 하지 않는다 — 총무가 건드리지 않은 값이 DB에 들어가면, 나중에 그게
+// 사람이 넣은 값인지 앱이 넣은 값인지 구분할 방법이 없다.
+//
+// 참석률과 달리 분모가 멤버 수가 아니라 경기 수다. 「몇 명이 모이나」는
+// 팀 규모와 무관한 절대 수치고, 매칭에서 상대 팀이 보는 것도 그 수치다.
+
+/** 최근 3개월(MEMBER_RATE_MONTHS)의 이미 치른 경기 기준. 표본이 없으면 null */
+export function recentAvgHeadcount(matches: RateMatch[], now = new Date()): number | null {
+  const from = new Date(now);
+  from.setMonth(from.getMonth() - MEMBER_RATE_MONTHS);
+
+  let total = 0;
+  let count = 0;
+  for (const m of matches) {
+    const t = new Date(m.matchDate).getTime();
+    if (t < from.getTime() || t > now.getTime()) continue; // 기간 밖 · 아직 안 치른 경기
+    total += m.attendCount;
+    count += 1;
+  }
+  return count === 0 ? null : Math.round(total / count);
+}

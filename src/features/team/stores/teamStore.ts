@@ -16,6 +16,8 @@ import {
   type TeamHomeLocation,
   type TeamMembership,
   type TeamMemberWithProfile,
+  updateTeamProfile as updateTeamProfileRequest,
+  type TeamProfileInput,
 } from '../services/teamService';
 import type { SkillTag } from '../../../types/database';
 import { toUserMessage } from '../../../lib/dbError';
@@ -36,6 +38,8 @@ interface TeamState {
   updateMemberPosition: (teamMemberId: string, position: string | null) => Promise<void>;
   updateMemberJersey: (teamMemberId: string, jerseyNumber: number | null) => Promise<void>;
   updateSlogan: (slogan: string | null) => Promise<void>;
+  /** 보낸 칸만 저장한다 — 세 필드가 각자 즉시 저장돼서, 전 칸을 보내면 화면의 낡은 값이 덮는다 */
+  updateTeamProfile: (input: TeamProfileInput) => Promise<boolean>;
   promoteToAdmin: (teamMemberId: string) => Promise<void>;
   removeMember: (teamMemberId: string) => Promise<void>;
   leaveTeam: () => Promise<void>;
@@ -129,6 +133,18 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       const dup = err instanceof Error && /duplicate|unique/i.test(err.message);
       set({ error: dup ? '이미 쓰고 있는 등번호예요' : '등번호를 바꾸지 못했습니다.' });
       throw err;
+    }
+  },
+  updateTeamProfile: async (input) => {
+    const activeTeam = get().activeTeam;
+    if (!activeTeam) return false;
+    try {
+      await updateTeamProfileRequest(activeTeam.team.id, input);
+      await get().loadMemberships();
+      return true;
+    } catch (err) {
+      set({ error: toUserMessage(err, {}, 'updateTeamProfile') });
+      return false;
     }
   },
   updateSlogan: async (slogan) => {

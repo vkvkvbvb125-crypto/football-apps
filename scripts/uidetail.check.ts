@@ -135,4 +135,25 @@ const num = (src: string, re: RegExp, what: string) => {
   assert.ok(/tabBar\.gap \+ tabBar\.height/.test(grad), '하단 여백이 토큰을 안 본다');
 }
 
+// ── 7. 멤버 탭에 항상 들어갈 수 있는가 ──────────────────────────────
+//
+// 들어가는 길이 가로 로스터(3명 이상)와 +N 타일(6명 이상)뿐이었다. 2명 이하 팀은
+// 도달 자체가 불가였고, 초대 진입로가 그 목록 끝에 있다 — 갓 만든 팀이 초대를
+// 제일 급하게 찾는데 정확히 그 팀이 못 봤다. 임계값을 다시 넣으면 같은 함정이 난다.
+{
+  const home = read('src/features/team/screens/TeamHomeScreen.tsx');
+  const calls = [...home.matchAll(/setTab\('members'\)/g)];
+  assert.ok(calls.length >= 3, '멤버 탭 진입로가 줄었다');
+
+  // 제목의 진입은 멤버 수를 안 본다
+  const anchor = home.indexOf('sectionHeadLink');
+  const head = home.slice(anchor - 600, anchor + 200);
+  assert.ok(/setTab\('members'\)/.test(head), '제목이 멤버 탭으로 안 간다');
+  assert.ok(!/members\.length [<>]/.test(head), '제목 진입에 멤버 수 조건이 붙었다');
+
+  // 초대는 그 목록 안에 있다
+  assert.ok(/accessibilityLabel="멤버 초대하기"/.test(home), '목록 끝 초대 행이 없다');
+  assert.ok(!/inviteCtaText/.test(home), '같은 일을 하는 초대 버튼이 둘이다');
+}
+
 console.log('uidetail.check: ok');

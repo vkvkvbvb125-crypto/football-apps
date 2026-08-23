@@ -196,7 +196,8 @@ export function TeamHomeScreen({ navigation }: any) {
 
   const handleShareInvite = () => {
     Share.share({
-      message: `${activeTeam.team.name}에 초대할게요! 아래 링크를 눌러 참여해주세요.\n${inviteUrl}`,
+      message: `${activeTeam.team.name}에 초대할게요! 아래 링크를 눌러 참여해주세요.
+${inviteUrl}`,
     });
   };
 
@@ -611,11 +612,33 @@ export function TeamHomeScreen({ navigation }: any) {
           // (멤버 탭은 목록이 주인공이라 카드를 유지한다)
           <View style={[tab === 'members' ? styles.card : styles.rosterStrip, { gap: 12 }]}>
             <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>
-                {tab === 'members' ? '전체' : '멤버'} {members.length}명
-              </Text>
-              {/* 「전체 보기 ›」를 뺐다 — 이제 이 목록이 전원이라 더 볼 게 없다.
-                  관리는 행을 탭하면 열린다. */}
+              {/*
+                홈에서는 제목이 멤버 탭으로 가는 문이다.
+
+                멤버 탭에 들어가는 길이 가로 로스터 아바타(3명 이상)와 +N 타일(6명
+                이상)뿐이었다. 즉 2명 이하 팀은 멤버 탭에 도달할 방법이 아예 없었고,
+                하필 초대가 제일 급한 갓 만든 팀이 정확히 거기 걸렸다. 초대 진입을
+                그 목록 끝에 넣었으니 더더욱 막히면 안 된다.
+
+                그래서 멤버 수를 조건으로 걸지 않는다 — 3명이든 6명이든 임계값을
+                두면 같은 함정이 다시 생긴다. 0명이어도 열린다.
+
+                멤버 탭에서는 제목이 그냥 제목이다. 이미 그 화면이라 갈 곳이 없다.
+              */}
+              {tab === 'members' ? (
+                <Text style={styles.sectionTitle}>전체 {members.length}명</Text>
+              ) : (
+                <Pressable
+                  onPress={() => setTab('members')}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`멤버 ${members.length}명 전체 보기`}
+                  style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
+                >
+                  <Text style={styles.sectionTitle}>멤버 {members.length}명</Text>
+                  <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
+                </Pressable>
+              )}
             </View>
 
             {/* 이름 검색 — 멤버 탭에서만. 팀 홈은 미리보기라 검색할 게 없다 */}
@@ -807,6 +830,35 @@ export function TeamHomeScreen({ navigation }: any) {
               {visibleMembers.length === 0 && (
                 <Text style={styles.empty}>{memberQuery ? '찾는 이름이 없어요' : '아직 멤버가 없어요'}</Text>
               )}
+
+              {/*
+                초대가 목록의 마지막 행이다.
+
+                아래에 초록 버튼이 따로 있었는데, 목록을 끝까지 훑고 「이 사람도
+                없네」 하는 지점이 목록의 끝이다. 거기서 눈을 떼고 버튼을 찾게 하는
+                대신 그 자리에 둔다 — 연락처 앱이 「새 연락처 추가」를 목록 끝에
+                두는 것과 같은 이유다.
+
+                검색 중에는 감춘다. 이름을 거르는 중에 초대 행이 남아 있으면
+                검색 결과처럼 읽힌다.
+              */}
+              {!memberQuery && (
+                <Pressable
+                  onPress={handleShareInvite}
+                  accessibilityRole="button"
+                  accessibilityLabel="멤버 초대하기"
+                  style={({ pressed }) => [styles.memberRow, pressed && styles.pressed]}
+                >
+                  <View style={[styles.avatar, styles.inviteAvatar]}>
+                    <Ionicons name="person-add-outline" size={17} color={colors.green} />
+                  </View>
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <Text style={styles.inviteRowName}>멤버 초대하기</Text>
+                    <Text style={styles.memberMeta}>링크를 보내면 코드를 불러주지 않아도 돼요</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </Pressable>
+              )}
             </View>
             )}
 
@@ -907,17 +959,6 @@ export function TeamHomeScreen({ navigation }: any) {
 
             {tab === 'home' && members.length <= 3 && (
               <Text style={styles.growHint}>멤버가 모이면 참석률과 기록이 쌓여요</Text>
-            )}
-
-            {/* 초대는 멤버 탭의 주된 행동이라 버튼으로 세운다 */}
-            {tab === 'members' && (
-              <Pressable
-                onPress={handleShareInvite}
-                style={({ pressed }) => [styles.inviteCta, pressed && styles.pressed]}
-              >
-                <Ionicons name="person-add-outline" size={16} color={colors.bgRoot} />
-                <Text style={styles.inviteCtaText}>멤버 초대하기</Text>
-              </Pressable>
             )}
           </View>
           )}
@@ -1392,16 +1433,13 @@ const styles = StyleSheet.create({
   /** 알림 토글 */
 
   /** 멤버 초대 버튼 */
-  inviteCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    height: 46,
-    borderRadius: radius.pill,
-    backgroundColor: colors.green,
+  inviteAvatar: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.greenLine,
   },
-  inviteCtaText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
+  inviteRowName: { color: colors.green, fontSize: 14, fontWeight: '700' },
 
   /** 설정 탭 — 라벨/값 한 줄 */
 
@@ -1438,6 +1476,7 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   // 다른 탭의 섹션 제목은 15/-0.2였다 — 팀 탭만 14.5라 나란히 놓으면 어긋나 보인다
+  sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionTitle: { color: colors.text, ...font.section },
   sectionLink: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   empty: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },

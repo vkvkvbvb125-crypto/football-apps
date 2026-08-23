@@ -1,5 +1,5 @@
 // src/features/team/screens/TeamSettingsScreen.tsx — 신규
-// 정기모임 기본값 / 회비 / 실력 레벨 / 게스트 / 가입 승인.
+// 팀 프로필 / 정기모임 기본값 / 회비 / 실력 레벨 / 게스트.
 // 실력 레벨은 누르는 즉시 저장되고(팀 분배에 바로 반영), 나머지 필드는 "저장" 버튼으로
 // team_settings 테이블에 upsert된다. 원본 핸드오프엔 "팀 삭제" 위험 구역이 있었는데
 // 실제로는 navigation.goBack()만 하고 아무것도 지우지 않는 가짜 버튼이었다 — 팀 삭제를
@@ -402,9 +402,9 @@ export function TeamSettingsScreen({ navigation }: any) {
           <Text style={styles.hint}>상 3점 · 중 2점 · 하 1점으로 균형을 맞춰요. 누르면 바로 저장돼요.</Text>
         </View>
 
-        {/* 게스트 / 가입 */}
+        {/* 게스트 */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>게스트 · 가입</Text>
+          <Text style={styles.cardTitle}>게스트</Text>
 
           <Pressable onPress={() => setGuestAllowed((v) => !v)} style={styles.toggleRow}>
             <View style={{ flex: 1, gap: 2 }}>
@@ -426,18 +426,24 @@ export function TeamSettingsScreen({ navigation }: any) {
             </>
           )}
 
-          <Pressable onPress={() => setApproval((v) => !v)} style={styles.toggleRow}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.toggleTitle}>가입 승인 필요</Text>
-              <Text style={styles.toggleSub}>초대 코드를 입력해도 총무 승인 후 가입돼요</Text>
-            </View>
-            <View style={[styles.switch, approval && styles.switchOn]}>
-              <View style={[styles.knob, approval && styles.knobOn]} />
-            </View>
-          </Pressable>
-          <Text style={styles.hint}>
-            가입 승인은 아직 실제로 심사하는 화면이 없어서, 켜도 지금은 기존과 동일하게 바로 가입돼요.
-          </Text>
+          {/*
+            「가입 승인 필요」 토글은 여기 있었다. 감춘 이유:
+
+            join_approval_required를 읽는 곳이 이 화면뿐이다. 실제 가입은
+            join_team_by_invite RPC가 하는데 security definer라 RLS를 우회하고
+            설정을 조회하지도 않는다 — 켜도 초대 코드만 알면 즉시 멤버가 된다.
+            즉 스위치가 「막고 있다」고 거짓말을 하고 있었다. 비활성 + 「준비 중」으로
+            두는 것도 같은 문제다. 총무는 언제 켜지나 계속 기다리게 된다.
+
+            ⚠ 승인을 안 쓰기로 한 게 아니다. 심사 화면이 없어서 감춘 것이다.
+              되살리려면 화면보다 RLS가 먼저다 — is_team_member(team_id)가 정책
+              곳곳에 쓰여서, 대기 상태인 사람이 거기서 true가 되면 승인 전에
+              공지·정산·경기를 다 본다. 승인 기능이 정보 노출 구멍이 된다.
+              그 전수 확인은 대시보드 SQL로 해야 한다(앱 경로는 RLS에 가려진다).
+
+            컬럼과 approval 상태는 남겨둔다. 저장은 바뀐 칸만 보내므로 손대지
+            않는 한 DB 값이 그대로 유지되고, 토글을 되살릴 때 이 파일만 고치면 된다.
+          */}
         </View>
 
         {loadError ? (

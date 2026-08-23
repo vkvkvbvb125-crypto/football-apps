@@ -21,6 +21,8 @@ import { AnnouncementListModal } from '../../announcements/components/Announceme
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
+import { regularLabel } from '../weekdays';
+import { fetchTeamSettings } from '../services/teamSettingsService';
 import { BoardPanel } from '../../board/components/BoardPanel';
 import { fetchPosts, resolveAuthor, type Post } from '../../board/services/boardService';
 import { relativeTime } from '../../../lib/relativeTime';
@@ -63,6 +65,9 @@ function initialOf(name: string) {
  * 구분은 색이 아니라 아이콘 모양과 그 아래 글자가 맡는다 — 확성기·말풍선·톱니바퀴·사람은
  * 이미 서로 안 닮았고, 라벨까지 붙어 있다. 색까지 동원할 일이 아니었다.
  */
+/** teams.skill_level — CHECK 제약과 같은 세 값 */
+const TEAM_SKILL_LABEL = { beginner: '입문', intermediate: '중급', advanced: '상급' } as const;
+
 const MEMBER_TILES = [
   { key: 'notices' as const, icon: 'megaphone-outline', label: '공지사항', tint: colors.green },
   { key: 'board' as const, icon: 'chatbubbles-outline', label: '게시판', tint: colors.green },
@@ -100,6 +105,10 @@ export function TeamHomeScreen({ navigation }: any) {
   const [tab, setTab] = useState<'home' | 'members' | 'notices' | 'board' | 'settings'>('home');
   const [memberQuery, setMemberQuery] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
+  // 정기 일정은 teams가 아니라 team_settings에 있다 — 배열이라 「매주 화·목」이 되고,
+  // teams에 단일 int로 또 두면 같은 뜻의 저장소가 둘이 된다. SettlementScreen도
+  // 같은 식으로 화면에서 직접 읽는다.
+  const [regular, setRegular] = useState<string | null>(null);
   const [sloganEditing, setSloganEditing] = useState(false);
   const [sloganText, setSloganText] = useState('');
   /** 팀 홈 미리보기용 최근 글 2개 — 게시판 화면과 달리 목록 전체를 들고 있지 않는다 */
@@ -129,6 +138,9 @@ export function TeamHomeScreen({ navigation }: any) {
     loadPolls();
     // 아래 「다음 경기」 카드가 쓴다 — 일정 탭을 한 번도 안 들렀으면 비어 있다
     loadMatches();
+    fetchTeamSettings(activeTeam.team.id)
+      .then((st) => setRegular(regularLabel(st?.defaultWeekdays, st?.defaultTime)))
+      .catch(() => setRegular(null)); // 프로필 줄의 한 조각이라 실패하면 그 조각만 빠진다
     if (myUserId) {
       fetchPosts(activeTeam.team.id, myUserId)
         .then((list) => setRecentPosts(list.slice(0, 2)))
@@ -160,6 +172,21 @@ export function TeamHomeScreen({ navigation }: any) {
   const inviteCodeDisplay = activeTeam.team.invite_code.replace(/(.{4})(?=.)/g, '$1-');
   const createdAt = new Date(activeTeam.team.created_at ?? Date.now());
 
+  /*
+    팀 프로필 한 줄 — 「서울 강남구 · 매주 수요일 20:00 · 평균 12명 · 중급」
+
+    있는 조각만 잇는다. 빈 항목을 「미설정」으로 채우면 줄이 정보가 아니라 빈칸
+    목록이 되고, 팀원에게는 고칠 수도 없는 빈칸이라 알려줄 이유가 없다.
+
+    자리는 bannerRow 밖 전체 폭이다 — 로고 오른쪽 칸은 팀명이 길어지면 좁아져서
+    28자짜리 줄이 잘린다. 이 파일이 이미 지표를 같은 이유로 아래로 뺐다.
+  */
+  const profileBits = [
+    activeTeam.team.region_label,
+    regular,
+    activeTeam.team.avg_headcount ? `평균 ${activeTeam.team.avg_headcount}명` : null,
+    activeTeam.team.skill_level ? TEAM_SKILL_LABEL[activeTeam.team.skill_level] : null,
+  ].filter(Boolean);
 
   const handleCopyInviteCode = async () => {
     await Clipboard.setStringAsync(activeTeam.team.invite_code);
@@ -413,6 +440,12 @@ export function TeamHomeScreen({ navigation }: any) {
               )}
             </View>
           </View>
+
+          {profileBits.length > 0 && (
+            <Text style={styles.profileLine} numberOfLines={2}>
+              {profileBits.join(' · ')}
+            </Text>
+          )}
 
           {/* 경기 / 멤버 / 이번 달 참석률 — 팀 프로필의 요약 지표.
               「공지」였다. 공지 개수는 팀이 어떤지 말해주지 않는다 — 세 개든 서른 개든
@@ -853,6 +886,25 @@ export function TeamHomeScreen({ navigation }: any) {
               구조를 늘려 채우지 않는다 — 지금 비어 보이는 건 레이아웃이 아니라
               데이터가 없어서다. 왜 비었는지만 한 줄로 말한다.
             */}
+            {/*
+              프로필이 비었을 때. 총무에게만 보인다 — 팀원은 채울 권한이 없고,
+              고칠 수 없는 빈칸을 알려주면 할 일처럼 보이기만 한다.
+            */}
+            {tab === 'home' && isAdmin && profileBits.length === 0 && (
+              <Pressable
+                onPress={() => navigation.navigate('TeamSettings')}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
+              >
+                <Ionicons name="sparkles-outline" size={17} color={colors.green} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.rowTitle}>팀 정보를 채워주세요</Text>
+                  <Text style={styles.rowSub}>지역 · 정기 일정 · 평균 인원 · 실력</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </Pressable>
+            )}
+
             {tab === 'home' && members.length <= 3 && (
               <Text style={styles.growHint}>멤버가 모이면 참석률과 기록이 쌓여요</Text>
             )}
@@ -1198,6 +1250,14 @@ const styles = StyleSheet.create({
   },
 
   /** 멤버가 적을 때 아래가 왜 비었는지 — 한 줄이면 충분하다 */
+  profileLine: {
+    color: colors.textDim,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 18,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
   growHint: {
     marginHorizontal: 20,
     marginTop: 14,

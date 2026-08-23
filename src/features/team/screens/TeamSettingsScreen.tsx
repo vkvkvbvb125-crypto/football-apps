@@ -14,6 +14,7 @@ import { useTeamStore } from '../stores/teamStore';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import { RegionPickerModal } from '../components/RegionPickerModal';
 import { regionLabelOf } from '../regions';
+import { WEEKDAYS } from '../weekdays';
 import { recentAvgHeadcount } from '../../attendance/utils/attendanceRate';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import type { PlaceResult } from '../../attendance/services/placeService';
@@ -23,8 +24,6 @@ import type { TeamSettings } from '../services/teamSettingsService';
 import { toUserMessage } from '../../../lib/dbError';
 import type { FeeMode, SkillLevel } from '../../../types/database';
 
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
-// team_settings.default_weekdays는 0=월…6=일로 저장 (DB 스키마 comment 기준)
 const TIMES = ['19:00', '20:00', '21:00'];
 const SKILL_OPTIONS = [
   ['beginner', '입문'],

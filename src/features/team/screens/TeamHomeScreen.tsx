@@ -7,7 +7,7 @@
 // 2) 다른 탭과 동일하게 TabHeader를 붙였다 — 기존 marginTop:60 하드코딩 제거.
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
 import { useEffect, useState } from 'react';
-import { Image, Pressable, Share, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -21,6 +21,7 @@ import { AnnouncementListModal } from '../../announcements/components/Announceme
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
+import { InviteSheet } from '../components/InviteSheet';
 import { regularLabel } from '../weekdays';
 import { fetchTeamSettings } from '../services/teamSettingsService';
 import { BoardPanel } from '../../board/components/BoardPanel';
@@ -109,6 +110,7 @@ export function TeamHomeScreen({ navigation }: any) {
   // teams에 단일 int로 또 두면 같은 뜻의 저장소가 둘이 된다. SettlementScreen도
   // 같은 식으로 화면에서 직접 읽는다.
   const [regular, setRegular] = useState<string | null>(null);
+  const [inviteVisible, setInviteVisible] = useState(false);
   const [sloganEditing, setSloganEditing] = useState(false);
   const [sloganText, setSloganText] = useState('');
   /** 팀 홈 미리보기용 최근 글 2개 — 게시판 화면과 달리 목록 전체를 들고 있지 않는다 */
@@ -194,12 +196,15 @@ export function TeamHomeScreen({ navigation }: any) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleShareInvite = () => {
-    Share.share({
-      message: `${activeTeam.team.name}에 초대할게요! 아래 링크를 눌러 참여해주세요.
-${inviteUrl}`,
-    });
-  };
+  /*
+    초대 진입 셋(홈 블록 / 얇은 바 / 멤버 목록 끝 행)이 전부 이걸 부른다.
+
+    예전엔 여기서 Share.share를 바로 열었다. QR을 놓을 자리가 없었고, 무엇보다
+    QR은 대면용인데 Share는 원격 공유라 — 눈앞의 사람에게 화면을 보여주려는
+    총무가 시스템 공유 시트를 먼저 통과해야 했다. 시트로 모아 「보낼지 /
+    보여줄지」를 그 자리에서 고르게 한다.
+  */
+  const openInvite = () => setInviteVisible(true);
 
   const handleSaveSlogan = async () => {
     const trimmed = sloganText.trim();
@@ -330,7 +335,7 @@ ${inviteUrl}`,
             </Pressable>
           ) : tab === 'members' ? (
             <Pressable
-              onPress={handleShareInvite}
+              onPress={openInvite}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="멤버 초대 링크 공유"
@@ -486,13 +491,13 @@ ${inviteUrl}`,
             <Text style={styles.inviteBigTitle}>멤버를 초대해보세요</Text>
             <Text style={styles.inviteBigSub}>링크를 보내면 코드를 불러주지 않아도 돼요</Text>
             <Pressable
-            onPress={handleShareInvite}
+            onPress={openInvite}
             accessibilityRole="button"
-            accessibilityLabel="초대 링크 공유"
+            accessibilityLabel="멤버 초대"
             style={({ pressed }) => [styles.inviteShare, pressed && styles.pressed]}
             >
-            <Ionicons name="share-social-outline" size={16} color={colors.bgRoot} />
-            <Text style={styles.inviteShareText}>초대 링크 보내기</Text>
+            <Ionicons name="person-add-outline" size={16} color={colors.bgRoot} />
+            <Text style={styles.inviteShareText}>초대하기</Text>
             </Pressable>
             <Pressable
             onPress={handleCopyInviteCode}
@@ -844,7 +849,7 @@ ${inviteUrl}`,
               */}
               {!memberQuery && (
                 <Pressable
-                  onPress={handleShareInvite}
+                  onPress={openInvite}
                   accessibilityRole="button"
                   accessibilityLabel="멤버 초대하기"
                   style={({ pressed }) => [styles.memberRow, pressed && styles.pressed]}
@@ -1136,6 +1141,13 @@ ${inviteUrl}`,
             setSelectedAnnouncement(null);
           })
         }
+      />
+      <InviteSheet
+        visible={inviteVisible}
+        onClose={() => setInviteVisible(false)}
+        teamName={activeTeam.team.name}
+        inviteCode={activeTeam.team.invite_code}
+        inviteUrl={inviteUrl}
       />
       <MemberListModal
         visible={memberListVisible}

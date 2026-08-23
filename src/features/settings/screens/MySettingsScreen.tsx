@@ -9,6 +9,8 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { useAuthStore } from '../../auth/stores/authStore';
+import { TERMS, type TermDoc } from '../../auth/terms';
+import { TermsDocModal } from '../../auth/components/TermsDocModal';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { updateDisplayName } from '../../team/services/memberProfileService';
 import { POSITIONS, POSITION_INFO, toPosition } from '../../team/positions';
@@ -40,6 +42,7 @@ export function MySettingsScreen({ navigation }: any) {
   const me = members.find((m) => m.id === activeTeam?.membershipId) ?? null;
 
   const [jersey, setJersey] = useState('');
+  const [openDoc, setOpenDoc] = useState<TermDoc | null>(null);
   const [phone, setPhone] = useState('');
   const [uploading, setUploading] = useState(false);
   const [name, setName] = useState('');
@@ -350,6 +353,32 @@ export function MySettingsScreen({ navigation }: any) {
         )}
 
 
+        {/*
+          약관·개인정보처리방침 — 가입할 때 한 번 보고 나면 앱 안에서 다시 볼
+          방법이 없었다. 심사에서 요구하는 자리이기도 하다.
+
+          웹(kickday.app/terms)으로 보내지 않는다 — 배포본이 앱 빌드보다 뒤처질 수
+          있고 지하철에서 안 열린다. 본문이 terms.ts에 있으니 그대로 띄운다.
+        */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>약관 및 정책</Text>
+          {TERMS.map((t) => (
+            <Pressable
+              key={t.key}
+              onPress={() => setOpenDoc(t)}
+              accessibilityRole="button"
+              accessibilityLabel={`${t.title} 전문 보기`}
+              style={({ pressed }) => [styles.docRow, pressed && styles.pressed]}
+            >
+              {/* label이 아니라 title이다 — label은 가입 화면 체크박스의 문장("…에 동의")이라
+                  이미 동의한 사람에게 보여주면 다시 동의하라는 말로 읽힌다. 모달 제목도 title이라
+                  label을 쓰면 줄과 제목이 서로 다른 이름이 된다. */}
+              <Text style={styles.docRowText}>{t.title}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+          ))}
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>계정</Text>
           <Text style={styles.accountEmail}>{session?.user.email ?? ''}</Text>
@@ -359,6 +388,7 @@ export function MySettingsScreen({ navigation }: any) {
           </Pressable>
         </View>
       </ScrollView>
+      <TermsDocModal doc={openDoc} onClose={() => setOpenDoc(null)} />
     </ScreenGradient>
   );
 }
@@ -374,6 +404,13 @@ const styles = StyleSheet.create({
   toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bgRoot },
   toggleKnobOn: { alignSelf: 'flex-end' },
   notifyHint: { color: colors.textMuted, fontSize: 11, fontWeight: '600', marginTop: 4 },
+  docRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 11,
+  },
+  docRowText: { color: colors.textBody, fontSize: 14, fontWeight: '600' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, TextInput } from '../../../components/nativeText';
 import { useAuthStore } from '../stores/authStore';
 import { TERMS, type TermDoc } from '../terms';
+import { TermsDocModal } from '../components/TermsDocModal';
 import { isValidEmail, suggestEmailFix, EMAIL_FORMAT_HINT } from '../email';
 import { isValidPassword, MIN_PASSWORD } from '../password';
 import { PasswordChecklist } from '../components/PasswordChecklist';
@@ -167,42 +168,16 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
         </Pressable>
       </View>
 
-      {/* 약관 전문 — 읽고 바로 동의까지 할 수 있게 한다(닫고 다시 체크하러 가지 않도록) */}
-      <Modal visible={!!openDoc} transparent animationType="fade" onRequestClose={() => setOpenDoc(null)}>
-        <View style={styles.docOverlay}>
-          <Pressable style={styles.docBackdrop} onPress={() => setOpenDoc(null)} />
-          <View style={styles.docCard}>
-            <View style={styles.docHead}>
-              <Text style={styles.docTitle}>{openDoc?.title}</Text>
-              <Text style={[styles.docBadge, openDoc?.required ? styles.docRequired : styles.docOptional]}>
-                {openDoc?.required ? '필수' : '선택'}
-              </Text>
-            </View>
-
-            <ScrollView style={styles.docScroll} contentContainerStyle={styles.docBody}>
-              <Text style={styles.docText}>{openDoc?.body}</Text>
-            </ScrollView>
-
-            <View style={styles.docFooter}>
-              <Pressable
-                onPress={() => setOpenDoc(null)}
-                style={({ pressed }) => [styles.docClose, pressed && styles.pressed]}
-              >
-                <Text style={styles.docCloseText}>닫기</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  if (openDoc) setAgreed((p) => ({ ...p, [openDoc.key]: true }));
-                  setOpenDoc(null);
-                }}
-                style={({ pressed }) => [styles.docAgree, pressed && styles.pressed]}
-              >
-                <Text style={styles.docAgreeText}>동의합니다</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* 약관 전문 — 읽고 바로 동의까지 할 수 있게 한다(닫고 다시 체크하러 가지 않도록).
+          설정 화면도 같은 모달을 쓴다 — 조항이 바뀔 때 한쪽만 고치면 안 된다. */}
+      <TermsDocModal
+        doc={openDoc}
+        onClose={() => setOpenDoc(null)}
+        onAgree={(d) => {
+          setAgreed((prev) => ({ ...prev, [d.key]: true }));
+          setOpenDoc(null);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -228,7 +203,7 @@ const styles = StyleSheet.create({
 
   head: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 8 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 16, fontWeight: '800' },
+  headTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 17, fontWeight: '800' },
 
   body: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 20, gap: 16 },
   field: { gap: 7 },
@@ -238,25 +213,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: radius.button,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
     color: colors.text,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '600',
   },
-  fieldHint: { color: colors.gold, fontSize: 11.5, fontWeight: '600' },
+  fieldHint: { color: colors.gold, fontSize: 11, fontWeight: '600' },
 
   // ── 약관 ──────────────────────────────────────────────
   terms: {
     backgroundColor: colors.card,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
     gap: 12,
   },
   termAllRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  termAllText: { color: colors.text, fontSize: 14.5, fontWeight: '800' },
+  termAllText: { color: colors.text, fontSize: 14, fontWeight: '800' },
   termDivider: { height: 1, backgroundColor: colors.divider, marginHorizontal: -16 },
   termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   termTapArea: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
@@ -268,67 +242,10 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: colors.green, borderColor: colors.green },
   checkOff: { backgroundColor: 'transparent', borderColor: colors.border },
 
-  errorText: { color: colors.danger, fontSize: 12.5, fontWeight: '600' },
-  noticeText: { color: colors.green, fontSize: 12.5, fontWeight: '600', lineHeight: 18 },
+  errorText: { color: colors.danger, fontSize: 12, fontWeight: '600' },
+  noticeText: { color: colors.green, fontSize: 12, fontWeight: '600', lineHeight: 18 },
 
   // ── 약관 전문 모달 ────────────────────────────────────
-  docOverlay: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.72)' },
-  docBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  docCard: {
-    // 화면을 다 덮지 않는다 — 뒤가 보여야 "잠깐 열어본 것"으로 읽힌다
-    maxHeight: '78%',
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  docHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  docTitle: { flex: 1, color: colors.text, fontSize: 15.5, fontWeight: '800', letterSpacing: -0.3 },
-  docBadge: { fontSize: 11, fontWeight: '800' },
-  docRequired: { color: colors.green },
-  docOptional: { color: colors.textDim },
-
-  docScroll: { flexGrow: 0 },
-  docBody: { paddingHorizontal: 18, paddingVertical: 16 },
-  // 조항이 많아 줄 간격을 넉넉히 — 좁으면 읽다가 줄을 놓친다
-  docText: { color: colors.textBody, fontSize: 13, fontWeight: '500', lineHeight: 21 },
-
-  docFooter: {
-    flexDirection: 'row',
-    gap: 8,
-    padding: 14,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-  },
-  docClose: {
-    flex: 1,
-    height: 46,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.cardAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  docCloseText: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
-  docAgree: {
-    flex: 1,
-    height: 46,
-    borderRadius: radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.green,
-  },
-  docAgreeText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
 
   footer: { paddingHorizontal: 24, paddingTop: 8 },
   cta: {

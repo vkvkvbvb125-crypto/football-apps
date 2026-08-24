@@ -51,7 +51,7 @@ export interface Database {
           skill_level: 'beginner' | 'intermediate' | 'advanced' | null;
           /** 매칭 공개 여부 — UI 없음 */
           open_to_match: boolean;
-          created_by: string;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -121,7 +121,7 @@ export interface Database {
           location_pending: boolean;
           /** 20260806 마이그레이션 전 앱에서는 undefined일 수 있다 */
           match_type?: string | null;
-          created_by: string;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -369,7 +369,7 @@ export interface Database {
         Row: {
           id: string;
           team_id: string;
-          author_id: string;
+          author_id: string | null;
           title: string;
           body: string;
           is_pinned: boolean;
@@ -448,7 +448,7 @@ export interface Database {
         Row: {
           id: string;
           team_id: string;
-          author_id: string;
+          author_id: string | null;
           question: string;
           options: string[];
           deadline: string | null;

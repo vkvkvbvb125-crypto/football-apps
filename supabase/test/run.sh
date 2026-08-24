@@ -208,5 +208,38 @@ $PSQL -c "update settlement_shares set exempt=false where team_member_id='bbbbbb
 [ "$(ask "$as_member" | python -c 'import sys,json; print(json.load(sys.stdin)["unpaid_own"])')" = "0" ]   || { echo "!! 마감된 정산인데 미납으로 셌다"; exit 1; }
 echo "D-2 제외   : 면제 · 마감된 정산은 안 셈"
 
+# ── D-3 ──────────────────────────────────────────────────────────
+seed
+$PSQL < supabase/migrations/20260824_account_deletion_status.sql
+$PSQL < supabase/migrations/20260824_account_deletion_handover.sql
+field() { ask "$1" | python -c "import sys,json;d=json.load(sys.stdin);print($2)"; }
+
+# 총무가 혼자고 멤버가 남아 있다 → 넘기기 전에는 못 나간다
+[ "$(field "$as_admin" 'd["can_delete"], d["admin_teams"][0]["needs_handover"]')" = "False True" ]   || { echo "!! 마지막 총무인데 삭제가 허용된다: $(ask "$as_admin")"; exit 1; }
+echo "D-3 미위임 : 거부 · needs_handover"
+
+# 멤버 쪽은 총무가 아니라 위임과 무관하다 (미납만 걸린다)
+[ "$(field "$as_member" 'd["can_delete"], len(d["admin_teams"])')" = "False 0" ]   || { echo "!! 멤버 판정이 틀렸다"; exit 1; }
+$PSQL -c "update settlement_shares set confirmed_at=now() where team_member_id='bbbbbbbb-0000-0000-0000-000000000002'"
+[ "$(field "$as_member" 'd["can_delete"]')" = "True" ]   || { echo "!! 미납을 정리한 멤버가 여전히 막힌다"; exit 1; }
+echo "D-3 멤버   : 미납 정리하면 통과 · 위임과 무관"
+
+# 「총무 임명」과 같은 동작 — 다른 멤버를 admin으로
+$PSQL -c "update team_members set role='admin' where id='bbbbbbbb-0000-0000-0000-000000000002'"
+[ "$(field "$as_admin" 'd["can_delete"], d["admin_teams"][0]["needs_handover"], d["admin_teams"][0]["other_admins"]')" = "True False 1" ]   || { echo "!! 위임했는데 여전히 막힌다: $(ask "$as_admin")"; exit 1; }
+echo "D-3 위임후 : 통과 (총무 임명이 곧 위임이다)"
+
+# 혼자인 팀은 넘길 상대가 없다 → 막지 않는다
+seed
+$PSQL -c "delete from team_members where id='bbbbbbbb-0000-0000-0000-000000000002'"
+[ "$(field "$as_admin" 'd["can_delete"], d["admin_teams"][0]["needs_handover"], d["admin_teams"][0]["members"]')" = "True False 1" ]   || { echo "!! 혼자인 팀인데 위임을 요구한다: $(ask "$as_admin")"; exit 1; }
+echo "D-3 혼자   : 통과 (넘길 상대가 없다)"
+
+# 그렇게 나간 뒤 팀이 실제로 안 보이는가 — D-4를 안 만든 근거다
+$PSQL -c "delete from auth.users where id='11111111-1111-1111-1111-111111111111'"
+[ "$($PSQL -tAc "select count(*) from team_members where team_id='aaaaaaaa-0000-0000-0000-000000000001'" | tail -1)" = "0" ]   || { echo "!! 멤버가 남았다"; exit 1; }
+[ "$(docker exec -i $C psql -U postgres -tAc "$as_admin" -c "select is_team_member('aaaaaaaa-0000-0000-0000-000000000001')" | tail -1)" = "f" ]   || { echo "!! 멤버 0명인 팀이 아직 보인다 — 팀 삭제가 따로 필요하다"; exit 1; }
+echo "D-4 유령팀 : 멤버 0명 → teams_select가 감춤 (팀 삭제 불필요)"
+
 echo
-echo "d1 ok / d2 ok"
+echo "d1 ok / d2 ok / d3 ok"

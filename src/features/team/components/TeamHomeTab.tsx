@@ -27,6 +27,8 @@ interface Props {
   /** 미리보기용으로 부모가 추린 목록 */
   visibleMembers: TeamMemberWithProfile[];
   me: TeamMemberWithProfile | null;
+  /** 내 team_members.id — 「(나)」 표시에 쓴다 (멤버 탭과 같은 표현) */
+  selfMemberId: string;
   isAdmin: boolean;
   /** 팀 프로필에서 채워진 항목. 비어 있으면 총무에게 채우라고 권한다 */
   profileBits: (string | null)[];
@@ -43,6 +45,7 @@ export function TeamHomeTab({
   members,
   visibleMembers,
   me,
+  selfMemberId,
   isAdmin,
   profileBits,
   myUnpaid,
@@ -54,6 +57,9 @@ export function TeamHomeTab({
   onLeaveTeam,
 }: Props) {
   return (
+    /* 팀 홈에서는 카드 껍데기를 벗긴다. 배너 아래로 똑같은 상자만 쌓이면
+       화면에 리듬이 없다 — 가로로 흐르는 아바타 줄이 상자들 사이에서 숨통이 된다.
+       (멤버 탭은 목록이 주인공이라 카드를 유지한다) */
     <View style={[styles.rosterStrip, { gap: 12 }]}>
             <View style={styles.sectionHead}>
               {/*
@@ -81,6 +87,14 @@ export function TeamHomeTab({
                 </Pressable>
             </View>
 
+            {/* 팀 홈은 "누가 있나"만 훑는 자리라 가로로 늘어놓는다.
+                멤버 탭은 포지션·실력을 견주고 관리까지 하는 자리라 세로 목록이 맞다. */}
+            {/*
+              멤버가 한둘이면 가로 스트립을 쓰지 않는다.
+              62px짜리 아바타 칸 하나가 화면 폭에 혼자 놓이면 오른쪽이 통째로 비어서
+              "아직 안 만든 화면"처럼 읽혔다. 같은 정보를 가로로 눕히면 폭을 다 쓴다.
+              셋부터는 스트립이 줄로 채워지니 그대로 둔다 — 미리보기라 가로가 맞다.
+            */}
             {visibleMembers.length <= 2 ? (
               <View style={styles.soloList}>
                 {visibleMembers.map((m) => {
@@ -114,7 +128,7 @@ export function TeamHomeTab({
                       <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
                         <Text style={styles.soloName} numberOfLines={1}>
                           {m.displayName}
-                          {m.id === me?.id ? ' (나)' : ''}
+                          {m.id === selfMemberId ? ' (나)' : ''}
                         </Text>
                         <Text style={styles.rosterMeta} numberOfLines={1}>
                           {meta.length > 0 ? meta.join(' · ') : '포지션 미지정'}
@@ -146,7 +160,7 @@ export function TeamHomeTab({
                       </View>
                       <Text style={styles.rosterName} numberOfLines={1}>
                         {m.displayName}
-                        {m.id === me?.id ? ' (나)' : ''}
+                        {m.id === selfMemberId ? ' (나)' : ''}
                       </Text>
                       <Text style={styles.rosterMeta} numberOfLines={1}>
                         <Text style={pos ? { color: POSITION_COLOR[pos] } : undefined}>
@@ -167,6 +181,18 @@ export function TeamHomeTab({
               </ScrollView>
             )}
 
+            {/*
+              내 기록 — 총무도 선수다. 역할과 무관하게 항상 보인다.
+
+              카드로 감쌌다. 멤버 목록과 같은 들여쓰기라 김범준 항목의 하위 항목처럼
+              읽혔다 — 경계가 있어야 「목록」과 「내 것」이 끊긴다.
+
+              참석률을 횟수와 나란히 적는다. 멤버 행은 「3개월 67%」, 여기는 「4회」였다.
+              같은 값인데 표현이 달라 사용자가 검산할 수 없었다. 기준을 맞춘다.
+
+              득점 칸은 없다. match_scores는 팀 단위라 개인 득점 데이터가 없고,
+              빈 칸을 만들어 두면 채울 때까지 계속 미완성으로 보인다.
+            */}
             {!!me && (
               <View style={styles.myRecord}>
                 <SoftTint tone="green" radius={radius.card} />

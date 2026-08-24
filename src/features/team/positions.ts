@@ -1,3 +1,4 @@
+import { colors } from '../../theme';
 // src/features/team/positions.ts — 풋살 포지션 정의
 //
 // 팀원의 선호 포지션(team_members.position)과 팀 분배 화면의 포메이션이 같은 값을 쓴다.
@@ -28,7 +29,7 @@ export const POSITION_INFO: Record<Position, { ko: string; role: string; short: 
  */
 export const POSITION_COLOR: Record<Position, string> = {
   PIVO: '#60A5FA',
-  ALA: '#4ADE80',
+  ALA: colors.green,
   FIXO: '#F59E0B',
   GOLEIRO: '#C084FC',
 };

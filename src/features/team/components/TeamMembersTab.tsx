@@ -42,6 +42,8 @@ export function TeamMembersTab({
   return (
           <View style={[styles.card, { gap: 12 }]}>
             <View style={styles.sectionHead}>
+              {/* 멤버 탭에서는 제목이 그냥 제목이다. 이미 그 화면이라 갈 곳이 없다.
+                  (팀 홈에서는 같은 자리가 멤버 탭으로 가는 문이다 — TeamHomeTab 참고) */}
               <Text style={styles.sectionTitle}>전체 {members.length}명</Text>
             </View>
 

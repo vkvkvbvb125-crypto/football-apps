@@ -609,11 +609,13 @@ export function TeamHomeScreen({ navigation, route }: any) {
               지역은 한 번 정해두고 거의 안 건드리는 값이라 설정이 맞다. */}
 
           {/* 멤버 — 팀 정보·멤버 관리 두 탭에서 보인다 (팀원은 탭이 없어 항상) */}
+          {/* 멤버 — 팀 정보·멤버 관리 두 탭에서 보인다 (팀원은 탭이 없어 항상) */}
           {tab === 'home' && (
             <TeamHomeTab
               members={members}
               visibleMembers={visibleMembers}
               me={me}
+              selfMemberId={activeTeam.membershipId}
               isAdmin={isAdmin}
               profileBits={profileBits}
               myUnpaid={myUnpaid}

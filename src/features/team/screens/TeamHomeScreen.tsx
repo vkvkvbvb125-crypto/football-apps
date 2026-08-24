@@ -21,6 +21,7 @@ import { AnnouncementListModal } from '../../announcements/components/Announceme
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
+import { TeamSwitchSheet } from '../components/TeamSwitchSheet';
 import { InviteSheet } from '../components/InviteSheet';
 import { regularLabel } from '../weekdays';
 import { fetchTeamSettings } from '../services/teamSettingsService';
@@ -101,6 +102,11 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const loadMatches = useAttendanceStore((s) => s.loadMatches);
 
   const [memberListVisible, setMemberListVisible] = useState(false);
+  const [teamSwitchVisible, setTeamSwitchVisible] = useState(false);
+  const memberships = useTeamStore((s) => s.memberships);
+  const setActiveTeam = useTeamStore((s) => s.setActiveTeam);
+  /* 팀이 하나면 고를 게 없다 — 셰브론도 시트도 없이 지금 동작 그대로다 */
+  const hasMultipleTeams = memberships.length > 1;
   const [copied, setCopied] = useState(false);
   /** 팀 탭 안의 네 화면. 총무·팀원 모두 같은 탭을 쓰고, 안에서 할 수 있는 일만 달라진다.
       route.params.tab으로 열 화면을 지정할 수 있다 — 탈퇴 거부 메시지가 「총무 넘기러 가기」로
@@ -110,6 +116,12 @@ export function TeamHomeScreen({ navigation, route }: any) {
   );
   const [memberQuery, setMemberQuery] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
+
+  /* 팀을 바꾸면 홈으로 되돌린다. 멤버 탭에 서서 팀을 바꾸면 제목만 바뀐 채
+     「멤버 관리」에 남아, 방금 무엇이 바뀐 건지 안 보인다 */
+  useEffect(() => {
+    setTab('home');
+  }, [activeTeam?.team.id]);
   // 정기 일정은 teams가 아니라 team_settings에 있다 — 배열이라 「매주 화·목」이 되고,
   // teams에 단일 int로 또 두면 같은 뜻의 저장소가 둘이 된다. SettlementScreen도
   // 같은 식으로 화면에서 직접 읽는다.
@@ -303,7 +315,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
   return (
     <ScreenGradient>
       {/* 팀 화면에서는 "팀"이라는 제목이 아무것도 알려주지 않는다 — 팀 이름을 제목으로 쓴다 */}
-      <TabHeader title={activeTeam.team.name} />
+      <TabHeader title={activeTeam.team.name} onPressTitle={hasMultipleTeams ? () => setTeamSwitchVisible(true) : undefined} />
 
       {/* 팀 홈이 허브다 — 아래 격자에서 각 화면으로 들어가고, 들어가면 뒤로가기로 돌아온다.
           탭 바를 위에 상시로 두면 격자와 같은 곳으로 가는 입구가 둘이 된다. */}
@@ -1153,6 +1165,15 @@ export function TeamHomeScreen({ navigation, route }: any) {
         inviteCode={activeTeam.team.invite_code}
         inviteUrl={inviteUrl}
       />
+      <TeamSwitchSheet
+        visible={teamSwitchVisible}
+        onClose={() => setTeamSwitchVisible(false)}
+        memberships={memberships}
+        activeTeamId={activeTeam.team.id}
+        onSelect={setActiveTeam}
+        onCreateOrJoin={() => navigation.navigate('TeamOnboarding')}
+      />
+
       <MemberListModal
         visible={memberListVisible}
         members={members}

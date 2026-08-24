@@ -34,6 +34,11 @@ import { useAnnouncementsStore } from '../features/announcements/stores/announce
 
 interface TabHeaderProps {
   title: string;
+  /**
+   * 제목을 누를 수 있게 한다. 넘긴 화면에서만 셰브론이 붙는다 —
+   * 다른 탭의 제목은 그냥 화면 이름이라 누를 것이 없다.
+   */
+  onPressTitle?: () => void;
 }
 
 /**
@@ -345,7 +350,7 @@ export function SettingsMenu() {
   );
 }
 
-export function TabHeader({ title }: TabHeaderProps) {
+export function TabHeader({ title, onPressTitle }: TabHeaderProps) {
   const teamName = useTeamStore((s) => s.activeTeam?.team.name);
   // 팀이 하나뿐이면 화면마다 같은 이름을 되풀이할 뿐이다 — 여러 팀에 속했을 때만
   // "지금 어느 팀을 보고 있나"가 정보가 된다
@@ -354,7 +359,22 @@ export function TabHeader({ title }: TabHeaderProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>{title}</Text>
+        {onPressTitle ? (
+          <Pressable
+            onPress={onPressTitle}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${title} — 팀 바꾸기`}
+            style={({ pressed }) => [styles.titleTap, pressed && styles.titlePressed]}
+          >
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+          </Pressable>
+        ) : (
+          <Text style={styles.title}>{title}</Text>
+        )}
         {/* 제목이 이미 팀 이름이면(팀 화면) 옆에 또 붙이지 않는다 */}
         {hasMultipleTeams && !!teamName && teamName !== title && (
           <Text style={styles.team} numberOfLines={1}>
@@ -380,6 +400,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
+  titleTap: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 },
+  titlePressed: { opacity: 0.6 },
   titleRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8, minWidth: 0 },
   title: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
   team: { color: colors.textFaint, fontSize: 12, fontWeight: '600', flexShrink: 1 },

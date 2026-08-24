@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, View } from 'react-native';
+import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../features/auth/stores/authStore';
@@ -17,7 +17,13 @@ import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen'
 import { registerForPushNotifications } from '../features/notifications/services/pushService';
 import * as Notifications from 'expo-notifications';
 import { useNotificationsStore } from '../features/notifications/stores/notificationsStore';
+import { useAttendanceStore } from '../features/attendance/stores/attendanceStore';
+import { useSettlementStore } from '../features/settlement/stores/settlementStore';
+import { useAnnouncementsStore } from '../features/announcements/stores/announcementsStore';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { Text } from '../components/nativeText';
 import { colors } from '../theme';
 
 const Stack = createNativeStackNavigator();
@@ -30,80 +36,122 @@ const navTheme = {
 function LoadingScreen() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgScreen }}>
-      <ActivityIndicator size="large" color="#4ADE80" />
+      <ActivityIndicator size="large" color={colors.green} />
     </View>
   );
 }
 
 /**
- * 앱을 켰을 때 처음 뜨는 화면.
+ * 레퍼런스의 순서를 그대로 따른다 (스펙 3절):
+ *   200ms   중앙에 아주 약한 초록 빛
+ *   300~800 공 등장 (opacity 0→1, scale 0.92→1)
+ *   600~1100 로고 등장 (opacity 0→1, translateY 8→0)
+ *   900~1400 화면 하단에 얇은 가로 빛이 퍼졌다 사라진다
  *
- * 글자가 하나씩 튀어 올라오고, 마지막에 공이 굴러 들어와 점을 찍는다.
- * (로고 이미지 한 장을 페이드인하면 "이미지 띄웠구나"로만 보인다)
+ * bounce·회전·파티클은 쓰지 않는다. 예전 버전은 글자가 하나씩 튀어 오르고 공이 한 바퀴
+ * 굴러 들어왔는데, 레퍼런스의 조용하고 무거운 인상과는 다른 종류의 움직임이었다.
  */
-/** 로그인 화면·홈 히어로와 같은 표기 — 여기만 대문자면 다른 로고처럼 보인다 */
-const SPLASH_WORD = 'KickDay';
+/** 로고 뒤에서 번지는 빛의 지름. 로고 너비의 두 배쯤이라야 뒤에서 비추는 것으로 읽힌다 */
+const GLOW = 420;
 
 function SplashScreen() {
-  // 글자마다 하나씩 — 0에서 1로 가면 아래에서 올라오며 나타난다
-  const letters = useRef(SPLASH_WORD.split('').map(() => new Animated.Value(0))).current;
-  const ball = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0)).current;
+  const logo = useRef(new Animated.Value(0)).current;
+  const sweep = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.stagger(
-        70,
-        letters.map((v) => Animated.spring(v, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }))
-      ),
-      Animated.spring(ball, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }),
+    const fade = (v: Animated.Value, delay: number, duration: number) =>
+      Animated.timing(v, { toValue: 1, delay, duration, useNativeDriver: true });
+
+    Animated.parallel([
+      fade(glow, 200, 500),
+      // 공을 걷어내면서 로고가 주인공이 됐다 — 빛이 번진 직후 바로 이어 붙는다
+      fade(logo, 380, 560),
+      // 퍼졌다 사라진다 — 0에서 1로 갔다가 다시 0으로
+      Animated.sequence([
+        Animated.delay(900),
+        Animated.timing(sweep, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.timing(sweep, { toValue: 0, duration: 240, useNativeDriver: true }),
+      ]),
     ]).start();
   }, []);
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgRoot }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-        {SPLASH_WORD.split('').map((ch, i) => (
-          <Animated.Text
-            key={i}
-            style={{
-              fontFamily: 'Pretendard-ExtraBold',
-              fontSize: 38,
-              letterSpacing: -1,
-              // 앞 낱말 Kick만 초록 — 로그인 화면·홈 히어로와 같은 규칙
-              color: i < 4 ? colors.green : colors.text,
-              opacity: letters[i],
-              transform: [
-                { translateY: letters[i].interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) },
-                { scale: letters[i].interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) },
-              ],
-            }}
-          >
-            {ch}
-          </Animated.Text>
-        ))}
+    <View style={splash.root}>
+      {/*
+        공 뒤에서 번지는 빛.
 
-        {/* 마지막에 굴러 들어오는 공 — 한 바퀴 돌면서 글자 끝에 붙는다.
-            사진 같은 3D 렌더(축구공.png)는 납작한 글자 옆에서 혼자 튀어서 아이콘으로 쓴다. */}
-        <Animated.View
-          style={{
-            marginLeft: 7,
-            marginBottom: 4,
-            opacity: ball,
-            transform: [
-              { translateX: ball.interpolate({ inputRange: [0, 1], outputRange: [-34, 0] }) },
-              { rotate: ball.interpolate({ inputRange: [0, 1], outputRange: ['-360deg', '0deg'] }) },
-            ],
-          }}
-        >
-          <Ionicons name="football" size={26} color={colors.green} />
-        </Animated.View>
-      </View>
+        처음엔 borderRadius를 준 초록 View 한 장으로 때웠는데, 그건 글로우가 아니라
+        가장자리가 딱 끊긴 초록 원판이었다 — 공 뒤에 접시를 받쳐 둔 것처럼 보였다.
+        빛은 중심에서 바깥으로 서서히 사라져야 하므로 방사형 그라디언트가 필요하다.
+        react-native-svg의 RadialGradient를 쓴다(이미 설치돼 있다).
+      */}
+      <Animated.View style={[splash.glow, { opacity: glow }]} pointerEvents="none">
+        <Svg width={GLOW} height={GLOW}>
+          <Defs>
+            <RadialGradient id="splashGlow" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={colors.green} stopOpacity={0.34} />
+              <Stop offset="0.45" stopColor={colors.green} stopOpacity={0.12} />
+              <Stop offset="1" stopColor={colors.green} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Circle cx={GLOW / 2} cy={GLOW / 2} r={GLOW / 2} fill="url(#splashGlow)" />
+        </Svg>
+      </Animated.View>
+
+      {/*
+        축구공 렌더(축구공.png)를 걷어냈다.
+
+        사진풍 3D 렌더라 흰 스페큘러와 바닥 그림자가 이미 구워져 있어서, 평평한 다크 UI 위에
+        놓으면 혼자 다른 재질로 떠 있었다. 빛 위에 로고만 두면 남는 건 브랜드와 빛뿐이라
+        훨씬 조용하다 — 스플래시가 보여줘야 하는 것도 그 둘이다.
+      */}
+      <Animated.View
+        style={{
+          opacity: logo,
+          transform: [
+            { translateY: logo.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            { scale: logo.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+          ],
+        }}
+      >
+        <View style={splash.logoRow}>
+          <Text style={splash.logo}>
+            <Text style={{ color: colors.green }}>Kick</Text>
+            <Text style={{ color: colors.text }}>Day</Text>
+          </Text>
+          <Ionicons name="football" size={28} color={colors.green} style={{ marginLeft: 10, marginBottom: 5 }} />
+        </View>
+      </Animated.View>
+
+      {/* 하단 가로 빛 — 가운데가 밝고 양끝으로 사라진다.
+          단색 막대로 두면 양끝이 칼로 자른 것처럼 끊긴다. 가로 그라디언트로 흘려보낸다. */}
+      <Animated.View style={[splash.sweep, { opacity: sweep }]} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(34,197,94,0)', colors.green, 'rgba(34,197,94,0)']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
     </View>
   );
 }
 
+const splash = StyleSheet.create({
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgRoot },
+  // 이제 화면 한가운데에 로고 하나뿐이라 빛도 그냥 가운데다 — 보정할 게 없다
+  glow: { position: 'absolute', width: GLOW, height: GLOW },
+  logoRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  // 화면의 유일한 요소가 됐으니 그만큼 키운다 (34 → 42)
+  logo: { fontFamily: 'Pretendard-ExtraBold', fontSize: 42, letterSpacing: -1.4 },
+  sweep: { position: 'absolute', bottom: 96, width: 240, height: 2, overflow: 'hidden' },
+});
+
 /** 애니메이션을 다 볼 수 있게 최소한 이만큼은 스플래시를 띄운다 */
 const SPLASH_MIN_MS = 1700;
+/** 걷히는 시간. 더 짧으면 툭 꺼지고, 더 길면 앱이 늦게 열리는 것처럼 느껴진다 */
+const SPLASH_EXIT_MS = 420;
 
 export function RootNavigator() {
   const session = useAuthStore((s) => s.session);
@@ -124,12 +172,28 @@ export function RootNavigator() {
 
   // 세션 복구는 보통 순식간이라 그대로 두면 로고가 한 프레임 번쩍이고 만다
   const [splashHeld, setSplashHeld] = useState(false);
+  /** 겹이 완전히 사라지기 전까지는 트리에 남겨 둔다 — 먼저 지우면 페이드가 끊긴다 */
+  const [splashMounted, setSplashMounted] = useState(true);
+  const exit = useRef(new Animated.Value(1)).current;
+
+  const ready = authInitialized && onboardingLoaded && splashHeld;
 
   useEffect(() => {
     checkOnboardingSeen();
     const t = setTimeout(() => setSplashHeld(true), SPLASH_MIN_MS);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    Animated.timing(exit, {
+      toValue: 0,
+      duration: SPLASH_EXIT_MS,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setSplashMounted(false);
+    });
+  }, [ready]);
 
   /**
    * 누가 로그인했는지가 바뀔 때만 다시 한다.
@@ -147,6 +211,37 @@ export function RootNavigator() {
     }
   }, [session?.user.id]);
 
+  /*
+   * 팀이 바뀌면 팀에 딸린 데이터를 즉시 비운다.
+   *
+   * 각 화면이 activeTeam.team.id를 보고 다시 불러오긴 하는데, 그 사이 몇백 ms 동안
+   * 새 팀 이름 아래 이전 팀의 경기·정산·공지가 그대로 떠 있다. 팀을 바꾼 직후가
+   * 「이게 어느 팀 숫자지」가 제일 헷갈리는 순간이라 잠깐 비어 있는 편이 낫다.
+   *
+   * teamStore가 직접 못 지운다 — attendance·announcements 스토어가 teamStore를
+   * import하고 있어서 반대로 import하면 순환이 된다. 여기는 그 위라 아무것도 안 꼬이고,
+   * 전환·생성·가입·폴백이 전부 activeTeam.team.id 변화로 나타나 한자리에서 잡힌다.
+   *
+   * ⚠ 팀 종속 스토어를 새로 만들면 여기에도 등록할 것. 빠뜨리면 전환 후에도 이전 팀
+   *   데이터가 남는데, 증상이 「가끔 이상한 값이 보인다」로만 나타나 추적이 어렵다.
+   *
+   * ponytail: 손으로 관리하는 목록이라 등록을 잊으면 조용히 샌다. 갚는 방향은 의존을
+   *   뒤집는 것 — teamStore가 활성 팀 변경 구독만 노출하고 각 스토어가 자기 모듈에서
+   *   리셋 콜백을 등록하면, 순환 없이 책임이 스토어 쪽에 남는다. 스토어가 하나 더
+   *   늘어날 때 그때 하면 된다.
+   */
+  const activeTeamId = activeTeam?.team.id;
+  const prevTeamId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    // 첫 진입(undefined → id)은 비울 것이 없다. 실제로 팀이 바뀐 경우만 처리한다
+    if (prevTeamId.current !== undefined && prevTeamId.current !== activeTeamId) {
+      useAttendanceStore.setState({ matches: [], loaded: false });
+      useSettlementStore.setState({ current: null, past: [], pendingMatches: [], loaded: false });
+      useAnnouncementsStore.setState({ announcements: [], readCounts: {}, loaded: false });
+    }
+    prevTeamId.current = activeTeamId;
+  }, [activeTeamId]);
+
   // 푸시가 도착하거나 눌렸을 때 앱 안의 알림 목록도 따라 갱신한다.
   // 안 그러면 벨을 눌렀을 때 방금 받은 알림이 없어서 "왔는데 왜 없지"가 된다.
   useEffect(() => {
@@ -161,18 +256,27 @@ export function RootNavigator() {
     // 위와 같은 이유 — 토큰만 바뀐 것으로 리스너를 떼었다 붙일 이유가 없다
   }, [session?.user.id]);
 
-  if (!authInitialized || !onboardingLoaded || !splashHeld) {
-    return <SplashScreen />;
-  }
-
   return (
-    <NavigationContainer theme={navTheme}>
+    <View style={{ flex: 1, backgroundColor: colors.bgRoot }}>
+      {/*
+        준비되기 전에는 네비게이터를 아예 마운트하지 않는다 — 세션·팀을 모르는 상태로
+        먼저 그리면 로그인 화면이 한 번 스쳤다가 홈으로 바뀐다.
+      */}
+      {ready && (
+        <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {/* 재설정 링크로 들어오면 세션이 이미 서 있다 — 그대로 두면 홈으로 지나쳐서
             정작 비밀번호를 바꿀 기회가 없다. 아래 모든 분기보다 먼저 잡는다. */}
         {recoveryMode ? (
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        ) : !onboardingSeen ? (
+        ) : /*
+             튜토리얼은 "아직 로그인 안 한 첫 사용자"에게만 보여준다.
+             전에는 세션보다 먼저 검사해서, 로그인된 사람도 온보딩 플래그가 없으면
+             튜토리얼을 봤다 — 앱 업데이트로 저장 키가 바뀌거나(이 저장소에서 실제로 한 번
+             바뀌었다) 기기 저장소만 날아가면 멀쩡히 쓰던 사람이 소개 화면부터 다시 봤다.
+             세션이 있으면 이미 이 앱을 아는 사람이다. 곧장 안으로 들여보낸다.
+           */
+        !session && !onboardingSeen ? (
           <Stack.Screen name="Onboarding">
             {() => <OnboardingScreen onDone={markOnboardingSeen} />}
           </Stack.Screen>
@@ -197,11 +301,37 @@ export function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabNavigator} />
+            {/* 팀이 있어도 열 수 있어야 한다 — 팀 전환 시트의 「새 팀 만들기 / 참여」가 여기로 온다.
+                팀이 없을 때의 등록(위 브랜치)과 같은 화면이고, 그쪽은 브랜치 교체로 닫힌다 */}
+            <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
             <Stack.Screen name="TeamSettings" component={TeamSettingsScreen} />
             <Stack.Screen name="MySettings" component={MySettingsScreen} />
           </>
         )}
-      </Stack.Navigator>
-    </NavigationContainer>
+          </Stack.Navigator>
+        </NavigationContainer>
+      )}
+
+      {/*
+        스플래시는 조건부 return이 아니라 위에 얹힌 한 겹이다.
+        전에는 준비되는 순간 통째로 갈아치워서 로고에서 앱으로 한 프레임에 툭 잘렸다.
+        앱을 밑에서 먼저 그려 두고 이 겹을 걷어내면, 걷히는 동안 이미 완성된 화면이 비친다.
+
+        걷힐 때 아주 살짝 확대한다(1 → 1.04). 불투명도만 줄이면 그냥 꺼지는 느낌인데,
+        조금 다가오면서 사라지면 화면 뒤로 물러나는 것처럼 읽힌다.
+        pointerEvents를 꺼서 걷히는 동안의 탭이 스플래시에 먹히지 않게 한다.
+      */}
+      {splashMounted && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: exit, transform: [{ scale: exit.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) }] },
+          ]}
+        >
+          <SplashScreen />
+        </Animated.View>
+      )}
+    </View>
   );
 }

@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import type { TextInput as RNTextInput } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
@@ -30,6 +31,25 @@ export function TeamStartScreen() {
 
   const pendingInviteCode = usePendingInviteStore((s) => s.code);
   const clearPendingInvite = usePendingInviteStore((s) => s.clear);
+
+  /*
+   * 이 화면은 두 가지 자리에서 열린다.
+   *
+   *   팀이 없을 때   RootNavigator가 이 화면만 그린다. 팀이 생기면 브랜치가 통째로
+   *                  바뀌면서 알아서 사라진다 — 여기서 할 일이 없다(canGoBack이 거짓).
+   *   팀이 있을 때   팀 전환 시트의 「새 팀 만들기 / 참여」가 스택에 얹는다. 이때는
+   *                  브랜치가 그대로라 저절로 안 닫힌다 — 팀이 바뀌면 직접 내려와야 한다.
+   *
+   * 그래서 「활성 팀이 바뀌었나」를 보고 닫는다. 만들었든 가입했든 결과는 같다.
+   */
+  const navigation = useNavigation();
+  const activeTeamId = useTeamStore((s) => s.activeTeam?.team.id);
+  const openedWith = useRef(activeTeamId);
+  useEffect(() => {
+    if (activeTeamId !== openedWith.current && navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [activeTeamId]);
 
   useEffect(() => {
     if (pendingInviteCode) {
@@ -66,7 +86,7 @@ export function TeamStartScreen() {
 
         <Pressable onPress={() => setPick('create')} style={[styles.card, pick === 'create' && styles.cardOn]}>
           <View style={styles.cardRow}>
-            <View style={[styles.icon, { backgroundColor: 'rgba(74,222,128,0.14)' }]}>
+            <View style={[styles.icon, { backgroundColor: 'rgba(34,197,94,0.14)' }]}>
               <Ionicons name="add" size={20} color={colors.green} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>
@@ -148,9 +168,26 @@ export function TeamStartScreen() {
 
         {/* 절대배치라 형제 중 마지막에 둬야 한다 —
             앞에 두면 뒤따르는 콘텐츠가 위를 덮어서 눌러도 반응하지 않는다 */}
-        <Pressable onPress={signOut} hitSlop={10} style={styles.signOutRow}>
-          <Text style={styles.signOutText}>로그아웃</Text>
-        </Pressable>
+        {/*
+          팀 없이 시작할 때는 여기서 갈 곳이 로그아웃뿐이다. 반대로 팀 전환 시트에서
+          열렸을 때는 이미 팀이 있으므로 로그아웃이 아니라 돌아가기가 필요하다 —
+          그 상태에서 로그아웃만 있으면 나갈 길이 없다.
+        */}
+        {navigation.canGoBack() ? (
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={styles.signOutRow}
+            accessibilityRole="button"
+            accessibilityLabel="돌아가기"
+          >
+            <Text style={styles.signOutText}>닫기</Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={signOut} hitSlop={10} style={styles.signOutRow}>
+            <Text style={styles.signOutText}>로그아웃</Text>
+          </Pressable>
+        )}
       </View>
     </ScreenGradient>
   );
@@ -171,11 +208,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  cardOn: { backgroundColor: 'rgba(74,222,128,0.09)', borderColor: '#2F4A3A' },
+  cardOn: { backgroundColor: 'rgba(34,197,94,0.09)', borderColor: colors.greenDeep },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
-  cardSub: { color: colors.textMuted, fontSize: 12.5, fontWeight: '500' },
+  cardSub: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
 
   inlineForm: { paddingTop: 14, marginTop: 14, borderTopWidth: 1, borderTopColor: colors.border },
   nameInput: {
@@ -211,8 +248,8 @@ const styles = StyleSheet.create({
   codeText: { color: colors.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
   hiddenInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
 
-  errorText: { color: colors.danger, fontSize: 12.5, textAlign: 'center' },
-  note: { color: '#5F6B66', fontSize: 11.5, textAlign: 'center', lineHeight: 18 },
+  errorText: { color: colors.danger, fontSize: 12, textAlign: 'center' },
+  note: { color: colors.textFaint, fontSize: 11, textAlign: 'center', lineHeight: 18 },
   cta: { height: 52, borderRadius: 16, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
 });

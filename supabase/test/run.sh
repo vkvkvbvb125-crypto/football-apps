@@ -212,6 +212,7 @@ echo "D-2 제외   : 면제 · 마감된 정산은 안 셈"
 seed
 $PSQL < supabase/migrations/20260824_account_deletion_status.sql
 $PSQL < supabase/migrations/20260824_account_deletion_handover.sql
+$PSQL < supabase/migrations/20260824_account_deletion_uid_guard.sql
 field() { ask "$1" | python -c "import sys,json;d=json.load(sys.stdin);print($2)"; }
 
 # 총무가 혼자고 멤버가 남아 있다 → 넘기기 전에는 못 나간다
@@ -240,6 +241,13 @@ $PSQL -c "delete from auth.users where id='11111111-1111-1111-1111-111111111111'
 [ "$($PSQL -tAc "select count(*) from team_members where team_id='aaaaaaaa-0000-0000-0000-000000000001'" | tail -1)" = "0" ]   || { echo "!! 멤버가 남았다"; exit 1; }
 [ "$(docker exec -i $C psql -U postgres -tAc "$as_admin" -c "select is_team_member('aaaaaaaa-0000-0000-0000-000000000001')" | tail -1)" = "f" ]   || { echo "!! 멤버 0명인 팀이 아직 보인다 — 팀 삭제가 따로 필요하다"; exit 1; }
 echo "D-4 유령팀 : 멤버 0명 → teams_select가 감춤 (팀 삭제 불필요)"
+
+# 로그인하지 않은 호출은 「모른다」가 아니라 「안 된다」여야 한다.
+# me가 비면 미납 0 · 관리 팀 0이 되어 can_delete가 참으로 나온다 — 판정이 헛돌면
+# 삭제가 그대로 진행된다. 호출자가 실수해도 여기서 닫힌다.
+[ "$(docker exec -i $C psql -U postgres -tAc "reset request.jwt.claim.sub;" -c "select account_deletion_status()" | tail -1 | python -c 'import sys,json;d=json.load(sys.stdin);print(d["can_delete"], d.get("reason"))')" = "False no_auth" ] \
+  || { echo "!! 로그인 없이 불렀는데 삭제를 허용한다 (fail-open)"; exit 1; }
+echo "D-5 무인증 : 거부 (fail-closed)"
 
 echo
 echo "d1 ok / d2 ok / d3 ok"

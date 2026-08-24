@@ -22,6 +22,8 @@ import { AnnouncementDetailModal } from '../../announcements/components/Announce
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
 import { TeamSwitchSheet } from '../components/TeamSwitchSheet';
+import { TeamHomeTab } from '../components/TeamHomeTab';
+import { TeamMembersTab } from '../components/TeamMembersTab';
 import { TeamNoticesTab } from '../components/TeamNoticesTab';
 import { TeamBoardTab } from '../components/TeamBoardTab';
 import { InviteSheet } from '../components/InviteSheet';
@@ -36,25 +38,15 @@ import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGrad
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
 import { RowCard, StatRow, StatTile } from '../../../components/Surface';
-import {
-  monthlyAttendanceRate,
-  memberAttendanceRate,
-  formatRate,
-  formatMemberRate,
-  MEMBER_RATE_MONTHS,
-} from '../../attendance/utils/attendanceRate';
+import { monthlyAttendanceRate, memberAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import type { PlaceResult } from '../../attendance/services/placeService';
 import { colors, font, radius, shadow } from '../../../theme';
-import { POSITION_COLOR, POSITION_INFO, positionLabel, toPosition } from '../positions';
+import { positionLabel, toPosition } from '../positions';
 import { clearTeamLogo, pickSquareImage, uploadTeamLogo } from '../../settings/services/avatarService';
 import { SoftTint } from '../../../components/BentoCard';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-
-function initialOf(name: string) {
-  return name.length > 2 ? name.slice(1) : name;
-}
 
 /**
  * 팀 홈의 진입 타일. 총무만 멤버 관리로 들어간다.
@@ -617,361 +609,34 @@ export function TeamHomeScreen({ navigation, route }: any) {
               지역은 한 번 정해두고 거의 안 건드리는 값이라 설정이 맞다. */}
 
           {/* 멤버 — 팀 정보·멤버 관리 두 탭에서 보인다 (팀원은 탭이 없어 항상) */}
-          {(tab === 'home' || tab === 'members') && (
-          // 팀 홈에서는 카드 껍데기를 벗긴다. 배너 아래로 똑같은 상자만 쌓이면
-          // 화면에 리듬이 없다 — 가로로 흐르는 아바타 줄이 상자들 사이에서 숨통이 된다.
-          // (멤버 탭은 목록이 주인공이라 카드를 유지한다)
-          <View style={[tab === 'members' ? styles.card : styles.rosterStrip, { gap: 12 }]}>
-            <View style={styles.sectionHead}>
-              {/*
-                홈에서는 제목이 멤버 탭으로 가는 문이다.
+          {tab === 'home' && (
+            <TeamHomeTab
+              members={members}
+              visibleMembers={visibleMembers}
+              me={me}
+              isAdmin={isAdmin}
+              profileBits={profileBits}
+              myUnpaid={myUnpaid}
+              myRateLabel={myRateLabel}
+              memberRateMatches={memberRateMatches}
+              onOpenMemberList={() => setMemberListVisible(true)}
+              onGoMembers={() => setTab('members')}
+              onOpenTeamSettings={() => navigation.navigate('TeamSettings')}
+              onLeaveTeam={handleLeaveTeam}
+            />
+          )}
 
-                멤버 탭에 들어가는 길이 가로 로스터 아바타(3명 이상)와 +N 타일(6명
-                이상)뿐이었다. 즉 2명 이하 팀은 멤버 탭에 도달할 방법이 아예 없었고,
-                하필 초대가 제일 급한 갓 만든 팀이 정확히 거기 걸렸다. 초대 진입을
-                그 목록 끝에 넣었으니 더더욱 막히면 안 된다.
-
-                그래서 멤버 수를 조건으로 걸지 않는다 — 3명이든 6명이든 임계값을
-                두면 같은 함정이 다시 생긴다. 0명이어도 열린다.
-
-                멤버 탭에서는 제목이 그냥 제목이다. 이미 그 화면이라 갈 곳이 없다.
-              */}
-              {tab === 'members' ? (
-                <Text style={styles.sectionTitle}>전체 {members.length}명</Text>
-              ) : (
-                <Pressable
-                  onPress={() => setTab('members')}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel={`멤버 ${members.length}명 전체 보기`}
-                  style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
-                >
-                  <Text style={styles.sectionTitle}>멤버 {members.length}명</Text>
-                  <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
-                </Pressable>
-              )}
-            </View>
-
-            {/* 이름 검색 — 멤버 탭에서만. 팀 홈은 미리보기라 검색할 게 없다 */}
-            {tab === 'members' && members.length > 6 && (
-              <View style={styles.searchRow}>
-                <Ionicons name="search" size={15} color={colors.textFaint} />
-                <TextInput
-                  style={styles.searchInput}
-                  value={memberQuery}
-                  onChangeText={setMemberQuery}
-                  placeholder="이름 검색"
-                  placeholderTextColor={colors.textFaint}
-                />
-              </View>
-            )}
-
-            {/* 팀 홈은 "누가 있나"만 훑는 자리라 가로로 늘어놓는다.
-                멤버 탭은 포지션·실력을 견주고 관리까지 하는 자리라 세로 목록이 맞다. */}
-            {/*
-              멤버가 한둘이면 가로 스트립을 쓰지 않는다.
-              62px짜리 아바타 칸 하나가 화면 폭에 혼자 놓이면 오른쪽이 통째로 비어서
-              "아직 안 만든 화면"처럼 읽혔다. 같은 정보를 가로로 눕히면 폭을 다 쓴다.
-              셋부터는 스트립이 줄로 채워지니 그대로 둔다 — 미리보기라 가로가 맞다.
-            */}
-            {tab === 'home' && visibleMembers.length <= 2 ? (
-              <View style={styles.soloList}>
-                {visibleMembers.map((m) => {
-                  const pos = toPosition(m.position);
-                  /*
-                    이름 → 역할 → 포지션 → 참석률.
-                    끝에 실력 등급(상/중/하)을 붙이고 있었다 — 본인이 자기 등급을 보면
-                    팀 분위기가 깨진다. 값과 팀 분배 로직은 그대로 두고 표시만 뺀다.
-                    (아래 memberRow 경로에서도 같은 이유로 뺐다.)
-                  */
-                  const meta = [
-                    m.role === 'admin' ? '총무' : null,
-                    pos ? POSITION_INFO[pos].ko : null,
-                    formatMemberRate(memberAttendanceRate(memberRateMatches, m)),
-                  ].filter(Boolean);
-                  return (
-                    <Pressable
-                      key={m.id}
-                      onPress={() => setMemberListVisible(true)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${m.displayName} 멤버 관리`}
-                      style={({ pressed }) => [styles.soloRow, pressed && styles.pressed]}
-                    >
-                      <View style={styles.soloAvatar}>
-                        {m.avatarUrl ? (
-                          <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
-                        ) : (
-                          <Text style={styles.rosterInitial}>{initialOf(m.displayName)}</Text>
-                        )}
-                      </View>
-                      <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-                        <Text style={styles.soloName} numberOfLines={1}>
-                          {m.displayName}
-                          {m.id === activeTeam.membershipId ? ' (나)' : ''}
-                        </Text>
-                        <Text style={styles.rosterMeta} numberOfLines={1}>
-                          {meta.length > 0 ? meta.join(' · ') : '포지션 미지정'}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : tab === 'home' ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rosterRow}>
-                {visibleMembers.map((m) => {
-                  const pos = toPosition(m.position);
-                  return (
-                    <Pressable key={m.id} onPress={() => setTab('members')} style={styles.rosterItem}>
-                      <View style={styles.rosterAvatar}>
-                        {/* 사진이 있으면 사진, 없으면 이니셜 */}
-                        {m.avatarUrl ? (
-                          <Image source={{ uri: m.avatarUrl }} style={styles.rosterPhoto} />
-                        ) : (
-                          <Text style={styles.rosterInitial}>{initialOf(m.displayName)}</Text>
-                        )}
-                        {m.role === 'admin' && (
-                          <View style={styles.rosterAdminDot}>
-                            <Text style={styles.rosterAdminText}>총무</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.rosterName} numberOfLines={1}>
-                        {m.displayName}
-                        {m.id === activeTeam.membershipId ? ' (나)' : ''}
-                      </Text>
-                      <Text style={styles.rosterMeta} numberOfLines={1}>
-                        <Text style={pos ? { color: POSITION_COLOR[pos] } : undefined}>
-                          {pos ? POSITION_INFO[pos].ko : '미지정'}
-                        </Text>
-                        {m.skillTag ? ` · ${m.skillTag}` : ''}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-                {members.length > 5 && (
-                  <Pressable onPress={() => setTab('members')} style={styles.rosterItem}>
-                    <View style={[styles.rosterAvatar, styles.rosterMore]}>
-                      <Text style={styles.rosterMoreText}>+{members.length - 5}</Text>
-                    </View>
-                  </Pressable>
-                )}
-              </ScrollView>
-            ) : (
-            <View>
-              {visibleMembers.map((m) => {
-                const isMe = m.id === activeTeam.membershipId;
-                const isTeamAdmin = m.role === 'admin';
-                return (
-                  /*
-                    행을 누르면 멤버 관리가 열린다.
-                    4버튼 그리드의 「멤버 관리」 타일이 하던 일이다 — 타일은 없앴지만
-                    MemberListModal은 이미 실력 등급·포지션·부총무 임명·내보내기를
-                    전부 갖고 있어서 새로 만들 게 없었다. 목록에서 사람을 보고 그 자리에서
-                    누르는 쪽이 타일을 거치는 것보다 짧다.
-                  */
-                  <Pressable
-                    key={m.id}
-                    onPress={() => setMemberListVisible(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${m.displayName} 멤버 관리`}
-                    style={({ pressed }) => [styles.memberRow, pressed && styles.pressed]}
-                  >
-                    <View style={styles.avatar}>
-                      {m.avatarUrl ? (
-                        <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
-                      ) : (
-                        <Text style={styles.avatarText}>{initialOf(m.displayName)}</Text>
-                      )}
-                    </View>
-                    {/* 주발 — 내 설정에 저장은 되는데 여태 어디서도 안 보였다.
-                        R/L 한 글자면 이름 옆에서 자리를 거의 안 먹는다 */}
-                    {!!m.dominantFoot && (
-                      <View style={styles.footBadge}>
-                        <Text style={styles.footBadgeText}>
-                          {m.dominantFoot === 'left' ? 'L' : m.dominantFoot === 'right' ? 'R' : 'LR'}
-                        </Text>
-                      </View>
-                    )}
-                    <View style={{ flex: 1, gap: 1 }}>
-                      <Text style={styles.memberName} numberOfLines={1}>
-                        {m.displayName}
-                        {isMe ? ' (나)' : ''}
-                      </Text>
-                      {/*
-                        실력 등급(skill_tag: 상/중/하)을 목록에서 뺐다.
-                        본인이 자기 등급을 보면 팀 분위기가 깨진다 — 「하」로 찍힌 채
-                        매주 나오는 사람에게 그걸 계속 보여줄 이유가 없다.
-                        값과 팀 분배 로직은 그대로다. 바꾸는 UI도 총무 전용
-                        MemberListModal에 그대로 남아 있다. 여기서 표시만 숨긴다.
-
-                        자리에는 참석률이 온다 — 목록을 훑을 때 「누가 꾸준한가」가
-                        「누가 잘하나」보다 총무에게 쓸모 있는 정보다.
-                      */}
-                      <View style={styles.memberMetaRow}>
-                        {/* 포지션마다 색이 달라 목록에서 자리를 색으로 먼저 읽는다 */}
-                        <Text
-                          style={[
-                            styles.memberMeta,
-                            !!toPosition(m.position) && {
-                              color: POSITION_COLOR[toPosition(m.position)!],
-                              fontWeight: '700',
-                            },
-                          ]}
-                        >
-                          {positionLabel(toPosition(m.position))}
-                        </Text>
-                        <Text style={styles.memberMetaDot}>·</Text>
-                        <Text style={styles.memberMeta}>
-                          {formatMemberRate(memberAttendanceRate(memberRateMatches, m))}
-                        </Text>
-                      </View>
-                    </View>
-                    {isTeamAdmin ? (
-                      <View style={styles.adminBadge}>
-                        <Text style={styles.adminBadgeText}>총무</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.memberRole}>멤버</Text>
-                    )}
-                  </Pressable>
-                );
-              })}
-              {visibleMembers.length === 0 && (
-                <Text style={styles.empty}>{memberQuery ? '찾는 이름이 없어요' : '아직 멤버가 없어요'}</Text>
-              )}
-
-              {/*
-                초대가 목록의 마지막 행이다.
-
-                아래에 초록 버튼이 따로 있었는데, 목록을 끝까지 훑고 「이 사람도
-                없네」 하는 지점이 목록의 끝이다. 거기서 눈을 떼고 버튼을 찾게 하는
-                대신 그 자리에 둔다 — 연락처 앱이 「새 연락처 추가」를 목록 끝에
-                두는 것과 같은 이유다.
-
-                검색 중에는 감춘다. 이름을 거르는 중에 초대 행이 남아 있으면
-                검색 결과처럼 읽힌다.
-              */}
-              {!memberQuery && (
-                <Pressable
-                  onPress={openInvite}
-                  accessibilityRole="button"
-                  accessibilityLabel="멤버 초대하기"
-                  style={({ pressed }) => [styles.memberRow, pressed && styles.pressed]}
-                >
-                  <View style={[styles.avatar, styles.inviteAvatar]}>
-                    <Ionicons name="person-add-outline" size={17} color={colors.green} />
-                  </View>
-                  <View style={{ flex: 1, gap: 1 }}>
-                    <Text style={styles.inviteRowName}>멤버 초대하기</Text>
-                    <Text style={styles.memberMeta}>링크를 보내면 코드를 불러주지 않아도 돼요</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                </Pressable>
-              )}
-            </View>
-            )}
-
-            {/*
-              내 기록 — 총무도 선수다. 역할과 무관하게 항상 보인다.
-
-              카드로 감쌌다. 멤버 목록과 같은 들여쓰기라 김범준 항목의 하위 항목처럼
-              읽혔다 — 경계가 있어야 「목록」과 「내 것」이 끊긴다.
-
-              참석률을 횟수와 나란히 적는다. 멤버 행은 「3개월 67%」, 여기는 「4회」였다.
-              같은 값인데 표현이 달라 사용자가 검산할 수 없었다. 기준을 맞춘다.
-
-              득점 칸은 없다. match_scores는 팀 단위라 개인 득점 데이터가 없고,
-              빈 칸을 만들어 두면 채울 때까지 계속 미완성으로 보인다.
-            */}
-            {tab === 'home' && !!me && (
-              <View style={styles.myRecord}>
-                <SoftTint tone="green" radius={radius.card} />
-                <Text style={styles.myRecordTitle}>내 기록</Text>
-                <StatRow>
-                  <StatTile
-                    label={`최근 ${MEMBER_RATE_MONTHS}개월 참석`}
-                    value={myRateLabel}
-                    accent
-                  />
-                  {/* 미납은 크면 나쁜 숫자다 — 초록이면 좋아 보인다 */}
-                  <StatTile
-                    label="미납 금액"
-                    value={`${myUnpaid.toLocaleString()}원`}
-                    accent={myUnpaid > 0}
-                    tone="danger"
-                  />
-                </StatRow>
-              </View>
-            )}
-
-            {/*
-              총무 동작 — 홈 탭 하단에 모은다.
-
-              4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
-              헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
-              서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
-              그 호출부에 갈 방법만 없는 상태였다.
-
-              라벨을 「설정」이 아니라 「운영 설정」으로 둔다. 하위 항목까지 적어 두면
-              헤더 톱니와 헷갈릴 여지가 없다 — 혼동은 둘 다 「설정」이라 불러서 생겼다.
-            */}
-            {tab === 'home' && isAdmin && (
-              <Pressable
-                onPress={() => navigation.navigate('TeamSettings')}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
-              >
-                <Ionicons name="options-outline" size={17} color={colors.green} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.rowTitle}>운영 설정</Text>
-                  <Text style={styles.rowSub}>정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-              </Pressable>
-            )}
-
-            {/* 팀 나가기는 총무만이 아니다 — 멤버가 팀을 떠날 유일한 길이다 */}
-            {tab === 'home' && (
-              <Pressable
-                onPress={handleLeaveTeam}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.leaveRow, pressed && styles.pressed]}
-              >
-                <Ionicons name="exit-outline" size={17} color={colors.danger} />
-                <Text style={styles.leaveText}>팀 나가기</Text>
-              </Pressable>
-            )}
-
-            {/*
-              멤버가 적을 때 아래가 비는 것에 대한 안내.
-              구조를 늘려 채우지 않는다 — 지금 비어 보이는 건 레이아웃이 아니라
-              데이터가 없어서다. 왜 비었는지만 한 줄로 말한다.
-            */}
-            {/*
-              프로필이 비었을 때. 총무에게만 보인다 — 팀원은 채울 권한이 없고,
-              고칠 수 없는 빈칸을 알려주면 할 일처럼 보이기만 한다.
-            */}
-            {tab === 'home' && isAdmin && profileBits.length === 0 && (
-              <Pressable
-                onPress={() => navigation.navigate('TeamSettings')}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
-              >
-                <Ionicons name="sparkles-outline" size={17} color={colors.green} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.rowTitle}>팀 정보를 채워주세요</Text>
-                  <Text style={styles.rowSub}>지역 · 정기 일정 · 평균 인원 · 실력</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-              </Pressable>
-            )}
-
-            {tab === 'home' && members.length <= 3 && (
-              <Text style={styles.growHint}>멤버가 모이면 참석률과 기록이 쌓여요</Text>
-            )}
-          </View>
+          {tab === 'members' && (
+            <TeamMembersTab
+              members={members}
+              visibleMembers={visibleMembers}
+              selfMemberId={activeTeam.membershipId}
+              memberQuery={memberQuery}
+              memberRateMatches={memberRateMatches}
+              onChangeQuery={setMemberQuery}
+              onOpenMemberList={() => setMemberListVisible(true)}
+              onOpenInvite={openInvite}
+            />
           )}
 
           {tab === 'notices' && (
@@ -1142,15 +807,6 @@ const styles = StyleSheet.create({
   /** 다음 경기 — 2열 타일 + 진행 막대 */
 
   /** 주발 배지 — R/L 한 글자 */
-  footBadge: {
-    minWidth: 20,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: colors.inputBg,
-    alignItems: 'center',
-  },
-  footBadgeText: { color: colors.textDim, fontSize: 10, fontWeight: '800' },
 
   /** 나란한 액션 버튼 — 인스타 프로필의 편집/공유 자리 */
   /** 멤버 3명 이하 — 공유 버튼이 주, 코드가 부 */
@@ -1180,33 +836,7 @@ const styles = StyleSheet.create({
    * 카드로 감싼다 — 멤버 목록과 같은 들여쓰기면 마지막 멤버의 하위 항목처럼 읽힌다.
    * 면·테두리·반경은 다른 카드와 같은 값이라 목록에서 따로 놀지 않는다.
    */
-  myRecord: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    gap: 12,
-    borderRadius: radius.card,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  myRecordTitle: { color: colors.text, ...font.title },
   /** 총무 동작 — 카드가 아니라 줄이다. 그리드 넷을 걷어낸 자리에 블록을 다시 세우지 않는다 */
-  adminRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 20,
-    marginTop: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: radius.control,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardAlt,
-  },
 
   /** 멤버가 적을 때 아래가 왜 비었는지 — 한 줄이면 충분하다 */
   profileLine: {
@@ -1216,14 +846,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingHorizontal: 20,
     paddingTop: 10,
-  },
-  growHint: {
-    marginHorizontal: 20,
-    marginTop: 14,
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
   },
 
   inviteBar: {
@@ -1274,79 +896,19 @@ const styles = StyleSheet.create({
   /** 총무 상단 탭 */
 
   /** 멤버 검색 */
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 42,
-    paddingHorizontal: 12,
-    borderRadius: radius.button,
-    backgroundColor: colors.inputBg,
-  },
-  searchInput: { flex: 1, color: colors.text, fontSize: 13 },
 
   /** 팀 홈 가로 명단 */
   /** 카드 없이 흐르는 멤버 줄 — 좌우 여백만 카드와 맞춘다 */
   /* 멤버 한둘일 때의 가로 행 — 아바타는 스트립(52)과 같게 두고 배치만 눕힌다 */
-  soloList: { gap: 4 },
-  soloRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 4 },
-  soloAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardAlt,
-  },
-  soloName: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
 
-  rosterStrip: { paddingHorizontal: 4, paddingTop: 4 },
-  rosterRow: { gap: 14, paddingVertical: 2 },
-  rosterItem: { width: 62, alignItems: 'center', gap: 5 },
-  rosterAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.inputBg,
-  },
-  rosterPhoto: { width: 52, height: 52, borderRadius: 26 },
-  avatarPhoto: { width: '100%', height: '100%', borderRadius: 999 },
-  rosterInitial: { color: colors.textStrong, fontSize: 14, fontWeight: '800' },
-  rosterAdminDot: {
-    position: 'absolute',
-    bottom: -3,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 999,
-    backgroundColor: colors.gold,
-  },
-  rosterAdminText: { color: colors.bgRoot, fontSize: 10, fontWeight: '800' },
-  rosterName: { color: colors.textStrong, fontSize: 11, fontWeight: '700' },
-  rosterMeta: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
-  rosterMore: { backgroundColor: colors.greenTint, borderColor: colors.greenDeep },
-  rosterMoreText: { color: colors.green, fontSize: 13, fontWeight: '800' },
 
   /** 고정 공지 — 공지 탭 맨 위 */
 
   /** 팀 나가기 */
-  leaveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
-  leaveText: { color: colors.danger, fontSize: 13, fontWeight: '700' },
 
   /** 알림 토글 */
 
   /** 멤버 초대 버튼 */
-  inviteAvatar: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.greenLine,
-  },
-  inviteRowName: { color: colors.green, fontSize: 14, fontWeight: '700' },
 
   /** 설정 탭 — 라벨/값 한 줄 */
 
@@ -1377,45 +939,11 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  rowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
-  rowSub: { color: colors.textMuted, fontSize: 11, fontWeight: '500' },
 
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // 다른 탭의 섹션 제목은 15/-0.2였다 — 팀 탭만 14.5라 나란히 놓으면 어긋나 보인다
-  sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionTitle: { color: colors.text, ...font.section },
-  empty: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
 
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSoft,
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: '#8FA69C', fontSize: 11, fontWeight: '800' },
-  memberName: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
-  memberMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  memberMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
-  memberMetaDot: { color: colors.textFaint, fontSize: 11 },
-  memberRole: { color: colors.textFaint, fontSize: 10, fontWeight: '800' },
   moreText: { color: colors.green, fontSize: 12, fontWeight: '700' },
-  adminBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#6B5426',
-  },
-  adminBadgeText: { color: colors.gold, fontSize: 10, fontWeight: '800' },
 
 });

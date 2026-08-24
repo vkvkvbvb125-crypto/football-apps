@@ -69,9 +69,15 @@ assert.equal(regularLabel([2, 9], '20:00'), '매주 수요일 20:00');
 
 // ── 빈 프로필 안내는 총무만 ────────────────────────────────────
 {
+  /*
+   * 파일이 갈라지면서 둘이 다른 곳에 있다 — 읽는 대상만 나눈다.
+   *   "채워주세요" 안내   팀 홈 탭
+   *   프로필 표시 줄      부모(배너 안이라 탭 위에 있다)
+   */
+  const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   const home = read('src/features/team/screens/TeamHomeScreen.tsx');
   assert.ok(
-    /isAdmin && profileBits\.length === 0/.test(home),
+    /isAdmin && profileBits\.length === 0/.test(homeTab),
     '팀원에게도 "채워주세요"가 뜬다 — 채울 권한이 없는 사람에게 할 일을 만든다'
   );
   assert.ok(/profileBits\.length > 0 &&/.test(home), '빈 줄이 자리를 차지한다');

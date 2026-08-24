@@ -70,15 +70,6 @@ function initialOf(name: string) {
 /** teams.skill_level — CHECK 제약과 같은 세 값 */
 const TEAM_SKILL_LABEL = { beginner: '입문', intermediate: '중급', advanced: '상급' } as const;
 
-const MEMBER_TILES = [
-  { key: 'notices' as const, icon: 'megaphone-outline', label: '공지사항', tint: colors.green },
-  { key: 'board' as const, icon: 'chatbubbles-outline', label: '게시판', tint: colors.green },
-  { key: 'settings' as const, icon: 'settings-outline', label: '설정', tint: colors.green },
-];
-const ADMIN_TILES = [
-  { key: 'members' as const, icon: 'people-outline', label: '멤버 관리', tint: colors.green },
-  ...MEMBER_TILES,
-];
 
 export function TeamHomeScreen({ navigation, route }: any) {
   const bottomPad = useTabBarPadding();
@@ -111,7 +102,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
   /** 팀 탭 안의 네 화면. 총무·팀원 모두 같은 탭을 쓰고, 안에서 할 수 있는 일만 달라진다.
       route.params.tab으로 열 화면을 지정할 수 있다 — 탈퇴 거부 메시지가 「총무 넘기러 가기」로
       멤버 화면을 바로 연다. 없으면 여느 때처럼 홈이다. */
-  const [tab, setTab] = useState<'home' | 'members' | 'notices' | 'board' | 'settings'>(
+  const [tab, setTab] = useState<'home' | 'members' | 'notices' | 'board'>(
     route?.params?.tab ?? 'home',
   );
   const [memberQuery, setMemberQuery] = useState('');

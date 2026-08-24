@@ -15,6 +15,7 @@ import { useTeamStore } from '../../team/stores/teamStore';
 import { updateDisplayName } from '../../team/services/memberProfileService';
 import { POSITIONS, POSITION_INFO, toPosition } from '../../team/positions';
 import { pickSquareImage, setAvatarUrl, updateProfileFields, uploadAvatar } from '../services/avatarService';
+import { deleteAccount, describeBlockers, fetchDeletionStatus } from '../services/accountService';
 import { colors, radius } from '../../../theme';
 import type { SkillTag } from '../../../types/database';
 
@@ -127,6 +128,55 @@ export function MySettingsScreen({ navigation }: any) {
       // 스토어가 사유를 담아둔다 — 중복이면 "이미 쓰고 있는 등번호예요"
       alertFail(useTeamStore.getState().error ?? '등번호를 바꾸지 못했어요');
       setJersey(String(me.jerseyNumber ?? ''));
+    }
+  };
+
+  const [deleting, setDeleting] = useState(false);
+
+  /**
+   * 탈퇴. 판정은 서버가 하고 여기서는 물어보기만 한다 —
+   * 화면이 따로 계산하면 화면은 된다고 하고 서버는 거절하는 상태가 생긴다.
+   */
+  const confirmDeleteAccount = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      const status = await fetchDeletionStatus();
+
+      if (!status.can_delete) {
+        const { message, handoverTeam } = describeBlockers(status);
+        // 총무를 넘겨야 하는 경우에만 갈 곳이 있다. 미납은 본인이 송금하면 끝나서
+        // 보낼 화면이 따로 없다.
+        if (handoverTeam) {
+          const go = await confirmAction({
+            title: '아직 탈퇴할 수 없어요',
+            message,
+            confirmLabel: '총무 넘기러 가기',
+          });
+          if (go) navigation.navigate('Main', { screen: 'Team', params: { tab: 'members' } });
+        } else {
+          alertMessage('아직 탈퇴할 수 없어요', message);
+        }
+        return;
+      }
+
+      const ok = await confirmAction({
+        title: '정말 탈퇴할까요?',
+        message:
+          '계정과 프로필, 참석 기록이 지워지고 되돌릴 수 없어요.\n\n' +
+          '내가 만든 경기와 공지는 팀에 남습니다 — 팀의 기록이라 지우면 남은 멤버들의 과거가 같이 사라져요.',
+        confirmLabel: '탈퇴하기',
+        destructive: true,
+      });
+      if (!ok) return;
+
+      await deleteAccount();
+      // 계정이 없어졌으니 세션도 버린다. 안 하면 죽은 토큰으로 화면이 계속 돈다.
+      signOut();
+    } catch (e: any) {
+      alertMessage('탈퇴하지 못했어요', e?.message ?? '잠시 후 다시 시도해 주세요');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -386,6 +436,23 @@ export function MySettingsScreen({ navigation }: any) {
             <Ionicons name="log-out-outline" size={16} color={colors.textMuted} />
             <Text style={styles.signOutText}>로그아웃</Text>
           </Pressable>
+          {/*
+            탈퇴는 앱 안에 있어야 한다 (App Store 5.1.1(v)). 「고객센터 문의」로는 안 된다.
+            로그아웃 아래, 구분선 뒤에 둔다 — 둘 다 「나가기」로 보여서 붙여 놓으면 잘못 누른다.
+          */}
+          <View style={styles.dangerDivider} />
+          <Pressable
+            onPress={confirmDeleteAccount}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="계정 삭제"
+            style={({ pressed }) => [styles.signOut, pressed && styles.pressed, deleting && styles.pressed]}
+          >
+            <Ionicons name="trash-outline" size={16} color={colors.danger} />
+            <Text style={[styles.signOutText, styles.deleteText]}>
+              {deleting ? '확인 중…' : '계정 삭제'}
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
       <TermsDocModal doc={openDoc} onClose={() => setOpenDoc(null)} />
@@ -404,6 +471,8 @@ const styles = StyleSheet.create({
   toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bgRoot },
   toggleKnobOn: { alignSelf: 'flex-end' },
   notifyHint: { color: colors.textMuted, fontSize: 11, fontWeight: '600', marginTop: 4 },
+  dangerDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 10 },
+  deleteText: { color: colors.danger },
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',

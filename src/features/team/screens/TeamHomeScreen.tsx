@@ -79,7 +79,7 @@ const ADMIN_TILES = [
   ...MEMBER_TILES,
 ];
 
-export function TeamHomeScreen({ navigation }: any) {
+export function TeamHomeScreen({ navigation, route }: any) {
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const signOut = useAuthStore((s) => s.signOut);
@@ -102,8 +102,12 @@ export function TeamHomeScreen({ navigation }: any) {
 
   const [memberListVisible, setMemberListVisible] = useState(false);
   const [copied, setCopied] = useState(false);
-  /** 팀 탭 안의 네 화면. 총무·팀원 모두 같은 탭을 쓰고, 안에서 할 수 있는 일만 달라진다 */
-  const [tab, setTab] = useState<'home' | 'members' | 'notices' | 'board' | 'settings'>('home');
+  /** 팀 탭 안의 네 화면. 총무·팀원 모두 같은 탭을 쓰고, 안에서 할 수 있는 일만 달라진다.
+      route.params.tab으로 열 화면을 지정할 수 있다 — 탈퇴 거부 메시지가 「총무 넘기러 가기」로
+      멤버 화면을 바로 연다. 없으면 여느 때처럼 홈이다. */
+  const [tab, setTab] = useState<'home' | 'members' | 'notices' | 'board' | 'settings'>(
+    route?.params?.tab ?? 'home',
+  );
   const [memberQuery, setMemberQuery] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
   // 정기 일정은 teams가 아니라 team_settings에 있다 — 배열이라 「매주 화·목」이 되고,

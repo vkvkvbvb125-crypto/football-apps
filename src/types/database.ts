@@ -524,6 +524,15 @@ export interface Database {
         Args: { p_invite_code: string };
         Returns: Database['public']['Tables']['team_members']['Row'];
       };
+      /**
+       * 탈퇴해도 되는지. 인자가 없고 auth.uid()만 본다 — 대상을 받으면 남의 미납
+       * 건수를 물어볼 수 있다. 인증이 없으면 can_delete: false + reason: 'no_auth'.
+       * 실제 모양은 accountService.DeletionStatus.
+       */
+      account_deletion_status: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
     };
   };
 }

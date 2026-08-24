@@ -22,10 +22,11 @@ import { AnnouncementDetailModal } from '../../announcements/components/Announce
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import { MemberListModal } from '../components/MemberListModal';
 import { TeamSwitchSheet } from '../components/TeamSwitchSheet';
+import { TeamNoticesTab } from '../components/TeamNoticesTab';
+import { TeamBoardTab } from '../components/TeamBoardTab';
 import { InviteSheet } from '../components/InviteSheet';
 import { regularLabel } from '../weekdays';
 import { fetchTeamSettings } from '../services/teamSettingsService';
-import { BoardPanel } from '../../board/components/BoardPanel';
 import { fetchPosts, resolveAuthor, type Post } from '../../board/services/boardService';
 import { relativeTime } from '../../../lib/relativeTime';
 import { usePollsStore } from '../../polls/stores/pollsStore';
@@ -559,11 +560,9 @@ export function TeamHomeScreen({ navigation, route }: any) {
             그대로 둔다: 이미 쌓인 글이 있고, 되살릴 때 마이그레이션부터 다시 보게 되면
             비용이 훨씬 크다. tab이 'board'가 되는 경로가 없어져서 이 줄은 지금 안 그려진다.
           */}
-          {/*
           {tab === 'board' && !!myUserId && (
-            <BoardPanel teamId={activeTeam.team.id} myUserId={myUserId} isAdmin={isAdmin} />
+            <TeamBoardTab teamId={activeTeam.team.id} myUserId={myUserId} isAdmin={isAdmin} />
           )}
-          */}
 
           {/* 다음 경기 카드를 걷어냈다 — 홈이 같은 경기를 더 자세히(참여 현황·CTA까지) 보여준다.
               팀 화면의 주인공은 멤버다. */}
@@ -975,133 +974,24 @@ export function TeamHomeScreen({ navigation, route }: any) {
           </View>
           )}
 
-          {/* 공지사항 — 팀 홈에서는 "최근 공지" 미리보기, 공지 탭에서는 전체 */}
-          {/*
-            공지는 홈이 맡는다 — 팀 홈에서 미리보기를 지웠다.
-            notices 탭 자체는 남겨 둔다(총무의 공지 CRUD가 여기 있다). 다만 지금은
-            여기로 오는 입구가 없다 — 작성은 홈의 「최근 공지」 + 가 연다.
-          */}
           {tab === 'notices' && (
-          <View style={[styles.card, { gap: 12 }]}>
-            {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
-            <SoftTint tone="green" radius={radius.card} />
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>공지사항</Text>
-              <View style={styles.sectionHeadRight}>
-                {isAdmin && (
-                  <Pressable
-                    hitSlop={14}
-                    onPress={() => {
-                      setEditingAnnouncement(null);
-                      setFormVisible(true);
-                    }}
-                  >
-                    <Ionicons name="add-circle-outline" size={20} color={colors.green} />
-                  </Pressable>
-                )}
-                <Pressable
-                  onPress={() => setListVisible(true)}
-                  hitSlop={14}
-                  accessibilityRole="link"
-                  accessibilityLabel="공지 전체 보기"
-                >
-                  <Text style={styles.sectionLink}>전체 보기 ›</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {/* 공지 탭에서는 고정 공지를 본문까지 펼쳐 맨 위에 세운다 —
-                "지금 모두가 알아야 하는" 내용이라 제목만 보여주면 한 번 더 눌러야 한다.
-                팀 홈에서는 목록에 배지로만 표시한다(자리를 많이 먹으면 미리보기가 아니게 된다). */}
-            {tab === 'notices' &&
-              announcements
-                .filter((a) => a.is_pinned)
-                .map((a) => (
-                  <Pressable
-                    key={`pinned-${a.id}`}
-                    onPress={() => setSelectedAnnouncement(a)}
-                    style={({ pressed }) => [styles.pinnedCard, pressed && styles.pressed]}
-                  >
-                    <View style={styles.pinnedHead}>
-                      <Ionicons name="pin" size={13} color={colors.green} />
-                      <Text style={styles.pinnedTitle} numberOfLines={1}>
-                        {a.title}
-                      </Text>
-                    </View>
-                    <Text style={styles.pinnedBody} numberOfLines={3}>
-                      {a.body}
-                    </Text>
-                  </Pressable>
-                ))}
-
-            {announcements.length === 0 ? (
-              <Text style={styles.empty}>등록된 공지가 없어요</Text>
-            ) : (
-              <View>
-                {(tab === 'notices' ? announcements : announcements.slice(0, 3)).map((a) => (
-                  <Pressable
-                    key={a.id}
-                    onPress={() => setSelectedAnnouncement(a)}
-                    style={({ pressed }) => [styles.noticeRow, pressed && styles.pressed]}
-                  >
-                    {a.is_pinned && (
-                      <View style={styles.pinBadge}>
-                        <Text style={styles.pinBadgeText}>고정</Text>
-                      </View>
-                    )}
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={styles.noticeTitle} numberOfLines={1}>
-                        {a.title}
-                      </Text>
-                      <Text style={styles.noticeBody} numberOfLines={1}>
-                        {a.body}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
-          )}
-
-          {/* 투표 — 공지와 같은 성격이라 같은 탭에 둔다 */}
-          {/*
-            공지는 홈이 맡는다 — 팀 홈에서 미리보기를 지웠다.
-            notices 탭 자체는 남겨 둔다(총무의 공지 CRUD가 여기 있다). 다만 지금은
-            여기로 오는 입구가 없다 — 작성은 홈의 「최근 공지」 + 가 연다.
-          */}
-          {tab === 'notices' && (
-          <View style={[styles.card, { gap: 12 }]}>
-            {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
-            <SoftTint tone="green" radius={radius.card} />
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>투표</Text>
-              {isAdmin && (
-                <Pressable
-                  onPress={() => setPollFormVisible(true)}
-                  hitSlop={14}
-                  accessibilityRole="button"
-                  accessibilityLabel="투표 만들기"
-                >
-                  <Ionicons name="add-circle-outline" size={20} color={colors.green} />
-                </Pressable>
-              )}
-            </View>
-            {polls.length === 0 ? (
-              <Text style={styles.empty}>등록된 투표가 없어요</Text>
-            ) : (
-              polls.map((poll) => (
-                <PollCard
-                  key={poll.id}
-                  poll={poll}
-                  selfMemberId={activeTeam.membershipId}
-                  isAdmin={isAdmin}
-                  onVote={(optionIndex) => votePoll(poll.id, optionIndex)}
-                  onDelete={() => confirm('투표 삭제', '이 투표를 삭제하시겠어요?', () => deletePoll(poll.id))}
-                />
-              ))
-            )}
-          </View>
+            <TeamNoticesTab
+              announcements={announcements}
+              polls={polls}
+              isAdmin={isAdmin}
+              selfMemberId={activeTeam.membershipId}
+              onCreateAnnouncement={() => {
+                setEditingAnnouncement(null);
+                setFormVisible(true);
+              }}
+              onOpenAnnouncementList={() => setListVisible(true)}
+              onSelectAnnouncement={setSelectedAnnouncement}
+              onEditAnnouncement={setEditingAnnouncement}
+              onCreatePoll={() => setPollFormVisible(true)}
+              onVotePoll={votePoll}
+              onDeletePoll={deletePoll}
+              confirm={confirm}
+            />
           )}
 
           {/* 로그아웃은 「내 설정」으로 옮겼다 — 계정에 딸린 동작이라 팀 화면에 있을 이유가 없다 */}
@@ -1442,17 +1332,6 @@ const styles = StyleSheet.create({
   rosterMoreText: { color: colors.green, fontSize: 13, fontWeight: '800' },
 
   /** 고정 공지 — 공지 탭 맨 위 */
-  pinnedCard: {
-    gap: 6,
-    padding: 13,
-    borderRadius: radius.button,
-    backgroundColor: colors.greenTint,
-    borderWidth: 1,
-    borderColor: colors.greenDeep,
-  },
-  pinnedHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pinnedTitle: { flex: 1, color: colors.textStrong, fontSize: 13, fontWeight: '800' },
-  pinnedBody: { color: colors.textDim, fontSize: 12, lineHeight: 18 },
 
   /** 팀 나가기 */
   leaveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
@@ -1502,11 +1381,9 @@ const styles = StyleSheet.create({
   rowSub: { color: colors.textMuted, fontSize: 11, fontWeight: '500' },
 
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   // 다른 탭의 섹션 제목은 15/-0.2였다 — 팀 탭만 14.5라 나란히 놓으면 어긋나 보인다
   sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionTitle: { color: colors.text, ...font.section },
-  sectionLink: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   empty: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
 
   memberRow: {
@@ -1541,22 +1418,4 @@ const styles = StyleSheet.create({
   },
   adminBadgeText: { color: colors.gold, fontSize: 10, fontWeight: '800' },
 
-  noticeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 9,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSoft,
-  },
-  pinBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-    backgroundColor: 'rgba(34,197,94,0.14)',
-    marginTop: 1,
-  },
-  pinBadgeText: { color: colors.green, fontSize: 10, fontWeight: '800' },
-  noticeTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
-  noticeBody: { color: colors.textDim, fontSize: 11, fontWeight: '500' },
 });

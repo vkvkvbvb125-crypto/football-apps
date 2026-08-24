@@ -49,6 +49,8 @@ import type { MatchWithVotes } from '../../attendance/services/attendanceService
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { relativeTime } from '../../../lib/relativeTime';
 import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
+import { HomeBanner } from '../components/HomeBanner';
+import { buildBannerSlides } from '../components/bannerSlides';
 
 /** 킥오프 3시간 뒤까지는 "다음 경기"로 본다 (경기운영 탭 MATCH_GRACE_MS와 같은 기준) */
 const NEXT_MATCH_GRACE_MS = 3 * 60 * 60 * 1000;
@@ -219,6 +221,9 @@ function SectionCard({
 
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const hero = heroLayout(useWindowDimensions().width);
+  /* 배너 자동 전환이 세로 스크롤 중에 끼어들지 않게 하는 신호.
+     상태로 올리면 스크롤할 때마다 이 화면 전체가 다시 그려진다 — 배너 타이머만 보면 되는 값이라 ref다. */
+  const verticalScrolling = useRef(false);
   const bottomPad = useTabBarPadding();
   /** 공지 작성 — 팀 화면에서 옮겨 왔다 (총무만) */
   const [noticeFormOpen, setNoticeFormOpen] = useState(false);
@@ -340,6 +345,28 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   );
 
   /*
+   * 지난달 참석률 — 「이번 달 대비」의 기준선.
+   *
+   * 같은 함수에 now만 지난달 말로 준다. 정의가 갈리면 두 값을 빼는 것 자체가 뜻을
+   * 잃는다. fetchMatches가 팀의 전 경기를 받아오므로 지난달 경기도 손에 있다.
+   */
+  const lastMonthRate = monthlyAttendanceRate(
+    matches.map((m) => ({
+      matchDate: m.match_date,
+      attendCount: m.votes.filter((v) => v.status === 'attend').length,
+    })),
+    members,
+    new Date(new Date().getFullYear(), new Date().getMonth(), 0, 23, 59, 59)
+  );
+
+  /* 무엇이 올라가고 무엇이 빠지는지는 bannerSlides가 정한다 — 분기라 따로 돌려볼 수 있어야 한다 */
+  const bannerSlides = buildBannerSlides({
+    thisMonth: teamRate,
+    lastMonth: lastMonthRate,
+    nextMatch: next ? { matchDate: next.match_date, location: next.location } : null,
+  });
+
+  /*
    * 홈에 띄울 「지금 처리할 정산」 한 건 — 가장 오래 방치된 미납.
    *
    * 없으면 줄 자체를 그리지 않는다. 「모두 정산 완료」 같은 문구를 넣지 않는 건
@@ -395,6 +422,10 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}
         showsVerticalScrollIndicator={false}
+        /* 세로로 긋는 동안 배너가 저 혼자 넘어가지 않게 알린다. ref라 다시 그리지 않는다 */
+        onScrollBeginDrag={() => { verticalScrolling.current = true; }}
+        onScrollEndDrag={() => { verticalScrolling.current = false; }}
+        onMomentumScrollEnd={() => { verticalScrolling.current = false; }}
       >
         {/* 상단 바 — 다른 탭(TabHeader)과 같은 자리에 화면 이름 + 팀명, 오른쪽엔 설정 메뉴 + 알림 벨 */}
         <View style={styles.topBar}>
@@ -431,33 +462,14 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           </Pressable>
         )}
 
-        {/* 히어로 카드 */}
-        <View style={[styles.heroCard, { height: hero.height }]}>
-          {/* 공 혼자면 카드가 밋밋해 보여서, 공이 있는 자리를 중심으로 은은한 초록 글로우를 깐다.
-              RN엔 원형(radial) 그라디언트가 없어 대각선 LinearGradient로 근사한다 —
-              로그인 화면 히어로 글로우와 같은 기법. */}
-          <LinearGradient
-            colors={['rgba(34,197,94,0.45)', 'rgba(34,197,94,0.1)', 'rgba(34,197,94,0)']}
-            locations={[0, 0.3, 0.6]}
-            start={{ x: 0.9, y: 0.05 }}
-            end={{ x: 0.05, y: 1 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          {/* 알파가 있는 이미지라 뒤의 배경색이 그대로 비친다.
-              aspectRatio + 절대배치는 RNW에서 크기가 안 잡혀 사라지므로 직접 계산한다. */}
-          <Image
-            source={HERO_IMG}
-            style={[styles.heroImage, hero.img]}
-            resizeMode="cover"
-          />
-          <View style={styles.heroText}>
-            <Text style={styles.brand}>
-              <Text style={{ color: colors.green }}>Kick</Text>Day
-            </Text>
-            <Text style={styles.brandSub}>풋살, 연결의 시작</Text>
-          </View>
-        </View>
+        {/* 히어로 배너 — 브랜드 / 이번 달 참석률 / 다음 경기 D-day를 5초마다 넘긴다.
+            값이 없는 슬라이드는 위에서 이미 빠졌고, 한 장만 남으면 배너가 정적으로 선다. */}
+        <HomeBanner
+          slides={bannerSlides}
+          layout={hero}
+          image={HERO_IMG}
+          scrollingRef={verticalScrolling}
+        />
 
         {/* 이번주 경기.
             예전엔 「할 일」에 "일정 등록"이 떠 있으면 이 섹션을 통째로 숨겼다 — 같은 말을
@@ -919,24 +931,7 @@ const styles = StyleSheet.create({
   topBarTeam: { color: colors.textFaint, fontSize: 12, fontWeight: '600', flexShrink: 1 },
   topBarIcons: { flexDirection: 'row', alignItems: 'center', gap: 14 },
 
-  // ── 히어로 카드 ───────────────────────────────────────────
-  heroCard: {
-    marginHorizontal: 20,
-    borderRadius: radius.hero,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#0A100D',
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  heroImage: { position: 'absolute', right: 0 },
-  /*
-   * 글자는 카드 폭의 55%까지만.
-   * 공이 오른쪽에서 들어오므로, 좁은 화면에서 워드마크가 공 위로 겹치는 걸 막는다.
-   */
-  heroText: { paddingHorizontal: 22, gap: 6, maxWidth: '55%' },
-  brand: { color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -1.2 },
-  brandSub: { color: colors.textBody, fontSize: 13, fontWeight: '600' },
+  // 히어로 배너의 카드·글자 스타일은 HomeBanner로 옮겨갔다.
 
   /*
    * ── 공지 티커 ────────────────────────────────────────────

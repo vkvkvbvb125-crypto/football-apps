@@ -28,12 +28,28 @@ create schema auth;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);
 create function auth.uid() returns uuid language sql stable as $f$ select null::uuid $f$;
 create role authenticated; create role anon;
+-- 아바타 마이그레이션이 storage.buckets를 건드린다. Storage는 여기서 볼 대상이 아니라
+-- 마이그레이션이 끝까지 도는 데 필요한 만큼만 흉내 낸다.
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean default false);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text, owner uuid);
+create function storage.foldername(text) returns text[] language sql immutable as $f$ select string_to_array($1,'/') $f$;
 SQL
 
+# schema.sql만 부으면 production과 다른 DB가 나온다 — 20260727 리디자인이 settlements와
+# payments를 drop하고 다시 만드는 등, 마이그레이션이 스키마를 실제로 갈아치운다.
+# 파일명 순서가 곧 적용 순서다(날짜 접두사).
 $PSQL < supabase/schema.sql
+for f in supabase/migrations/*.sql; do
+  [ "$f" = "supabase/migrations/20260824_account_deletion_fks.sql" ] && continue
+  $PSQL < "$f" || { echo "!! 마이그레이션 실패: $f"; exit 1; }
+done
 
-# 총무 한 명 + 멤버 한 명. 총무는 경기·공지·투표를 만들었고 입금 확인까지 했다 —
-# 즉 RESTRICT 외래키 5개에 전부 걸려 있는 상태다. profiles는 트리거가 만든다.
+# 총무 한 명 + 멤버 한 명. 총무는 경기·공지·투표를 만들었다 — 즉 NO ACTION 외래키
+# 3개에 걸려 있고, 팀 생성자라 teams.created_by에도 걸린다. profiles는 트리거가 만든다.
+#
+# 정산은 settlement_shares다. schema.sql의 payments가 아니다 — 20260727 리디자인이
+# payments를 drop했다. 멤버 몫은 미납(confirmed_at is null)으로 둔다: D-2가 쓴다.
 $PSQL <<'SQL'
 insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 update profiles set display_name='총무' where id='11111111-1111-1111-1111-111111111111';
@@ -44,8 +60,11 @@ insert into team_members (id,team_id,user_id,role) values
   ('bbbbbbbb-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001','22222222-2222-2222-2222-222222222222','member');
 insert into matches (id,team_id,match_date,created_by) values ('cccccccc-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001',now(),'bbbbbbbb-0000-0000-0000-000000000001');
 insert into attendance_votes (match_id,team_member_id,status) values ('cccccccc-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000001','attend');
-insert into settlements (id,match_id,total_amount,bank_name,account_number,account_holder) values ('dddddddd-0000-0000-0000-000000000001','cccccccc-0000-0000-0000-000000000001',60000,'국민','123','총무');
-insert into payments (settlement_id,team_member_id,is_paid,checked_by) values ('dddddddd-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000002',true,'bbbbbbbb-0000-0000-0000-000000000001');
+insert into settlements (id,match_id,team_id,total_amount,per_person,created_by)
+  values ('dddddddd-0000-0000-0000-000000000001','cccccccc-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001',60000,30000,'bbbbbbbb-0000-0000-0000-000000000001');
+insert into settlement_shares (settlement_id,team_member_id,amount,confirmed_at) values
+  ('dddddddd-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000001',30000,now()),  -- 총무는 냈다
+  ('dddddddd-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000002',30000,null);   -- 멤버는 미납
 insert into announcements (team_id,author_id,title,body) values ('aaaaaaaa-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000001','제목','공지');
 insert into polls (team_id,author_id,question,options) values ('aaaaaaaa-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000001','투표?','["A","B"]'::jsonb);
 SQL
@@ -65,9 +84,15 @@ do $$ begin
         join pg_attribute a on a.attrelid=c.conrelid and a.attnum=c.conkey[1]
        where c.contype='f' and c.confdeltype='n'
          and (c.conrelid::regclass::text,a.attname) in
-             (('teams','created_by'),('matches','created_by'),('announcements','author_id'),
-              ('polls','author_id'),('payments','checked_by'))) <> 5
-  then raise exception 'set null이 5개가 아니다'; end if;
+             (('teams','created_by'),('matches','created_by'),
+              ('announcements','author_id'),('polls','author_id'))) <> 4
+  then raise exception 'set null이 4개가 아니다'; end if;
+
+  -- 놓친 게 없는지 반대로도 본다: 아직 삭제를 막는 외래키가 남아 있으면 안 된다
+  if exists (select 1 from pg_constraint c
+              where c.contype='f' and c.confdeltype='a'
+                and c.confrelid::regclass::text in ('profiles','team_members'))
+  then raise exception '아직 삭제를 막는 외래키가 남아 있다'; end if;
 end $$;
 
 delete from auth.users where id='11111111-1111-1111-1111-111111111111';
@@ -77,7 +102,9 @@ do $$ begin
   if (select count(*) from matches)       <> 1 then raise exception '경기가 사라졌다'; end if;
   if (select count(*) from announcements) <> 1 then raise exception '공지가 사라졌다'; end if;
   if (select count(*) from polls)         <> 1 then raise exception '투표가 사라졌다'; end if;
-  if (select count(*) from payments)      <> 1 then raise exception '정산 기록이 사라졌다'; end if;
+  if (select count(*) from settlements)   <> 1 then raise exception '정산이 사라졌다'; end if;
+  -- 총무 몫은 team_members cascade로 같이 빠진다. 멤버 몫(미납)은 남아야 한다
+  if (select count(*) from settlement_shares) <> 1 then raise exception '남은 멤버의 정산 몫까지 빠졌다'; end if;
   if (select count(*) from teams)         <> 1 then raise exception '팀이 사라졌다'; end if;
   if (select created_by from matches) is not null then raise exception '작성자가 안 비었다'; end if;
 
@@ -114,8 +141,8 @@ do $$ begin
         join pg_attribute a on a.attrelid=c.conrelid and a.attnum=c.conkey[1]
        where c.contype='f' and c.confdeltype='n'
          and (c.conrelid::regclass::text,a.attname) in
-             (('teams','created_by'),('matches','created_by'),('announcements','author_id'),
-              ('polls','author_id'),('payments','checked_by'))) <> 5
+             (('teams','created_by'),('matches','created_by'),
+              ('announcements','author_id'),('polls','author_id'))) <> 4
   then raise exception '롤백이 실패했는데 제약이 바뀌었다 — 반쯤 적용됐다'; end if;
 end $$;
 SQL

@@ -49,8 +49,7 @@ begin
       ('teams',         'created_by', true),
       ('matches',       'created_by', true),
       ('announcements', 'author_id',  true),
-      ('polls',         'author_id',  true),
-      ('payments',      'checked_by', false)   -- 원래부터 nullable이라 not null을 안 건다
+      ('polls',         'author_id',  true)
     ) as v(tbl, col, restore_not_null)
   loop
     select c.conname, c.confrelid::regclass::text

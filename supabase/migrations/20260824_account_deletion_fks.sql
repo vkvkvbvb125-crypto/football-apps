@@ -1,9 +1,13 @@
 -- 계정 삭제 (D-1) — 삭제를 막고 있던 외래키 5개를 set null로
 --
 -- auth.users 삭제는 profiles → team_members까지 cascade로 내려가는데, 그 끝에
--- on delete 절이 없는 외래키가 5개 있다. 절이 없으면 기본이 NO ACTION(사실상 RESTRICT)
+-- on delete 절이 없는 외래키가 4개 있다. 절이 없으면 기본이 NO ACTION(사실상 RESTRICT)
 -- 이라서 삭제가 23503으로 막힌다. 경기를 한 번이라도 만든 사람은 탈퇴가 실패하고,
 -- 총무는 거의 전원이 여기 걸린다.
+--
+-- 4개는 추측이 아니라 schema.sql에 마이그레이션을 전부 얹은 DB에서 세어 본 값이다.
+-- schema.sql에 있는 payments.checked_by는 여기 없다 — 20260727 리디자인이 payments를
+-- drop했다. settlements.created_by도 없다 — 그 리디자인이 이미 set null로 만들었다.
 --
 -- 지우지 않고 set null인 이유: 경기·공지·투표는 팀의 기록이지 만든 사람의 소유물이
 -- 아니다. 작성자를 따라 지우면 남은 멤버들의 과거가 같이 사라진다. 화면은 작성자가
@@ -31,8 +35,7 @@ begin
       ('teams',         'created_by', true),
       ('matches',       'created_by', true),
       ('announcements', 'author_id',  true),
-      ('polls',         'author_id',  true),
-      ('payments',      'checked_by', false)   -- 원래 nullable
+      ('polls',         'author_id',  true)
     ) as v(tbl, col, was_not_null)
   loop
     select c.conname, c.confrelid::regclass::text

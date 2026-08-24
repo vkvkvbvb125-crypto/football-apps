@@ -26,7 +26,10 @@ $PSQL <<'SQL'
 create extension if not exists pgcrypto;
 create schema auth;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}'::jsonb);
-create function auth.uid() returns uuid language sql stable as $f$ select null::uuid $f$;
+-- Supabase는 JWT 클레임을 GUC로 넣고 auth.uid()가 거기서 읽는다. 같은 자리를 쓴다 —
+-- 그래야 검사에서 「누구로 부르는지」를 set 한 줄로 바꿀 수 있다.
+create function auth.uid() returns uuid language sql stable as $f$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 create role authenticated; create role anon;
 -- 아바타 마이그레이션이 storage.buckets를 건드린다. Storage는 여기서 볼 대상이 아니라
 -- 마이그레이션이 끝까지 도는 데 필요한 만큼만 흉내 낸다.
@@ -45,11 +48,9 @@ for f in supabase/migrations/*.sql; do
   $PSQL < "$f" || { echo "!! 마이그레이션 실패: $f"; exit 1; }
 done
 
-# 총무 한 명 + 멤버 한 명. 총무는 경기·공지·투표를 만들었다 — 즉 NO ACTION 외래키
-# 3개에 걸려 있고, 팀 생성자라 teams.created_by에도 걸린다. profiles는 트리거가 만든다.
-#
-# 정산은 settlement_shares다. schema.sql의 payments가 아니다 — 20260727 리디자인이
-# payments를 drop했다. 멤버 몫은 미납(confirmed_at is null)으로 둔다: D-2가 쓴다.
+# D-1은 총무 계정을 실제로 지운다. D-2는 살아 있는 총무가 필요하니 다시 심을 수 있게 함수로 둔다.
+seed() {
+  $PSQL -c "truncate auth.users cascade;" >/dev/null
 $PSQL <<'SQL'
 insert into auth.users (id) values ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 update profiles set display_name='총무' where id='11111111-1111-1111-1111-111111111111';
@@ -68,6 +69,14 @@ insert into settlement_shares (settlement_id,team_member_id,amount,confirmed_at)
 insert into announcements (team_id,author_id,title,body) values ('aaaaaaaa-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000001','제목','공지');
 insert into polls (team_id,author_id,question,options) values ('aaaaaaaa-0000-0000-0000-000000000001','bbbbbbbb-0000-0000-0000-000000000001','투표?','["A","B"]'::jsonb);
 SQL
+}
+
+# 총무 한 명 + 멤버 한 명. 총무는 경기·공지·투표를 만들었다 — 즉 NO ACTION 외래키
+# 3개에 걸려 있고, 팀 생성자라 teams.created_by에도 걸린다. profiles는 트리거가 만든다.
+#
+# 정산은 settlement_shares다. schema.sql의 payments가 아니다 — 20260727 리디자인이
+# payments를 drop했다. 멤버 몫은 미납(confirmed_at is null)으로 둔다: D-2가 쓴다.
+seed
 
 # ── D-1 ──────────────────────────────────────────────────────────
 # 고치기 전에 실제로 막히는지부터 본다. 안 막히면 이 마이그레이션은 아무것도 안 고치는 것이다.
@@ -167,5 +176,37 @@ $PSQL < supabase/migrations/20260824_account_deletion_fks.sql
 $PSQL < supabase/migrations/20260824_account_deletion_fks.sql
 echo "재실행     : 2회 적용 안전"
 
+# ── D-2 ──────────────────────────────────────────────────────────
+seed   # D-1이 총무를 지웠다
+$PSQL < supabase/migrations/20260824_account_deletion_status.sql
+
+# 멤버(미납 1건)와 총무(완납, 팀에 미납 1건)로 각각 불러 본다
+as_member="set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';"
+as_admin="set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';"
+# psql은 SET의 명령 태그도 stdout에 찍는다 — 마지막 줄만 취한다
+ask() { docker exec -i $C psql -U postgres -tAc "$1" -c "select account_deletion_status()" | tail -1; }
+
+[ "$(ask "$as_member" | python -c 'import sys,json; print(json.load(sys.stdin)["unpaid_own"])')" = "1" ]   || { echo "!! 멤버의 미납 1건을 못 셌다"; exit 1; }
+[ "$(ask "$as_admin"  | python -c 'import sys,json; print(json.load(sys.stdin)["unpaid_own"])')" = "0" ]   || { echo "!! 총무는 냈는데 미납으로 셌다"; exit 1; }
+echo "D-2 본인   : 미납 1건 잡음 · 낸 사람은 0"
+
+# 총무는 막히지 않지만, 팀의 미납은 안내로 나와야 한다
+[ "$(ask "$as_admin" | python -c 'import sys,json; d=json.load(sys.stdin)["admin_teams"][0]; print(d["unpaid_team"], d["other_admins"], d["members"])')" = "1 0 2" ]   || { echo "!! 총무 안내(팀 미납/다른 총무/멤버 수)가 틀렸다: $(ask "$as_admin")"; exit 1; }
+echo "D-2 총무   : 안 막힘 · 팀 미납 1건은 안내로 나옴 · 다른 총무 0명"
+
+# 본인이 「보냈어요」를 누르면 통과해야 한다 — 총무 확인을 기다리다 탈퇴가 막히면 안 된다
+$PSQL -c "update settlement_shares set marked_paid_at=now() where team_member_id='bbbbbbbb-0000-0000-0000-000000000002'"
+[ "$(ask "$as_member" | python -c 'import sys,json; print(json.load(sys.stdin)["unpaid_own"])')" = "0" ]   || { echo "!! 입금 신고를 했는데 여전히 막는다 — 남의 확인에 걸린다"; exit 1; }
+# 반면 총무 쪽 안내는 그대로여야 한다 (확인은 아직 안 됐으니 인수인계 대상이다)
+[ "$(ask "$as_admin" | python -c 'import sys,json; print(json.load(sys.stdin)["admin_teams"][0]["unpaid_team"])')" = "1" ]   || { echo "!! 신고만 된 건이 총무 안내에서 사라졌다"; exit 1; }
+echo "D-2 신고   : 본인은 통과 · 총무 안내에는 남음"
+
+# 면제와 마감된 정산은 안 센다
+$PSQL -c "update settlement_shares set marked_paid_at=null, exempt=true where team_member_id='bbbbbbbb-0000-0000-0000-000000000002'"
+[ "$(ask "$as_member" | python -c 'import sys,json; print(json.load(sys.stdin)["unpaid_own"])')" = "0" ]   || { echo "!! 면제인데 미납으로 셌다"; exit 1; }
+$PSQL -c "update settlement_shares set exempt=false where team_member_id='bbbbbbbb-0000-0000-0000-000000000002'; update settlements set status='done';"
+[ "$(ask "$as_member" | python -c 'import sys,json; print(json.load(sys.stdin)["unpaid_own"])')" = "0" ]   || { echo "!! 마감된 정산인데 미납으로 셌다"; exit 1; }
+echo "D-2 제외   : 면제 · 마감된 정산은 안 셈"
+
 echo
-echo "d1 ok"
+echo "d1 ok / d2 ok"

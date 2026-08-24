@@ -38,10 +38,11 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
   error: null,
   markRead: async (announcements) => {
     const userId = useAuthStore.getState().session?.user.id;
-    const isAdmin = useTeamStore.getState().activeTeam?.role === 'admin';
+    const activeTeam = useTeamStore.getState().activeTeam;
+    const isAdmin = activeTeam?.role === 'admin';
     if (!userId || announcements.length === 0) return;
     try {
-      await markAnnouncementsRead(announcements, userId);
+      await markAnnouncementsRead(announcements, userId, activeTeam?.membershipId ?? null);
       // 집계는 총무만 본다 — 팀원 화면에서까지 매번 세어올 이유가 없다
       if (isAdmin) {
         const counts = await fetchAnnouncementReadCounts(announcements.map((a) => a.id));

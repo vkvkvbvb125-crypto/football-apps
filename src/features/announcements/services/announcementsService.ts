@@ -22,9 +22,17 @@ export async function fetchAnnouncements(teamId: string): Promise<AnnouncementRo
  *
  * upsert라 여러 번 불러도 한 줄이다(패널을 열 때마다 호출된다).
  */
-export async function markAnnouncementsRead(announcements: AnnouncementRow[], userId: string) {
+export async function markAnnouncementsRead(
+  announcements: AnnouncementRow[],
+  userId: string,
+  myMembershipId: string | null,
+) {
   const rows = announcements
-    .filter((a) => a.author_id !== userId)
+    // author_id는 team_members.id다. 예전엔 auth.users.id와 비교해서 영영 안 맞았고,
+    // 그래서 작성자가 자기 공지를 늘 읽음으로 남겼다 — 막으려던 「1명 읽음」이 그대로 났다.
+    // (프로덕션 읽음 기록 3건이 전부 이 경우였다.)
+    // announcement_reads.user_id는 auth.users를 보므로 insert에는 userId를 그대로 쓴다.
+    .filter((a) => a.author_id !== myMembershipId)
     .map((a) => ({ announcement_id: a.id, user_id: userId }));
   if (rows.length === 0) return;
   const { error } = await supabase

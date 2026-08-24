@@ -141,19 +141,26 @@ const num = (src: string, re: RegExp, what: string) => {
 // 도달 자체가 불가였고, 초대 진입로가 그 목록 끝에 있다 — 갓 만든 팀이 초대를
 // 제일 급하게 찾는데 정확히 그 팀이 못 봤다. 임계값을 다시 넣으면 같은 함정이 난다.
 {
-  const home = read('src/features/team/screens/TeamHomeScreen.tsx');
-  const calls = [...home.matchAll(/setTab\('members'\)/g)];
+  /*
+   * 파일이 갈라졌다. 진입로는 팀 홈 탭(제목·로스터 아바타·+N 타일)에 있고, 목록 끝
+   * 초대 행은 멤버 탭에 있다. 부모(TeamHomeScreen)는 이제 라우팅만 해서 여기 없다 —
+   * 읽는 대상만 옮기고 보는 내용은 그대로다.
+   */
+  const home = read('src/features/team/components/TeamHomeTab.tsx');
+  const membersTab = read('src/features/team/components/TeamMembersTab.tsx');
+  // 부모가 setTab('members')를 넘겨주고 탭 안에서는 onGoMembers로 불린다
+  const calls = [...home.matchAll(/onGoMembers/g)];
   assert.ok(calls.length >= 3, '멤버 탭 진입로가 줄었다');
 
   // 제목의 진입은 멤버 수를 안 본다
   const anchor = home.indexOf('sectionHeadLink');
   const head = home.slice(anchor - 600, anchor + 200);
-  assert.ok(/setTab\('members'\)/.test(head), '제목이 멤버 탭으로 안 간다');
+  assert.ok(/onGoMembers/.test(head), '제목이 멤버 탭으로 안 간다');
   assert.ok(!/members\.length [<>]/.test(head), '제목 진입에 멤버 수 조건이 붙었다');
 
   // 초대는 그 목록 안에 있다
-  assert.ok(/accessibilityLabel="멤버 초대하기"/.test(home), '목록 끝 초대 행이 없다');
-  assert.ok(!/inviteCtaText/.test(home), '같은 일을 하는 초대 버튼이 둘이다');
+  assert.ok(/accessibilityLabel="멤버 초대하기"/.test(membersTab), '목록 끝 초대 행이 없다');
+  assert.ok(!/inviteCtaText/.test(membersTab), '같은 일을 하는 초대 버튼이 둘이다');
 }
 
 console.log('uidetail.check: ok');

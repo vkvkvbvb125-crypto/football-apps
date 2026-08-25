@@ -8,6 +8,7 @@
 // 겹치는지 판단이 남아 있어서, 지금은 옮기기만 하고 다듬지 않았다.
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SoftTint } from '../../../components/BentoCard';
 import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -101,6 +102,40 @@ export function TeamHomeTab({
         {/* ── 배너: 엠블럼 + 팀명 + 초대 코드 ── 팀 홈에서만 */}
         {(
         <View style={styles.banner}>
+          {/*
+            배경.
+
+            팀 로고가 있으면 그걸 깔고 검정 60%를 덮는다 — 별도 배경 이미지 컬럼이 없어서
+            이미 있는 값을 쓴다. 로고는 정사각 엠블럼이라 cover로 채우면 가장자리가 잘리는데,
+            어차피 60%에 덮여 색감만 남는 자리라 구도가 문제되지 않는다.
+
+            로고가 없으면(대부분의 팀이 그렇다) 짙은 그린 그라데이션이다. 대각선으로 흐르게
+            둬서 카드가 평평한 색 한 장으로 보이지 않게 한다.
+
+            오버레이가 없으면 로고 색에 따라 글자가 읽히지 않는다. 평평한 검정 60%로 시작했는데
+            채도 높은 로고(카카오 노랑으로 시험)에서 아래쪽 지역·정기모임 줄이 그대로 묻혔다 —
+            위아래로 글자 밝기가 다른데 덮개가 균일해서다. 위 45% → 아래 85%로 흐르게 바꿨다.
+            팀명은 위쪽이라 이미지가 남고, 작고 흐린 글자가 오는 아래는 거의 검정이 된다.
+            그라데이션 폴백에는 덮개가 없다 — 이미 어둡다.
+          */}
+          {activeTeam.team.logo_url ? (
+            <View style={StyleSheet.absoluteFill}>
+              <Image source={{ uri: activeTeam.team.logo_url }} style={styles.bannerBg} blurRadius={12} />
+              <LinearGradient
+                colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.85)']}
+                style={styles.bannerScrim}
+                pointerEvents="none"
+              />
+            </View>
+          ) : (
+            <LinearGradient
+              colors={[colors.greenDeep, colors.cardRaised]}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          )}
           {/* 이 카드에만 있던 SoftTint를 뺐다 — 지금은 앱의 모든 카드에 같은 결이 깔려 있어서
               여기만 따로 강조할 이유가 없어졌다. 혼자 빛이 두 겹이라 팀 탭만 톤이 튀었다. */}
           <View style={styles.bannerRow}>
@@ -136,9 +171,19 @@ export function TeamHomeTab({
 
             {/* 로고 오른쪽엔 이름만 — 긴 팀명이 지표를 밀어내지 않게 지표는 아래 전체 폭으로 뺐다 */}
             <View style={styles.bannerBody}>
-              <Text style={styles.teamName} numberOfLines={1}>
-                {activeTeam.team.name}
-              </Text>
+              <View style={styles.teamNameRow}>
+                <Text style={styles.teamName} numberOfLines={1}>
+                  {activeTeam.team.name}
+                </Text>
+                {/* 내 역할 — 팀 화면 어디에도 「나는 여기서 무엇인가」가 없었다.
+                    총무는 금색, 팀원은 무채색이다. 총무만 색을 쓰는 건 할 수 있는 일이
+                    달라서고, 팀원 뱃지까지 물들이면 둘 다 강조가 아니게 된다 */}
+                <View style={[styles.roleTag, isAdmin && styles.roleTagAdmin]}>
+                  <Text style={[styles.roleTagText, isAdmin && styles.roleTagTextAdmin]}>
+                    {isAdmin ? '총무' : '팀원'}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.teamMeta} numberOfLines={1}>
                 {[activeTeam.team.home_place_name, '풋살', `Since ${createdAt.getFullYear()}.${String(createdAt.getMonth() + 1).padStart(2, '0')}`]
                   .filter(Boolean)
@@ -592,11 +637,27 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 14 },
   banner: {
     ...shadow.raised,
+    // 배경 레이어가 절대배치로 깔린다 — 안 막으면 모서리 밖으로 칠해져 radius가 사라진다
+    overflow: 'hidden',
     marginHorizontal: 20,
     marginTop: 4,
     borderRadius: radius.hero,
     backgroundColor: colors.cardRaised,
   },
+  bannerBg: { width: '100%', height: '100%' },
+  /* 검정 60% — 밝은 로고 위에서도 흰 글자가 읽히는 최소선이다 */
+  bannerScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)' },
+  teamNameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  roleTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  roleTagAdmin: { borderColor: '#6B5426' },
+  roleTagText: { color: colors.textFaint, fontSize: 10, fontWeight: '800' },
+  roleTagTextAdmin: { color: colors.gold },
   bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 20 },
   bannerBody: { flex: 1, gap: 6 },
   emblem: {

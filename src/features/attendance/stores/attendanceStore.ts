@@ -236,11 +236,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     try {
       await castVoteRequest(matchId, me, status);
     } catch (err) {
-      set({
-        matches: putMyVote(get().matches, matchId, me, prev),
-        error: toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote'),
-      });
-      return;
+      const message = toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote');
+      set({ matches: putMyVote(get().matches, matchId, me, prev), error: message });
+      /*
+        마감 가드와 같은 방식으로 던진다.
+
+        조용히 return하면 부르는 쪽은 성공과 실패를 구별하지 못한다. 명단 시트가 그걸로
+        「저장했어요」를 띄우고 스스로 닫았다 — 롤백은 제대로 됐는데 화면만 성공이라고
+        말하는, 눈으로는 안 걸리는 상태였다. 브라우저 확인에서 잡혔다.
+
+        일정 화면 카드는 .catch로 받아 삼킨다(문구는 위 error를 :428이 그린다).
+      */
+      throw new Error(message);
     }
 
     await get().loadMatches();

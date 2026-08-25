@@ -161,10 +161,13 @@ const fixture = (): MatchWithVotes[] =>
 
   const rollback = body.slice(iCatch, iLoad);
   assert.ok(/putMyVote\(get\(\)\.matches, matchId, me, prev\)/.test(rollback), '실패해도 안 되돌린다');
-  assert.ok(/error: toUserMessage\(/.test(rollback), '실패했는데 문구를 안 세운다 — 눌러도 아무 일이 없어 보인다');
+  assert.ok(/error: message/.test(rollback), '실패했는데 문구를 안 세운다 — 눌러도 아무 일이 없어 보인다');
+  // 조용히 return하면 부르는 쪽이 성공과 실패를 구별하지 못한다 — 시트가 「저장했어요」를 띄웠다
+  assert.ok(/throw new Error\(message\)/.test(rollback),
+    '쓰기 실패를 안 던진다 — 부르는 쪽이 성공으로 알고 완료 화면을 띄운다');
   // 실패 경로에서 재조회하면 error: null로 밀려 방금 세운 문구가 지워진다
   assert.ok(!/loadMatches/.test(rollback), '실패 경로에서 재조회한다 — 방금 세운 문구가 지워진다');
-  assert.ok(/return;/.test(rollback), '롤백 후 계속 흘러 재조회까지 간다');
+  assert.ok(!rollback.includes('return;'), '롤백 후 조용히 return한다 — 실패가 성공처럼 보인다');
 
   // 되돌릴 값을 현재 상태에서 얻는다. 열 때 찍어둔 배열을 복원하면 그 사이 도착한
   // 남의 최신 표가 사라진다 — 낙관 반영 중 화면 진입 이펙트가 loadMatches를 부르는 경로다.

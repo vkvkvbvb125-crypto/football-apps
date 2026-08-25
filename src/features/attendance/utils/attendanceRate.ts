@@ -136,6 +136,21 @@ export function formatMemberRate(r: AttendanceRate): string {
   return r.rate == null ? '-' : `${MEMBER_RATE_MONTHS}개월 ${Math.round(r.rate * 100)}%`;
 }
 
+/**
+ * "최근 3경기 중 2회" — 멤버 목록의 보조줄.
+ *
+ * 퍼센트가 아니라 횟수로 적는 이유: 목록에서 한 사람을 훑을 때 「67%」는 분모를 모르면
+ * 못 읽는다. 세 경기 중 두 번인지 아홉 경기 중 여섯 번인지가 다른 이야기인데 같은
+ * 숫자로 보인다. MIN_SAMPLE 미만이라 퍼센트를 못 내는 경우에도 횟수는 사실이라 적을 수 있다.
+ *
+ * 셀 경기가 없으면 null — 부르는 쪽이 줄 자체를 생략한다. "최근 0경기 중 0회"는
+ * 정보가 아니라 빈칸이다.
+ */
+export function formatRecentAttendance(r: AttendanceRate): string | null {
+  if (r.slots === 0) return null;
+  return `최근 ${r.slots}경기 중 ${r.attended}회`;
+}
+
 // ── 평균 인원 ──────────────────────────────────────────────
 //
 // 팀 프로필의 「평균 인원」 입력칸에 자동 계산값을 placeholder로 띄운다.

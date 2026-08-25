@@ -633,6 +633,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
               members={members}
               visibleMembers={visibleMembers}
               selfMemberId={activeTeam.membershipId}
+              isAdmin={isAdmin}
               memberQuery={memberQuery}
               memberRateMatches={memberRateMatches}
               onChangeQuery={setMemberQuery}

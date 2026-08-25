@@ -13,15 +13,17 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
 import { POSITION_COLOR, positionLabel, toPosition } from '../positions';
 import { initialOf } from '../initials';
-import { formatMemberRate, memberAttendanceRate, type MemberRateMatch } from '../../attendance/utils/attendanceRate';
+import { formatRecentAttendance, memberAttendanceRate, type MemberRateMatch } from '../../attendance/utils/attendanceRate';
 import type { TeamMemberWithProfile } from '../services/teamService';
 
 interface Props {
   members: TeamMemberWithProfile[];
   /** 검색어로 걸러진 목록 — 부모가 만든 것을 그대로 받는다 */
   visibleMembers: TeamMemberWithProfile[];
-  /** 내 team_members.id — 「(나)」 표시에 쓴다 */
+  /** 내 team_members.id — 「(나)」 표시와 셰브론 조건에 쓴다 */
   selfMemberId: string;
+  /** 총무인가 — 셰브론(편집 가능 신호)을 어디에 붙일지 정한다 */
+  isAdmin: boolean;
   memberQuery: string;
   memberRateMatches: MemberRateMatch[];
   onChangeQuery: (v: string) => void;
@@ -33,6 +35,7 @@ export function TeamMembersTab({
   members,
   visibleMembers,
   selfMemberId,
+  isAdmin,
   memberQuery,
   memberRateMatches,
   onChangeQuery,
@@ -111,24 +114,35 @@ export function TeamMembersTab({
                         자리에는 참석률이 온다 — 목록을 훑을 때 「누가 꾸준한가」가
                         「누가 잘하나」보다 총무에게 쓸모 있는 정보다.
                       */}
-                      <View style={styles.memberMetaRow}>
-                        {/* 포지션마다 색이 달라 목록에서 자리를 색으로 먼저 읽는다 */}
-                        <Text
-                          style={[
-                            styles.memberMeta,
-                            !!toPosition(m.position) && {
-                              color: POSITION_COLOR[toPosition(m.position)!],
-                              fontWeight: '700',
-                            },
-                          ]}
-                        >
-                          {positionLabel(toPosition(m.position))}
-                        </Text>
-                        <Text style={styles.memberMetaDot}>·</Text>
-                        <Text style={styles.memberMeta}>
-                          {formatMemberRate(memberAttendanceRate(memberRateMatches, m))}
-                        </Text>
-                      </View>
+                      {/*
+                        포지션은 값이 있을 때만 적는다.
+
+                        예전엔 positionLabel이 빈 값을 「미지정」으로 채웠다. 팀 대부분이
+                        포지션을 안 정해서 목록 전체가 「미지정 · 미지정 · 미지정」이 됐고,
+                        그러면 이 줄은 정보가 아니라 빈칸 목록이다. 빈 값은 적지 않는다.
+
+                        참석은 퍼센트가 아니라 횟수다 — 「67%」는 분모를 모르면 못 읽는다.
+                        세 경기 중 두 번과 아홉 경기 중 여섯 번이 같은 숫자로 보인다.
+
+                        둘 다 없으면 줄을 통째로 그리지 않는다.
+                      */}
+                      {(() => {
+                        const pos = toPosition(m.position);
+                        const recent = formatRecentAttendance(memberAttendanceRate(memberRateMatches, m));
+                        if (!pos && !recent) return null;
+                        return (
+                          <View style={styles.memberMetaRow}>
+                            {!!pos && (
+                              /* 포지션마다 색이 달라 목록에서 자리를 색으로 먼저 읽는다 */
+                              <Text style={[styles.memberMeta, { color: POSITION_COLOR[pos], fontWeight: '700' }]}>
+                                {positionLabel(pos)}
+                              </Text>
+                            )}
+                            {!!pos && !!recent && <Text style={styles.memberMetaDot}>·</Text>}
+                            {!!recent && <Text style={styles.memberMeta}>{recent}</Text>}
+                          </View>
+                        );
+                      })()}
                     </View>
                     {isTeamAdmin ? (
                       <View style={styles.adminBadge}>
@@ -136,6 +150,19 @@ export function TeamMembersTab({
                       </View>
                     ) : (
                       <Text style={styles.memberRole}>멤버</Text>
+                    )}
+                    {/*
+                      셰브론은 「눌러서 바꿀 수 있다」는 신호다. 그래서 조건이 모달의
+                      편집 권한과 같아야 한다 — MemberListModal은 포지션을
+                      disabled={!isAdmin && !isSelf}로 막는다. 즉 총무이거나 자기 행이면
+                      바꿀 수 있다.
+
+                      총무에게만 붙이면 일반 멤버는 정작 바꿀 수 있는 유일한 행(자기 행)에서
+                      신호를 못 받는다. 탭 자체는 전원에게 열어 둔다 — 남의 행을 눌러도
+                      모달에서 조회는 되고, 막을 이유가 없다.
+                    */}
+                    {(isAdmin || isMe) && (
+                      <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
                     )}
                   </Pressable>
                 );

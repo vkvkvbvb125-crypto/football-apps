@@ -116,7 +116,20 @@ const stat = (s: ReturnType<typeof buildBannerSlides>, i: number) => {
   ] as const) {
     assert.ok(autoExpr![1].includes(needle), `자동 전환 조건에 ${needle}이 없다 — ${why}`);
   }
-  assert.ok(src.includes('isReduceMotionEnabled'), '「동작 줄이기」를 읽지 않는다');
+  /*
+    「동작 줄이기」는 이제 배너가 직접 읽지 않는다 — src/lib/useReduceMotion.ts가 읽고,
+    일정 화면의 명단 시트도 같은 훅을 쓴다. 「배너 파일에 isReduceMotionEnabled가 있는가」로는
+    훅을 부르면서 값을 안 쓰는 상태를 못 잡으므로, 값을 만드는 줄을 양쪽에서 집어 본다.
+  */
+  assert.ok(/const reduceMotion = useReduceMotion\(\);/.test(src), '배너가 「동작 줄이기」 훅을 부르지 않는다');
+  const hook = readFileSync(new URL('../src/lib/useReduceMotion.ts', import.meta.url), 'utf8');
+  assert.ok(hook.includes('isReduceMotionEnabled'), '훅이 「동작 줄이기」를 읽지 않는다');
+  assert.ok(
+    hook.includes("addEventListener('reduceMotionChanged'"),
+    '훅이 설정 변경을 구독하지 않는다 — 앱을 켠 뒤에 켜면 안 먹는다'
+  );
+  assert.ok(/sub\.remove\(\)/.test(hook), '훅이 구독을 해제하지 않는다');
+  assert.ok(/return reduceMotion;/.test(hook), '훅이 읽은 값을 안 돌려준다 — 늘 false가 된다');
   // 세로 스크롤 중 전환 금지
   assert.ok(/if \(scrollingRef\?\.current\) return;/.test(src), '세로 스크롤 중에도 넘어간다');
   // 타이머 정리

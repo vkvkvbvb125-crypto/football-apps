@@ -8,7 +8,6 @@
 // 길이가 달라도 카드가 늘었다 줄었다 하면 아래 섹션이 통째로 밀린다.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  AccessibilityInfo,
   Image,
   type ImageStyle,
   type NativeScrollEvent,
@@ -22,6 +21,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '../../../components/nativeText';
 import { colors, radius } from '../../../theme';
+import { useReduceMotion } from '../../../lib/useReduceMotion';
 
 /** 자동 전환 간격 */
 const AUTO_MS = 5000;
@@ -67,28 +67,14 @@ export function HomeBanner({ slides, layout, image, scrollingRef, onPress }: Pro
   const [index, setIndex] = useState(0);
   /** 손으로 민 직후 — RESUME_MS 동안 자동 전환을 멈춘다 */
   const [suspended, setSuspended] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
   const scroller = useRef<ScrollView>(null);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFocused = useIsFocused();
+  const reduceMotion = useReduceMotion();
 
   const count = slides.length;
   // 슬라이드가 줄어들면(데이터가 사라지면) 마지막 칸에 머물러 빈 화면이 된다
   const safeIndex = count === 0 ? 0 : Math.min(index, count - 1);
-
-  // OS의 「동작 줄이기」. 켜져 있으면 자동 전환을 하지 않는다 — 스스로 움직이는 것이
-  // 어지럼을 만드는 사람들이 있고, 그 설정이 바로 그 말이다. 도중에 바뀔 수도 있어 구독한다.
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
-      if (alive) setReduceMotion(v);
-    });
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      alive = false;
-      sub.remove();
-    };
-  }, []);
 
   /**
    * 자동 전환.

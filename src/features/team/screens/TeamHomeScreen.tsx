@@ -7,8 +7,8 @@
 // 2) 다른 탭과 동일하게 TabHeader를 붙였다 — 기존 marginTop:60 하드코딩 제거.
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
 import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Text, TextInput } from '../../../components/nativeText';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useAuthStore } from '../../auth/stores/authStore';
@@ -37,19 +37,16 @@ import { PollCard } from '../../polls/components/PollCard';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
-import { RowCard, StatRow, StatTile } from '../../../components/Surface';
+import { RowCard } from '../../../components/Surface';
 import {
   monthlyAttendanceRate,
   memberAttendanceRate,
-  formatRate,
   formatRecentAttendance,
 } from '../../attendance/utils/attendanceRate';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import type { PlaceResult } from '../../attendance/services/placeService';
 import { colors, font, radius, shadow } from '../../../theme';
-import { positionLabel, toPosition } from '../positions';
 import { clearTeamLogo, pickSquareImage, uploadTeamLogo } from '../../settings/services/avatarService';
-import { SoftTint } from '../../../components/BentoCard';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
@@ -357,192 +354,47 @@ export function TeamHomeScreen({ navigation, route }: any) {
       )}
 
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
-        {/* ── 배너: 엠블럼 + 팀명 + 초대 코드 ── 팀 홈에서만 */}
+
+
+        {/* 팀 홈은 배너·초대가 이 래퍼 밖에 있어야 한다 — banner의 marginHorizontal 20이
+            content의 padding 20과 겹치면 여백이 두 겹이 된다. 그래서 홈은 TeamHomeTab이
+            자기 content를 갖고, 여기서는 감싸지 않는다. 감싸면 빈 래퍼의 padding이 남는다. */}
         {tab === 'home' && (
-        <View style={styles.banner}>
-          {/* 이 카드에만 있던 SoftTint를 뺐다 — 지금은 앱의 모든 카드에 같은 결이 깔려 있어서
-              여기만 따로 강조할 이유가 없어졌다. 혼자 빛이 두 겹이라 팀 탭만 톤이 튀었다. */}
-          <View style={styles.bannerRow}>
-            <View>
-              <Pressable
-                onPress={isAdmin ? handlePickEmblem : undefined}
-                accessibilityRole={isAdmin ? 'button' : 'image'}
-                accessibilityLabel={isAdmin ? '팀 엠블럼 변경' : '팀 엠블럼'}
-                style={({ pressed }) => [styles.emblem, pressed && isAdmin && styles.pressed]}
-              >
-                {activeTeam.team.logo_url ? (
-                  <Image source={{ uri: activeTeam.team.logo_url }} style={styles.emblemImage} />
-                ) : (
-                  <>
-                    <Text style={styles.emblemInitials}>{emblemInitials}</Text>
-                    <Text style={styles.emblemHint}>{logoUploading ? '올리는 중' : 'EMBLEM'}</Text>
-                  </>
-                )}
-              </Pressable>
-              {isAdmin && (
-                // 길게 누르면 지운다 — 지우기 버튼을 따로 세우면 배너가 복잡해지고,
-                // 로고를 내리는 일은 자주 있는 동작이 아니다
-                <Pressable
-                  onPress={handlePickEmblem}
-                  onLongPress={activeTeam.team.logo_url ? handleClearEmblem : undefined}
-                  style={styles.emblemEdit}
-                  hitSlop={14}
-                >
-                  <Ionicons name="pencil" size={11} color={colors.bgRoot} />
-                </Pressable>
-              )}
-            </View>
-
-            {/* 로고 오른쪽엔 이름만 — 긴 팀명이 지표를 밀어내지 않게 지표는 아래 전체 폭으로 뺐다 */}
-            <View style={styles.bannerBody}>
-              <Text style={styles.teamName} numberOfLines={1}>
-                {activeTeam.team.name}
-              </Text>
-              <Text style={styles.teamMeta} numberOfLines={1}>
-                {[activeTeam.team.home_place_name, '풋살', `Since ${createdAt.getFullYear()}.${String(createdAt.getMonth() + 1).padStart(2, '0')}`]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
-              {/*
-                소개는 팀명 바로 아래다 — 헤더 블록에 속한다.
-                예전엔 엠블럼 아래 별도 줄이라 통계 3칸과 붙어서, 팀 소개인지
-                지표의 설명인지 자리로는 알 수 없었다.
-              */}
-
-              {/* 슬로건 — 총무만 고친다. 비어 있으면 총무에게만 "한 줄 소개" 자리를 보여주고,
-                  팀원에게는 아예 안 띄운다(빈 줄이 있는지도 알 필요가 없다). */}
-              {sloganEditing ? (
-                <View style={styles.sloganEditRow}>
-                  <TextInput
-                    style={styles.sloganInput}
-                    value={sloganText}
-                    onChangeText={setSloganText}
-                    placeholder="한 줄 소개"
-                    placeholderTextColor={colors.textFaint}
-                    maxLength={40}
-                    autoFocus
-                  />
-                  <Pressable
-                    onPress={handleSaveSlogan}
-                    hitSlop={14}
-                    accessibilityRole="button"
-                    accessibilityLabel="한 줄 소개 저장"
-                  >
-                    <Ionicons name="checkmark" size={18} color={colors.green} />
-                  </Pressable>
-                </View>
-              ) : (
-                (!!activeTeam.team.slogan || isAdmin) && (
-                  <Pressable
-                    disabled={!isAdmin}
-                    onPress={() => {
-                      setSloganText(activeTeam.team.slogan ?? '');
-                      setSloganEditing(true);
-                    }}
-                    style={styles.sloganRow}
-                    hitSlop={10}
-                    accessibilityRole={isAdmin ? 'button' : undefined}
-                    accessibilityLabel={isAdmin ? '한 줄 소개 수정' : undefined}
-                  >
-                    <Text style={styles.slogan} numberOfLines={1}>
-                      {activeTeam.team.slogan || '한 줄 소개를 적어보세요'}
-                    </Text>
-                    {/* 톱니를 뺐다 — 줄 전체가 이미 눌리는데 12px 아이콘을 옆에 두면
-                        그 아이콘만 표적처럼 보인다. 헤더 우측 톱니와도 뜻이 겹쳤다. */}
-                  </Pressable>
-                )
-              )}
-            </View>
-          </View>
-
-          {profileBits.length > 0 && (
-            <Text style={styles.profileLine} numberOfLines={2}>
-              {profileBits.join(' · ')}
-            </Text>
-          )}
-
-          {/* 경기 / 멤버 / 이번 달 참석률 — 팀 프로필의 요약 지표.
-              「공지」였다. 공지 개수는 팀이 어떤지 말해주지 않는다 — 세 개든 서른 개든
-              그 팀이 잘 모이는지와 무관하다. 참석률로 바꾼다.
-              계산은 홈의 통계 타일과 같은 함수(attendanceRate)를 쓴다.
-              공통 StatTile을 쓴다: 라벨이 위, 숫자가 아래라 격자를 훑을 때 숫자끼리 같은
-              높이에서 비교된다. 숫자만 초록으로 둬서 라벨은 조용히 물러난다. */}
-          <View style={styles.teamStats}>
-            <StatRow>
-              <StatTile label="경기" value={String(matches.length)} accent />
-              <StatTile label="멤버" value={String(members.length)} accent />
-              <StatTile label="이번 달 참석률" value={formatRate(teamRate)} accent />
-            </StatRow>
-          </View>
-
-          {/* 초대 코드 공유는 총무 전용이 아니다 — 홈의 "친구 초대하기"가 멤버를 여기로 보내는데
-              총무만 볼 수 있으면 멤버는 눌러도 아무것도 못 하는 막다른 길이 된다. */}
-          {/* 「초대 공유 / 팀 설정」 버튼 줄은 뺐다 — 바로 아래 상자의 설정·멤버 관리와 겹친다.
-              초대는 멤버 관리 화면의 + 버튼이 맡는다. */}
-
-        </View>
-
+          <TeamHomeTab
+            activeTeam={activeTeam}
+            createdAt={createdAt}
+            emblemInitials={emblemInitials}
+            logoUploading={logoUploading}
+            sloganEditing={sloganEditing}
+            sloganText={sloganText}
+            matches={matches}
+            teamRate={teamRate}
+            inviteCodeDisplay={inviteCodeDisplay}
+            copied={copied}
+            onPickEmblem={handlePickEmblem}
+            onClearEmblem={handleClearEmblem}
+            onEditSlogan={setSloganEditing}
+            onChangeSloganText={setSloganText}
+            onSaveSlogan={handleSaveSlogan}
+            onCopyInviteCode={handleCopyInviteCode}
+            onOpenInvite={openInvite}
+            members={members}
+            visibleMembers={visibleMembers}
+            me={me}
+            selfMemberId={activeTeam.membershipId}
+            isAdmin={isAdmin}
+            profileBits={profileBits}
+            myUnpaid={myUnpaid}
+            myRateLabel={myRateLabel}
+            memberRateMatches={memberRateMatches}
+            onOpenMemberList={() => setMemberListVisible(true)}
+            onGoMembers={() => setTab('members')}
+            onOpenTeamSettings={() => navigation.navigate('TeamSettings')}
+            onLeaveTeam={handleLeaveTeam}
+          />
         )}
 
-        {/*
-          초대 블록은 팀 프로필 카드 밖이다.
-          안에 있으면 카드 안에 카드가 되어 경계가 어디까지인지 알 수 없었다 —
-          엠블럼·팀명·통계는 「이 팀은 무엇인가」이고 초대는 「지금 할 일」이라 성격도 다르다.
-
-          멤버가 셋 이하면 초대가 이 화면에서 가장 급한 일이라 큰 카드로 세운다.
-          코드만 작게 두면 총무가 그걸 손으로 불러줘야 한다 — 카톡 링크가 실용적이라
-          공유 버튼이 주(主), 코드가 부(副)다. 넷부터는 상시 과제가 아니라서 코드 줄만.
-        */}
-        {tab === 'home' &&
-          (members.length <= 3 ? (
-            <View style={styles.inviteBig}>
-            <Text style={styles.inviteBigTitle}>멤버를 초대해보세요</Text>
-            <Text style={styles.inviteBigSub}>링크를 보내면 코드를 불러주지 않아도 돼요</Text>
-            <Pressable
-            onPress={openInvite}
-            accessibilityRole="button"
-            accessibilityLabel="멤버 초대"
-            style={({ pressed }) => [styles.inviteShare, pressed && styles.pressed]}
-            >
-            <Ionicons name="person-add-outline" size={16} color={colors.bgRoot} />
-            <Text style={styles.inviteShareText}>초대하기</Text>
-            </Pressable>
-            <Pressable
-            onPress={handleCopyInviteCode}
-            accessibilityRole="button"
-            accessibilityLabel={`초대 코드 ${activeTeam.team.invite_code} 복사`}
-            style={styles.inviteCodeLine}
-            >
-            <Text style={styles.inviteLabel}>초대 코드</Text>
-            <Text style={styles.inviteCode} numberOfLines={1}>
-            {inviteCodeDisplay}
-            </Text>
-            <Ionicons
-            name={copied ? 'checkmark' : 'copy-outline'}
-            size={14}
-            color={copied ? colors.green : colors.textDim}
-            />
-            </Pressable>
-            </View>
-          ) : (
-            <Pressable
-            onPress={handleCopyInviteCode}
-            style={styles.inviteBar}
-            accessibilityRole="button"
-            accessibilityLabel={`초대 코드 ${activeTeam.team.invite_code} 복사`}
-            >
-            <Text style={styles.inviteLabel}>초대 코드</Text>
-            <Text style={styles.inviteCode} numberOfLines={1}>
-            {inviteCodeDisplay}
-            </Text>
-            <Ionicons
-            name={copied ? 'checkmark' : 'copy-outline'}
-            size={14}
-            color={copied ? colors.green : colors.textDim}
-            />
-            </Pressable>
-          ))}
-
+        {tab !== 'home' && (
         <View style={styles.content}>
           {/* 기능 입구 — 팀 홈에서 각 화면으로 들어가는 유일한 길이다 */}
           {/*
@@ -564,46 +416,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
             <TeamBoardTab teamId={activeTeam.team.id} myUserId={myUserId} isAdmin={isAdmin} />
           )}
 
-          {/* 다음 경기 카드를 걷어냈다 — 홈이 같은 경기를 더 자세히(참여 현황·CTA까지) 보여준다.
-              팀 화면의 주인공은 멤버다. */}
-
-          {tab === 'home' && !isAdmin && !!me && (
-            <View style={[styles.card, { gap: 12 }]}>
-              {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
-              <SoftTint tone="green" radius={radius.card} />
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>내 정보</Text>
-                <Pressable
-                  onPress={() => setMemberListVisible(true)}
-                  hitSlop={14}
-                  accessibilityRole="button"
-                  accessibilityLabel="내 정보 수정"
-                >
-                  <Text style={styles.moreText}>수정 ›</Text>
-                </Pressable>
-              </View>
-              <View style={styles.myInfoRow}>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <Text style={styles.myInfoLabel}>주 포지션</Text>
-                  <View style={styles.myInfoChip}>
-                    <Text style={styles.myInfoChipText}>{positionLabel(toPosition(me.position))}</Text>
-                  </View>
-                </View>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <Text style={styles.myInfoLabel}>실력</Text>
-                  <View style={[styles.myInfoChip, styles.myInfoChipAlt]}>
-                    <Text style={[styles.myInfoChipText, styles.myInfoChipTextAlt]}>{me.skillTag ?? '미지정'}</Text>
-                  </View>
-                </View>
-
-                {/* 등번호 — 숫자만 두면 무슨 숫자인지 모른다. 유니폼 안에 넣어 뜻이 드러나게 */}
-                <View style={styles.jersey}>
-                  <Ionicons name="shirt-outline" size={44} color={colors.greenDeep} />
-                  <Text style={styles.jerseyNumber}>{me.jerseyNumber ?? '–'}</Text>
-                </View>
-              </View>
-            </View>
-          )}
 
           {/* 설정 탭 — 팀 정보 요약과 깊은 설정으로 가는 입구.
               정기모임·회비·계좌 같은 건 이미 팀 설정 화면에 있어 여기서 복제하지 않는다. */}
@@ -617,24 +429,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
               지역은 한 번 정해두고 거의 안 건드리는 값이라 설정이 맞다. */}
 
           {/* 멤버 — 팀 정보·멤버 관리 두 탭에서 보인다 (팀원은 탭이 없어 항상) */}
-          {/* 멤버 — 팀 정보·멤버 관리 두 탭에서 보인다 (팀원은 탭이 없어 항상) */}
-          {tab === 'home' && (
-            <TeamHomeTab
-              members={members}
-              visibleMembers={visibleMembers}
-              me={me}
-              selfMemberId={activeTeam.membershipId}
-              isAdmin={isAdmin}
-              profileBits={profileBits}
-              myUnpaid={myUnpaid}
-              myRateLabel={myRateLabel}
-              memberRateMatches={memberRateMatches}
-              onOpenMemberList={() => setMemberListVisible(true)}
-              onGoMembers={() => setTab('members')}
-              onOpenTeamSettings={() => navigation.navigate('TeamSettings')}
-              onLeaveTeam={handleLeaveTeam}
-            />
-          )}
 
           {tab === 'members' && (
             <TeamMembersTab
@@ -672,6 +466,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
 
           {/* 로그아웃은 「내 설정」으로 옮겼다 — 계정에 딸린 동작이라 팀 화면에 있을 이유가 없다 */}
         </View>
+        )}
       </ScrollView>
 
       <AnnouncementFormModal
@@ -755,51 +550,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.85 },
 
-  banner: {
-    ...shadow.raised,
-    marginHorizontal: 20,
-    marginTop: 4,
-    borderRadius: radius.hero,
-    backgroundColor: colors.cardRaised,
-  },
-  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 20 },
-  emblem: {
-    // rounded-square. 원형은 인스타 프로필을 그대로 옮긴 모양이었는데, 이건 사람 사진이
-    // 아니라 팀 로고다 — 엠블럼은 방패·사각이 원형보다 자연스럽고, 아래 Bento 격자의
-    // 사각 타일들과도 모양이 맞는다.
-    width: 66,
-    height: 66,
-    borderRadius: radius.tile,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(7,16,13,0.55)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.28)',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  teamStats: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
-  emblemImage: { width: '100%', height: '100%' },
-  emblemInitials: { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: -0.5 },
-  emblemHint: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800' },
-  emblemEdit: {
-    position: 'absolute',
-    right: -5,
-    bottom: -5,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.green,
-    borderWidth: 2,
-    borderColor: '#12211A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bannerBody: { flex: 1, gap: 6 },
-  teamName: { color: '#FFFFFF', fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
-  teamMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   /** 하위 화면 헤더 — 뒤로가기 + 제목 + (있으면) 새로 만들기 */
   subHeader: {
     flexDirection: 'row',
@@ -821,27 +572,6 @@ const styles = StyleSheet.create({
 
   /** 나란한 액션 버튼 — 인스타 프로필의 편집/공유 자리 */
   /** 멤버 3명 이하 — 공유 버튼이 주, 코드가 부 */
-  inviteBig: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    padding: 16,
-    gap: 8,
-    borderRadius: radius.card,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardAlt,
-  },
-  inviteBigTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
-  inviteBigSub: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  inviteShare: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    height: 44, marginTop: 4,
-    borderRadius: radius.button, borderCurve: 'continuous',
-    backgroundColor: colors.green,
-  },
-  inviteShareText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
-  inviteCodeLine: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 36 },
 
   /*
    * 카드로 감싼다 — 멤버 목록과 같은 들여쓰기면 마지막 멤버의 하위 항목처럼 읽힌다.
@@ -850,59 +580,11 @@ const styles = StyleSheet.create({
   /** 총무 동작 — 카드가 아니라 줄이다. 그리드 넷을 걷어낸 자리에 블록을 다시 세우지 않는다 */
 
   /** 멤버가 적을 때 아래가 왜 비었는지 — 한 줄이면 충분하다 */
-  profileLine: {
-    color: colors.textDim,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
 
-  inviteBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minHeight: 46, // 코드 전체가 복사 버튼이다 — 표적도 버튼만큼 커야 한다
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    backgroundColor: colors.inputBg,
-  },
-  inviteLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
-  inviteCode: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    fontVariant: ['tabular-nums'],
-  },
 
   /** 슬로건 — 팀명 아래 한 줄 */
-  sloganRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  slogan: { color: colors.textBody, fontSize: 12, fontWeight: '600' },
-  sloganEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sloganInput: {
-    flex: 1,
-    height: 32,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
 
   /** 등번호 유니폼 — 숫자를 옷 안에 얹는다 */
-  jersey: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-  jerseyNumber: {
-    position: 'absolute',
-    color: colors.green,
-    fontSize: 13,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-  },
 
   /** 총무 상단 탭 */
 
@@ -924,37 +606,11 @@ const styles = StyleSheet.create({
   /** 설정 탭 — 라벨/값 한 줄 */
 
   /** 내 정보 (팀원) */
-  myInfoRow: { flexDirection: 'row', gap: 12 },
-  myInfoLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
-  myInfoChip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.greenTint,
-    borderWidth: 1,
-    borderColor: colors.greenDeep,
-  },
-  myInfoChipAlt: { backgroundColor: colors.inputBg, borderColor: colors.border },
-  myInfoChipText: { color: colors.green, fontSize: 12, fontWeight: '800' },
-  myInfoChipTextAlt: { color: colors.textStrong },
 
   content: { padding: 20, gap: 14 },
-  card: {
-    ...shadow.card,
-    backgroundColor: colors.card,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderCurve: 'continuous',
-    padding: 20,
-  },
 
 
-  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // 다른 탭의 섹션 제목은 15/-0.2였다 — 팀 탭만 14.5라 나란히 놓으면 어긋나 보인다
-  sectionTitle: { color: colors.text, ...font.section },
 
-  moreText: { color: colors.green, fontSize: 12, fontWeight: '700' },
 
 });

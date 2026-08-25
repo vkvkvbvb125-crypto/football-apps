@@ -299,7 +299,12 @@ export function TeamHomeTab({
           {/* 다음 경기 카드를 걷어냈다 — 홈이 같은 경기를 더 자세히(참여 현황·CTA까지) 보여준다.
               팀 화면의 주인공은 멤버다. */}
 
-          {!isAdmin && !!me && (
+          {/*
+            총무에게도 보인다. 예전엔 !isAdmin 조건이 붙어 있었는데, 바로 아래 「내 기록」이
+            「총무도 선수다. 역할과 무관하게 항상 보인다」고 적어 둔 것과 같은 파일 안에서
+            어긋났다. 총무도 자기 포지션·등번호가 필요하다.
+          */}
+          {!!me && (
             <View style={[styles.card, { gap: 12 }]}>
               {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
               <SoftTint tone="green" radius={radius.card} />
@@ -317,14 +322,29 @@ export function TeamHomeTab({
               <View style={styles.myInfoRow}>
                 <View style={{ flex: 1, gap: 5 }}>
                   <Text style={styles.myInfoLabel}>주 포지션</Text>
-                  <View style={styles.myInfoChip}>
-                    <Text style={styles.myInfoChipText}>{positionLabel(toPosition(me.position))}</Text>
-                  </View>
+                  {/* 값이 없으면 「미지정」이 아니라 「설정하기」다. 「미지정」은 상태를 알려줄 뿐
+                      할 일을 가리키지 않는다 — 어디서 정하는지 모르면 그대로 비어 있다 */}
+                  {toPosition(me.position) ? (
+                    <View style={styles.myInfoChip}>
+                      <Text style={styles.myInfoChipText}>{positionLabel(toPosition(me.position))}</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={onOpenMemberList}
+                      accessibilityRole="button"
+                      accessibilityLabel="주 포지션 설정하기"
+                      style={({ pressed }) => [styles.myInfoChip, styles.myInfoChipEmpty, pressed && styles.pressed]}
+                    >
+                      <Text style={styles.myInfoChipEmptyText}>설정하기</Text>
+                    </Pressable>
+                  )}
                 </View>
                 <View style={{ flex: 1, gap: 5 }}>
                   <Text style={styles.myInfoLabel}>실력</Text>
+                  {/* 실력은 총무가 매기는 값이라 본인에게 「설정하기」를 주지 않는다 —
+                      누르면 못 바꾸는 곳으로 보내는 셈이다. 비어 있으면 그냥 「-」 */}
                   <View style={[styles.myInfoChip, styles.myInfoChipAlt]}>
-                    <Text style={[styles.myInfoChipText, styles.myInfoChipTextAlt]}>{me.skillTag ?? '미지정'}</Text>
+                    <Text style={[styles.myInfoChipText, styles.myInfoChipTextAlt]}>{me.skillTag ?? '-'}</Text>
                   </View>
                 </View>
 
@@ -635,21 +655,40 @@ const styles = StyleSheet.create({
   teamStats: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   /* 코드·QR·공유 세 칸. 코드가 폭을 다 먹고 QR이 오른쪽에 붙는다 — 공유는 아래 한 줄 */
   inviteCard: {
-    marginHorizontal: 20, marginTop: 12, padding: 14, gap: 10,
-    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
-    borderRadius: radius.card, borderCurve: 'continuous',
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardAlt,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 14,
+    gap: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    borderRadius: radius.card,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
   },
   /* 코드 전체가 복사 버튼이다 — 표적이 버튼만큼 커야 한다 */
   inviteCodeBox: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44,
-    paddingHorizontal: 12, borderRadius: radius.button, borderCurve: 'continuous',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
     backgroundColor: colors.inputBg,
   },
   inviteQr: {
-    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-    borderRadius: radius.button, borderCurve: 'continuous',
-    borderWidth: 1, borderColor: colors.border,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   inviteShare: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -689,6 +728,8 @@ const styles = StyleSheet.create({
     borderColor: colors.greenDeep,
   },
   myInfoChipText: { color: colors.green, fontSize: 12, fontWeight: '800' },
+  myInfoChipEmpty: { borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
+  myInfoChipEmptyText: { color: colors.green, fontSize: 13, fontWeight: '700' },
   myInfoChipAlt: { backgroundColor: colors.inputBg, borderColor: colors.border },
   myInfoChipTextAlt: { color: colors.textStrong },
   jersey: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },

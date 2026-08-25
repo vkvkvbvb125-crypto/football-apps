@@ -735,6 +735,13 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       </Modal>
 
       <RosterSheet
+        /*
+          파생 전환으로 여기 하나가 달라졌다: 시트가 열린 채 그 경기가 지워지면 이제 닫힌다.
+          예전엔 스냅샷이 남아 이미 없는 경기의 명단을 계속 그렸다 — 의도가 아니라 부작용이었다.
+
+          rosterMatchId에 걸면 옛 동작에 가깝지만, 그때는 「열려 있는데 그릴 경기가 없는」
+          상태가 새로 생긴다(정원 12명 기본값에 빈 명단). 예전엔 존재할 수 없던 상태다.
+        */
         visible={!!rosterMatch}
         onClose={() => setRosterMatchId(null)}
         matchLabel={rosterMatchLabel}

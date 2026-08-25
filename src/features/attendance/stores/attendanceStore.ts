@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AttendanceStatus } from '../../../types/database';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { isVotingOpen, votingLockNote } from '../utils/voting';
+import { makeOptimisticVote, putMyVote, rollbackTarget } from '../utils/optimisticVote';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toUserMessage } from '../../../lib/dbError';
 import { notifyTeam } from '../../notifications/services/pushService';
@@ -198,10 +199,19 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
    * RLS도 status='open'을 본다(votes_insert_own / votes_update_own). 다만 그쪽은
    * vote_deadline을 안 봐서, 마감 시각만 지난 open 경기는 서버가 막지 못한다.
    * 여기 가드가 그 구간까지 덮는다.
+   *
+   * 서버 응답을 기다리지 않고 화면에 먼저 반영한다. 실패하면 되돌린다.
+   * 되돌리기는 열 때 찍어둔 배열을 복원하는 게 아니라 내 행 하나를 지금 상태에
+   * 얹는 연산이다 — 이유는 utils/optimisticVote.ts 머리말에 있다.
+   *
+   * 남는 창이 하나 있다: 같은 경기에 대한 vote()가 겹쳐 돌 때. 두 번째가 첫 번째의
+   * 낙관 행을 보지만 replaced로 원래 값을 되찾으므로 값 자체는 맞고, 순서만
+   * 뒤집힐 수 있다. 다음 loadMatches()가 수렴시킨다.
    */
   vote: async (matchId, status) => {
     const activeTeam = useTeamStore.getState().activeTeam;
     if (!activeTeam) return;
+    const me = activeTeam.membershipId;
 
     const match = get().matches.find((m) => m.id === matchId);
     if (match && !isVotingOpen(match)) {
@@ -210,11 +220,29 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       throw new Error(reason);
     }
 
+    // 실패했을 때 되돌릴 값. 연타로 낙관 행이 이미 깔려 있으면 그 행이 덮은 원래 값을 쓴다
+    const prev = rollbackTarget(match?.votes.find((v) => v.team_member_id === me));
+    set({ matches: putMyVote(get().matches, matchId, me, makeOptimisticVote(matchId, me, status, prev)) });
+
+    /*
+      try는 castVote 하나만 감싼다.
+      loadMatches()는 자기 catch로 에러를 삼켜서 지금은 절대 안 던진다 — 그래서 예전
+      코드도 「쓰기 실패」와 「재조회 실패」가 우연히 동치였다. 그 우연에 롤백을 걸면,
+      누가 loadMatches를 rethrow로 바꾸는 날 쓰기가 성공한 투표가 되돌아간다.
+
+      실패 경로에서 loadMatches()를 부르지 않는다. 서버가 안 받았으니 되돌린 값이 곧
+      서버 상태이고, loadMatches는 시작하면서 error를 null로 밀어 방금 세운 문구를 지운다.
+    */
     try {
-      await castVoteRequest(matchId, activeTeam.membershipId, status);
-      await get().loadMatches();
+      await castVoteRequest(matchId, me, status);
     } catch (err) {
-      set({ error: toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote') });
+      set({
+        matches: putMyVote(get().matches, matchId, me, prev),
+        error: toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote'),
+      });
+      return;
     }
+
+    await get().loadMatches();
   },
 }));

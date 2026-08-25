@@ -2,7 +2,7 @@ import { supabase } from '../../../lib/supabase';
 import type { AttendanceStatus, Database } from '../../../types/database';
 
 type MatchRow = Database['public']['Tables']['matches']['Row'];
-type VoteRow = Database['public']['Tables']['attendance_votes']['Row'];
+export type VoteRow = Database['public']['Tables']['attendance_votes']['Row'];
 
 export interface MatchWithVotes extends MatchRow {
   votes: VoteRow[];

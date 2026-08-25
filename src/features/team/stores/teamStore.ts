@@ -244,13 +244,23 @@ export const useTeamStore = create<TeamState>((set, get) => ({
    *
    * 마지막 총무는 못 나간다. 나가면 팀에 주인이 없어져서 아무도 경기를 만들거나
    * 설정을 바꿀 수 없는 팀이 남는다(총무 임명도 총무만 할 수 있다).
+   *
+   * 단 혼자인 팀은 나갈 수 있다. 위 근거는 「남은 사람이 아무것도 못 한다」인데
+   * 혼자면 남을 사람이 없어서 전제가 닿지 않는다. 막아 두면 팀 삭제 경로도 없으므로
+   * (D-4에서 안 만들기로 했다) 혼자 만든 팀에 영영 갇힌다.
+   *
+   * 나가면 멤버가 0명이 되고, teams_select가 is_team_member(id)라 그 팀은 아무에게도
+   * 안 보인다 — 지우지 않아도 사라진 것과 같다는 것이 D-4의 결론이다.
+   *
    * 나간 뒤에는 소속이 사라지므로 멤버십을 다시 불러 화면이 팀 선택으로 돌아가게 한다.
    */
   leaveTeam: async () => {
     const activeTeam = get().activeTeam;
     if (!activeTeam) return;
-    const adminCount = get().members.filter((m) => m.role === 'admin').length;
-    if (activeTeam.role === 'admin' && adminCount <= 1) {
+    const members = get().members;
+    const adminCount = members.filter((m) => m.role === 'admin').length;
+    const alone = members.length <= 1;
+    if (!alone && activeTeam.role === 'admin' && adminCount <= 1) {
       set({ error: '마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.' });
       throw new Error('마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.');
     }

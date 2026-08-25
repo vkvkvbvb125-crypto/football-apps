@@ -11,6 +11,9 @@ import { useNavigation } from '@react-navigation/native';
 import { Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePendingSettlementStore } from '../features/settlement/stores/pendingSettlementStore';
+import { useSettlementStore } from '../features/settlement/stores/settlementStore';
+import { useTeamStore } from '../features/team/stores/teamStore';
+import { myUnpaidAmount } from '../features/settlement/utils/unpaid';
 import { Text } from '../components/nativeText';
 import { colors, shadow, tabBar, zIndex } from '../theme';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
@@ -75,6 +78,23 @@ export function MainTabNavigator() {
   // bottom을 10으로 못박아 두면 홈 인디케이터가 있는 기기에서 탭바가 그 위에 겹친다
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  /*
+   * 정산 탭의 빨간 점 — 내가 안 낸 돈이 있으면 어느 화면에 있든 보인다.
+   * 팀 홈의 「미납 금액」 타일을 여기로 옮긴 것이다. 돈 이야기는 정산 화면의 일이고,
+   * 팀 홈에 상시로 두면 그 화면이 독촉장이 된다.
+   *
+   * ⚠ 전제: 이 값은 settlementStore가 채워져 있을 때만 정확하다. 채우는 건
+   *   loadSettlements이고, 지금은 홈·팀 화면이 마운트될 때 부른다. 앱을 켜면 홈이
+   *   첫 화면이라 실질적으로 늘 채워지지만, **첫 화면이 홈이 아니게 되면 조용히 깨진다** —
+   *   점이 안 뜰 뿐 에러가 없어서 눈치채기 어렵다.
+   *   그때는 여기서 부르지 말고(탭 네비게이터가 데이터를 불러오는 책임을 갖게 된다)
+   *   RootNavigator의 팀 전환 정리와 같은 자리에서 미리 채우는 쪽이 맞다.
+   */
+  const settlementCurrent = useSettlementStore((s) => s.current);
+  const settlementPast = useSettlementStore((s) => s.past);
+  const myMembershipId = useTeamStore((s) => s.activeTeam?.membershipId);
+  const hasUnpaid = myUnpaidAmount(settlementCurrent, settlementPast, myMembershipId) > 0;
+
   const pendingSettlementId = usePendingSettlementStore((s) => s.id);
   const clearPendingSettlement = usePendingSettlementStore((s) => s.clear);
 
@@ -138,6 +158,10 @@ export function MainTabNavigator() {
         options={{
           tabBarLabel: tabLabel('정산'),
           tabBarIcon: tabIcon('card-outline'),
+          /* 금액이 아니라 점이다 — 탭 라벨 옆에 숫자를 적으면 「무슨 숫자지」가 되고,
+             자릿수에 따라 탭 폭이 흔들린다. 「볼 것이 있다」만 알리고 액수는 화면이 말한다 */
+          tabBarBadge: hasUnpaid ? '' : undefined,
+          tabBarBadgeStyle: styles.unpaidDot,
         }}
       />
       <Tab.Screen
@@ -223,6 +247,15 @@ const styles = StyleSheet.create({
    */
   item: { height: BAR_H - 2, paddingVertical: 0, justifyContent: 'center' },
   /** 가운데 탭 — 라벨이 없고 ring이 marginTop으로 자리를 잡는다. 손대지 않는다 */
+  /* 숫자 없는 점 — 기본 뱃지는 최소 폭이 있어서 빈 문자열이면 타원이 된다 */
+  unpaidDot: {
+    minWidth: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    marginTop: 4,
+  },
   itemCenter: { justifyContent: 'center' },
   label: { fontSize: 10, fontWeight: '700', marginTop: 3 },
 

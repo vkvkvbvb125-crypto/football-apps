@@ -20,6 +20,9 @@ import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import type { PlaceResult } from '../../attendance/services/placeService';
 import { fetchMemberProfiles, updateSkillLevel, SKILL_LABEL, type MemberProfile } from '../services/memberProfileService';
 import { fetchTeamSettings, upsertTeamSettings, diffSettings, hhmm } from '../services/teamSettingsService';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
+import { useSettlementStore } from '../../settlement/stores/settlementStore';
+import { myUnpaidAmount } from '../../settlement/utils/unpaid';
 import type { TeamSettings } from '../services/teamSettingsService';
 import { toUserMessage } from '../../../lib/dbError';
 import type { FeeMode, SkillLevel } from '../../../types/database';
@@ -33,6 +36,38 @@ const SKILL_OPTIONS = [
 
 export function TeamSettingsScreen({ navigation }: any) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
+  const leaveTeam = useTeamStore((s) => s.leaveTeam);
+  const settlementCurrent = useSettlementStore((st) => st.current);
+  const settlementPast = useSettlementStore((st) => st.past);
+
+  /*
+   * 팀 나가기 — 팀 홈에서 옮겨 왔다.
+   *
+   * 미납이 있으면 확인 문구에 같이 적는다. 나가면 team_members 행이 지워지고
+   * settlement_shares가 cascade로 따라가서, 안 낸 돈의 기록이 조용히 사라진다.
+   * 총무는 누가 얼마를 안 냈는지 알 방법이 없어진다 — 막지는 않되 말은 해준다.
+   *
+   * 마지막 총무 가드는 여기서 다시 쓰지 않는다. teamStore.leaveTeam()이 던지고,
+   * 그 문구를 그대로 보여준다 — 조건을 두 곳에 두면 언젠가 갈린다.
+   */
+  const handleLeaveTeam = () => {
+    if (!activeTeam) return;
+    const unpaid = myUnpaidAmount(settlementCurrent, settlementPast, activeTeam.membershipId);
+    const warn = unpaid > 0 ? `
+
+아직 내지 않은 회비 ${unpaid.toLocaleString()}원이 있어요. 나가면 그 기록도 함께 사라져요.` : '';
+    confirmAction({
+      title: '팀 나가기',
+      message: `${activeTeam.team.name}에서 나갈까요?${warn}`,
+      confirmLabel: '나가기',
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      leaveTeam().catch((err) => {
+        alertMessage('나갈 수 없어요', err instanceof Error ? err.message : '팀을 나가지 못했어요');
+      });
+    });
+  };
   const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
   const updateTeamProfile = useTeamStore((s) => s.updateTeamProfile);
   const matches = useAttendanceStore((s) => s.matches);
@@ -465,6 +500,27 @@ export function TeamSettingsScreen({ navigation }: any) {
             </Pressable>
           </>
         )}
+
+        {/*
+          관리 — 되돌리기 어려운 동작이라 설정 맨 아래에 따로 둔다.
+          저장 버튼 아래, 구분선 뒤다. 위쪽 카드들과 붙여 놓으면 값을 고치다가 손이 미끄러진다.
+
+          「팀 삭제하기」는 두지 않는다. role이 admin/member 둘뿐이라 팀장을 가릴 기준이
+          없고(teams.created_by는 생성자가 탈퇴하면 null이 된다), 삭제를 만들면 D-4에서
+          안 만들기로 한 cascade 설계가 되살아난다. 멤버가 0명이 되면 teams_select가
+          is_team_member(id)라 그 팀은 아무에게도 안 보인다 — 지운 것과 같다.
+        */}
+        <View style={styles.dangerZone}>
+          <Pressable
+            onPress={handleLeaveTeam}
+            accessibilityRole="button"
+            accessibilityLabel="팀 나가기"
+            style={({ pressed }) => [styles.leaveRow, pressed && styles.leavePressed]}
+          >
+            <Ionicons name="exit-outline" size={17} color={colors.danger} />
+            <Text style={styles.leaveText}>팀 나가기</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </ScreenGradient>
   );
@@ -612,4 +668,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   saveBtnText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
+
+  dangerZone: { marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.divider },
+  leaveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  leavePressed: { opacity: 0.6 },
+  leaveText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
 });

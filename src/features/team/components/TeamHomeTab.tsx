@@ -56,13 +56,11 @@ interface Props {
   isAdmin: boolean;
   /** 팀 프로필에서 채워진 항목. 비어 있으면 총무에게 채우라고 권한다 */
   profileBits: (string | null)[];
-  myUnpaid: number;
   myRateLabel: string;
   memberRateMatches: MemberRateMatch[];
   onOpenMemberList: () => void;
   onGoMembers: () => void;
   onOpenTeamSettings: () => void;
-  onLeaveTeam: () => void;
 }
 
 export function TeamHomeTab({
@@ -89,13 +87,11 @@ export function TeamHomeTab({
   selfMemberId,
   isAdmin,
   profileBits,
-  myUnpaid,
   myRateLabel,
   memberRateMatches,
   onOpenMemberList,
   onGoMembers,
   onOpenTeamSettings,
-  onLeaveTeam,
 }: Props) {
   return (
     <>
@@ -551,13 +547,9 @@ export function TeamHomeTab({
                         value={myRateLabel}
                         accent
                       />
-                      {/* 미납은 크면 나쁜 숫자다 — 초록이면 좋아 보인다 */}
-                      <StatTile
-                        label="미납 금액"
-                        value={`${myUnpaid.toLocaleString()}원`}
-                        accent={myUnpaid > 0}
-                        tone="danger"
-                      />
+                      {/* 미납 타일은 하단 탭 「정산」의 빨간 점으로 옮겼다 — 돈 이야기는
+                          정산 화면의 일이고, 여기 두면 팀 홈이 독촉장이 된다.
+                          점은 탭에 상시로 있어서 어느 화면에 있든 보인다 */}
                     </StatRow>
                   </View>
                 )}
@@ -588,17 +580,8 @@ export function TeamHomeTab({
                   </Pressable>
                 )}
 
-                {/* 팀 나가기는 총무만이 아니다 — 멤버가 팀을 떠날 유일한 길이다 */}
-                {(
-                  <Pressable
-                    onPress={onLeaveTeam}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.leaveRow, pressed && styles.pressed]}
-                  >
-                    <Ionicons name="exit-outline" size={17} color={colors.danger} />
-                    <Text style={styles.leaveText}>팀 나가기</Text>
-                  </Pressable>
-                )}
+                {/* 팀 나가기는 팀 설정 맨 아래로 옮겼다 — 되돌리기 어려운 동작이라
+                    매일 보는 홈에 둘 이유가 없다. 나가기 확인에서 미납액도 함께 경고한다 */}
 
                 {/*
                   멤버가 적을 때 아래가 비는 것에 대한 안내.
@@ -873,8 +856,6 @@ const styles = StyleSheet.create({
   },
   rowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
   rowSub: { color: colors.textMuted, fontSize: 11, fontWeight: '500' },
-  leaveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
-  leaveText: { color: colors.danger, fontSize: 13, fontWeight: '700' },
   growHint: {
     marginHorizontal: 20,
     marginTop: 14,

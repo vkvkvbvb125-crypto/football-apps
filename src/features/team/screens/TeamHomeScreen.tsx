@@ -79,7 +79,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const updateSlogan = useTeamStore((s) => s.updateSlogan);
   const promoteToAdmin = useTeamStore((s) => s.promoteToAdmin);
   const removeMember = useTeamStore((s) => s.removeMember);
-  const leaveTeam = useTeamStore((s) => s.leaveTeam);
   const updateNotifyPref = useTeamStore((s) => s.updateNotifyPref);
   const loadMemberships = useTeamStore((s) => s.loadMemberships);
   const matches = useAttendanceStore((s) => s.matches);
@@ -162,11 +161,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
 
   const isAdmin = activeTeam.role === 'admin';
   const me = members.find((m) => m.id === activeTeam.membershipId) ?? null;
-  /** 내가 아직 안 낸 돈 — 진행중·지난 정산에서 내 몫 중 미납만 */
-  const myUnpaid = [...(settlementCurrent ? [settlementCurrent] : []), ...settlementPast]
-    .flatMap((st) => st.shares)
-    .filter((sh) => sh.teamMemberId === activeTeam.membershipId && !sh.paid && !sh.exempt)
-    .reduce((t, sh) => t + sh.amount, 0);
   const inviteUrl = `${SUPABASE_URL}/functions/v1/invite-redirect?code=${activeTeam.team.invite_code}`;
   /*
    * 「7248-6805」 — 8자리를 연속으로 두면 읽다가 자리를 놓친다.
@@ -213,14 +207,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
     setSloganEditing(false);
     // 빈 문자열 대신 null — "빈 슬로건"과 "안 정함"을 굳이 구분할 이유가 없다
     await updateSlogan(trimmed || null);
-  };
-
-  const handleLeaveTeam = () => {
-    confirm('팀 나가기', `${activeTeam.team.name}에서 나갈까요?`, () => {
-      leaveTeam().catch((err) => {
-        alertMessage('나갈 수 없어요', err instanceof Error ? err.message : '팀을 나가지 못했어요');
-      });
-    }, '나가기');
   };
 
   const handlePickEmblem = async () => {
@@ -384,13 +370,11 @@ export function TeamHomeScreen({ navigation, route }: any) {
             selfMemberId={activeTeam.membershipId}
             isAdmin={isAdmin}
             profileBits={profileBits}
-            myUnpaid={myUnpaid}
             myRateLabel={myRateLabel}
             memberRateMatches={memberRateMatches}
             onOpenMemberList={() => setMemberListVisible(true)}
             onGoMembers={() => setTab('members')}
             onOpenTeamSettings={() => navigation.navigate('TeamSettings')}
-            onLeaveTeam={handleLeaveTeam}
           />
         )}
 

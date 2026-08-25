@@ -45,6 +45,7 @@ import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../
 import { resolveCapacity } from '../utils/capacity';
 import { createResultLabel } from '../utils/createResult';
 import { isVotingOpen, votingLockNote } from '../utils/voting';
+import { matchDateTimeLabel, matchLabel } from '../utils/matchLabel';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
 import { fetchPartnerVenues, venueMeta } from '../services/venueService';
 import type { PlaceResult } from '../services/placeService';
@@ -396,15 +397,11 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     });
   }, [rosterMatch, members, activeTeam]);
 
-  const rosterMatchLabel = useMemo(() => {
-    if (!rosterMatch) return '';
-    const d = new Date(rosterMatch.match_date);
-    const base = `${d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} ${d.toLocaleTimeString(
-      'ko-KR',
-      { hour: '2-digit', minute: '2-digit', hour12: false }
-    )}`;
-    return rosterMatch.location ? `${base} · ${rosterMatch.location}` : base;
-  }, [rosterMatch]);
+  /* 홈 경기 카드도 같은 시트에 같은 라벨을 넘긴다 — 포맷은 matchLabel 유틸이 갖는다 */
+  const rosterMatchLabel = useMemo(
+    () => (rosterMatch ? matchLabel(rosterMatch.match_date, rosterMatch.location) : ''),
+    [rosterMatch],
+  );
 
   return (
     <ScreenGradient>
@@ -470,7 +467,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 return (
                   <View style={styles.detailWrap}>
                     <MatchDetailCard
-                      headline={`${d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} ${d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}`}
+                      headline={matchDateTimeLabel(d)}
                       ddayLabel={ddayLabel(selectedMatch.match_date)}
                       matchType={selectedMatch.match_type}
                       placeLabel={selectedMatch.location ?? '장소 미정'}

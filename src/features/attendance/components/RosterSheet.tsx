@@ -218,6 +218,14 @@ export function RosterSheet({
             <View style={styles.head}>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.title}>참석 명단</Text>
+                {/*
+                  경기 요약은 뒤 카드와 중복이 아니다 — 이 시트가 모달이라 열리는 순간
+                  그 카드가 가려진다. 여기 없으면 「지금 보는 명단이 어느 경기 것인지」를
+                  기억에 의존하게 되고, 경기가 둘 이상인 팀에서는 그게 안 된다.
+
+                  문구는 matchLabel 유틸이 만든다. 부르는 곳이 둘(홈 경기 카드, 일정 화면)
+                  이라 각자 만들면 같은 경기가 화면마다 다르게 적힌다.
+                */}
                 <Text style={styles.subtitle}>{matchLabel}</Text>
               </View>
               <Pressable onPress={onClose} hitSlop={8}>

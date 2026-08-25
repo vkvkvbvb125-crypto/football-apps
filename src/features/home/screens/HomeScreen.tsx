@@ -49,6 +49,7 @@ import type { MatchWithVotes } from '../../attendance/services/attendanceService
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { relativeTime } from '../../../lib/relativeTime';
 import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
+import { matchLabel } from '../../attendance/utils/matchLabel';
 import { HomeBanner } from '../components/HomeBanner';
 import { buildBannerSlides } from '../components/bannerSlides';
 
@@ -883,15 +884,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         <RosterSheet
           visible={rosterOpen}
           onClose={() => setRosterOpen(false)}
-          matchLabel={`${new Date(next.match_date).toLocaleDateString('ko-KR', {
-            month: 'long',
-            day: 'numeric',
-            weekday: 'short',
-          })} ${new Date(next.match_date).toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          })}${next.location ? ` · ${next.location}` : ''}`}
+          matchLabel={matchLabel(next.match_date, next.location)}
           capacity={next.capacity ?? 12}
           deadlineLabel={undefined}
           members={rosterMembers}

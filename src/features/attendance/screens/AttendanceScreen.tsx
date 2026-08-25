@@ -1,7 +1,14 @@
 // src/features/attendance/screens/AttendanceScreen.tsx — 리디자인 v3 (캘린더 + 상세카드 + 다가오는 경기 목록)
 // 캘린더/모달 컴포넌트(CalendarGrid, TimeWheelPicker, DeadlinePicker, PlaceSearchModal)와
 // store API는 기존 그대로 사용합니다.
-// 참석 투표는 이 화면에만 있다 — 홈은 참여 현황만 보여주고 focusDate 파라미터로 여기 보낸다.
+// 참석 투표는 이 화면에만 있었다 — 홈은 참여 현황만 보여주고 focusDate 파라미터로 여기 보낸다.
+// 2026-08 참석 명단 시트(RosterSheet)에도 응답 변경이 붙어서 이 문장이 절반만 맞게 됐다.
+// 원래 근거는 「홈은 다음 경기 하나만 보여주므로 거기서 투표하면 그 경기 말고는 못 찍는다」였고,
+// 그건 홈 카드에는 여전히 유효하다. 시트는 다르다 — 어느 경기의 명단을 열었든 그 경기의
+// 내 응답을 보고 있는 자리라서, 「하나만 보인다」가 제약이 아니라 맥락이다.
+// 두 번째 쓰기 경로가 열려도 되는 이유는 마감 판정이 화면에서 스토어로 내려갔기 때문이다
+// (attendanceStore.vote가 isVotingOpen을 보고 거절한다). 그전에 시트에 붙였다면
+// 시트가 같은 판정을 다시 계산해야 했고, 규칙이 두 곳으로 갈렸다.
 // 경기 만들기는 이 화면에만 있다 — 「다가오는 경기」 헤더의 버튼과 빈 날짜의 "이 날짜에 경기 만들기".
 // 홈에는 만드는 입구를 두지 않는다(홈은 다음 경기 하나만 보여주는 자리다).
 //
@@ -749,6 +756,10 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         deadlineLabel={rosterMatch?.vote_deadline ? ddayLabel(rosterMatch.vote_deadline) : undefined}
         members={rosterMembers}
         isAdmin={isAdmin ?? false}
+        isLocked={rosterMatch ? !isVotingOpen(rosterMatch) : false}
+        lockNote={(rosterMatch && votingLockNote(rosterMatch, isAdmin ?? false)) ?? undefined}
+        /* 던지는 것을 시트가 받아서 자기 자리에 그린다 — 위(:428)는 시트에 가려 안 보인다 */
+        onVote={rosterMatch ? (status) => vote(rosterMatch.id, status) : undefined}
       />
 
       <CreateMatchSheet

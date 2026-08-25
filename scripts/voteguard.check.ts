@@ -16,6 +16,8 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'u
 const store = read('src/features/attendance/stores/attendanceStore.ts');
 const card = read('src/features/attendance/components/MatchDetailCard.tsx');
 const screen = read('src/features/attendance/screens/AttendanceScreen.tsx');
+const sheet = read('src/features/attendance/components/RosterSheet.tsx');
+const home = read('src/features/home/screens/HomeScreen.tsx');
 
 // ── 1. 판정 함수 자체 ───────────────────────────────────────────────
 {
@@ -50,12 +52,42 @@ const screen = read('src/features/attendance/screens/AttendanceScreen.tsx');
   assert.ok(/set\(\{ error: reason \}\)/.test(body), '이유를 스토어 error에 안 넣는다 — 화면이 못 그린다');
 }
 
-// ── 3. 화면과 스토어가 같은 함수를 본다 ─────────────────────────────
-// 한쪽만 다른 조건으로 바뀌면 여기서 걸린다.
+// ── 3. 쓰기를 부르는 모든 자리가 같은 판정을 본다 ───────────────────
+//
+// 스토어가 거절하는 것과 화면이 못 누르게 하는 것은 다른 일이다. 스토어만 있으면
+// 눌러 보고 나서야 안 된다는 걸 알고, 화면만 있으면 화면 밖에서 뚫린다.
+// 셋을 한자리에 묶는 이유는 한쪽만 다른 조건으로 바뀌는 걸 잡기 위해서다 —
+// 세 곳 다 isVotingOpen 하나에서 나와야 한다.
 {
+  // 스토어 (쓰기 거절) — 위 2번에서 본다
+  // 일정 화면 카드
   assert.ok(/const isLocked = !isVotingOpen\(selectedMatch\)/.test(screen),
     '화면이 다른 방식으로 잠금을 판정한다 — 스토어와 갈린다');
   assert.ok(/disabled=\{p\.isLocked\}/.test(card), '카드가 잠금을 무시하고 버튼을 연다');
+
+  // 명단 시트 — 두 화면이 렌더한다. 넘기는 그 줄을 각각 본다
+  assert.ok(/isLocked=\{rosterMatch \? !isVotingOpen\(rosterMatch\) : false\}/.test(screen),
+    '일정 화면이 시트에 잠금을 안 넘긴다 — 마감된 경기에서 시트 버튼이 열린다');
+  assert.ok(/isLocked=\{!voteOpen\}/.test(home),
+    '홈이 시트에 잠금을 안 넘긴다 — 마감된 경기에서 시트 버튼이 열린다');
+  assert.ok(/disabled=\{isLocked\}/.test(sheet), '시트가 잠금을 무시하고 버튼을 연다');
+  /*
+    막힌 것이 눈에도 보여야 한다. disabled만 걸면 눌리지 않을 뿐 모양은 그대로여서,
+    누르고 아무 일도 안 일어나는 것으로 읽힌다 — 이 단언이 없을 때 변이가 실제로 샜다.
+    아웃라인이라 opacity로는 안 된다(테두리까지 흐려져 버튼으로 안 보인다). 면·테두리·글자를
+    각각 내리므로 그 두 줄을 집어서 본다.
+  */
+  assert.ok(/style=\{\[styles\.change, isLocked && styles\.changeOff\]\}/.test(sheet),
+    '마감이 버튼 모양에 안 나타난다 — 못 누르는데 눌릴 것처럼 보인다');
+  assert.ok(/style=\{\[styles\.changeText, isLocked && styles\.changeTextOff\]\}/.test(sheet),
+    '마감인데 버튼 글자색이 그대로다');
+
+  // 막힌 이유도 같은 함수가 만든다. 시트가 따로 지으면 카드와 다른 말을 한다
+  assert.ok(/votingLockNote\(rosterMatch, isAdmin \?\? false\)/.test(screen),
+    '일정 화면이 시트에 잠금 사유를 안 넘긴다');
+  assert.ok(/lockNote=\{lockNote \?\? undefined\}/.test(home), '홈이 시트에 잠금 사유를 안 넘긴다');
+  assert.ok(/\{isLocked && !!lockNote && <Text style=\{styles\.lockNote\}>\{lockNote\}<\/Text>\}/.test(sheet),
+    '시트가 막힌 이유를 안 그린다 — 왜 못 누르는지 알 수 없다');
 }
 
 // ── 4. 총무 예외가 없다 ─────────────────────────────────────────────

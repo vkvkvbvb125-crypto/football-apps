@@ -236,6 +236,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const matches = useAttendanceStore((s) => s.matches);
   const loadMatches = useAttendanceStore((s) => s.loadMatches);
+  const vote = useAttendanceStore((s) => s.vote);
 
   const current = useSettlementStore((s) => s.current);
   const past = useSettlementStore((s) => s.past);
@@ -889,6 +890,10 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           deadlineLabel={undefined}
           members={rosterMembers}
           isAdmin={!!isAdmin}
+          isLocked={!voteOpen}
+          lockNote={lockNote ?? undefined}
+          /* 홈은 스토어 error를 구독하지 않는다 — 실패 문구는 시트가 자기 자리에 그린다 */
+          onVote={(status) => vote(next.id, status)}
         />
       )}
 

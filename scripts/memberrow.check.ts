@@ -9,6 +9,7 @@ import { formatRecentAttendance } from '../src/features/attendance/utils/attenda
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const tab = read('src/features/team/components/TeamMembersTab.tsx');
 const modal = read('src/features/team/components/MemberListModal.tsx');
+const screen = read('src/features/team/screens/TeamHomeScreen.tsx');
 
 // ── 1. 셰브론 조건이 모달의 편집 권한과 같은가 ──────────────────────
 //
@@ -52,6 +53,43 @@ const modal = read('src/features/team/components/MemberListModal.tsx');
   assert.equal(formatRecentAttendance(r(0, 0)), null, '셀 경기가 없는데 「0경기 중 0회」를 적는다');
   // 표본이 모자라 퍼센트를 못 내는 경우에도 횟수는 나와야 한다
   assert.equal(formatRecentAttendance(r(1, 2)), '최근 2경기 중 1회', '표본이 적다고 횟수까지 감춘다');
+}
+
+// ── 4. 참석 표기가 두 곳에서 같은가 ────────────────────────────────
+//
+// 멤버 행(TeamMembersTab)과 「내 기록」(TeamHomeScreen의 myRateLabel)은 같은 값을
+// 적는다 — 둘 다 memberAttendanceRate(memberRateMatches, ...)라 창(최근 3개월 · 가입 후)이
+// 같다. 그런데 표현이 갈리면 사용자는 두 숫자가 같은 것인지 알 수 없다.
+//
+// 실제로 두 번 갈렸다: 한 번 맞췄다가 STEP 2에서 멤버 행만 바꾸며 또 갈렸다.
+// 따로 검사하면 한쪽만 바뀌었을 때 못 잡으므로, 둘을 한 단언으로 묶는다.
+{
+  assert.ok(/formatRecentAttendance/.test(tab), '멤버 행이 공용 표기 함수를 안 쓴다');
+  assert.ok(/formatRecentAttendance\(myRate\)/.test(screen),
+    '「내 기록」이 공용 표기 함수를 안 쓴다 — 멤버 행과 같은 값을 다르게 적게 된다');
+
+  // 손으로 만든 문구가 남아 있으면 함수를 써도 갈린다
+  assert.ok(!/\$\{myRate\.attended\}회/.test(screen),
+    '「내 기록」이 문구를 직접 만든다 (「4회 (67%)」) — 멤버 행과 갈린다');
+  assert.ok(!/formatMemberRate/.test(tab), '멤버 행에 퍼센트 표기가 남아 있다');
+
+  /*
+   * 창이 같아야 표기 통일이 뜻을 갖는다. 한쪽 창이 바뀌면 표현만 같고 값이 다른 상태가
+   * 되는데, 그게 지금보다 나쁘다.
+   *
+   * 「파일에 그 호출이 있는가」로는 안 된다 — 다른 줄에 남아 있으면 통과한다.
+   * 변이 시험에서 내 기록만 memberAttendanceRate([], me)로 바꿨는데 새어 나갔다.
+   * 각 값을 만드는 그 줄을 본다.
+   */
+  const myRateLine = screen.match(/const myRate = [^;]+;/);
+  assert.ok(myRateLine, '「내 기록」의 참석 계산을 못 찾음');
+  assert.ok(/memberAttendanceRate\(memberRateMatches, me\)/.test(myRateLine![0]),
+    `「내 기록」이 다른 창을 센다: ${myRateLine![0]} — 표기만 같고 값이 다른 상태가 된다`);
+
+  const rowCall = tab.match(/formatRecentAttendance\([^)]*\)+/);
+  assert.ok(rowCall, '멤버 행의 참석 계산을 못 찾음');
+  assert.ok(/memberAttendanceRate\(memberRateMatches, m\)/.test(rowCall![0]),
+    `멤버 행이 다른 창을 센다: ${rowCall![0]}`);
 }
 
 console.log('memberrow ok');

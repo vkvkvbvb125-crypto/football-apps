@@ -38,7 +38,12 @@ import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGrad
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
 import { RowCard, StatRow, StatTile } from '../../../components/Surface';
-import { monthlyAttendanceRate, memberAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
+import {
+  monthlyAttendanceRate,
+  memberAttendanceRate,
+  formatRate,
+  formatRecentAttendance,
+} from '../../attendance/utils/attendanceRate';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import type { PlaceResult } from '../../attendance/services/placeService';
 import { colors, font, radius, shadow } from '../../../theme';
@@ -284,17 +289,20 @@ export function TeamHomeScreen({ navigation, route }: any) {
   }));
 
   /*
-   * 「4회 (67%)」 — 멤버 행의 「3개월 67%」와 같은 값이다.
-   * 횟수만 적으면 옆 목록의 비율과 같은 것인지 사용자가 알 수 없다.
-   * 표본이 모자라 비율이 없으면(3회 미만) 괄호를 생략한다 — 「-」를 괄호에 넣으면
-   * 무엇이 없다는 건지 더 헷갈린다.
+   * 멤버 행과 같은 문구를 쓴다 — formatRecentAttendance 하나가 두 곳을 적는다.
+   *
+   * 창도 이미 같다: 둘 다 memberAttendanceRate(memberRateMatches, ...)이라
+   * 최근 3개월 · 가입 후 경기라는 분모가 동일하다. 그래서 표기만 맞추면 두 숫자가
+   * 서로 검산된다 — 목록에서 「최근 6경기 중 4회」를 보고 여기서 같은 문장을 본다.
+   *
+   * 예전엔 여기가 「4회 (67%)」, 멤버 행이 「3개월 67%」였다. 같은 값을 다르게 적으면
+   * 사용자는 두 숫자가 같은 것인지 알 수 없다. 한 번 맞췄다가 STEP 2에서 멤버 행만
+   * 바꾸며 다시 갈렸고, 이번에 되돌린다.
+   *
+   * 셀 경기가 없으면 null이 온다 — 「0경기 중 0회」는 정보가 아니라 빈칸이라 「-」로 둔다.
    */
   const myRate = me ? memberAttendanceRate(memberRateMatches, me) : null;
-  const myRateLabel = myRate
-    ? myRate.rate == null
-      ? `${myRate.attended}회`
-      : `${myRate.attended}회 (${Math.round(myRate.rate * 100)}%)`
-    : '-';
+  const myRateLabel = (myRate && formatRecentAttendance(myRate)) ?? '-';
 
   return (
     <ScreenGradient>

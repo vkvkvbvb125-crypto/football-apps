@@ -14,12 +14,7 @@ import { Text } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
 import { POSITION_COLOR, POSITION_INFO, toPosition } from '../positions';
 import { initialOf } from '../initials';
-import {
-  MEMBER_RATE_MONTHS,
-  formatMemberRate,
-  memberAttendanceRate,
-  type MemberRateMatch,
-} from '../../attendance/utils/attendanceRate';
+import { formatMemberRate, memberAttendanceRate, type MemberRateMatch } from '../../attendance/utils/attendanceRate';
 import type { TeamMemberWithProfile } from '../services/teamService';
 
 interface Props {
@@ -198,8 +193,10 @@ export function TeamHomeTab({
                 <SoftTint tone="green" radius={radius.card} />
                 <Text style={styles.myRecordTitle}>내 기록</Text>
                 <StatRow>
+                  {/* 값이 「최근 6경기 중 4회」라 라벨에 「최근」을 또 쓰면 겹친다.
+                      기간은 값의 「최근 N경기」가 이미 말한다 (최근 3개월 창) */}
                   <StatTile
-                    label={`최근 ${MEMBER_RATE_MONTHS}개월 참석`}
+                    label="참석"
                     value={myRateLabel}
                     accent
                   />

@@ -210,9 +210,21 @@ export function TeamHomeTab({
               높이에서 비교된다. 숫자만 초록으로 둬서 라벨은 조용히 물러난다. */}
           <View style={styles.teamStats}>
             <StatRow>
-              <StatTile label="경기" value={String(matches.length)} accent />
+              {/*
+                「경기」는 matches.length — 팀 생성 이래 전부다. 라벨을 「이번 달 경기」로
+                바꾸려면 계산도 바꿔야 하고, 그러면 참석률의 「이번 달」·멤버 지표의
+                「최근 3개월」에 이어 세 번째 창이 생긴다. 계산을 두고 라벨을 값에 맞춘다.
+
+                0은 「-」로 바꾸지 않는다. 경기 0회와 멤버 0명은 실제로 0이지 데이터가
+                없는 게 아니다. 「-」는 셀 것이 없어 비율을 못 내는 참석률에만 쓴다.
+
+                「멤버」에는 진입을 걸지 않는다 — 아래 로스터 카드 제목이 이미 멤버 탭의
+                문이고, 같은 화면에 같은 곳으로 가는 입구가 둘이면 어느 쪽이 무엇인지
+                흐려진다. 여기는 지표, 저기는 명단이다.
+              */}
+              <StatTile label="총 경기" value={String(matches.length)} accent />
               <StatTile label="멤버" value={String(members.length)} accent />
-              <StatTile label="이번 달 참석률" value={formatRate(teamRate)} accent />
+              <StatTile label="참석" value={formatRate(teamRate)} accent />
             </StatRow>
           </View>
 
@@ -351,10 +363,10 @@ export function TeamHomeTab({
                       onPress={onGoMembers}
                       hitSlop={10}
                       accessibilityRole="button"
-                      accessibilityLabel={`멤버 ${members.length}명 전체 보기`}
+                      accessibilityLabel={`팀원 ${members.length}명 전체 보기`}
                       style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
                     >
-                      <Text style={styles.sectionTitle}>멤버 {members.length}명</Text>
+                      <Text style={styles.sectionTitle}>팀원 {members.length}명</Text>
                       <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
                     </Pressable>
                 </View>

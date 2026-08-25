@@ -10,6 +10,7 @@ const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'u
 const tab = read('src/features/team/components/TeamMembersTab.tsx');
 const modal = read('src/features/team/components/MemberListModal.tsx');
 const screen = read('src/features/team/screens/TeamHomeScreen.tsx');
+const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
 
 // ── 1. 셰브론 조건이 모달의 편집 권한과 같은가 ──────────────────────
 //
@@ -90,6 +91,27 @@ const screen = read('src/features/team/screens/TeamHomeScreen.tsx');
   assert.ok(rowCall, '멤버 행의 참석 계산을 못 찾음');
   assert.ok(/memberAttendanceRate\(memberRateMatches, m\)/.test(rowCall![0]),
     `멤버 행이 다른 창을 센다: ${rowCall![0]}`);
+}
+
+// ── 5. 스탯 바와 로스터 카드가 같은 말을 두 번 하지 않는가 ────────
+//
+// 둘 다 멤버 수를 말한다. 문구까지 같으면 화면에 같은 문장이 두 줄 뜨고, 진입까지
+// 양쪽에 걸면 같은 곳으로 가는 입구가 셋(제목 셰브론 · 로스터 칩 · 스탯 바)이 된다.
+// 지표는 스탯 바, 명단은 로스터 카드로 역할을 갈랐다.
+{
+  const tiles = [...homeTab.matchAll(/<StatTile label="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(tiles, ['총 경기', '멤버', '참석'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
+
+  // 로스터 제목은 「팀원」 — 스탯 바의 「멤버」와 겹치지 않게
+  assert.ok(/<Text style=\{styles\.sectionTitle\}>팀원 \{members\.length\}명<\/Text>/.test(homeTab),
+    '로스터 제목이 「팀원 N명」이 아니다 — 스탯 바의 「멤버」와 문구가 겹친다');
+
+  // 스탯 바에는 진입이 없다. StatTile을 Pressable로 감싸면 입구가 셋이 된다
+  const bar = homeTab.slice(homeTab.indexOf('<StatRow>'), homeTab.indexOf('</StatRow>'));
+  assert.ok(!/Pressable|onPress/.test(bar), '스탯 바에 진입이 붙었다 — 멤버 탭 입구가 셋이 된다');
+
+  // 제목의 진입은 남아 있어야 한다. 2명 이하 팀은 로스터 칩이 없어 이 길뿐이다
+  assert.ok(/onPress=\{onGoMembers\}/.test(homeTab), '제목에서 멤버 탭으로 가는 길이 사라졌다');
 }
 
 console.log('memberrow ok');

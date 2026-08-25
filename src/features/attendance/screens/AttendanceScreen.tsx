@@ -147,7 +147,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
   const [quarterMinutesText, setQuarterMinutesText] = useState('10');
   const [deadlineText, setDeadlineText] = useState('');
-  const [rosterMatch, setRosterMatch] = useState<MatchWithVotes | null>(null);
+  const [rosterMatchId, setRosterMatchId] = useState<string | null>(null);
   const [matchWeatherById, setMatchWeatherById] = useState<Record<string, ServiceWeather>>({});
   const [weatherDecisions, setWeatherDecisions] = useState<Record<string, 'keep' | 'indoor'>>({});
   const [weatherLoading, setWeatherLoading] = useState(false);
@@ -382,6 +382,18 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     });
   };
 
+  /*
+    명단 시트가 볼 경기 — id만 들고 store에서 파생한다.
+
+    예전엔 열 때의 MatchWithVotes를 그대로 담아 뒀다. 그러면 loadMatches()가 store를
+    갈아끼워도 시트는 옛 votes를 계속 본다 — 시트 안에서 투표하면 화면이 안 바뀐다.
+    (홈은 next를 matches에서 파생하고 있어서 이 문제가 없었다.)
+  */
+  const rosterMatch = useMemo(
+    () => (rosterMatchId ? matches.find((m) => m.id === rosterMatchId) ?? null : null),
+    [matches, rosterMatchId],
+  );
+
   const rosterMembers: RosterMember[] = useMemo(() => {
     if (!rosterMatch) return [];
     return members.map((m) => {
@@ -501,7 +513,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       onKeepOutdoor={() => setWeatherDecision(selectedMatch, 'keep')}
                       onFindIndoor={() => setWeatherDecision(selectedMatch, 'indoor')}
                       // 카드 밖에 떠 있던 「명단 보기」를 카드 푸터로 넣었다 (MatchDetailCard 참고)
-                      onOpenRoster={() => setRosterMatch(selectedMatch)}
+                      onOpenRoster={() => setRosterMatchId(selectedMatch.id)}
                     />
                   </View>
                 );
@@ -724,7 +736,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
       <RosterSheet
         visible={!!rosterMatch}
-        onClose={() => setRosterMatch(null)}
+        onClose={() => setRosterMatchId(null)}
         matchLabel={rosterMatchLabel}
         capacity={rosterMatch?.capacity ?? 12}
         deadlineLabel={rosterMatch?.vote_deadline ? ddayLabel(rosterMatch.vote_deadline) : undefined}

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AttendanceStatus } from '../../../types/database';
 import { useTeamStore } from '../../team/stores/teamStore';
+import { isVotingOpen, votingLockNote } from '../utils/voting';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { toUserMessage } from '../../../lib/dbError';
 import { notifyTeam } from '../../notifications/services/pushService';
@@ -180,9 +181,35 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       set({ error: toUserMessage(err, {}, 'deleteMatch'), loading: false });
     }
   },
+  /**
+   * 참석 투표.
+   *
+   * 마감 판정을 여기서 한다. 예전엔 화면에만 있었다 — MatchDetailCard의
+   * disabled={isLocked}가 전부였고, 그건 버튼을 안 눌리게 할 뿐 쓰기를 막지 않는다.
+   * 부르는 경로가 하나 더 생기면(참석 명단 시트의 「내 응답 변경」 같은 것) 그 화면이
+   * 같은 판정을 다시 계산해야 하고, 그러면 규칙이 두 곳으로 갈린다.
+   *
+   * 총무 예외를 두지 않는다. 홈의 「총무는 마감 뒤에도 경기를 관리한다」는
+   * 이동 버튼(라벨이 「경기 관리」다) 조건이지 투표 권한이 아니다 — 일정 화면의
+   * isLocked에도 isAdmin이 없어서, 지금도 총무는 마감 후 투표하지 못한다.
+   *
+   * 조용히 return하지 않고 던진다. 부르는 쪽이 실패를 알아야 화면에 이유를 띄운다.
+   *
+   * RLS도 status='open'을 본다(votes_insert_own / votes_update_own). 다만 그쪽은
+   * vote_deadline을 안 봐서, 마감 시각만 지난 open 경기는 서버가 막지 못한다.
+   * 여기 가드가 그 구간까지 덮는다.
+   */
   vote: async (matchId, status) => {
     const activeTeam = useTeamStore.getState().activeTeam;
     if (!activeTeam) return;
+
+    const match = get().matches.find((m) => m.id === matchId);
+    if (match && !isVotingOpen(match)) {
+      const reason = votingLockNote(match, activeTeam.role === 'admin') ?? '지금은 투표할 수 없어요';
+      set({ error: reason });
+      throw new Error(reason);
+    }
+
     try {
       await castVoteRequest(matchId, activeTeam.membershipId, status);
       await get().loadMatches();

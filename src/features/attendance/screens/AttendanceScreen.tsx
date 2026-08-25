@@ -487,7 +487,12 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       isAdmin={isAdmin ?? false}
                       waitlist={waitlistEntriesFor(cap.waitlist)}
                       weatherDecision={weatherDecisions[selectedMatch.id] ?? null}
-                      onVote={(status) => vote(selectedMatch.id, status)}
+                      /* vote()는 마감된 경기에서 던진다 — 조용히 삼키면 눌러도 아무 일이
+                         없는 것처럼 보인다. 스토어가 error를 세팅하고 위(:428)가 그걸 그리므로
+                         여기서는 unhandled rejection만 막는다 */
+                      onVote={(status) => {
+                        vote(selectedMatch.id, status).catch(() => {});
+                      }}
                       onOpenMenu={(anchorY) => {
                         setActionAnchorY(anchorY);
                         setActionMatch(selectedMatch);

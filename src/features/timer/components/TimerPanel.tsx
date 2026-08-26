@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import { colors } from '../../../theme';
+import { elapsedRatioOf, secondsLeft as secondsLeftOf, totalSecondsOf } from '../utils/timer';
 
 const STROKE_WIDTH = 6;
 
@@ -146,9 +147,8 @@ export function TimerPanel({
   // 예약만 해두고 화면을 벗어나면 엉뚱한 데서 휘슬이 울린다
   useEffect(() => stopWhistle, []);
 
-  /** endsAt으로부터 남은 초 — 음수는 0으로 */
-  const secondsLeft = () =>
-    endsAtRef.current == null ? remainingSeconds : Math.max(0, Math.round((endsAtRef.current - Date.now()) / 1000));
+  /** endsAt으로부터 남은 초 — 식은 utils/timer.ts에 있다(검사가 같은 것을 본다) */
+  const secondsLeft = () => secondsLeftOf(endsAtRef.current, remainingSeconds, Date.now());
 
   useEffect(() => {
     if (!isRunning) return;
@@ -229,7 +229,7 @@ export function TimerPanel({
     if (endsAtRef.current != null) endsAtRef.current += 60_000;
   };
 
-  const totalSeconds = quarterMinutes * 60 + addedSeconds;
+  const totalSeconds = totalSecondsOf(quarterMinutes, addedSeconds);
   const isFresh = remainingSeconds === totalSeconds;
   const stateLabel =
     remainingSeconds === 0 ? '쿼터 종료' : isRunning ? '진행 중' : isFresh ? '경기 전' : '일시정지';
@@ -247,8 +247,7 @@ export function TimerPanel({
    * clamp가 "링이 엉뚱하게 그려지는" 증상만 덮고 원인(분모가 안 자라는 것)은 놔둔 셈이다.
    * totalSeconds가 추가시간을 품게 된 지금은 이 식이 음수가 될 일이 없다.
    */
-  const elapsedRatio =
-    totalSeconds > 0 ? Math.min(1, Math.max(0, (totalSeconds - remainingSeconds) / totalSeconds)) : 0;
+  const elapsedRatio = elapsedRatioOf(totalSeconds, remainingSeconds);
   const strokeDashoffset = circumference * (1 - elapsedRatio);
 
   return (

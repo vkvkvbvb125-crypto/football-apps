@@ -4,6 +4,8 @@
 // 포지션이 전원 비어 있는 팀에서는 「미지정」을 지웠는지 안 지웠는지가 안 드러난다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { formatRecentAttendance } from '../src/features/attendance/utils/attendanceRate';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
@@ -99,7 +101,63 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
 // 양쪽에 걸면 같은 곳으로 가는 입구가 셋(제목 셰브론 · 로스터 칩 · 스탯 바)이 된다.
 // 지표는 스탯 바, 명단은 로스터 카드로 역할을 갈랐다.
 {
-  const tiles = [...homeTab.matchAll(/<StatTile label="([^"]+)"/g)].map((m) => m[1]);
+  /*
+    StatRow가 이 파일에 둘이다 — 히어로의 스탯 바와 「내 기록」. 예전엔 두 곳 다
+    문자열로 재고 있었고, 둘 다 지금 맞는 것이 **우연**이었다.
+
+      indexOf('<StatRow>')            앞의 것을 집는다. 스탯 바가 위에 있어서 맞았다.
+                                      내 기록이 위로 가면 조용히 뒤집힌다.
+      /<StatTile label="…"/ 전수      내 기록의 StatTile은 label이 다음 줄이라 정규식이
+                                      못 봤다. 포맷이 한 줄로 바뀌면 라벨 넷이 잡힌다.
+
+    둘 다 파서로 본다 — 어느 StatRow인지는 감싸는 View의 스타일 이름으로 가른다.
+    (규칙: JSX 구조를 보는 단언은 파서로 — teamsettings.check 머리말)
+  */
+  const file = fileURLToPath(new URL('../src/features/team/components/TeamHomeTab.tsx', import.meta.url));
+  const sf = ts.createSourceFile(file, homeTab, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+  /** 이 노드를 감싸는 가장 가까운 styles.X 이름 */
+  const ownerStyle = (n: ts.Node): string | null => {
+    for (let p = n.parent; p; p = p.parent) {
+      const tag = ts.isJsxElement(p) ? p.openingElement.getText() : null;
+      const m = tag?.match(/styles\.(\w+)/);
+      if (m) return m[1];
+    }
+    return null;
+  };
+
+  const rows = new Map<string, ts.JsxElement>();
+  const collectRows = (n: ts.Node) => {
+    if (ts.isJsxElement(n) && n.openingElement.tagName.getText() === 'StatRow') {
+      const owner = ownerStyle(n);
+      assert.ok(owner, 'StatRow를 감싸는 스타일을 못 찾았다');
+      rows.set(owner as string, n);
+    }
+    ts.forEachChild(n, collectRows);
+  };
+  collectRows(sf);
+
+  assert.deepEqual([...rows.keys()].sort(), ['myRecord', 'teamStats'], `StatRow의 자리가 바뀌었다: ${[...rows.keys()].join(' / ')}`);
+
+  const bar = rows.get('teamStats')!;
+  const labelsOf = (root: ts.Node) => {
+    const out: string[] = [];
+    const visit = (n: ts.Node) => {
+      const open = ts.isJsxSelfClosingElement(n) ? n : ts.isJsxElement(n) ? n.openingElement : null;
+      if (open && open.tagName.getText() === 'StatTile') {
+        const a = open.attributes.properties.find(
+          (x) => ts.isJsxAttribute(x) && x.name.getText() === 'label'
+        ) as ts.JsxAttribute | undefined;
+        const init = a?.initializer;
+        if (init && ts.isStringLiteral(init)) out.push(init.text);
+        else out.push(`(문자열이 아님: ${init?.getText() ?? '없음'})`);
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(root);
+    return out;
+  };
+  const tiles = labelsOf(bar);
   assert.deepEqual(tiles, ['총 경기', '멤버', '참석'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
 
   // 로스터 제목은 「팀원」 — 스탯 바의 「멤버」와 겹치지 않게
@@ -107,8 +165,8 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
     '로스터 제목이 「팀원 N명」이 아니다 — 스탯 바의 「멤버」와 문구가 겹친다');
 
   // 스탯 바에는 진입이 없다. StatTile을 Pressable로 감싸면 입구가 셋이 된다
-  const bar = homeTab.slice(homeTab.indexOf('<StatRow>'), homeTab.indexOf('</StatRow>'));
-  assert.ok(!/Pressable|onPress/.test(bar), '스탯 바에 진입이 붙었다 — 멤버 탭 입구가 셋이 된다');
+  // (부정 단언 — bar 구간 안에 onPress를 넣어 실패하는 것을 확인했다)
+  assert.ok(!/Pressable|onPress/.test(bar.getText()), '스탯 바에 진입이 붙었다 — 멤버 탭 입구가 셋이 된다');
 
   // 제목의 진입은 남아 있어야 한다. 2명 이하 팀은 로스터 칩이 없어 이 길뿐이다
   assert.ok(/onPress=\{onGoMembers\}/.test(homeTab), '제목에서 멤버 탭으로 가는 길이 사라졌다');

@@ -344,6 +344,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
             matches={matches}
             teamRate={teamRate}
             inviteCodeDisplay={inviteCodeDisplay}
+            inviteUrl={inviteUrl}
             copied={copied}
             onPickEmblem={handlePickEmblem}
             onClearEmblem={handleClearEmblem}

@@ -12,6 +12,7 @@
 //   list    공지·게시글처럼 줄줄이 쌓이는 것. 가라앉혀서 위 셋을 방해하지 않는다.
 import type { ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Text } from './nativeText';
 import { colors, font, radius, shadow } from '../theme';
@@ -180,11 +181,21 @@ export function Badge({ label, tone = 'muted' }: { label: string; tone?: 'green'
 export function StatTile({
   label,
   value,
+  icon,
   accent,
   tone = 'green',
 }: {
   label: string;
   value: string;
+  /**
+   * 라벨 앞 아이콘 — 선택이다.
+   *
+   * 「격자 안에서 서로 구분해야 할 때만 붙인다」가 규칙이다. 칸이 하나뿐인 자리
+   * (팀 홈의 「내 기록」)나 칸마다 이미 카드로 갈려 있는 자리(홈 Bento 3칸)에서는
+   * 구분할 대상이 없어서 장식만 남는다 — 타일 색을 초록 하나로 모을 때와 같은 논리다.
+   * 그래서 전부에 붙이지 않고, 안 넘기면 예전 모양 그대로다.
+   */
+  icon?: keyof typeof Ionicons.glyphMap;
   /** 숫자를 강조할지 — 0이거나 뜻이 없으면 끈다 */
   accent?: boolean;
   /**
@@ -197,7 +208,10 @@ export function StatTile({
 }) {
   return (
     <View style={styles.stat}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.statLabelRow}>
+        {!!icon && <Ionicons name={icon} size={13} color={colors.textMuted} />}
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
       <Text
         style={[styles.statValue, accent && { color: tone === 'danger' ? colors.danger : colors.green }]}
         numberOfLines={1}
@@ -307,6 +321,8 @@ const styles = StyleSheet.create({
 
   statRow: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, gap: 4 },
+  /* 아이콘은 라벨과 같은 줄, 같은 색이다 — 숫자보다 물러나 있어야 숫자끼리 비교된다 */
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel: { ...font.micro, color: colors.textMuted, fontWeight: '700' },
   statValue: { ...font.title, ...font.num, color: colors.text },
 });

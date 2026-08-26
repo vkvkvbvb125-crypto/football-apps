@@ -357,10 +357,38 @@ export function TeamHomeTab({
                 문이고, 같은 화면에 같은 곳으로 가는 입구가 둘이면 어느 쪽이 무엇인지
                 흐려진다. 여기는 지표, 저기는 명단이다.
               */}
-              <StatTile label="총 경기" value={String(matches.length)} accent />
-              <StatTile label="멤버" value={String(members.length)} accent />
-              <StatTile label="참석" value={formatRate(teamRate)} accent />
+              <StatTile label="경기" value={String(matches.length)} icon="calendar-outline" accent />
+              {/*
+                「멤버」는 하단 탭 「팀」의 people-outline을 쓰지 않는다.
+                거기는 눌러서 가는 화면 이름이고 여기는 아무 데도 안 가는 지표다 —
+                스탯 바에 진입이 없다는 건 검사가 이미 붙들고 있다. 같은 그림을 쓰면
+                그림이 「누를 수 있다」고 거짓말한다. 한 겹 안쪽인 person-outline을 쓴다.
+              */}
+              <StatTile label="멤버" value={String(members.length)} icon="person-outline" accent />
+              {/*
+                trending-up이 아니다 — 값이 내려가도 화살표가 위를 가리켜 거짓말이 된다.
+                checkmark 계열도 아니다. 앱에서 그건 「했다」는 동작 완료를 뜻해서
+                지표 칸에 쓰면 이미 끝난 일로 읽힌다.
+              */}
+              <StatTile label="참석" value={formatRate(teamRate)} icon="stats-chart-outline" accent />
             </StatRow>
+
+            {/*
+              기준을 상시로 적는다.
+
+              이 화면에는 참석률 창이 둘 있다. 위 「참석」은 monthlyAttendanceRate(이번 달)이고,
+              아래 멤버 행과 「내 기록」은 memberAttendanceRate(최근 3개월)다. 팀 지표는
+              「이번 달 어땠나」, 개인 지표는 표본이 작아 흔들리니 3개월 — 둘 다 근거가 있어서
+              합치지 않는다(attendanceRate.ts 머리말).
+
+              그래서 접어두지 않는다. 눌러야 보이는 안내는 안 누른 사람이 계속 오해하는데,
+              여기서는 두 창이 한 화면에 같이 서 있어서 오해가 기본값이 된다.
+              ⓘ는 누르는 표식이 아니라 「이건 안내다」라는 뜻이다.
+            */}
+            <View style={styles.statNote}>
+              <Ionicons name="information-circle-outline" size={13} color={colors.textFaint} />
+              <Text style={styles.statNoteText}>이번 달 치른 경기 기준이에요</Text>
+            </View>
           </View>
 
           {/* 초대 코드 공유는 총무 전용이 아니다 — 홈의 "친구 초대하기"가 멤버를 여기로 보내는데
@@ -515,10 +543,15 @@ export function TeamHomeTab({
                       onPress={onGoMembers}
                       hitSlop={10}
                       accessibilityRole="button"
-                      accessibilityLabel={`팀원 ${members.length}명 전체 보기`}
+                      accessibilityLabel="멤버 전체 보기"
                       style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
                     >
-                      <Text style={styles.sectionTitle}>팀원 {members.length}명</Text>
+                      {/*
+                        숫자를 뺐다. 바로 위 스탯 바가 같은 수를 이미 말한다 —
+                        「멤버 6」과 「팀원 6명」이 한 화면에서 같은 값을 두 번 적고 있었다.
+                        지표는 스탯 바, 명단은 이 카드로 역할을 갈랐으니 제목은 이름만 든다.
+                      */}
+                      <Text style={styles.sectionTitle}>멤버</Text>
                       <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
                     </Pressable>
                 </View>
@@ -925,6 +958,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   myRecordTitle: { color: colors.text, ...font.title },
+  /* 기준 안내 — 스탯 바 바로 아래. 값보다 물러나야 하므로 가장 옅은 글자색이다 */
+  statNote: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
+  statNoteText: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
+
   /* 2×2. 1×4는 412px에서 칸당 88px이라 「공지사항」 네 글자가 잘린다.
      칸 크기는 비율로 잡는다 — 고정 px를 두면 폭이 다른 기기에서 한 칸이 밀린다 */
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

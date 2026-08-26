@@ -93,6 +93,29 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   assert.ok(rowCall, '멤버 행의 참석 계산을 못 찾음');
   assert.ok(/memberAttendanceRate\(memberRateMatches, m\)/.test(rowCall![0]),
     `멤버 행이 다른 창을 센다: ${rowCall![0]}`);
+
+  /*
+   * 창이 둘이라는 것 자체를 붙든다.
+   *
+   *   팀 지표 (스탯 바의 「참석」)   monthlyAttendanceRate  →  이번 달
+   *   개인 지표 (멤버 행 · 내 기록)  memberAttendanceRate   →  최근 3개월
+   *
+   * 「창을 새로 만들지 마라」를 계속 지켜 왔는데, 창이 이미 둘이라는 걸 모르고 있었다.
+   * 둘 다 근거가 있다 — 팀은 「이번 달 어땠나」이고 개인은 표본이 작아 한 번 빠지면
+   * 75%까지 흔들린다(attendanceRate.ts 머리말). 그래서 합치지 않고 유지한다.
+   *
+   * 대신 뒤바뀌는 것을 막는다. 스탯 바가 3개월을 세거나 개인 지표가 이번 달을 세면
+   * 옆에 적힌 기준 문구가 그 자리에서 거짓말이 된다.
+   */
+  const teamRateLine = screen.match(/const teamRate = [^;]+;/);
+  assert.ok(teamRateLine, '팀 참석률 계산을 못 찾음');
+  assert.ok(/monthlyAttendanceRate\(/.test(teamRateLine![0]),
+    `팀 지표가 개인 창을 센다: ${teamRateLine![0]} — 스탯 바 옆의 「이번 달 …」이 거짓이 된다`);
+  assert.ok(!/memberAttendanceRate\(/.test(teamRateLine![0]), `팀 지표가 개인 창을 센다: ${teamRateLine![0]}`);
+
+  // 그 기준 문구가 실제로 화면에 있어야 붙들 것이 있다
+  assert.ok(/이번 달 치른 경기 기준이에요/.test(homeTab),
+    '스탯 바 옆 기준 안내가 없다 — 한 화면에 창이 둘인데 어느 쪽인지 말하지 않는다');
 }
 
 // ── 5. 스탯 바와 로스터 카드가 같은 말을 두 번 하지 않는가 ────────
@@ -164,11 +187,39 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
     「또 그 검사네」가 되는 순간 단언을 지우는 쪽이 쉬워진다.
   */
   const tiles = labelsOf(bar);
-  assert.deepEqual(tiles, ['총 경기', '멤버', '참석'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
+  /* 「총 경기」였다. 계산이 matches.length(팀 생성 이래 전부)라 「총」이 값과 맞았지만,
+     기간이 없는 「경기」도 누적을 가리키는 데 거짓이 아니고 옆 두 칸과 길이가 맞는다.
+     계산은 그대로다 — 라벨만 값에 맞춰 줄였다. */
+  assert.deepEqual(tiles, ['경기', '멤버', '참석'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
 
-  // 로스터 제목은 「팀원」 — 스탯 바의 「멤버」와 겹치지 않게
-  assert.ok(/<Text style=\{styles\.sectionTitle\}>팀원 \{members\.length\}명<\/Text>/.test(homeTab),
-    '로스터 제목이 「팀원 N명」이 아니다 — 스탯 바의 「멤버」와 문구가 겹친다');
+  /*
+    로스터 제목에는 숫자를 안 적는다.
+
+    예전엔 「팀원 N명」이었고 이 단언도 그 문구를 붙들었다. 스탯 바와 문구가 겹치지
+    않게 한 것인데, 겹치는 건 문구가 아니라 **값**이었다 — 「멤버 6」과 「팀원 6명」이
+    한 화면에서 같은 수를 두 번 적었다. 이름을 갈라도 그건 안 풀린다.
+    근거는 그대로다(지표는 스탯 바, 명단은 이 카드). 보는 대상만 바뀐다.
+
+    제목 Text 노드를 파서로 집는다 — 파일 어딘가에 members.length가 있는지가 아니라
+    그 줄이 무엇을 그리는지를 본다.
+  */
+  let title: ts.JsxElement | null = null;
+  const findTitle = (n: ts.Node) => {
+    if (
+      ts.isJsxElement(n) &&
+      n.openingElement.tagName.getText() === 'Text' &&
+      n.openingElement.getText().includes('styles.sectionTitle')
+    ) {
+      title = n;
+    }
+    ts.forEachChild(n, findTitle);
+  };
+  findTitle(sf);
+  assert.ok(title, '로스터 제목을 못 찾았다');
+  const titleText = (title as ts.JsxElement).children.map((c) => c.getText()).join('').trim();
+  assert.equal(titleText, '멤버', `로스터 제목이 「멤버」가 아니다: ${titleText}`);
+  assert.ok(!/members\.length/.test(titleText),
+    `로스터 제목에 숫자가 붙었다 — 스탯 바가 같은 수를 이미 말한다: ${titleText}`);
 
   // 스탯 바에는 진입이 없다. StatTile을 Pressable로 감싸면 입구가 셋이 된다
   // (부정 단언 — bar 구간 안에 onPress를 넣어 실패하는 것을 확인했다)

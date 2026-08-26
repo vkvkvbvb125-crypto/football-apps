@@ -157,6 +157,12 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
     visit(root);
     return out;
   };
+  /*
+    이 방식은 「내 기록의 StatTile을 한 줄로 정리」 같은 변이를 **일부러 안 잡는다.**
+    무해한 포맷 변경이고, 옛 정규식은 그걸 라벨 넷으로 읽어 엉뚱하게 실패했다.
+    포맷만 바꿔도 깨지는 검사는 다음 사람이 검사를 무르게 만든다 —
+    「또 그 검사네」가 되는 순간 단언을 지우는 쪽이 쉬워진다.
+  */
   const tiles = labelsOf(bar);
   assert.deepEqual(tiles, ['총 경기', '멤버', '참석'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
 

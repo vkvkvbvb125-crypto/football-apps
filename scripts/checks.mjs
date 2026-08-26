@@ -25,6 +25,18 @@
 // 골라 돌리기 시작하면, 고르는 사람이 관련 없다고 판단한 검사가 목록에서 빠지고
 // 빠졌다는 사실이 아무 데도 안 남는다. 느리면 느린 대로 전부 돌린다.
 //
+// ── 파이프로 감싸지 말 것 ───────────────────────────────────────────
+//
+//   node scripts/checks.mjs | tail -2 && git commit ...
+//
+// 이렇게 쓰면 파이프라인의 exit code가 tail의 것이라 **FAIL이어도 0이 나오고 커밋이
+// 나간다.** 러너를 아무리 잘 만들어도 무의미해진다. fb0009f가 나간 실제 경로가
+// 이것이었을 수 있다 — 그때 출력에는 FAIL이 찍혀 있었다.
+//
+//   node scripts/checks.mjs > /tmp/chk.txt 2>&1; echo "exit=$?"
+//
+// 리다이렉트하고 $?를 눈으로 확인한 뒤에 커밋한다.
+//
 // 쓰는 법:  node scripts/checks.mjs        (또는 npm run check)
 import { readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';

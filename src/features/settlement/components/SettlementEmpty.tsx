@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors } from '../../../theme';
+import { colors, radius } from '../../../theme';
 
 export function SettlementEmpty({ isAdmin }: { isAdmin: boolean }) {
   return (
@@ -27,15 +27,15 @@ const styles = StyleSheet.create({
   icon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     // 홈의 빈 상태 아이콘과 같은 계열 — 두 탭이 같은 빈 상태를 다르게 그리면 안 된다
     backgroundColor: colors.greenTint,
     borderWidth: 1,
-    borderColor: 'rgba(74,222,128,0.18)',
+    borderColor: 'rgba(34,197,94,0.18)',
     marginBottom: 4,
   },
   title: { color: colors.text, fontSize: 15, fontWeight: '800' },
-  sub: { color: colors.textDim, fontSize: 12.5, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
+  sub: { color: colors.textDim, fontSize: 12, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
 });

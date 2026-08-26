@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
   list: {
     marginTop: 6,
     borderRadius: radius.button,
+    borderCurve: 'continuous',
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.greenDeep,
@@ -136,6 +137,6 @@ const styles = StyleSheet.create({
   },
   itemName: { color: colors.textStrong, fontSize: 13, fontWeight: '700' },
   everyoneName: { color: colors.green, fontWeight: '800' },
-  itemHint: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600' },
+  itemHint: { color: colors.textFaint, fontSize: 10, fontWeight: '600' },
   mention: { color: colors.green, fontWeight: '800' },
 });

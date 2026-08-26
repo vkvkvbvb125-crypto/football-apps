@@ -177,11 +177,31 @@ export function Badge({ label, tone = 'muted' }: { label: string; tone?: 'green'
  * 라벨이 위, 숫자가 아래다. 숫자를 먼저 읽고 라벨로 확인하는 순서라야
  * 격자를 훑을 때 숫자끼리 같은 높이에서 비교된다.
  */
-export function StatTile({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+export function StatTile({
+  label,
+  value,
+  accent,
+  tone = 'green',
+}: {
+  label: string;
+  value: string;
+  /** 숫자를 강조할지 — 0이거나 뜻이 없으면 끈다 */
+  accent?: boolean;
+  /**
+   * 강조색.
+   *
+   * 초록만 있었는데, 미납 금액처럼 「크면 나쁜 숫자」에도 초록이 붙어 좋아 보였다.
+   * 색이 숫자의 뜻을 뒤집으면 안 된다.
+   */
+  tone?: 'green' | 'danger';
+}) {
   return (
     <View style={styles.stat}>
       <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, accent && { color: colors.green }]} numberOfLines={1}>
+      <Text
+        style={[styles.statValue, accent && { color: tone === 'danger' ? colors.danger : colors.green }]}
+        numberOfLines={1}
+      >
         {value}
       </Text>
     </View>

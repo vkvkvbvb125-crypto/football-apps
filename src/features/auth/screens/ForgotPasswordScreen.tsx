@@ -11,6 +11,7 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { useAuthStore } from '../stores/authStore';
 import { isValidEmail, suggestEmailFix, EMAIL_FORMAT_HINT } from '../email';
 import { colors, radius } from '../../../theme';
+import { GreenAmbient } from '../../../components/ScreenGradient';
 
 export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
   const sendPasswordReset = useAuthStore((s) => s.sendPasswordReset);
@@ -42,6 +43,8 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
+      <GreenAmbient />
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={colors.textStrong} />
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
 
   head: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 8 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 16, fontWeight: '800' },
+  headTitle: { flex: 1, textAlign: 'center', color: colors.text, fontSize: 17, fontWeight: '800' },
 
   body: { paddingHorizontal: 24, paddingTop: 16, gap: 14 },
   desc: { color: colors.textMuted, fontSize: 13, fontWeight: '500', lineHeight: 20 },
@@ -128,14 +131,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: radius.button,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
     color: colors.text,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '600',
   },
-  errorText: { color: colors.danger, fontSize: 12.5, fontWeight: '600' },
-  noticeText: { color: colors.green, fontSize: 12.5, fontWeight: '600', lineHeight: 19 },
+  errorText: { color: colors.danger, fontSize: 12, fontWeight: '600' },
+  noticeText: { color: colors.green, fontSize: 12, fontWeight: '600', lineHeight: 19 },
   suggestRow: {
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(210,163,76,0.35)',
   },
-  suggestText: { color: colors.gold, fontSize: 12.5, fontWeight: '600' },
+  suggestText: { color: colors.gold, fontSize: 12, fontWeight: '600' },
   suggestStrong: { fontWeight: '800' },
 
   linkRow: { alignItems: 'center', paddingTop: 6 },

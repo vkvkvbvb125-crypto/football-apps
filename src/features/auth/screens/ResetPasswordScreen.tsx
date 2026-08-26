@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/authStore';
 import { isValidPassword, MIN_PASSWORD } from '../password';
 import { PasswordChecklist } from '../components/PasswordChecklist';
 import { colors, radius } from '../../../theme';
+import { GreenAmbient } from '../../../components/ScreenGradient';
 
 export function ResetPasswordScreen() {
   const updatePassword = useAuthStore((s) => s.updatePassword);
@@ -26,6 +27,8 @@ export function ResetPasswordScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
+      <GreenAmbient />
       <ScrollView
         contentContainerStyle={[styles.body, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled"
@@ -89,14 +92,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: radius.button,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
     color: colors.text,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '600',
   },
-  fieldHint: { color: colors.gold, fontSize: 11.5, fontWeight: '600' },
-  errorText: { color: colors.danger, fontSize: 12.5, fontWeight: '600' },
+  fieldHint: { color: colors.gold, fontSize: 11, fontWeight: '600' },
+  errorText: { color: colors.danger, fontSize: 12, fontWeight: '600' },
 
   cta: {
     height: 52,

@@ -100,7 +100,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 const TONE = {
-  green: { bg: 'rgba(74,222,128,0.14)', fg: colors.green },
+  green: { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
   gold: { bg: colors.goldTint, fg: colors.gold },
   muted: { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
 } as const;
@@ -142,17 +142,15 @@ const styles = StyleSheet.create({
   wrap: { gap: 14 },
 
   amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 7 },
-  amountTotal: { color: colors.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
+  amountTotal: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
   amountPer: { color: colors.textDim, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
 
   ringWrap: { alignItems: 'center', gap: 8 },
   ringCount: { color: colors.textBody, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
 
-  groupTitle: { color: colors.textDim, fontSize: 11.5, fontWeight: '800' },
+  groupTitle: { color: colors.textDim, fontSize: 11, fontWeight: '800' },
   group: {
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.inputBg,
     overflow: 'hidden',
   },
@@ -165,10 +163,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  rowSelected: { backgroundColor: 'rgba(74,222,128,0.07)' },
+  rowSelected: { backgroundColor: 'rgba(34,197,94,0.07)' },
   rowName: { flex: 1, color: colors.textStrong, fontSize: 13, fontWeight: '700' },
   badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { fontSize: 10.5, fontWeight: '800' },
+  badgeText: { fontSize: 10, fontWeight: '800' },
 
   refresh: {
     flexDirection: 'row',
@@ -176,10 +174,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 7,
     height: 46,
-    borderRadius: radius.button,
+    borderRadius: radius.pill,
     backgroundColor: colors.cardAlt,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  refreshText: { color: colors.textStrong, fontSize: 13.5, fontWeight: '800' },
+  refreshText: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
 });

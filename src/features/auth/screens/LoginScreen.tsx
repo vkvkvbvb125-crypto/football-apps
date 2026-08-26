@@ -11,6 +11,8 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, CREDENTIAL_MISMATCH, type SocialProvider } from '../stores/authStore';
 import { colors, radius } from '../../../theme';
+import { GreenFill } from '../../../components/Surface';
+import { GreenAmbient } from '../../../components/ScreenGradient';
 
 
 /**
@@ -45,6 +47,34 @@ const SOCIALS: {
   { key: 'apple', label: '애플', icon: 'logo-apple', bg: '#2B2B2B', fg: '#FFFFFF' },
 ];
 
+/**
+ * 아이콘이 붙은 입력칸.
+ *
+ * 예전엔 placeholder만 있는 맨 입력칸 둘이 나란히 있어서, 훑을 때 어느 칸이 무엇인지
+ * 글자를 읽어야 알 수 있었다. 봉투·자물쇠는 글자보다 먼저 눈에 들어온다.
+ * 이 화면에서 두 번 쓰이므로 여기 안에 둔다 — 다른 화면이 필요해지면 그때 밖으로 옮긴다.
+ */
+function AuthField({
+  icon,
+  right,
+  ...input
+}: React.ComponentProps<typeof TextInput> & {
+  icon: keyof typeof Ionicons.glyphMap;
+  right?: React.ReactNode;
+}) {
+  return (
+    <View style={styles.field}>
+      <Ionicons name={icon} size={18} color={colors.textMuted} />
+      <TextInput
+        style={styles.fieldInput}
+        placeholderTextColor={colors.placeholder}
+        {...input}
+      />
+      {right}
+    </View>
+  );
+}
+
 export function LoginScreen({ navigation }: { navigation: any }) {
   const signInWithSocial = useAuthStore((s) => s.signInWithSocial);
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
@@ -55,6 +85,8 @@ export function LoginScreen({ navigation }: { navigation: any }) {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  /** 비밀번호를 잘못 친 채로 계속 실패하는 걸 막는다 — 레퍼런스의 우측 eye 아이콘 */
+  const [passwordShown, setPasswordShown] = useState(false);
 
   /** 비밀번호가 틀렸다 = 소셜로 가입했을 가능성 — 구분선 문구로 알려준다.
       다른 오류(만료된 링크 등)에는 붙이지 않는다. 답이 저 아래 있지 않다. */
@@ -74,6 +106,8 @@ export function LoginScreen({ navigation }: { navigation: any }) {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
+      <GreenAmbient />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }]}
         keyboardShouldPersistTaps="handled"
@@ -95,29 +129,46 @@ export function LoginScreen({ navigation }: { navigation: any }) {
             대신 accessibilityLabel을 붙여 스크린리더에서는 항목 이름이 읽히게 한다
             (placeholder는 입력을 시작하면 사라져서 그것만으로는 접근성이 깨진다). */}
         <View style={styles.form}>
-          <TextInput
-            style={styles.input}
+          <AuthField
+            icon="mail-outline"
             value={email}
             onChangeText={setEmail}
             placeholder="이메일"
-            placeholderTextColor={colors.placeholder}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
             accessibilityLabel="이메일"
           />
 
-          <TextInput
-            style={styles.input}
+          <AuthField
+            icon="lock-closed-outline"
             value={password}
             onChangeText={setPassword}
             placeholder="비밀번호"
-            placeholderTextColor={colors.placeholder}
-            secureTextEntry
+            secureTextEntry={!passwordShown}
             autoCapitalize="none"
             onSubmitEditing={submit}
             returnKeyType="done"
             accessibilityLabel="비밀번호"
+            right={
+              <Pressable
+                onPress={() => setPasswordShown((v) => !v)}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={passwordShown ? '비밀번호 가리기' : '비밀번호 보기'}
+              >
+                {/*
+                  아이콘은 "지금 어떤 상태인가"를 그린다 — 뜬 눈이면 보이는 중, 감은 눈이면 가린 중.
+                  반대로(눌렀을 때 벌어질 일) 달아 뒀었는데, 눈 그림은 상태로 먼저 읽힌다.
+                  누르면 무슨 일이 생기는지는 accessibilityLabel이 말한다.
+                */}
+                <Ionicons
+                  name={passwordShown ? 'eye-outline' : 'eye-off-outline'}
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </Pressable>
+            }
           />
 
           {/* 오류는 버튼 바로 위에 — 눌렀는데 아무 반응 없어 보이면 안 된다 */}
@@ -128,6 +179,7 @@ export function LoginScreen({ navigation }: { navigation: any }) {
             onPress={submit}
             style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}
           >
+            <GreenFill />
             <Text style={styles.ctaText}>{signingIn ? '잠시만요…' : '로그인'}</Text>
           </Pressable>
 
@@ -199,23 +251,45 @@ const styles = StyleSheet.create({
 
   // ── 입력 폼 (카드 없이 배경 위에 바로) ────────────────
   form: { gap: 10 },
-  input: {
-    height: 52,
+  /** 아이콘 + 입력 + (선택)우측 슬롯이 한 줄에 앉는 껍데기 */
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 56,
     paddingHorizontal: 16,
     borderRadius: radius.button,
+    borderCurve: 'continuous',
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  /*
+   * 배경·반경은 껍데기(field)가 갖지만 높이는 입력칸도 같이 채워야 한다.
+   *
+   * flex: 1은 가로만 채운다. 세로는 비워 뒀더니 웹에서 <input>이 제 고유 높이(20px 남짓)로
+   * 줄고 껍데기의 alignItems:'center'가 그걸 56px 한가운데에 놓았다 — 글자가 들어가는
+   * 칸이 껍데기의 3분의 1이었고, 포커스 링이 짧게 떠서 그게 눈에 보였다.
+   * 누를 수 있는 범위도 그 20px뿐이라 위아래 여백을 눌러도 커서가 안 잡혔다.
+   *
+   * paddingVertical: 0은 안드로이드용이다 — TextInput이 기본 세로 패딩을 얹어서
+   * 늘린 높이 안에서 글자가 다시 내려앉는다.
+   */
+  fieldInput: {
+    flex: 1,
+    alignSelf: 'stretch',
+    paddingVertical: 0,
     color: colors.text,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '600',
   },
 
-  errorText: { color: colors.danger, fontSize: 12.5, fontWeight: '600' },
+  errorText: { color: colors.danger, fontSize: 12, fontWeight: '600' },
 
   cta: {
-    height: 52,
+    overflow: 'hidden', // GreenFill을 모서리 안에 가둔다
+    // 화면에서 가장 강한 요소 — 입력칸(56)보다 살짝 크게 잡아 마지막 단계임을 알린다
+    height: 58,
     borderRadius: radius.button,
+    borderCurve: 'continuous',
     backgroundColor: colors.green,
     alignItems: 'center',
     justifyContent: 'center',
@@ -225,13 +299,13 @@ const styles = StyleSheet.create({
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
 
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 10 },
-  linkText: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700' },
+  linkText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
   linkDivider: { width: 1, height: 11, backgroundColor: colors.border },
 
   // ── 간편 로그인 ───────────────────────────────────────
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   orLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  orText: { color: colors.textDim, fontSize: 11.5, fontWeight: '700' },
+  orText: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   orTextHint: { color: colors.green },
 
   socialRow: { flexDirection: 'row', justifyContent: 'center', gap: 22 },
@@ -250,5 +324,5 @@ const styles = StyleSheet.create({
   socialMark: { fontSize: 22, fontWeight: '800' },
   socialLabel: { color: colors.textBody, fontSize: 11, fontWeight: '700' },
 
-  footNote: { color: colors.textFaint, fontSize: 11.5, fontWeight: '600', textAlign: 'center' },
+  footNote: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });

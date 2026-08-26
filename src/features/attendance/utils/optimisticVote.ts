@@ -46,6 +46,9 @@ export function rollbackTarget(current: VoteRow | null | undefined): VoteRow | n
  * capacity.ts가 이 값을 오름차순으로 정렬해 대기 순번을 매기는데, 서버는 재투표에서
  * 이 칸을 올리지 않는다(트리거가 없고 castVote 페이로드에도 없다). now로 통일하면
  * 낙관 반영에서 맨 뒤로 갔다가 재조회에서 원래 순번으로 튀어 올라온다.
+ *
+ * 새로 찍을 때의 now는 기기 시계다 — 시계가 어긋난 기기면 정원이 찬 경계에서 낙관 구간
+ * 동안만 대기 순번이 한 칸 다를 수 있다. 재조회가 서버 값으로 덮으므로 그대로 둔다.
  */
 export function makeOptimisticVote(
   matchId: string,

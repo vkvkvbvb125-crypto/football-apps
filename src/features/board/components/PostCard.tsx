@@ -267,6 +267,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 14,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -283,8 +284,8 @@ const styles = StyleSheet.create({
   },
   avatarPhoto: { width: '100%', height: '100%' },
   avatarText: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
-  postAuthor: { color: colors.textStrong, fontSize: 12.5, fontWeight: '800' },
-  postTime: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600' },
+  postAuthor: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
+  postTime: { color: colors.textFaint, fontSize: 10, fontWeight: '600' },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: colors.greenTint },
   categoryBadgeText: { color: colors.green, fontSize: 10, fontWeight: '800' },
 
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
     width: 200,
     backgroundColor: colors.card,
     borderRadius: 14,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -338,5 +340,5 @@ const styles = StyleSheet.create({
 
   postFoot: { flexDirection: 'row', gap: 16, paddingTop: 2 },
   footItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  footText: { color: colors.textDim, fontSize: 11.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  footText: { color: colors.textDim, fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

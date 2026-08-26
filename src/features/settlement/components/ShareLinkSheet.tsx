@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   headline: {
     color: colors.green,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     letterSpacing: -0.3,
     marginTop: 18,
@@ -173,18 +173,16 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: radius.button,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  linkText: { color: colors.green, fontSize: 12.5, fontWeight: '600' },
+  linkText: { color: colors.green, fontSize: 12, fontWeight: '600' },
 
   actionRow: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 22 },
   action: { flex: 1, alignItems: 'center', gap: 7, paddingVertical: 4 },
   // 48px — 탭 타겟 최소 크기(44px)를 넘긴다
   actionCircle: {
     width: 48,
-    height: 48,
-    borderRadius: 24,
+    height: 46,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardAlt,

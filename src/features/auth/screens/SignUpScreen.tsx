@@ -17,6 +17,7 @@ import { isValidEmail, suggestEmailFix, EMAIL_FORMAT_HINT } from '../email';
 import { isValidPassword, MIN_PASSWORD } from '../password';
 import { PasswordChecklist } from '../components/PasswordChecklist';
 import { colors, radius } from '../../../theme';
+import { GreenAmbient } from '../../../components/ScreenGradient';
 
 export function SignUpScreen({ navigation }: { navigation: any }) {
   const signUpWithEmail = useAuthStore((s) => s.signUpWithEmail);
@@ -60,6 +61,8 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
+      <GreenAmbient />
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={colors.textStrong} />

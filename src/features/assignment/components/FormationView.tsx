@@ -92,11 +92,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headText: { flex: 1, color: colors.textStrong, fontSize: 12.5, fontWeight: '800' },
+  headText: { flex: 1, color: colors.textStrong, fontSize: 12, fontWeight: '800' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.chip, backgroundColor: colors.greenTint },
   badgeText: { color: colors.green, fontSize: 11, fontWeight: '800', fontVariant: ['tabular-nums'] },
 
-  goalLabel: { color: colors.textFaint, fontSize: 10.5, fontWeight: '700', textAlign: 'center' },
+  goalLabel: { color: colors.textFaint, fontSize: 10, fontWeight: '700', textAlign: 'center' },
   goalLine: { height: 1, marginHorizontal: 60, backgroundColor: colors.greenDeep },
 
   row: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
@@ -105,6 +105,6 @@ const styles = StyleSheet.create({
   // 골키퍼만 색을 달리한다 — 한 명뿐이라 줄 위치보다 색이 빨리 읽힌다
   dotKeeper: { backgroundColor: colors.gold },
   slotName: { color: colors.text, fontSize: 12, fontWeight: '700' },
-  slotPos: { color: colors.textDim, fontSize: 9.5, fontWeight: '600' },
-  slotRole: { color: colors.textFaint, fontSize: 9, fontWeight: '600' },
+  slotPos: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
+  slotRole: { color: colors.textFaint, fontSize: 10, fontWeight: '600' },
 });

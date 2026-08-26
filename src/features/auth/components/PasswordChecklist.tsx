@@ -37,7 +37,7 @@ export function PasswordChecklist({ value }: { value: string }) {
 }
 
 const styles = StyleSheet.create({
-  head: { color: colors.textDim, fontSize: 11.5, fontWeight: '700' },
+  head: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

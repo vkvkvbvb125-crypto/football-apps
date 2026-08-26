@@ -216,7 +216,16 @@ export function RosterSheet({
     [collapsedH, expandedH, heightAnim]
   );
 
-  /** 아래 칸이 자라거나 줄어든 만큼 시트 높이를 따라 옮긴다 */
+  /**
+   * 아래 칸이 자라거나 줄어든 만큼 시트 높이를 따라 옮긴다.
+   *
+   * 시트 높이는 처음 한 번 재고 굳는다(collapsedH). 그 뒤로는 Animated 값이 높이를 쥐고
+   * 있어서 내용이 자라도 시트는 안 자란다 — 대신 flex:1인 명단이 그만큼 줄어든다.
+   * 알약을 펼쳤더니 1명짜리 팀에서 그 한 줄이 통째로 사라졌다. 명단을 원래 크기로 두려면
+   * 자란 만큼을 시트가 받아야 한다.
+   *
+   * 「내 응답」 칸을 붙이는 것은 순수 추가로 끝나지 않았다. 이 함수가 그 대가다.
+   */
   const growSheet = (delta: number) => {
     if (collapsedH == null || delta === 0) return;
     setCollapsedH(collapsedH + delta);

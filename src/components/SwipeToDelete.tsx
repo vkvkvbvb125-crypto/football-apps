@@ -157,5 +157,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 3,
   },
-  actionText: { color: colors.danger, fontSize: 11.5, fontWeight: '800' },
+  actionText: { color: colors.danger, fontSize: 11, fontWeight: '800' },
 });

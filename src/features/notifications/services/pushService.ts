@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '../../../lib/supabase';
+import { colors } from '../../../theme';
 
 /**
  * 앱이 켜져 있는 동안 도착한 알림을 어떻게 할지.
@@ -31,7 +32,7 @@ async function ensureAndroidChannel() {
     name: '킥데이 알림',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#4ADE80',
+    lightColor: colors.green,
   });
 }
 

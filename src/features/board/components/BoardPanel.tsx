@@ -254,11 +254,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: colors.inputBg,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   chipOn: { backgroundColor: colors.greenTint, borderColor: colors.greenDeep },
-  chipText: { color: colors.textDim, fontSize: 11.5, fontWeight: '700' },
+  chipText: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   chipTextOn: { color: colors.green, fontWeight: '800' },
 
   writeBtn: {
@@ -266,16 +264,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 44,
-    borderRadius: radius.button,
+    height: 46,
+    borderRadius: radius.pill,
     backgroundColor: colors.green,
   },
-  writeBtnText: { color: colors.bgRoot, fontSize: 13.5, fontWeight: '800' },
+  writeBtnText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
 
   composer: {
     gap: 10,
     padding: 14,
     borderRadius: radius.card,
+    borderCurve: 'continuous',
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.greenDeep,
@@ -286,7 +285,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.button,
     backgroundColor: colors.inputBg,
     color: colors.text,
-    fontSize: 13.5,
+    fontSize: 13,
     textAlignVertical: 'top',
   },
   composerActions: { flexDirection: 'row', gap: 8 },
@@ -311,7 +310,7 @@ const styles = StyleSheet.create({
   composerSubmitText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
 
   empty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-  emptyText: { color: colors.textFaint, fontSize: 12.5, fontWeight: '600' },
+  emptyText: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
 
 
 

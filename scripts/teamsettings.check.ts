@@ -26,6 +26,19 @@ import ts from 'typescript';
 
 // CRLF를 정규화한다 — 안 하면 개행이 든 정규식이 못 찾고 항상 실패한다
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').split('\r').join('');
+/**
+ * indexOf인데, 두 번 이상 나오면 실패한다.
+ *
+ * 그냥 indexOf는 같은 꼴이 둘이 되는 날 조용히 앞의 것을 집는다. 그러면 검사는 통과하는데
+ * 재는 자리가 달라진다 — 이 파일이 그 사고의 현장이다. 위치를 앵커로 잡을 거면 그 앵커가
+ * 하나뿐이라는 것까지 같이 붙든다. 못 찾아도, 둘 이상이어도 「재료 없음」으로 시끄럽게 끝난다.
+ */
+const onlyIndexOf = (src: string, needle: string, what: string) => {
+  const n = src.split(needle).length - 1;
+  assert.equal(n, 1, `${what}: 앵커가 ${n}개다(1개여야 한다) — ${needle.slice(0, 50)}`);
+  return src.indexOf(needle);
+};
+
 const tab = read('src/features/team/components/TeamHomeTab.tsx');
 const screen = read('src/features/team/screens/TeamSettingsScreen.tsx');
 const home = read('src/features/team/screens/TeamHomeScreen.tsx');
@@ -65,10 +78,21 @@ const home = read('src/features/team/screens/TeamHomeScreen.tsx');
   };
   collect(sf);
 
-  const entry = src.indexOf('onPress={onOpenTeamSettings}');
-  assert.ok(entry > 0, '팀 홈에 팀 설정 진입이 없다');
-  const gated = gates.some((g) => entry >= g.getStart() && entry < g.getEnd());
-  assert.equal(gated, false, '팀 설정 진입이 총무 전용 구간 안에 있다 — 팀원은 팀을 나갈 방법이 없어진다');
+  /*
+    진입이 여럿이다 — 히어로의 「팀 설정 ›」과 「팀 정보를 채워주세요」 행이 같은 곳으로 간다.
+    indexOf로 첫 것을 집으면 순서가 바뀌는 날 판정이 뒤집힌다(뒤엣것은 총무 전용이다).
+    필요한 것은 「어느 하나라도 총무 게이트 밖에 있는가」다 — 팀원에게 문이 하나라도 있으면 된다.
+  */
+  const entries: number[] = [];
+  for (let i = src.indexOf('onPress={onOpenTeamSettings}'); i >= 0; i = src.indexOf('onPress={onOpenTeamSettings}', i + 1)) {
+    entries.push(i);
+  }
+  assert.ok(entries.length > 0, '팀 홈에 팀 설정 진입이 없다');
+  const open = entries.filter((at) => !gates.some((g) => at >= g.getStart() && at < g.getEnd()));
+  assert.ok(
+    open.length > 0,
+    `팀 설정 진입 ${entries.length}개가 전부 총무 전용 구간 안에 있다 — 팀원은 팀을 나갈 방법이 없어진다`
+  );
 
   // 이 파일에 총무 전용 구간이 실제로 있어야 위 판정이 뜻을 갖는다.
   // 0개면 「감싸는 게 없으니 통과」가 되어 아무것도 안 보는 단언이 된다.
@@ -125,17 +149,15 @@ const home = read('src/features/team/screens/TeamHomeScreen.tsx');
   const inGate = (pos: number) => gates.some((g) => pos >= g.getStart() && pos < g.getEnd());
 
   const src = readFileSync(file, 'utf8');
-  const leave = src.indexOf('accessibilityLabel="팀 나가기"');
-  const save = src.indexOf('onPress={handleSave}');
-  assert.ok(leave > 0 && save > 0, '팀 나가기 또는 저장 버튼을 못 찾았다');
+  const leave = onlyIndexOf(src, 'accessibilityLabel="팀 나가기"', '팀 나가기 버튼');
+  const save = onlyIndexOf(src, 'onPress={handleSave}', '저장 버튼');
 
   assert.equal(inGate(leave), false, '팀 나가기가 총무 전용 구간 안에 있다 — 팀원이 다시 갇힌다');
   assert.equal(inGate(save), true, '저장 버튼이 총무 구간 밖에 있다 — 팀원이 RLS가 거절할 폼을 채우게 된다');
 
   // 총무가 고치는 카드들도 그 안이다
   for (const card of ['팀 대표 지역', '정기모임', '회비', '실력 레벨']) {
-    const at = src.indexOf(`<Text style={styles.cardTitle}>${card}</Text>`);
-    assert.ok(at > 0, `${card} 카드를 못 찾았다`);
+    const at = onlyIndexOf(src, `<Text style={styles.cardTitle}>${card}</Text>`, `${card} 카드`);
     assert.equal(inGate(at), true, `${card} 카드가 팀원에게도 보인다 — 저장할 수 없는 값이다`);
   }
 }

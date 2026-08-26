@@ -52,6 +52,7 @@ import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../
 import { resolveCapacity } from '../utils/capacity';
 import { createResultLabel } from '../utils/createResult';
 import { isVotingOpen, votingLockNote } from '../utils/voting';
+import { upcomingFrom } from '../utils/upcoming';
 import { matchDateTimeLabel, matchLabel } from '../utils/matchLabel';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
 import { fetchPartnerVenues, venueMeta } from '../services/venueService';
@@ -212,12 +213,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     };
   }, [matches]);
 
-  const upcomingMatches = useMemo(() => {
-    const startOfToday = new Date().setHours(0, 0, 0, 0);
-    return matches
-      .filter((m) => new Date(m.match_date).getTime() >= startOfToday)
-      .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
-  }, [matches]);
+  /* 고르는 식은 utils/upcoming.ts에 있다 — 검사가 같은 것을 본다 */
+  const upcomingMatches = useMemo(() => upcomingFrom(matches, new Date()), [matches]);
 
   const selectedMatch = useMemo(
     () => matches.find((m) => dateKey(new Date(m.match_date)) === dateKey(selectedDate)) ?? null,

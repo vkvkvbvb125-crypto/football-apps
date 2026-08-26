@@ -5,6 +5,8 @@
 // 뜨는데 실제 경기는 수요일이면 아무도 버그로 신고하지 않는다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { WEEKDAYS, regularLabel } from '../src/features/team/weekdays.ts';
 import { recentAvgHeadcount } from '../src/features/attendance/utils/attendanceRate.ts';
 
@@ -80,8 +82,41 @@ assert.equal(regularLabel([2, 9], '20:00'), '매주 수요일 20:00');
     '팀원에게도 "채워주세요"가 뜬다 — 채울 권한이 없는 사람에게 할 일을 만든다'
   );
   assert.ok(/profileBits\.length > 0 &&/.test(home), '빈 줄이 자리를 차지한다');
-  assert.ok(!/미설정/.test(home.slice(home.indexOf('profileBits'), home.indexOf('profileBits') + 900)),
-    '빈 항목을 "미설정"으로 채운다 — 줄이 정보가 아니라 빈칸 목록이 된다');
+
+  /*
+    빈 항목을 「미설정」으로 채우지 않는다 — 줄이 정보가 아니라 빈칸 목록이 된다.
+
+    예전엔 home.slice(indexOf('profileBits'), +900)으로 그 자리를 봤다. profileBits가
+    이 파일에 다섯 번 나오고 첫 것이 props 인터페이스라, 900자 창이 인터페이스와
+    구조분해만 덮고 **렌더 자리에 닿지 않았다.** 무엇을 넣어도 통과하는 단언이었다.
+
+    profileBits를 그리는 JSX 노드를 파서로 찾아 그 안만 본다.
+    (규칙: JSX 구조를 보는 단언은 파서로 — teamsettings.check 머리말)
+  */
+  const file = fileURLToPath(new URL('../src/features/team/components/TeamHomeTab.tsx', import.meta.url));
+  const sf = ts.createSourceFile(file, home, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+  let line: ts.Node | null = null;
+  const find = (n: ts.Node) => {
+    // {profileBits.length > 0 && ( … )} 의 오른쪽 — 실제로 그리는 부분
+    if (
+      ts.isJsxExpression(n) &&
+      n.expression &&
+      ts.isBinaryExpression(n.expression) &&
+      n.expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+      n.expression.left.getText().replace(/\s/g, '') === 'profileBits.length>0'
+    ) {
+      line = n.expression.right;
+    }
+    ts.forEachChild(n, find);
+  };
+  find(sf);
+
+  assert.ok(line, 'profileBits를 그리는 자리를 못 찾았다');
+  const rendered = (line as ts.Node).getText();
+  assert.ok(!/미설정/.test(rendered), `빈 항목을 "미설정"으로 채운다 — 줄이 정보가 아니라 빈칸 목록이 된다: ${rendered.slice(0, 80)}`);
+  // 그 자리가 실제로 profileBits를 그리는지 — 못 찾은 것과 빈 것을 가른다
+  assert.ok(/profileBits/.test(rendered), '그 자리가 profileBits를 안 그린다');
 }
 
 console.log('teamprofile.check: ok');

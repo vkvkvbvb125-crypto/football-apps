@@ -4,6 +4,8 @@
 // 여기서 잡는 건 "두 곳이 서로 맞아야 하는데 한쪽만 바뀌면 조용히 깨지는 것"들이다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const num = (src: string, re: RegExp, what: string) => {
@@ -152,11 +154,51 @@ const num = (src: string, re: RegExp, what: string) => {
   const calls = [...home.matchAll(/onGoMembers/g)];
   assert.ok(calls.length >= 3, '멤버 탭 진입로가 줄었다');
 
-  // 제목의 진입은 멤버 수를 안 본다
-  const anchor = home.indexOf('sectionHeadLink');
-  const head = home.slice(anchor - 600, anchor + 200);
-  assert.ok(/onGoMembers/.test(head), '제목이 멤버 탭으로 안 간다');
-  assert.ok(!/members\.length [<>]/.test(head), '제목 진입에 멤버 수 조건이 붙었다');
+  /*
+    제목의 진입은 멤버 수를 안 본다.
+
+    예전엔 indexOf('sectionHeadLink')로 그 자리를 잡았다. 히어로에 「팀 설정 ›」이 같은
+    토큰으로 들어오면서 그 문자열이 파일에 둘이 됐고, indexOf가 앞의 것(히어로)을 집어
+    검사가 통째로 엉뚱한 자리를 봤다 — 다행히 통과가 아니라 실패로 드러났다.
+    onGoMembers를 부르는 Pressable 자체를 노드로 찾는다.
+    (규칙: JSX 구조를 보는 단언은 파서로 — teamsettings.check 머리말)
+  */
+  const file = fileURLToPath(new URL('../src/features/team/components/TeamHomeTab.tsx', import.meta.url));
+  const sf = ts.createSourceFile(file, home, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+  let titleEntry: ts.Node | null = null;
+  const gates: ts.Node[] = [];
+  const collect = (n: ts.Node) => {
+    if (
+      ts.isJsxOpeningElement(n) &&
+      n.tagName.getText() === 'Pressable' &&
+      n.attributes.properties.some(
+        (a) => ts.isJsxAttribute(a) && a.name.getText() === 'onPress' && a.initializer?.getText() === '{onGoMembers}'
+      ) &&
+      n.attributes.properties.some((a) => a.getText().includes('sectionHeadLink'))
+    ) {
+      titleEntry = n;
+    }
+    // 「멤버가 N명 이상일 때만」으로 감싼 구간
+    if (
+      ts.isJsxExpression(n) &&
+      n.expression &&
+      ts.isBinaryExpression(n.expression) &&
+      n.expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+      /members\.length\s*[<>]/.test(n.expression.left.getText())
+    ) {
+      gates.push(n.expression.right);
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
+
+  assert.ok(titleEntry, '제목이 멤버 탭으로 안 간다');
+  const at = (titleEntry as ts.Node).getStart();
+  assert.ok(
+    !gates.some((g) => at >= g.getStart() && at < g.getEnd()),
+    '제목 진입에 멤버 수 조건이 붙었다 — 2명 이하 팀이 멤버 탭에 못 간다'
+  );
 
   // 초대는 그 목록 안에 있다
   assert.ok(/accessibilityLabel="멤버 초대하기"/.test(membersTab), '목록 끝 초대 행이 없다');

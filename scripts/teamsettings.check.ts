@@ -40,37 +40,51 @@ const home = read('src/features/team/screens/TeamHomeScreen.tsx');
 }
 
 // ── 2. 그 문이 역할로 좁혀져 있지 않다 ──────────────────────────────
+//
+// 진입이 히어로 카드 안으로 옮겨 가면서 앞뒤 글자가 다 바뀌었다. 문자열로 「앞을 훑어
+// 조건이 붙었나」를 보면 옮길 때마다 깨지거나, 더 나쁘게는 엉뚱한 자리를 잰다.
+// 아래 4번과 같은 방식으로 노드 포함 관계를 본다 — 어디로 옮겨도 판정이 같다.
 {
-  const i = tab.indexOf('onPress={onOpenTeamSettings}');
-  assert.ok(i > 0, '팀 홈에 팀 설정 진입이 없다');
+  const file = fileURLToPath(new URL('../src/features/team/components/TeamHomeTab.tsx', import.meta.url));
+  const src = readFileSync(file, 'utf8');
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 
-  // 그 Pressable을 여는 자리부터 앞으로 훑어, 감싸는 조건이 붙었는지 본다.
-  // 「파일에 isAdmin이 있는가」로는 못 잡는다 — 이 파일은 원래 isAdmin을 여러 번 쓴다.
-  const open = tab.lastIndexOf('<Pressable', i);
-  const before = tab.slice(tab.lastIndexOf('*/', open), open);
-  // (부정 단언 — before 구간에 「{isAdmin && (」를 넣어 실패하는 것을 확인했다)
-  assert.ok(
-    !/\{\s*isAdmin\s*&&\s*\(/.test(before),
-    '팀 설정 진입이 다시 총무 전용으로 좁아졌다 — 팀원은 팀을 나갈 방법이 없어진다'
-  );
-  assert.ok(
-    !/\{\s*activeTeam\?\.role === 'admin'\s*&&/.test(before),
-    '팀 설정 진입이 다시 총무 전용으로 좁아졌다'
-  );
+  /** isAdmin(또는 role === 'admin')으로 감싼 JSX 구간들 */
+  const gates: ts.Node[] = [];
+  const collect = (n: ts.Node) => {
+    if (
+      ts.isJsxExpression(n) &&
+      n.expression &&
+      ts.isBinaryExpression(n.expression) &&
+      n.expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+      /^(isAdmin|activeTeam\?\.role === 'admin')/.test(n.expression.left.getText())
+    ) {
+      gates.push(n.expression.right);
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
 
-  // 팀원에게는 그 안에서 자기가 할 수 있는 일을 적는다
-  assert.ok(
-    /\{isAdmin \? '정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트' : '팀 나가기'\}/.test(tab),
-    '부제가 역할과 무관하다 — 팀원에게 총무용 항목만 나열하면 못 여는 문의 안내판이 된다'
-  );
+  const entry = src.indexOf('onPress={onOpenTeamSettings}');
+  assert.ok(entry > 0, '팀 홈에 팀 설정 진입이 없다');
+  const gated = gates.some((g) => entry >= g.getStart() && entry < g.getEnd());
+  assert.equal(gated, false, '팀 설정 진입이 총무 전용 구간 안에 있다 — 팀원은 팀을 나갈 방법이 없어진다');
+
+  // 이 파일에 총무 전용 구간이 실제로 있어야 위 판정이 뜻을 갖는다.
+  // 0개면 「감싸는 게 없으니 통과」가 되어 아무것도 안 보는 단언이 된다.
+  assert.ok(gates.length > 0, '이 파일에 총무 전용 구간이 하나도 없다 — 위 판정이 헛돈다');
 }
 
 // ── 3. 가는 화면과 오는 문의 이름이 같다 ────────────────────────────
 //
 // 예전엔 문이 「운영 설정」, 화면 제목이 「설정」, 로딩 중 제목이 「팀 설정」이었다.
 // 한 곳으로 가는 길에 이름이 셋이었다.
+//
+// 전체 폭 행이던 것을 링크로 줄이면서 역할별 부제(총무 「정기모임 · 회비 …」 /
+// 팀원 「팀 나가기」)가 사라졌다. 그 자리를 비워 두지 않고 링크 문구를 값으로 붙든다 —
+// 부제가 있던 단언을 지우기만 하면 이 지점의 검사가 통째로 없어진다.
 {
-  assert.ok(/<Text style={styles\.rowTitle}>팀 설정<\/Text>/.test(tab), '진입 행 이름이 「팀 설정」이 아니다');
+  assert.ok(/<Text style=\{styles\.moreText\}>팀 설정 ›<\/Text>/.test(tab), '진입 링크 문구가 「팀 설정 ›」이 아니다');
   const titles = screen.match(/<Text style={styles\.headerTitle}>([^<]+)<\/Text>/g) ?? [];
   assert.ok(titles.length >= 2, '팀 설정 화면의 제목을 못 찾았다');
   const names = new Set(titles.map((t) => t.replace(/<[^>]+>/g, '')));

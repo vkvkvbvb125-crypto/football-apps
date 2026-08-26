@@ -168,7 +168,7 @@ export function TeamHomeTab({
             {/* 로고 오른쪽엔 이름만 — 긴 팀명이 지표를 밀어내지 않게 지표는 아래 전체 폭으로 뺐다 */}
             <View style={styles.bannerBody}>
               <View style={styles.teamNameRow}>
-                <Text style={styles.teamName} numberOfLines={1}>
+                <Text style={[styles.teamName, { flexShrink: 1 }]} numberOfLines={1}>
                   {activeTeam.team.name}
                 </Text>
                 {/* 내 역할 — 팀 화면 어디에도 「나는 여기서 무엇인가」가 없었다.
@@ -179,6 +179,40 @@ export function TeamHomeTab({
                     {isAdmin ? '총무' : '팀원'}
                   </Text>
                 </View>
+                {/*
+                  팀 설정 진입 — 팀명 줄 오른쪽 끝이다.
+
+                  4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
+                  헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
+                  서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
+                  그 호출부에 갈 방법만 없는 상태였다.
+
+                  되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
+                  팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
+                  팀원은 팀을 나갈 방법이 없었다. 조건을 걸지 않는다 — 총무·팀원 모두 연다.
+
+                  라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
+                  헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
+                  가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
+
+                  전체 폭 행이던 것을 링크로 줄이면서 부제(총무는 「정기모임 · 회비 …」,
+                  팀원은 「팀 나가기」)를 뺐다. 한 줄짜리 링크에는 담을 자리가 없고,
+                  팀명 줄 오른쪽에 두 줄이 들어가면 팀명이 밀린다.
+                  ⚠ 팀원에게 그 화면이 「팀 나가기」 한 줄뿐이라는 안내가 이 자리에서 사라진다.
+                    팀 설정 화면을 팀원용으로 다시 설계하는 일이라 서랍에 있고, 여기서는 안 푼다.
+
+                  ⚠ 이미지 대조 전 임시값이다. 기존 sectionHeadLink·moreText 토큰을 그대로 쓰고
+                    새 값을 하나도 정하지 않았다. 자리·크기·테두리·배경은 (나)에서 맞춘다.
+                */}
+                <Pressable
+                  onPress={onOpenTeamSettings}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="팀 설정"
+                  style={({ pressed }) => [styles.sectionHeadLink, { marginLeft: 'auto' }, pressed && styles.pressed]}
+                >
+                  <Text style={styles.moreText}>팀 설정 ›</Text>
+                </Pressable>
               </View>
               {/*
                 Since를 지역·풋살에서 떼어 낸다.
@@ -282,39 +316,6 @@ export function TeamHomeTab({
               <StatTile label="참석" value={formatRate(teamRate)} accent />
             </StatRow>
           </View>
-
-          {/*
-            총무 동작 — 홈 탭 하단에 모은다.
-
-            4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
-            헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
-            서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
-            그 호출부에 갈 방법만 없는 상태였다.
-
-            되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
-            팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
-            팀원은 팀을 나갈 방법이 없었다. 조건을 없앤다 — 총무·팀원 모두 연다.
-
-            라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
-            헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
-            가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
-            부제는 역할에 따라 다르다 — 팀원에게 「정기모임 · 회비 …」는 못 여는
-            문의 안내판이다. 각자 그 안에서 자기가 할 수 있는 일을 적는다.
-          */}
-          <Pressable
-            onPress={onOpenTeamSettings}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
-          >
-            <Ionicons name="options-outline" size={17} color={colors.green} />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.rowTitle}>팀 설정</Text>
-              <Text style={styles.rowSub}>
-                {isAdmin ? '정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트' : '팀 나가기'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-          </Pressable>
 
           {/* 초대 코드 공유는 총무 전용이 아니다 — 홈의 "친구 초대하기"가 멤버를 여기로 보내는데
               총무만 볼 수 있으면 멤버는 눌러도 아무것도 못 하는 막다른 길이 된다. */}
@@ -651,6 +652,7 @@ const styles = StyleSheet.create({
   bannerBg: { width: '100%', height: '100%' },
   /* 검정 60% — 밝은 로고 위에서도 흰 글자가 읽히는 최소선이다 */
   bannerScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)' },
+  /* 팀명 · 역할 뱃지 · 팀 설정 링크. 링크만 오른쪽 끝으로 민다 (marginLeft: 'auto') */
   teamNameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   roleTag: {
     paddingHorizontal: 7,

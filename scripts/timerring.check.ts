@@ -3,16 +3,22 @@
 // 버그: 경기 중 "+1분"을 누르면 링이 사라졌다. totalSeconds가 쿼터 길이에 고정돼 있어서
 // 남은 시간이 총 시간을 넘었고, 지난 비율이 음수 → clamp로 0 → 채워진 호가 통째로 없어졌다.
 //
-// TimerPanel의 계산식만 그대로 옮겨 왔다 (RN 없이 돌리기 위해).
+// 예전엔 이 파일이 「TimerPanel과 같은 식」이라며 계산을 **다시 써 놓고** 그 사본을
+// 시험했다. 화면의 식이 바뀌어도 검사는 자기 사본을 보고 통과한다 — 깨진 적이 없는 게
+// 아니라 깨질 수가 없었다. 지금은 화면이 쓰는 함수를 그대로 부른다(utils/timer.ts).
 import assert from 'node:assert/strict';
+import { elapsedRatioOf, totalSecondsOf } from '../src/features/timer/utils/timer.ts';
 
-/** TimerPanel과 같은 식 */
-function elapsedRatio(quarterMinutes: number, addedSeconds: number, remainingSeconds: number) {
-  const totalSeconds = quarterMinutes * 60 + addedSeconds;
-  return totalSeconds > 0 ? Math.min(1, Math.max(0, (totalSeconds - remainingSeconds) / totalSeconds)) : 0;
-}
+/** 화면이 쓰는 두 함수를 화면과 같은 순서로 엮는다 — 여기서 계산하지 않는다 */
+const elapsedRatio = (quarterMinutes: number, addedSeconds: number, remainingSeconds: number) =>
+  elapsedRatioOf(totalSecondsOf(quarterMinutes, addedSeconds), remainingSeconds);
 
-/** 버그 시절 식 — 추가시간이 분모에 없다 */
+/*
+ * 버그 시절 식 — 추가시간이 분모에 없다.
+ *
+ * 이건 사본이 아니라 붙박이다. 지금 코드에 없는 옛 식이라 import할 데가 없고,
+ * 「그때는 이렇게 되어 신고가 들어왔다」를 값으로 남겨 두는 자리다.
+ */
 function elapsedRatioOld(quarterMinutes: number, remainingSeconds: number) {
   const totalSeconds = quarterMinutes * 60;
   return totalSeconds > 0 ? Math.min(1, Math.max(0, (totalSeconds - remainingSeconds) / totalSeconds)) : 0;

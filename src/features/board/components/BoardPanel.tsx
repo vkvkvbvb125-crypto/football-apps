@@ -76,8 +76,9 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     ].filter((id) => id !== myUserId);
     if (targets.length === 0) return;
 
-    /* 이름을 모를 때의 대체 표시는 「멤버」다 — 서버에서 온 글은 boardService가 이미
-       그렇게 적는다. 여기만 「팀원」이면 같은 사람이 저장 전엔 팀원, 새로고침 후엔 멤버로 보인다 */
+    /* 알림 문구에 넣을 내 이름. 이름이 없을 때의 대체 표시는 「멤버」다 —
+       같은 사람의 이름을 글 목록에서는 boardService가 「멤버」로 적는다.
+       여기만 「팀원」이면 알림에는 「팀원님이 …」, 목록에는 「멤버」로 한 사람이 두 이름을 갖는다 */
     const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '멤버';
     const plain = toPlainText(body);
     const preview = plain.length > 40 ? `${plain.slice(0, 40)}…` : plain;

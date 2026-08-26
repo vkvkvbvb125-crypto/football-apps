@@ -86,7 +86,8 @@ export function PostComments({
 
       const targets = notifyTargets(postAuthorId, myUserId);
       if (targets.length > 0 && activeTeam) {
-        /* 낙관 표시용 내 이름. 서버가 돌려주는 값(boardService)과 같은 대체 표시를 쓴다 */
+        /* 알림 문구에 넣을 내 이름 — 댓글 목록의 이름은 boardService가 만든다.
+           대체 표시를 그쪽과 맞춘다(「멤버」). 두 곳이 갈리면 한 사람이 두 이름이 된다 */
         const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '멤버';
         const preview = body.length > 40 ? `${body.slice(0, 40)}…` : body;
         // 알림 실패는 삼킨다 — 댓글은 이미 달렸고, 실패한 것처럼 보이면 안 된다.

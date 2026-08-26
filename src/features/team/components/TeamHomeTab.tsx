@@ -283,6 +283,39 @@ export function TeamHomeTab({
             </StatRow>
           </View>
 
+          {/*
+            총무 동작 — 홈 탭 하단에 모은다.
+
+            4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
+            헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
+            서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
+            그 호출부에 갈 방법만 없는 상태였다.
+
+            되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
+            팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
+            팀원은 팀을 나갈 방법이 없었다. 조건을 없앤다 — 총무·팀원 모두 연다.
+
+            라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
+            헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
+            가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
+            부제는 역할에 따라 다르다 — 팀원에게 「정기모임 · 회비 …」는 못 여는
+            문의 안내판이다. 각자 그 안에서 자기가 할 수 있는 일을 적는다.
+          */}
+          <Pressable
+            onPress={onOpenTeamSettings}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
+          >
+            <Ionicons name="options-outline" size={17} color={colors.green} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.rowTitle}>팀 설정</Text>
+              <Text style={styles.rowSub}>
+                {isAdmin ? '정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트' : '팀 나가기'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+          </Pressable>
+
           {/* 초대 코드 공유는 총무 전용이 아니다 — 홈의 "친구 초대하기"가 멤버를 여기로 보내는데
               총무만 볼 수 있으면 멤버는 눌러도 아무것도 못 하는 막다른 길이 된다. */}
           {/* 「초대 공유 / 팀 설정」 버튼 줄은 뺐다 — 바로 아래 상자의 설정·멤버 관리와 겹친다.
@@ -567,39 +600,6 @@ export function TeamHomeTab({
                     </StatRow>
                   </View>
                 )}
-
-                {/*
-                  총무 동작 — 홈 탭 하단에 모은다.
-
-                  4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
-                  헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
-                  서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
-                  그 호출부에 갈 방법만 없는 상태였다.
-
-                  되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
-                  팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
-                  팀원은 팀을 나갈 방법이 없었다. 조건을 없앤다 — 총무·팀원 모두 연다.
-
-                  라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
-                  헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
-                  가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
-                  부제는 역할에 따라 다르다 — 팀원에게 「정기모임 · 회비 …」는 못 여는
-                  문의 안내판이다. 각자 그 안에서 자기가 할 수 있는 일을 적는다.
-                */}
-                <Pressable
-                  onPress={onOpenTeamSettings}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
-                >
-                  <Ionicons name="options-outline" size={17} color={colors.green} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.rowTitle}>팀 설정</Text>
-                    <Text style={styles.rowSub}>
-                      {isAdmin ? '정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트' : '팀 나가기'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                </Pressable>
 
                 {/* 팀 나가기는 팀 설정 맨 아래로 옮겼다 — 되돌리기 어려운 동작이라
                     매일 보는 홈에 둘 이유가 없다. 나가기 확인에서 미납액도 함께 경고한다 */}

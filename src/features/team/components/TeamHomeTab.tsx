@@ -180,11 +180,25 @@ export function TeamHomeTab({
                   </Text>
                 </View>
               </View>
+              {/*
+                Since를 지역·풋살에서 떼어 낸다.
+
+                셋을 「·」로 이으면 「언제부터 있는 팀인가」가 장소·종목과 같은 무게로 읽힌다.
+                팀을 처음 보는 사람에게 그 셋은 층위가 다르다 — 앞의 둘은 어디서 무엇을 하는지고,
+                Since는 얼마나 됐는지다.
+
+                ⚠ 이미지 대조 전 임시값이다. 두 줄 다 기존 teamMeta 토큰을 그대로 쓰고 새 값을
+                  정하지 않았다. 크기·색·간격과 지역·풋살 줄의 자리는 레퍼런스를 읽고 맞춘다 —
+                  레퍼런스 히어로에는 지역·풋살 줄이 아예 없어서 순서를 여기서 단정하지 않는다.
+              */}
               <Text style={styles.teamMeta} numberOfLines={1}>
-                {[activeTeam.team.home_place_name, '풋살', `Since ${createdAt.getFullYear()}.${String(createdAt.getMonth() + 1).padStart(2, '0')}`]
-                  .filter(Boolean)
-                  .join(' · ')}
+                {`Since ${createdAt.getFullYear()}.${String(createdAt.getMonth() + 1).padStart(2, '0')}`}
               </Text>
+              {[activeTeam.team.home_place_name, '풋살'].filter(Boolean).length > 0 && (
+                <Text style={styles.teamMeta} numberOfLines={1}>
+                  {[activeTeam.team.home_place_name, '풋살'].filter(Boolean).join(' · ')}
+                </Text>
+              )}
               {/*
                 소개는 팀명 바로 아래다 — 헤더 블록에 속한다.
                 예전엔 엠블럼 아래 별도 줄이라 통계 3칸과 붙어서, 팀 소개인지

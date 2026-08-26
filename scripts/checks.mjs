@@ -1,0 +1,59 @@
+// scripts/checks.mjs — 검사 전부를 돌린다
+//
+// ── 커밋 규칙 ────────────────────────────────────────────────────────
+//
+//   FAIL이 하나라도 있으면 커밋하지 않는다.
+//   고쳐서 통과시킨 뒤에 커밋하거나, 왜 실패해도 되는지 보고하고 멈춘다.
+//
+// 이 규칙이 필요해진 이유가 있다. 히어로에 「팀 설정 ›」을 넣은 커밋을 uidetail이
+// FAIL인 채로 올렸다. 실패는 커밋 직전 출력에 찍혀 있었고, 보고는 했지만 커밋을
+// 멈추지는 않았다. 그건 앞의 것들을 무의미하게 만든다 — CRLF 때문에 항상 실패하던
+// 검사, 절대 실패할 수 없던 죽은 단언, 성공을 말하던 조용한 return, 전부 「검사가
+// 실제로 무언가를 보고 있는가」를 지키려던 일이었다. 그 검사가 FAIL을 찍었는데
+// 커밋이 나가면 남는 것은 「검사가 있다」는 사실뿐이고, 그건 오히려 안심 신호가 된다.
+//
+// ── 왜 목록을 손으로 들고 다니지 않는가 ─────────────────────────────
+//
+// 그전에는 돌릴 검사 이름을 손으로 나열했다. 그러다 19개만 돌리고 있었다 —
+// board·mentions·score·sendapp·settingswipe·settleaccount·teamprofile·timerring
+// 여덟 개가 목록에서 빠져 있었고, 빠졌다는 사실 자체를 아무도 몰랐다.
+// 디렉터리를 읽어서 전부 돈다. 새 검사를 만들면 그날부터 자동으로 포함된다.
+//
+// 쓰는 법:  node scripts/checks.mjs        (또는 npm run check)
+import { readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
+
+const SCRIPTS = fileURLToPath(new URL('./', import.meta.url));
+const ROOT = dirname(SCRIPTS);
+
+const files = readdirSync(SCRIPTS)
+  .filter((f) => f.endsWith('.check.ts'))
+  .sort();
+
+const failed = [];
+for (const f of files) {
+  const name = f.replace('.check.ts', '');
+  process.stdout.write(name.padEnd(18));
+  try {
+    execFileSync('npx', ['tsx', join(SCRIPTS, f)], { cwd: ROOT, stdio: 'pipe', shell: true });
+    console.log('ok');
+  } catch (e) {
+    console.log('FAIL');
+    failed.push({ name, out: `${e.stdout ?? ''}${e.stderr ?? ''}`.trim() });
+  }
+}
+
+if (failed.length) {
+  console.error(`\n${failed.length}개 실패 — 커밋하지 마라.\n`);
+  for (const { name, out } of failed) {
+    // 첫 단언 실패 줄만 보여준다. 스택은 그 검사를 직접 돌리면 나온다
+    const line = out.split('\n').find((l) => /AssertionError|Error:/.test(l)) ?? out.split('\n')[0];
+    console.error(`  ${name}: ${line.trim().slice(0, 160)}`);
+  }
+  console.error(`\n하나씩 보려면: npx tsx scripts/<이름>.check.ts`);
+  process.exit(1);
+}
+
+console.log(`\n${files.length}개 전부 통과.`);

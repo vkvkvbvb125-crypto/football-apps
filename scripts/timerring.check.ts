@@ -14,10 +14,17 @@ const elapsedRatio = (quarterMinutes: number, addedSeconds: number, remainingSec
   elapsedRatioOf(totalSecondsOf(quarterMinutes, addedSeconds), remainingSeconds);
 
 /*
- * 버그 시절 식 — 추가시간이 분모에 없다.
+ * ⚠ 이건 사본이 아니다. 지우지 마라.
  *
- * 이건 사본이 아니라 붙박이다. 지금 코드에 없는 옛 식이라 import할 데가 없고,
- * 「그때는 이렇게 되어 신고가 들어왔다」를 값으로 남겨 두는 자리다.
+ * 방금 이 파일과 score.check에서 「TimerPanel과 같은 식」 사본을 걷어냈다. 그 직후라
+ * 이것도 사본으로 보이기 쉬운데, 성격이 반대다.
+ *
+ *   사본     지금 src에 있는 식을 베껴 둔 것. 검사가 src 대신 자기 것을 본다 → 걷어낸다.
+ *   붙박이   지금 src에 **없는** 옛 식. 회귀를 재현하려고 값으로 박아 둔 것.
+ *
+ * src로 뺄 수 없다 — 앱이 쓰지 않는 계산이라 utils에 두면 죽은 코드가 되고,
+ * 「어디서 쓰나」를 찾는 사람이 다음엔 그쪽을 지운다.
+ * 여기 있어야 아래 단언이 「신고된 그 증상이 이 식에서 나왔다」를 실제로 보여준다.
  */
 function elapsedRatioOld(quarterMinutes: number, remainingSeconds: number) {
   const totalSeconds = quarterMinutes * 60;

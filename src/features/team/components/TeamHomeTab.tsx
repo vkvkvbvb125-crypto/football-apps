@@ -25,6 +25,45 @@ import {
 import type { TeamMembership, TeamMemberWithProfile } from '../services/teamService';
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 
+/**
+ * 팀 화면 하단의 진입 타일 넷.
+ *
+ * 한 번 걷어냈다가 되살렸다. 걷어낸 근거는 「넷 다 다른 화면으로 보내기라 팀 화면에서
+ * 끝나는 일이 없다」였는데, 두 가지가 그 판단을 뒤집었다.
+ *
+ *   하나. 팀 화면은 팀에 관한 화면들의 허브다. 나가는 것이 결함이 아니라 그 역할이다.
+ *   둘.  그 근거가 사실과 반쯤 달랐다. 공지사항은 나가지 않는다 —
+ *        같은 화면의 내부 탭(setTab)이라 여기서 끝난다.
+ *
+ * 색은 초록 하나다. 아래는 타일이 있던 시절 TeamHomeScreen에 적혀 있던 판단을 그대로
+ * 옮겨 온 것이다. 타일은 지워졌는데 판단만 그 파일에 남아 있었다 —
+ * 판단과 그 판단이 적용되는 코드가 다른 파일에 있으면 다음 사람이 못 본다.
+ *
+ *   칸마다 색을 달리 쓰던 것을 초록 하나로 모았다.
+ *
+ *   예전 의도는 「색으로 입구를 기억하게 한다」였는데, 실제로는 gold·blue·회색이 앱의 다른
+ *   의미와 부딪혔다 — gold는 확인 대기 배지, blue는 정보성 표시, 회색은 비활성이다.
+ *   팀 홈 네 칸만 그 규칙 밖에서 놀아서, 이 화면에서 색이 무엇을 뜻하는지 알 수 없었다.
+ *
+ *   구분은 색이 아니라 아이콘 모양과 그 아래 글자가 맡는다 — 확성기·말풍선·톱니바퀴·사람은
+ *   이미 서로 안 닮았고, 라벨까지 붙어 있다. 색까지 동원할 일이 아니었다.
+ *
+ * 「경기운영」은 붙여 쓴다. 그 화면이 스스로를 그렇게 부르고(AssignmentScreen의 TabHeader),
+ * 하단 탭에는 라벨이 없어서 이 타일이 그 이름을 처음 보여주는 자리다.
+ *
+ * 역할 조건을 걸지 않는다. 넷 다 팀원이 들어갈 수 있는 화면이고, isAdmin은 그 안의
+ * 쓰기 동작에만 걸려 있다. 여기서 가리면 팀원이 볼 수 있는 화면을 못 보게 된다 —
+ * 팀 설정 진입을 총무 전용으로 감쌌다가 팀원이 팀을 나갈 수 없게 됐던 것과 같은 실수다.
+ */
+export type TileKey = 'schedule' | 'assignment' | 'settlement' | 'notices';
+
+const TILES: { key: TileKey; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+  { key: 'schedule', icon: 'calendar-outline', label: '일정' },
+  { key: 'assignment', icon: 'football-outline', label: '경기운영' },
+  { key: 'settlement', icon: 'card-outline', label: '정산' },
+  { key: 'notices', icon: 'megaphone-outline', label: '공지사항' },
+];
+
 interface Props {
   activeTeam: TeamMembership;
   /** 「Since YYYY.MM」에 쓴다 — 부모가 만든 Date를 그대로 받는다 */
@@ -61,6 +100,12 @@ interface Props {
   onOpenMemberList: () => void;
   onGoMembers: () => void;
   onOpenTeamSettings: () => void;
+  /**
+   * 타일이 갈 곳. 어디로 가는지는 부모가 정한다 — 셋은 하단 탭으로 나가고 공지사항만
+   * 이 화면 안에 머물러서, 그 분기를 한 곳에 둔다. 타일마다 onPress를 따로 두면
+   * 넷이 같은 모양인데 하나만 다르게 동작하는 것이 어디서 갈리는지 안 보인다.
+   */
+  onGoTile: (key: TileKey) => void;
 }
 
 export function TeamHomeTab({
@@ -92,6 +137,7 @@ export function TeamHomeTab({
   onOpenMemberList,
   onGoMembers,
   onOpenTeamSettings,
+  onGoTile,
 }: Props) {
   return (
     <>
@@ -629,6 +675,22 @@ export function TeamHomeTab({
                   </Pressable>
                 )}
 
+                {/* 정의는 파일 위 TILES에 있다. 넷을 같은 모양으로 그린다 */}
+                <View style={styles.tiles}>
+                  {TILES.map((t) => (
+                    <Pressable
+                      key={t.key}
+                      onPress={() => onGoTile(t.key)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t.label}
+                      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+                    >
+                      <Ionicons name={t.icon} size={22} color={colors.green} />
+                      <Text style={styles.tileLabel}>{t.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+
                 {members.length <= 3 && (
                   <Text style={styles.growHint}>멤버가 모이면 참석률과 기록이 쌓여요</Text>
                 )}
@@ -863,6 +925,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   myRecordTitle: { color: colors.text, ...font.title },
+  /* 2×2. 1×4는 412px에서 칸당 88px이라 「공지사항」 네 글자가 잘린다.
+     칸 크기는 비율로 잡는다 — 고정 px를 두면 폭이 다른 기기에서 한 칸이 밀린다 */
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 18,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardRaised,
+  },
+  tileLabel: { color: colors.text, fontSize: 13, fontWeight: '800' },
+
   adminRow: {
     flexDirection: 'row',
     alignItems: 'center',

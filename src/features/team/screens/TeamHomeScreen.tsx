@@ -50,18 +50,6 @@ import { clearTeamLogo, pickSquareImage, uploadTeamLogo } from '../../settings/s
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
-/**
- * 팀 홈의 진입 타일. 총무만 멤버 관리로 들어간다.
- *
- * 칸마다 색을 달리 쓰던 것을 초록 하나로 모았다.
- *
- * 예전 의도는 「색으로 입구를 기억하게 한다」였는데, 실제로는 gold·blue·회색이 앱의 다른
- * 의미와 부딪혔다 — gold는 확인 대기 배지, blue는 정보성 표시, 회색은 비활성이다.
- * 팀 홈 네 칸만 그 규칙 밖에서 놀아서, 이 화면에서 색이 무엇을 뜻하는지 알 수 없었다.
- *
- * 구분은 색이 아니라 아이콘 모양과 그 아래 글자가 맡는다 — 확성기·말풍선·톱니바퀴·사람은
- * 이미 서로 안 닮았고, 라벨까지 붙어 있다. 색까지 동원할 일이 아니었다.
- */
 /** teams.skill_level — CHECK 제약과 같은 세 값 */
 const TEAM_SKILL_LABEL = { beginner: '입문', intermediate: '중급', advanced: '상급' } as const;
 
@@ -375,6 +363,15 @@ export function TeamHomeScreen({ navigation, route }: any) {
             onOpenMemberList={() => setMemberListVisible(true)}
             onGoMembers={() => setTab('members')}
             onOpenTeamSettings={() => navigation.navigate('TeamSettings')}
+            /*
+              타일 넷이 갈 곳. 셋은 하단 탭으로 나가고 공지사항만 이 화면 안에 머문다 —
+              그래서 목적지를 타일이 아니라 부모가 정한다. 타일 쪽에 navigate와 setTab이
+              섞이면 「왜 하나만 다르지」가 그 자리에서 안 읽힌다.
+            */
+            onGoTile={(key) => {
+              if (key === 'notices') setTab('notices');
+              else navigation.navigate({ schedule: 'Attendance', assignment: 'Assignment', settlement: 'Settlement' }[key]);
+            }}
           />
         )}
 

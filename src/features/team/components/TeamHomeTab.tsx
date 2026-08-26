@@ -562,23 +562,30 @@ export function TeamHomeTab({
                   서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
                   그 호출부에 갈 방법만 없는 상태였다.
 
-                  라벨을 「설정」이 아니라 「운영 설정」으로 둔다. 하위 항목까지 적어 두면
-                  헤더 톱니와 헷갈릴 여지가 없다 — 혼동은 둘 다 「설정」이라 불러서 생겼다.
+                  되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
+                  팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
+                  팀원은 팀을 나갈 방법이 없었다. 조건을 없앤다 — 총무·팀원 모두 연다.
+
+                  라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
+                  헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
+                  가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
+                  부제는 역할에 따라 다르다 — 팀원에게 「정기모임 · 회비 …」는 못 여는
+                  문의 안내판이다. 각자 그 안에서 자기가 할 수 있는 일을 적는다.
                 */}
-                {isAdmin && (
-                  <Pressable
-                    onPress={onOpenTeamSettings}
-                    accessibilityRole="button"
-                    style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
-                  >
-                    <Ionicons name="options-outline" size={17} color={colors.green} />
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={styles.rowTitle}>운영 설정</Text>
-                      <Text style={styles.rowSub}>정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                  </Pressable>
-                )}
+                <Pressable
+                  onPress={onOpenTeamSettings}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.adminRow, pressed && styles.pressed]}
+                >
+                  <Ionicons name="options-outline" size={17} color={colors.green} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={styles.rowTitle}>팀 설정</Text>
+                    <Text style={styles.rowSub}>
+                      {isAdmin ? '정기모임 · 회비 · 계좌 · 실력 레벨 · 게스트' : '팀 나가기'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </Pressable>
 
                 {/* 팀 나가기는 팀 설정 맨 아래로 옮겼다 — 되돌리기 어려운 동작이라
                     매일 보는 홈에 둘 이유가 없다. 나가기 확인에서 미납액도 함께 경고한다 */}

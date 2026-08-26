@@ -195,6 +195,13 @@ export function TeamSettingsScreen({ navigation }: any) {
   const selectedDays = Object.keys(weekdays).filter((k) => weekdays[Number(k)]);
 
   const team = activeTeam?.team;
+  /**
+   * 이 화면의 카드들은 전부 총무가 고치는 값이다. 팀원에게 그대로 보여주면 RLS가 거절할
+   * 폼을 채우게 만든다 — 「저장」을 눌러야 안 되는 걸 아는 화면이 된다.
+   *
+   * 그래도 팀원이 이 화면에 와야 한다. 맨 아래 「팀 나가기」가 여기 말고는 없다.
+   */
+  const isAdmin = activeTeam?.role === 'admin';
   const profileFilled = !!(team?.region_code && team?.avg_headcount && team?.skill_level);
 
   // 자동 계산값은 placeholder로만 보여준다 — 총무가 안 건드린 값이 DB에 들어가면
@@ -244,10 +251,12 @@ export function TeamSettingsScreen({ navigation }: any) {
         <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.textStrong} />
         </Pressable>
-        <Text style={styles.headerTitle}>설정</Text>
+        <Text style={styles.headerTitle}>팀 설정</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {isAdmin && (
+          <>
         {/* 정기모임 */}
         {/*
           팀 대표 지역 — 팀 화면 설정 탭에서 옮겨 왔다.
@@ -500,9 +509,12 @@ export function TeamSettingsScreen({ navigation }: any) {
             </Pressable>
           </>
         )}
+          </>
+        )}
 
         {/*
           관리 — 되돌리기 어려운 동작이라 설정 맨 아래에 따로 둔다.
+          팀원에게는 이 화면에서 유일하게 남는 것이기도 하다 — 위 카드들은 전부 총무 것이다.
           저장 버튼 아래, 구분선 뒤다. 위쪽 카드들과 붙여 놓으면 값을 고치다가 손이 미끄러진다.
 
           「팀 삭제하기」는 두지 않는다. role이 admin/member 둘뿐이라 팀장을 가릴 기준이

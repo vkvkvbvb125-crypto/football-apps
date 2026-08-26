@@ -86,7 +86,8 @@ export function PostComments({
 
       const targets = notifyTargets(postAuthorId, myUserId);
       if (targets.length > 0 && activeTeam) {
-        const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '팀원';
+        /* 낙관 표시용 내 이름. 서버가 돌려주는 값(boardService)과 같은 대체 표시를 쓴다 */
+        const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '멤버';
         const preview = body.length > 40 ? `${body.slice(0, 40)}…` : body;
         // 알림 실패는 삼킨다 — 댓글은 이미 달렸고, 실패한 것처럼 보이면 안 된다.
         // kind를 안 넘긴다: 나에게 직접 온 반응이라 끄고 켜는 종류로 두지 않는다.

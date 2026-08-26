@@ -101,7 +101,8 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
 {
   assert.ok(/accessibilityState=\{\{ selected: active \}\}/.test(sheet), '현재 팀을 접근성에 알리지 않는다');
   assert.ok(/checkmark/.test(sheet), '현재 팀에 체크가 없다');
-  assert.ok(/role === 'admin' \? '총무' : '멤버'/.test(sheet), '역할 뱃지가 없다');
+  // 뱃지 문구는 rolelabel.check가 전수로 붙든다 — 여기서는 있는지만 본다
+  assert.ok(/role === 'admin' \? '총무' : '팀원'/.test(sheet), '역할 뱃지가 없다');
   assert.ok(/onCreateOrJoin/.test(sheet), '새 팀 만들기 / 참여 진입이 없다');
   // 팀이 있을 때도 그 화면이 등록돼 있어야 한다
   assert.ok(/name="TeamOnboarding"[\s\S]{0,400}name="TeamSettings"/.test(root),

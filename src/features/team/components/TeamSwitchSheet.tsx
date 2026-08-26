@@ -81,7 +81,8 @@ export function TeamSwitchSheet({
                     </Text>
                     <View style={[styles.roleBadge, m.role === 'admin' && styles.roleBadgeAdmin]}>
                       <Text style={[styles.roleText, m.role === 'admin' && styles.roleTextAdmin]}>
-                        {m.role === 'admin' ? '총무' : '멤버'}
+                        {/* 역할 뱃지 — 반대말이 「총무」다 */}
+                        {m.role === 'admin' ? '총무' : '팀원'}
                       </Text>
                     </View>
                   </View>

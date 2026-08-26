@@ -82,8 +82,10 @@ export function MemberListModal({
                       {m.displayName}
                       {isSelf && <Text style={styles.itemSelfTag}> (나)</Text>}
                     </Text>
+                    {/* 반대말이 「총무」인 자리라 「팀원」이다 — 「멤버」는 명단의 한 칸을
+                        가리키는 말이고 총무와 층위가 맞지 않는다. 약관도 역할(총무/팀원)로 적는다 */}
                     <View style={styles.roleBadge}>
-                      <Text style={styles.roleBadgeText}>{m.role === 'admin' ? '총무' : '멤버'}</Text>
+                      <Text style={styles.roleBadgeText}>{m.role === 'admin' ? '총무' : '팀원'}</Text>
                     </View>
                   </View>
                   {/* 선호 포지션 — 팀 분배에서 이 값대로 포메이션에 세운다.

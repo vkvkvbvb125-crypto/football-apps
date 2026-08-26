@@ -76,7 +76,9 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     ].filter((id) => id !== myUserId);
     if (targets.length === 0) return;
 
-    const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '팀원';
+    /* 이름을 모를 때의 대체 표시는 「멤버」다 — 서버에서 온 글은 boardService가 이미
+       그렇게 적는다. 여기만 「팀원」이면 같은 사람이 저장 전엔 팀원, 새로고침 후엔 멤버로 보인다 */
+    const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '멤버';
     const plain = toPlainText(body);
     const preview = plain.length > 40 ? `${plain.slice(0, 40)}…` : plain;
     notifyTeam(

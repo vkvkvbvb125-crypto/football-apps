@@ -149,7 +149,7 @@ export function TeamMembersTab({
                         <Text style={styles.adminBadgeText}>총무</Text>
                       </View>
                     ) : (
-                      <Text style={styles.memberRole}>멤버</Text>
+                      <Text style={styles.memberRole}>팀원</Text>
                     )}
                     {/*
                       셰브론은 「눌러서 바꿀 수 있다」는 신호다. 그래서 조건이 모달의

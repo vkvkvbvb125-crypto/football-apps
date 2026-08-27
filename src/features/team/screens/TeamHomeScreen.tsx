@@ -15,6 +15,7 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useTeamStore } from '../stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../../settlement/stores/settlementStore';
+import { myUnpaidAmount } from '../../settlement/utils/unpaid';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
 import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
 import { AnnouncementListModal } from '../../announcements/components/AnnouncementListModal';
@@ -360,6 +361,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
             isAdmin={isAdmin}
             profileBits={profileBits}
             myRateLabel={myRateLabel}
+            myUnpaid={myUnpaidAmount(settlementCurrent, settlementPast, activeTeam.membershipId)}
             memberRateMatches={memberRateMatches}
             onOpenMemberList={() => setMemberListVisible(true)}
             onGoMembers={() => setTab('members')}

@@ -117,6 +117,8 @@ interface Props {
   /** 팀 프로필에서 채워진 항목. 비어 있으면 총무에게 채우라고 권한다 */
   profileBits: (string | null)[];
   myRateLabel: string;
+  /** 내가 아직 안 낸 돈 — unpaid.ts가 세 곳과 같은 정의로 낸 값이다 */
+  myUnpaid: number;
   memberRateMatches: MemberRateMatch[];
   onOpenMemberList: () => void;
   onGoMembers: () => void;
@@ -155,6 +157,7 @@ export function TeamHomeTab({
   isAdmin,
   profileBits,
   myRateLabel,
+  myUnpaid,
   memberRateMatches,
   onOpenMemberList,
   onGoMembers,
@@ -715,11 +718,32 @@ export function TeamHomeTab({
                       <StatTile
                         label="참석"
                         value={myRateLabel}
+                        icon="stats-chart-outline"
                         accent
                       />
-                      {/* 미납 타일은 하단 탭 「정산」의 빨간 점으로 옮겼다 — 돈 이야기는
-                          정산 화면의 일이고, 여기 두면 팀 홈이 독촉장이 된다.
-                          점은 탭에 상시로 있어서 어느 화면에 있든 보인다 */}
+                      {/*
+                        미납이 돌아왔다.
+
+                        「돈 이야기는 정산 화면의 일이고 여기 두면 팀 홈이 독촉장이 된다」며
+                        하단 탭의 빨간 점으로 옮겼던 값이다. 점은 그대로 둔다 — 둘은 다른
+                        일을 한다. 점은 알림이라 어느 화면에 있든 「볼 것이 있다」만 말하고,
+                        이 칸은 확인이라 얼마인지를 말한다. 액수를 탭 뱃지에 적으면
+                        「무슨 숫자지」가 되고 자릿수에 따라 탭 폭이 흔들린다.
+
+                        기간을 안 적는다. 「최근 30일 기준」을 붙일 뻔했는데 myUnpaidAmount는
+                        날짜로 안 자른다 — 지난 정산에 남은 미납도 여전히 내가 낼 돈이라
+                        전부 센다(unpaid.ts). 잔액이지 기간 값이 아니다.
+
+                        tone="danger" — 크면 나쁜 숫자에 초록이 붙으면 색이 뜻을 뒤집는다.
+                        0원이면 accent를 끈다. 낼 돈이 없는 것은 강조할 일이 아니다.
+                      */}
+                      <StatTile
+                        label="내 미납"
+                        value={`${myUnpaid.toLocaleString()}원`}
+                        icon="card-outline"
+                        accent={myUnpaid > 0}
+                        tone="danger"
+                      />
                     </StatRow>
                   </View>
                 )}

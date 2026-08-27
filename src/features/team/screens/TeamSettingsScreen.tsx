@@ -13,6 +13,7 @@ import { colors, font, radius } from '../../../theme';
 import { useTeamStore } from '../stores/teamStore';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import { RegionPickerModal } from '../components/RegionPickerModal';
+import * as Clipboard from 'expo-clipboard';
 import { regionLabelOf } from '../regions';
 import { WEEKDAYS } from '../weekdays';
 import { recentAvgHeadcount } from '../../attendance/utils/attendanceRate';
@@ -193,6 +194,29 @@ export function TeamSettingsScreen({ navigation }: any) {
 
 
   const selectedDays = Object.keys(weekdays).filter((k) => weekdays[Number(k)]);
+
+  /*
+    읽기 전용 값은 편집 폼과 **같은 상태**에서 나온다.
+
+    load()가 isAdmin 밖에 있어 팀원에게도 폼 상태가 채워진다. 그래서 baseRef(서버 원본)를
+    따로 읽지 않는다 — 그러면 편집과 읽기가 다른 식에서 나오고, 한쪽만 고치는 날 두 화면이
+    다른 값을 말한다. baseRef는 ref라 바뀌어도 다시 그려지지도 않는다.
+    팀원은 편집하지 않으므로 폼 값 = 서버 값이다.
+
+    빈 값은 「0원」이 아니라 「아직 정하지 않았어요」다. 폼이 「정하지 않음」을 빈 문자열로,
+    「0」을 '0'으로 들고 있어서 둘이 갈린다(load에서 defaultFee != null ? String(...) : '').
+  */
+  const NOT_SET = '아직 정하지 않았어요';
+  const won = (v: string) => (v === '' ? NOT_SET : `${Number(v).toLocaleString()}원`);
+  const [copiedAccount, setCopiedAccount] = useState(false);
+  const hasAccount = !!bank || !!accountNo || !!holder;
+  const copyAccount = async () => {
+    /* 은행명을 같이 넣는다 — 번호만 복사하면 붙여넣는 쪽에서 어느 은행인지 모른다.
+       SendMoneySheet가 이미 그렇게 한다. 여기서 다르게 하면 같은 값을 두 화면이 다르게 다룬다 */
+    await Clipboard.setStringAsync(`${bank} ${accountNo}`.trim());
+    setCopiedAccount(true);
+    setTimeout(() => setCopiedAccount(false), 1500);
+  };
 
   const team = activeTeam?.team;
   /**
@@ -512,6 +536,104 @@ export function TeamSettingsScreen({ navigation }: any) {
           </>
         )}
 
+
+        {/*
+          팀원이 보는 것 — 읽기 전용.
+
+          A에서 이 화면으로 오는 문을 팀원에게 열었는데 안이 「팀 나가기」 한 줄뿐이었다.
+          문을 열어놓고 안을 안 채운 상태였다.
+
+          다섯 카드를 보여주고 「실력 레벨」 하나만 뺀다. 그 카드는 상 3점 / 중 2점 / 하 1점
+          배점표인데, 보여주면 자기 등급을 역산한다. 「본인이 자기 등급을 보면 팀 분위기가
+          깨진다」는 판단이 이미 두 곳(TeamHomeTab의 가로 로스터, 멤버 행)에서 표시를 빼게
+          했고, 여기가 세 번째 자리다. 빠뜨린 게 아니라 뺀 것이다.
+
+          나머지 다섯은 팀원이 알아야 하는 값이다 — 어디서 모이나(지역), 언제 모이나(정기모임),
+          얼마 내나(회비), 친구를 데려와도 되나(게스트), 우리 팀은 어떤 팀인가(프로필).
+          RLS도 team_settings_select가 is_team_member라 다 읽힌다.
+
+          편집 위젯을 안 쓴다. 읽기로 바꾸면 전부 Text 한 줄이 되어 공유할 껍데기가
+          카드 스타일뿐이다 — 이 코드베이스에서 다섯 번째로 「공유 단위 0」이 나온 자리다.
+        */}
+        {!isAdmin && (
+          <>
+            {!!loadError && (
+              /* 팀원에게는 「저장을 잠갔어요」를 안 띄운다 — 저장할 게 없다 */
+              <View style={styles.loadErr}>
+                <Text style={styles.loadErrTitle}>설정을 불러오지 못했어요</Text>
+                <Text style={styles.loadErrBody} selectable>{loadError}</Text>
+                <Pressable onPress={load} style={styles.retryBtn} accessibilityRole="button">
+                  <Text style={styles.retryText}>다시 시도</Text>
+                </Pressable>
+              </View>
+            )}
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>팀 대표 지역</Text>
+              <Text style={styles.readValue}>{team?.home_place_name || NOT_SET}</Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>팀 프로필</Text>
+              <Text style={styles.label}>활동 지역</Text>
+              <Text style={styles.readValue}>{team?.region_code ? regionLabelOf(team.region_code) : NOT_SET}</Text>
+              <Text style={styles.label}>평균 인원</Text>
+              <Text style={styles.readValue}>{headcount === '' ? NOT_SET : `${headcount}명`}</Text>
+              <Text style={styles.label}>실력</Text>
+              <Text style={styles.readValue}>
+                {SKILL_OPTIONS.find(([v]) => v === team?.skill_level)?.[1] ?? NOT_SET}
+              </Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>정기모임</Text>
+              <Text style={styles.readValue}>
+                {selectedDays.length && time
+                  ? `매주 ${selectedDays.map((d) => WEEKDAYS[Number(d)]).join('·')} ${time}`
+                  : NOT_SET}
+              </Text>
+              <Text style={styles.label}>기본 정원</Text>
+              <Text style={styles.readValue}>{capacity}명</Text>
+              <Text style={styles.hint}>정원을 넘겨 참석하면 대기자로 넘어가요.</Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>회비</Text>
+              <Text style={styles.label}>{feeMode === 'per_match' ? '경기별 1인당' : '월 회비'}</Text>
+              <Text style={styles.readValue}>{won(fee)}</Text>
+
+              <Text style={styles.label}>입금 계좌</Text>
+              {hasAccount ? (
+                <Pressable onPress={copyAccount} style={styles.readAccount} accessibilityRole="button" accessibilityLabel="계좌 복사">
+                  <View style={{ flex: 1, gap: 2 }}>
+                    {/* 은행과 번호를 한 줄에 — SendMoneySheet의 「받는 곳」과 같은 모양이다 */}
+                    <Text style={styles.readValue}>{`${bank} ${accountNo}`.trim()}</Text>
+                    {!!holder && <Text style={styles.hint}>예금주 {holder}</Text>}
+                  </View>
+                  <Ionicons
+                    name={copiedAccount ? 'checkmark' : 'copy-outline'}
+                    size={16}
+                    color={copiedAccount ? colors.green : colors.textDim}
+                  />
+                </Pressable>
+              ) : (
+                <Text style={styles.readValue}>{NOT_SET}</Text>
+              )}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>게스트</Text>
+              <Text style={styles.readValue}>{guestAllowed ? '초대할 수 있어요' : '초대할 수 없어요'}</Text>
+              {guestAllowed && (
+                <>
+                  <Text style={styles.label}>게스트 회비</Text>
+                  <Text style={styles.readValue}>{won(guestFee)}</Text>
+                </>
+              )}
+            </View>
+          </>
+        )}
+
         {/*
           관리 — 되돌리기 어려운 동작이라 설정 맨 아래에 따로 둔다.
           팀원에게는 이 화면에서 유일하게 남는 것이기도 하다 — 위 카드들은 전부 총무 것이다.
@@ -681,6 +803,9 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
 
+  /* 읽기 전용 값 — 편집 폼의 input과 같은 자리에 오지만 입력이 아니다 */
+  readValue: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
+  readAccount: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dangerZone: { marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.divider },
   leaveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   leavePressed: { opacity: 0.6 },

@@ -23,34 +23,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { onlyIndexOf } from './lib/anchor.ts';
 
 // CRLF를 정규화한다 — 안 하면 개행이 든 정규식이 못 찾고 항상 실패한다
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').split('\r').join('');
-/**
- * indexOf인데, 두 번 이상 나오면 실패한다.
- *
- * 문자열 앵커를 쓸 일이 있으면 이걸 통과시켜라. 앵커가 1회가 아니면 실패한다는 게
- * 기본값이어야 한다.
- *
- * 그냥 indexOf는 같은 꼴이 둘이 되는 날 **조용히 앞의 것을 집는다.** 검사는 통과하는데
- * 재는 자리가 달라진다 — 이게 제일 나쁜 고장이다. 실패는 눈에 띄지만 「엉뚱한 걸 재면서
- * 통과」는 안 띈다. 세 번 겪었다.
- *
- *   이 파일        </> + )} 가 둘이라 저장 버튼 쪽을 집었다. 총무 구간을 통째로 지운
- *                  변이가 그 틈으로 샜다.
- *   uidetail       sectionHeadLink가 둘이 되면서 히어로 링크를 집었다.
- *   teamprofile    profileBits 첫 것이 props 인터페이스라 렌더 자리에 닿지 않았다.
- *                  무엇을 넣어도 통과하는 단언이 됐다.
- *
- * 개별로 고치는 대신 경로를 없앤다. 못 찾아도, 둘 이상이어도 「재료 없음」으로 시끄럽게
- * 끝난다 — 잘못된 통과보다 시끄러운 실패가 낫다.
- */
-const onlyIndexOf = (src: string, needle: string, what: string) => {
-  const n = src.split(needle).length - 1;
-  assert.equal(n, 1, `${what}: 앵커가 ${n}개다(1개여야 한다) — ${needle.slice(0, 50)}`);
-  return src.indexOf(needle);
-};
-
 const tab = read('src/features/team/components/TeamHomeTab.tsx');
 const screen = read('src/features/team/screens/TeamSettingsScreen.tsx');
 const home = read('src/features/team/screens/TeamHomeScreen.tsx');

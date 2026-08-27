@@ -13,23 +13,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { onlyIndexOf } from './lib/anchor.ts';
 
 // CRLF를 정규화한다 — 안 하면 개행이 든 정규식이 못 찾고 항상 실패한다
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').split('\r').join('');
 const tab = read('src/features/team/components/TeamHomeTab.tsx');
 const sheet = read('src/features/team/components/InviteSheet.tsx');
 const screen = read('src/features/team/screens/TeamHomeScreen.tsx');
-
-/**
- * indexOf인데 두 번 이상 나오면 실패한다.
- * (규칙과 근거는 teamsettings.check의 같은 헬퍼에 있다 — 앵커가 둘이 되는 날
- *  조용히 앞의 것을 집는 경로를 없앤다.)
- */
-const onlyIndexOf = (src: string, needle: string, what: string) => {
-  const n = src.split(needle).length - 1;
-  assert.equal(n, 1, `${what}: 앵커가 ${n}개다(1개여야 한다) — ${needle.slice(0, 50)}`);
-  return src.indexOf(needle);
-};
 
 // ── 1. QR이 스캔되는 크기다 ─────────────────────────────────────────
 //

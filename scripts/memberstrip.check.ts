@@ -104,33 +104,39 @@ const tab = read('src/features/team/components/TeamHomeTab.tsx');
   const w = Number(chip.match(/width: (\d+)/)![1]);
 
   /*
-    겹침의 천장은 「글자가 안 잘리는가」에서 나온다. 퍼센트 범위가 아니다.
+    겹침의 천장은 「칸 안에 무엇이 들어 있는가」에서 나온다. 퍼센트 범위가 아니다.
 
-    뒤 칸이 위로 얹히므로 각 칸은 **오른쪽부터** 가려진다. 글자는 칸 가운데에 놓이니
-    보이는 폭(w - |m|)이 글자의 오른쪽 끝보다 커야 한다.
+    뒤 칸이 위로 얹히므로 각 칸은 **오른쪽부터** 가려진다. 내용은 칸 가운데 놓이니
+    보이는 폭(w - |m|)이 내용의 오른쪽 끝보다 커야 한다.
 
-    GLYPH는 실측이다 — 이 앱의 렌더에서 Noto Sans KR 800 12px로 두 글자가 22.1px였고
-    (avatarInitial의 fontSize/fontWeight와 같다) 한글은 고정폭에 가까워 한 글자는 그 절반이다.
-    폰트나 fontSize를 바꾸면 이 수가 바뀌고 천장도 같이 움직인다.
+    CONTENT는 그 내용의 폭이다. 세 번 바뀌었고 그때마다 천장이 움직였다:
+      두 글자 22.1  천장 6.9   (실측: Noto Sans KR 800 12px)
+      한 글자 11.05 천장 12.45
+      아이콘  18    천장 9     ← 지금. 레퍼런스의 일러스트 아바타를 근사한 모양이다
   */
-  const GLYPH = 11.05;
-  const ceiling = (w - GLYPH) / 2; // 글자 오른쪽 끝 = w/2 + GLYPH/2 → m ≤ w - 그 값
+  const CONTENT = 18; // Ionicons person의 size
+  const ceiling = w - (w / 2 + CONTENT / 2);
   assert.ok(
     Math.abs(px) <= ceiling,
-    `겹침 ${Math.abs(px)}가 천장 ${ceiling.toFixed(2)}를 넘는다 — 한 글자가 잘린다`
+    `겹침 ${Math.abs(px)}가 천장 ${ceiling}을 넘는다 — 아이콘 오른쪽이 잘린다`
   );
   // 너무 안 당기면 겹침이 안 보인다. 지름의 1/4은 넘겨야 「파고든다」로 읽힌다
   assert.ok(Math.abs(px) / w >= 0.25, `겹침이 지름의 ${Math.round((Math.abs(px) / w) * 100)}%뿐이다 — 겹쳐 보이지 않는다`);
 
   /*
-    천장의 전제는 「한 글자」다. 두 글자로 돌아가면 GLYPH가 두 배가 되어 지금 값이
-    글자를 자른다. 그래서 함수와 겹침을 한 자리에서 같이 본다 — 한쪽만 바뀌면
-    화면에서는 「글자가 좀 잘렸네」로만 보이고 왜인지는 안 보인다.
+    천장의 전제는 「그 크기의 아이콘」이다. 아이콘을 키우면 지금 값이 그것을 자른다.
+    그래서 아이콘 크기와 겹침을 한 자리에서 같이 본다 — 한쪽만 바뀌면 화면에서는
+    「그림이 좀 깨졌네」로만 보이고 왜인지는 안 보인다.
+
+    글자가 아니라 아이콘인 것 자체도 붙든다. 레퍼런스가 일러스트 아바타이고, 우리에겐
+    그 자산이 없어서 「사람 아이콘 + 사람마다 다른 배경색」으로 근사했다.
+    이니셜로 돌아가면 겹쳐 놓은 작은 원이 다시 「글자 줄」로 보인다.
   */
-  assert.ok(
-    /avatarLetterOf\(m\.displayName\)/.test(tab),
-    '아바타 줄이 한 글자 함수를 안 쓴다 — 두 글자면 지금 겹침이 글자를 자른다'
-  );
+  const chipIcon = onlyMatch(tab, /<Ionicons name="person" size=\{(\d+)\} color=\{tint\.fg\} \/>/, '아바타 아이콘');
+  assert.equal(Number(chipIcon.match(/size=\{(\d+)\}/)![1]), CONTENT,
+    '아바타 아이콘 크기가 겹침 계산의 전제와 다르다');
+  assert.ok(/avatarTint\(m\.id\)/.test(tab), '아바타 배경색이 사람마다 다르지 않다');
+  assert.ok(!/styles\.avatarInitial/.test(tab), '아바타 줄이 이니셜 글자로 돌아갔다 — 겹친 원이 글자 줄로 보인다');
 
   // 각 칸에 배경색 테두리 — 없으면 겹침이 「뭉갰다」로 보인다
   assert.ok(/borderWidth: 2,\s*\n\s*borderColor: colors\.bgRoot,/.test(chip), '아바타에 경계 테두리가 없다');

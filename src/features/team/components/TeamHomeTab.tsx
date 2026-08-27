@@ -16,7 +16,8 @@ import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
 import { positionLabel, toPosition } from '../positions';
-import { avatarLetterOf, initialOf } from '../initials';
+import { avatarTint } from '../avatarTint';
+import { initialOf } from '../initials';
 import {
   type AttendanceRate,
   formatRate,
@@ -651,21 +652,35 @@ export function TeamHomeTab({
                 */}
                 {others.length > 0 && (
                   <View style={styles.avatarRow}>
-                    {others.slice(0, 5).map((m, i) => (
-                      <Pressable
-                        key={m.id}
-                        onPress={onGoMembers}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${m.displayName} 멤버 보기`}
-                        style={[styles.avatarChip, i > 0 && styles.avatarChipOverlap]}
-                      >
-                        {m.avatarUrl ? (
-                          <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
-                        ) : (
-                          <Text style={styles.avatarInitial}>{avatarLetterOf(m.displayName)}</Text>
-                        )}
-                      </Pressable>
-                    ))}
+                    {others.slice(0, 5).map((m, i) => {
+                      const tint = avatarTint(m.id);
+                      return (
+                        <Pressable
+                          key={m.id}
+                          onPress={onGoMembers}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${m.displayName} 멤버 보기`}
+                          style={[
+                            styles.avatarChip,
+                            { backgroundColor: tint.bg },
+                            i > 0 && styles.avatarChipOverlap,
+                          ]}
+                        >
+                          {m.avatarUrl ? (
+                            <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
+                          ) : (
+                            /*
+                              레퍼런스는 사람마다 다른 일러스트 아바타다. 자산이 없어서
+                              사람 아이콘 + 사람마다 다른 배경색으로 근사한다.
+                              한때 이니셜 한 글자였다 — 겹쳐 놓는 36px 원에서 글자는
+                              읽히지도 않으면서 줄 전체를 「글자 줄」로 보이게 했다.
+                              색은 avatarTint가 id에서 뽑아 같은 사람에게 늘 같다.
+                            */
+                            <Ionicons name="person" size={18} color={tint.fg} />
+                          )}
+                        </Pressable>
+                      );
+                    })}
                     {others.length > 5 && (
                       /* +N도 눌린다. 눌리는 원 옆에 안 눌리는 원이 서면 그게 더 나쁘다 */
                       <Pressable
@@ -1195,24 +1210,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    /* 배경색은 avatarTint가 사람마다 인라인으로 준다 — 여기 값은 사진이 있을 때의 바탕 */
     backgroundColor: colors.inputBg,
     borderWidth: 2,
     borderColor: colors.bgRoot,
   },
   /*
-    -12는 지름 36의 33%다. 이 값에는 천장이 있다.
+    -9는 지름 36의 25%다. 이 값에는 천장이 있고, 천장은 **칸 안에 무엇이 들어 있는가**로
+    정해진다. 세 번 다시 계산했다:
 
-    한 글자(11.1px)가 36px 칸 가운데 놓이므로 오른쪽 끝이 23.55px다. 뒤 칸이 위로
-    얹혀서 이 칸의 **오른쪽부터** 가려지니, 보이는 폭 36 - m이 23.55보다 커야 글자가
-    안 잘린다 → m ≤ 12.45. 정수로 12가 최대다.
+      두 글자(22.1px)   천장 (36-29.05)= 6.9  →  -9는 이미 넘었다. 글자가 붙어 보였다
+      한 글자(11.05px)  천장 12.45            →  -12로 당겼다
+      사람 아이콘(18)   천장 9                →  -9로 돌아왔다
 
-    예전엔 -9(25%)였고 근거가 「더 당기면 이니셜 두 글자가 가려진다」였다. 그 두 글자를
-    한 글자로 줄이면서(avatarLetterOf) 근거가 통째로 바뀌었다 — 같은 계산을 다시 해서
-    나온 값이지 눈대중으로 더 당긴 게 아니다.
+    뒤 칸이 위로 얹혀 각 칸은 **오른쪽부터** 가려지고, 내용은 칸 가운데 놓인다.
+    보이는 폭(36 - |m|)이 내용의 오른쪽 끝보다 커야 안 잘린다.
+
+    글자와 아이콘의 차이가 하나 더 있다. 글자는 조금 잘려도 남은 획으로 읽히지만
+    아이콘은 실루엣이라 오른쪽이 잘리면 「깨진 그림」이 된다. 그래서 천장을 꽉 채우지
+    않고 정확히 천장에 맞춘다.
+
+    사진(avatarUrl)이 있는 칸은 full-bleed라 잘려도 괜찮은데, 한 줄에 사진과 아이콘이
+    섞이므로 값은 더 빡빡한 쪽(아이콘)에 맞춘다.
   */
-  avatarChipOverlap: { marginLeft: -12 },
+  avatarChipOverlap: { marginLeft: -9 },
   avatarPhoto: { width: '100%', height: '100%' },
-  avatarInitial: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
   avatarMore: { backgroundColor: colors.greenTint },
   avatarMoreText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 

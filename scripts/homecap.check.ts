@@ -79,6 +79,11 @@ const util = read('src/features/attendance/utils/capacity.ts');
   // 삼항식 사본이 돌아왔는가 — 근거 주석에는 「대기 N번」이 남아야 하므로 코드 꼴을 본다
   assert.ok(!/`대기 \$\{myWaitPosition\}번`/.test(card), '카드에 라벨 삼항식 사본이 돌아왔다');
 
+  // 홈은 버튼이 아니라 안내다. 문구가 달라서 함수를 공유하지 않는다 —
+  // 나누는 것은 계산(myWaitPosition)이지 문자열이 아니다
+  assert.ok(/cap\.myWaitPosition > 0 &&/.test(home), '홈이 대기 순번을 안 그린다');
+  assert.ok(/대기 \{cap\.myWaitPosition\}번이에요/.test(home), '홈의 대기 안내 문구가 없다');
+
   // 승격 함수는 지웠다 — 대기는 매번 정렬로 다시 계산되니 승격 대상을 고를 일이 없다
   assert.ok(!/export function nextPromotion/.test(util), 'nextPromotion이 돌아왔다 — 대기는 저장된 상태가 아니다');
 }

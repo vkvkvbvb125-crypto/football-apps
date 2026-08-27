@@ -641,6 +641,25 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               </View>
             </View>
 
+            {/*
+              내 대기 순번 — 위 세 칸과 층위가 다르다.
+
+              참석·미정·불참은 팀 전체 집계이고 이건 내 것이라, 네 번째 칸으로 넣으면
+              같은 성격으로 읽힌다. MatchDetailCard도 같은 이유로 pill 라벨과 대기
+              명단을 갈라 뒀다. 줄을 따로 둔다.
+
+              정원이 안 찼으면 아무것도 안 그린다 — 「대기 0번」은 없는 상태고,
+              「정원 여유 있어요」를 상시로 적으면 그게 소음이 된다.
+            */}
+            {!!cap && cap.myWaitPosition > 0 && (
+              <View style={styles.waitLine}>
+                <Ionicons name="hourglass-outline" size={14} color={colors.gold} />
+                <Text style={styles.waitLineText}>
+                  대기 {cap.myWaitPosition}번이에요
+                  {cap.myWaitPosition === 1 ? ' · 한 명만 빠지면 참석이에요' : ''}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.cardBtnRow}>
               <Pressable
@@ -1144,6 +1163,9 @@ const styles = StyleSheet.create({
   statsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statsTitle: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   statsRate: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  /* 대기 순번 — 참석/미정/불참 줄 아래. 금색은 「내 것」이라는 표시다(역할 뱃지와 같은 계열) */
+  waitLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  waitLineText: { color: colors.gold, fontSize: 12, fontWeight: '700' },
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },

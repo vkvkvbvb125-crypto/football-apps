@@ -164,6 +164,13 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
   없는 구멍을 항목으로 만든 것이라 지웠다. **착수 전 실측의 첫 항목은 「이게 정말
   구멍인가」여야 한다.**
 
+- **`resolveCapacityValue`(ScheduleRow.tsx)를 아무도 안 부른다.** `capacity ??
+  venue_capacity ?? 12`인데, **`venue_capacity`를 폴백으로 삼는 유일하게 남은 자리다.**
+  `nextPromotion`은 지웠지만 이건 안 지웠다 — 그건 중복이라 지워도 개념이 남고,
+  이건 지우면 「경기 정원이 없으면 구장 정원을 쓴다」는 개념 자체가 사라진다.
+  DB가 `capacity int not null default 12`라 지금은 폴백이 걸릴 일이 없다.
+  지우자는 게 아니라 안 쓰인다는 사실의 기록이다(`waitlist` 항목과 같은 성격).
+
 - **`waitlist` 테이블을 앱이 한 번도 안 읽는다** — 대기 순번은 `capacity.ts`가
   투표를 `updated_at` 순으로 세서 만든다. 테이블은 스키마에 있고 행도 안 쌓인다.
   지우자는 게 아니라, **두 개의 대기 정의가 공존한다**는 사실을 적어 둔다 —

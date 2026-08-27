@@ -428,8 +428,9 @@ export function TeamHomeTab({
 
         )}
 
-      {/* 배너·초대는 content 밖이다 — banner의 marginHorizontal 20이 content의 padding 20과
-          겹치면 여백이 두 겹이 된다. 부모에서도 이 둘만 ScrollView 직속이었다. */}
+      {/* 배너는 content 밖이다 — banner의 marginHorizontal 20이 content의 padding 20과
+          겹치면 여백이 두 겹이 된다. 초대 카드도 같은 이유로 여기 있었는데, 순서를 바꾸며
+          content 안으로 들어가면서 자기 여백을 뺐다. 지금 밖에 있는 것은 배너 하나다. */}
       <View style={styles.content}>
           {/* 다음 경기 카드를 걷어냈다 — 홈이 같은 경기를 더 자세히(참여 현황·CTA까지) 보여준다.
               팀 화면의 주인공은 멤버다. */}
@@ -684,6 +685,12 @@ export function TeamHomeTab({
                   안에 있으면 카드 안에 카드가 되어 경계가 어디까지인지 알 수 없었다 —
                   엠블럼·팀명·통계는 「이 팀은 무엇인가」이고 초대는 「지금 할 일」이라 성격도 다르다.
 
+                  그 「지금 할 일」이 화면 위쪽을 차지할 이유는 아니었다. 초대는 한 번 하고
+                  끝나는 일이고 멤버·기록은 매번 보는 것이다 — 갓 만든 팀에서도 초대는
+                  며칠이면 끝나지만 그 자리는 팀이 사라질 때까지 남는다. 일시적 과업에
+                  첫 화면을 내주면 남은 기간 내내 손해다. 그래서 멤버·내 기록 아래로 내렸다.
+                  (배너 바로 아래였을 때는 6명 팀에서 멤버 섹션과 내 기록이 둘 다 스크롤 밖이었다)
+
                   제목·설명이 돌아왔다. 뺐던 근거는 「상시 권유는 소음이고, 이미 여섯 명인 팀 홈이
                   그만큼 길어진다」였는데, 그건 조건 분기(셋 이하만 큰 카드)를 없애면서 큰 쪽을
                   버린 판단이었다. 조건을 안 두고 항상 카드로 노출하기로 정해졌으니 그 근거는
@@ -884,8 +891,8 @@ const styles = StyleSheet.create({
   teamStats: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
   /* 코드·QR·공유 세 칸. 코드가 폭을 다 먹고 QR이 오른쪽에 붙는다 — 공유는 아래 한 줄 */
   inviteCard: {
-    marginHorizontal: 20,
-    marginTop: 12,
+    /* content(padding 20, gap 14) 안으로 들어왔다 — 자기 marginHorizontal·marginTop을
+       그대로 두면 여백이 두 겹이 된다 */
     padding: 14,
     gap: 12,
     borderRadius: radius.card,

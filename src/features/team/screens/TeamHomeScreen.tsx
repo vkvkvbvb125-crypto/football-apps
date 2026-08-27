@@ -331,7 +331,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }} showsVerticalScrollIndicator={false}>
 
 
-        {/* 팀 홈은 배너·초대가 이 래퍼 밖에 있어야 한다 — banner의 marginHorizontal 20이
+        {/* 팀 홈은 배너가 이 래퍼 밖에 있어야 한다 — banner의 marginHorizontal 20이
             content의 padding 20과 겹치면 여백이 두 겹이 된다. 그래서 홈은 TeamHomeTab이
             자기 content를 갖고, 여기서는 감싸지 않는다. 감싸면 빈 래퍼의 padding이 남는다. */}
         {tab === 'home' && (

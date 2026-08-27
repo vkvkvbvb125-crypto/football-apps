@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { onlyIndexOf, onlyMatch } from './lib/anchor.ts';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const num = (src: string, re: RegExp, what: string) => {
@@ -203,6 +204,61 @@ const num = (src: string, re: RegExp, what: string) => {
   // 초대는 그 목록 안에 있다
   assert.ok(/accessibilityLabel="멤버 초대하기"/.test(membersTab), '목록 끝 초대 행이 없다');
   assert.ok(!/inviteCtaText/.test(membersTab), '같은 일을 하는 초대 버튼이 둘이다');
+}
+
+// ── 히어로 — 두 곳이 맞아야 하는 것들 ──────────────────────────────
+{
+  const tab = read('src/features/team/components/TeamHomeTab.tsx').split('\r').join('');
+  const blockOf = (name: string) => {
+    const i = onlyIndexOf(tab, `  ${name}: {`, `${name} 스타일`);
+    return tab.slice(i, tab.indexOf('\n  },', i));
+  };
+
+  /*
+    엠블럼 링 ↔ 내 행 아바타 링.
+
+    「이 동그라미가 주인공이다」를 앱은 이미 초록 링으로 말하고 있다(selfAvatar).
+    엠블럼이 그 어휘를 빌려 쓰는 것이라 값이 같아야 한다 — 한쪽만 굵어지거나 색이
+    갈리면 같은 뜻을 다른 모양으로 두 번 말하게 된다.
+  */
+  const ring = (name: string) => {
+    const b = blockOf(name);
+    return {
+      width: onlyMatch(b, /borderWidth: [\d.]+/, `${name} borderWidth`),
+      color: onlyMatch(b, /borderColor: [^,\n]+/, `${name} borderColor`),
+    };
+  };
+  const emblem = ring('emblem');
+  const self = ring('selfAvatar');
+  assert.deepEqual(
+    emblem,
+    self,
+    `엠블럼 링과 내 행 아바타 링이 갈렸다: ${JSON.stringify(emblem)} vs ${JSON.stringify(self)}`
+  );
+  assert.ok(/borderColor: colors\.green/.test(emblem.color), '엠블럼 링이 초록이 아니다');
+
+  /*
+    dashed가 안 돌아왔는가.
+
+    이 앱에서 dashed는 「비었으니 채워라」다(myInfoChipEmpty의 「설정하기」). 엠블럼에
+    dashed를 두면 로고를 **다 채운 뒤에도** 채우라는 표시가 남는다. 빈 상태의 안내는
+    안에 있는 EMBLEM 글자가 한다.
+    (부정 단언 — 위 긍정 단언이 emblem 블록을 이미 고정했다: anchor.ts 다섯 번째 구분)
+  */
+  assert.ok(
+    !/borderStyle: 'dashed'/.test(blockOf('emblem')),
+    '엠블럼에 dashed가 돌아왔다 — 다 채운 자리에도 채우라는 표시가 남는다'
+  );
+
+  /*
+    밑색과 빛줄기가 같은 방향인가.
+
+    빛줄기는 밑색의 밝은 쪽(우상단)에서 뻗어 나간다. 한쪽만 뒤집히면 어두운 구석에서
+    빛이 시작해 카드가 두 방향으로 갈린다 — 눈으로는 「뭔가 탁하다」로만 보이고
+    원인이 안 보인다. 두 겹 다 우상 → 좌하여야 한다.
+  */
+  const dirs = tab.match(/start=\{\{ x: 1, y: 0 \}\}\s*\n\s*end=\{\{ x: 0, y: 1 \}\}/g) ?? [];
+  assert.equal(dirs.length, 2, `히어로 배경 두 겹의 방향이 갈렸다 (우상→좌하가 ${dirs.length}겹)`);
 }
 
 console.log('uidetail.check: ok');

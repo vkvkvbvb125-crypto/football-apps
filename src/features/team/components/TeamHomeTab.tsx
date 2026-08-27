@@ -198,13 +198,47 @@ export function TeamHomeTab({
               />
             </View>
           ) : (
-            <LinearGradient
-              colors={[colors.greenDeep, colors.cardRaised]}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              {/*
+                밑색. 방향이 우상 → 좌하다 — 예전엔 반대(좌상 → 우하)였다.
+                오른쪽 위가 밝고 왼쪽 아래로 갈수록 어두워진다.
+              */}
+              <LinearGradient
+                colors={[colors.greenDeep, colors.cardRaised]}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              {/*
+                우상단에서 대각으로 뻗는 빛줄기. 밑색 위에 한 겹 더 얹는다.
+
+                알파는 재서 정했다. 눈대중으로 잡았다가 「안 보인다」를 두 번 들은 자리가
+                있어서다(배경 L* 2.81에 +2.3을 얹은 적이 있다 — 매끈한 그라디언트에는
+                비교할 경계가 없어 확실히 안 보이는 크기였다).
+
+                이 카드의 밑색은 우상단 L* 25.83 → 좌하단 12.69다. 카드 자신의 명도 폭이
+                13.1이라, 얹는 빛이 그보다 한참 작으면 밑색의 기울기에 묻힌다.
+
+                  greenTint (0.12)  합성 31.60  ΔL* 5.76  → 「오른쪽이 조금 밝다」로만 읽혔다
+                  green   에 0.22   합성 36.29  ΔL* 10.45 → 줄기로 선다. 이걸 쓴다
+                  green   에 0.30+              ΔL* 14+   → 글자와 다투기 시작한다
+
+                토큰 재사용(greenTint)이 새 값 0이라 먼저 그려 봤는데, 두 번 렌더해서
+                나란히 놓고 보니 줄기가 안 섰다. 새로 정한 값은 알파 하나뿐이다 —
+                색은 colors.green 그대로고, 이 파일이 이미 일회성 오버레이를 인라인
+                rgba로 쓰고 있다(스크림 0.45/0.85, 엠블럼 바탕 0.55).
+
+                locations의 0.55는 줄기의 길이다. 1.0이면 카드 전체가 초록으로 물들어
+                밑색의 어두운 쪽이 사라진다 — 대각선이 아니라 그냥 밝은 카드가 된다.
+              */}
+              <LinearGradient
+                colors={['rgba(34,197,94,0.22)', 'transparent']}
+                start={{ x: 1, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                locations={[0, 0.55]}
+                style={StyleSheet.absoluteFill}
+              />
+            </View>
           )}
           {/* 이 카드에만 있던 SoftTint를 뺐다 — 지금은 앱의 모든 카드에 같은 결이 깔려 있어서
               여기만 따로 강조할 이유가 없어졌다. 혼자 빛이 두 겹이라 팀 탭만 톤이 튀었다. */}
@@ -862,12 +896,21 @@ const styles = StyleSheet.create({
     // 사각 타일들과도 모양이 맞는다.
     width: 66,
     height: 66,
-    borderRadius: radius.tile,
+    // tile(16)에서 hero(20)로. 66 기준 24%에서 30%가 된다 — 사각형 정체성은 남기면서
+    // 모서리가 눈에 띄게 둥글어진다. 카드 자신과 같은 곡률이라 안에 든 요소로 묶인다.
+    // pill(원형)은 위 근거를 뒤집는 것이라 안 간다.
+    borderRadius: radius.hero,
     overflow: 'hidden',
     backgroundColor: 'rgba(7,16,13,0.55)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.28)',
-    borderStyle: 'dashed',
+    // 내 행 아바타(selfAvatar)와 같은 링이다 — 값도 같다. 앱에서 「이 동그라미가
+    // 주인공이다」를 이미 그렇게 말하고 있어서 새 어휘를 만들 이유가 없다.
+    //
+    // dashed였다. 이 앱에서 dashed는 「비었으니 채워라」라는 뜻을 이미 갖고 있고
+    // (myInfoChipEmpty의 「설정하기」), 엠블럼도 그 뜻으로 읽혔다. 문제는 로고가
+    // **있을 때까지** dashed였다는 것이다 — 다 채운 자리에 채우라는 표시가 남았다.
+    // 빈 상태의 안내는 안에 있는 EMBLEM 글자가 이미 하고 있으니 테두리에서 뺀다.
+    borderWidth: 2,
+    borderColor: colors.green,
     alignItems: 'center',
     justifyContent: 'center',
   },

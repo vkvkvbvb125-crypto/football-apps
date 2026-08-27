@@ -7,6 +7,7 @@
 //   1. putMyVote가 내 행 말고 아무것도 안 건드리는가 (참석 수·대기 순번이 전부 여기서 파생된다)
 //   2. 되돌릴 값을 어디서 얻는가 (연타로 깔린 낙관 행을 그대로 되돌리면 서버에 없는 값이 남는다)
 //   3. 스토어가 그 순서대로 부르는가 (반영 → castVote → 실패면 롤백, 성공이면 재조회)
+//   4. 낙관 규칙이 서버 동작과 같은가 (규칙의 근거가 「서버 흉내」다 — 서버가 바뀌면 흉내도)
 //
 // ── 소스 단언만으로 끝내면 안 되는 종류 ──────────────────────────────
 //
@@ -22,6 +23,7 @@
 // 것을 다시 새지 않게 붙들어 두는 역할이다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { onlyIndexOf, onlyMatch } from './lib/anchor.ts';
 import type { MatchWithVotes, VoteRow } from '../src/features/attendance/services/attendanceService';
 import {
   OPTIMISTIC_ID_PREFIX,
@@ -35,6 +37,8 @@ import {
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').split('\r').join('');
 const store = read('src/features/attendance/stores/attendanceStore.ts');
 const screen = read('src/features/attendance/screens/AttendanceScreen.tsx');
+const util = read('src/features/attendance/utils/optimisticVote.ts');
+const trigger = read('supabase/migrations/20260828_votes_updated_at_trigger.sql');
 
 const vrow = (member: string, status: VoteRow['status'], updated: string, id = `srv-${member}`): VoteRow => ({
   id,
@@ -99,22 +103,73 @@ const fixture = (): MatchWithVotes[] =>
   assert.equal(putMyVote(before, 'M1', 'nobody', null)[0], before[0], '없는 행을 지우면서 객체를 새로 만든다');
 }
 
-// ── 2. updated_at — 새로 찍을 때만 now ──────────────────────────────
+// ── 2. updated_at — 서버가 하는 것을 흉내 낸다 ──────────────────────
 //
-// 서버는 재투표에서 이 칸을 안 올린다(트리거 없음, castVote 페이로드에 없음).
-// now로 통일하면 낙관 반영에서 대기 맨 뒤로 갔다가 재조회에서 원래 순번으로 튄다.
+// 셋이다: 신규면 now(컬럼 default), 상태가 바뀌면 now(트리거), 상태가 같으면 기존
+// 유지(when 절이 트리거를 안 태운다). capacity.ts가 이 값으로 대기 순번을 매기므로
+// 서버와 다르게 정하면 낙관에서 한 순번, 재조회에서 다른 순번이 되어 줄이 튄다.
 {
   const now = new Date('2026-08-20T09:00:00Z');
   const prev = vrow('me', 'absent', '2026-08-01T11:00:00Z');
 
+  // 상태가 바뀌면 now — 서버 트리거가 올린다
   const changed = makeOptimisticVote('M1', 'me', 'attend', prev, now);
-  assert.equal(changed.updated_at, prev.updated_at, '바꾸는데 updated_at을 now로 덮는다 — 대기 순번이 튄다');
+  assert.equal(changed.updated_at, now.toISOString(),
+    '상태가 바뀌는데 기존 updated_at을 유지한다 — 서버는 올린다(트리거). 재조회에서 순번이 튄다');
   assert.equal(changed.status, 'attend');
   assert.deepEqual(changed.replaced, prev, '덮은 원래 값을 안 들고 있다 — 연타 롤백이 깨진다');
 
+  // 상태가 같으면 유지 — 같은 pill 재탭이다. 서버는 when 절 때문에 안 올린다
+  const same = makeOptimisticVote('M1', 'me', 'absent', prev, now);
+  assert.equal(same.updated_at, prev.updated_at,
+    '같은 상태인데 now로 갱신한다 — 재탭만으로 대기 맨 뒤로 갔다가 재조회에서 튀어 올라온다');
+
+  // 신규면 now — 찾아볼 기존 값이 없다
   const fresh = makeOptimisticVote('M1', 'me', 'attend', null, now);
   assert.equal(fresh.updated_at, now.toISOString(), '새로 찍는데 updated_at이 now가 아니다');
   assert.equal(fresh.replaced, null);
+
+  // 비교 기준은 화면 값이 아니라 서버 값이다. 연타 중 화면 값은 앞선 낙관 행이고,
+  // 서버가 보는 old.status는 그게 아니다 — rollbackTarget이 서버 값을 준다.
+  const first = makeOptimisticVote('M1', 'me', 'attend', rollbackTarget(prev), now);
+  const second = makeOptimisticVote('M1', 'me', 'absent', rollbackTarget(first), now);
+  assert.equal(second.updated_at, prev.updated_at,
+    '연타로 원래 상태로 되돌아왔는데 now를 찍는다 — 서버는 absent→attend→absent를 결국 안 바뀐 것으로 보지 않는다');
+}
+
+// ── 2-b. 낙관 규칙과 서버 동작을 한 단언으로 묶는다 ─────────────────
+//
+// 이 규칙의 근거는 「서버를 흉내 낸다」다. 근거가 서버에 있으니 서버가 바뀌면 흉내도
+// 바뀌어야 하는데, 그 대응은 소스 어디에도 안 적혀 있으면 조용히 갈린다.
+// ③-b 직전이 그 상태였다: 트리거가 없어서 「바꿀 때는 유지」가 맞았고, 트리거를 붙이는
+// 순간 같은 코드가 틀린 규칙이 됐다. 마이그레이션 파일과 여기를 마주 보게 한다.
+{
+  // 서버가 무엇을 하는지부터 파일에서 읽는다
+  const bumpsOnUpdate = /new\.updated_at := now\(\);/.test(trigger)
+    && /before update on attendance_votes/.test(trigger);
+  const onlyWhenChanged = /when \(old\.status is distinct from new\.status\)/.test(trigger);
+  assert.ok(bumpsOnUpdate, '트리거가 UPDATE에서 updated_at을 올리지 않는다 — 아래 대응의 전제가 사라졌다');
+
+  // 클라이언트가 그 셋을 그대로 따르는가. 값을 만드는 그 줄을 집어서 본다 —
+  // 파일 어딘가에 남은 다른 줄로 통과하면 안 된다
+  const rule = onlyMatch(util, /updated_at: .+/, 'updated_at 계산');
+
+  assert.equal(
+    /replaced && replaced\.status === status \? replaced\.updated_at : now\.toISOString\(\)/.test(rule),
+    onlyWhenChanged,
+    `낙관 규칙이 서버와 갈렸다. 트리거는 ${onlyWhenChanged ? '상태가 바뀔 때만' : '모든 UPDATE에서'} 올리는데 ` +
+      `클라이언트는 다르게 정한다: ${rule.trim()}`
+  );
+
+  // 근거 주석이 옛 전제로 남아 있으면 다음 사람이 그걸 읽고 판단한다.
+  // (부정 단언 — 먼저 긍정으로 대상을 고정한다. anchor.ts 다섯 번째 구분)
+  const doc = util.slice(
+    onlyIndexOf(util, ' * 화면에 먼저 얹을 행.', '낙관 행 주석'),
+    onlyIndexOf(util, 'export function makeOptimisticVote(', 'makeOptimisticVote 정의')
+  );
+  assert.ok(/트리거/.test(doc), '낙관 행 주석에 서버 동작이 안 적혀 있다 — 대상을 잘못 집었을 수도 있다');
+  assert.ok(!/트리거가 없|올리지 않는다|안 올린다/.test(doc),
+    `근거 주석이 「서버가 안 올린다」로 남아 있다 — ③-b로 사실이 바뀌었다: ${doc.slice(0, 120)}`);
 }
 
 // ── 3. 낙관 행 id 접두사는 계약이다 ─────────────────────────────────

@@ -42,13 +42,23 @@ export function rollbackTarget(current: VoteRow | null | undefined): VoteRow | n
 /**
  * 화면에 먼저 얹을 행.
  *
- * updated_at은 새로 찍을 때만 now다. 바꿀 때는 원래 값을 유지한다 —
- * capacity.ts가 이 값을 오름차순으로 정렬해 대기 순번을 매기는데, 서버는 재투표에서
- * 이 칸을 올리지 않는다(트리거가 없고 castVote 페이로드에도 없다). now로 통일하면
- * 낙관 반영에서 맨 뒤로 갔다가 재조회에서 원래 순번으로 튀어 올라온다.
+ * updated_at은 서버가 하는 것을 그대로 흉내 낸다. 셋 다
+ * 20260828_votes_updated_at_trigger.sql의 동작이다:
+ *   신규        → now   (컬럼 default now()가 찍는다)
+ *   상태가 바뀜 → now   (트리거가 올린다)
+ *   상태가 같음 → 기존 값 유지 (when 절이 트리거를 안 태운다 — 같은 pill 재탭)
  *
- * 새로 찍을 때의 now는 기기 시계다 — 시계가 어긋난 기기면 정원이 찬 경계에서 낙관 구간
- * 동안만 대기 순번이 한 칸 다를 수 있다. 재조회가 서버 값으로 덮으므로 그대로 둔다.
+ * 흉내를 내는 이유는 capacity.ts가 이 값을 오름차순으로 정렬해 대기 순번을 매기기
+ * 때문이다. 서버와 다르게 정하면 낙관 반영에서 한 순번, 재조회에서 다른 순번이 되어
+ * 대기 줄이 눈앞에서 튄다. 서버 동작이 바뀌면 여기도 바뀌어야 한다 —
+ * optimistic.check가 마이그레이션 파일과 이 규칙을 한 단언으로 묶어 두고 있다.
+ *
+ * 비교 기준은 replaced다. 지금 화면에 있는 값이 아니라 **서버에 있는 값**이다 —
+ * 연타 중이면 화면 값은 앞선 낙관 행이고 서버가 보는 old.status는 그게 아니다.
+ * rollbackTarget이 그 서버 값을 준다.
+ *
+ * now는 기기 시계다 — 어긋난 기기면 정원이 찬 경계에서 낙관 구간 동안만 대기 순번이
+ * 한 칸 다를 수 있다. 재조회가 서버 값으로 덮으므로 그대로 둔다.
  */
 export function makeOptimisticVote(
   matchId: string,
@@ -62,7 +72,7 @@ export function makeOptimisticVote(
     match_id: matchId,
     team_member_id: memberId,
     status,
-    updated_at: replaced?.updated_at ?? now.toISOString(),
+    updated_at: replaced && replaced.status === status ? replaced.updated_at : now.toISOString(),
     replaced,
   };
 }

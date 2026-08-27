@@ -15,7 +15,7 @@ import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
 import { POSITION_INFO, positionLabel, toPosition } from '../positions';
-import { initialOf } from '../initials';
+import { avatarLetterOf, initialOf } from '../initials';
 import {
   type AttendanceRate,
   formatRate,
@@ -606,7 +606,7 @@ export function TeamHomeTab({
                         {m.avatarUrl ? (
                           <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
                         ) : (
-                          <Text style={styles.avatarInitial}>{initialOf(m.displayName)}</Text>
+                          <Text style={styles.avatarInitial}>{avatarLetterOf(m.displayName)}</Text>
                         )}
                       </Pressable>
                     ))}
@@ -1117,7 +1117,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.bgRoot,
   },
-  avatarChipOverlap: { marginLeft: -9 },
+  /*
+    -12는 지름 36의 33%다. 이 값에는 천장이 있다.
+
+    한 글자(11.1px)가 36px 칸 가운데 놓이므로 오른쪽 끝이 23.55px다. 뒤 칸이 위로
+    얹혀서 이 칸의 **오른쪽부터** 가려지니, 보이는 폭 36 - m이 23.55보다 커야 글자가
+    안 잘린다 → m ≤ 12.45. 정수로 12가 최대다.
+
+    예전엔 -9(25%)였고 근거가 「더 당기면 이니셜 두 글자가 가려진다」였다. 그 두 글자를
+    한 글자로 줄이면서(avatarLetterOf) 근거가 통째로 바뀌었다 — 같은 계산을 다시 해서
+    나온 값이지 눈대중으로 더 당긴 게 아니다.
+  */
+  avatarChipOverlap: { marginLeft: -12 },
   avatarPhoto: { width: '100%', height: '100%' },
   avatarInitial: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
   avatarMore: { backgroundColor: colors.greenTint },

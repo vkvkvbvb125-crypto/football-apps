@@ -359,65 +359,6 @@ export function TeamHomeTab({
             </View>
           </View>
 
-          {profileBits.length > 0 && (
-            <Text style={styles.profileLine} numberOfLines={2}>
-              {profileBits.join(' · ')}
-            </Text>
-          )}
-
-          {/* 경기 / 멤버 / 이번 달 참석률 — 팀 프로필의 요약 지표.
-              「공지」였다. 공지 개수는 팀이 어떤지 말해주지 않는다 — 세 개든 서른 개든
-              그 팀이 잘 모이는지와 무관하다. 참석률로 바꾼다.
-              계산은 홈의 통계 타일과 같은 함수(attendanceRate)를 쓴다.
-              공통 StatTile을 쓴다: 라벨이 위, 숫자가 아래라 격자를 훑을 때 숫자끼리 같은
-              높이에서 비교된다. 숫자만 초록으로 둬서 라벨은 조용히 물러난다. */}
-          <View style={styles.teamStats}>
-            <StatRow>
-              {/*
-                「경기」는 matches.length — 팀 생성 이래 전부다. 라벨을 「이번 달 경기」로
-                바꾸려면 계산도 바꿔야 하고, 그러면 참석률의 「이번 달」·멤버 지표의
-                「최근 3개월」에 이어 세 번째 창이 생긴다. 계산을 두고 라벨을 값에 맞춘다.
-
-                0은 「-」로 바꾸지 않는다. 경기 0회와 멤버 0명은 실제로 0이지 데이터가
-                없는 게 아니다. 「-」는 셀 것이 없어 비율을 못 내는 참석률에만 쓴다.
-
-                「멤버」에는 진입을 걸지 않는다 — 아래 로스터 카드 제목이 이미 멤버 탭의
-                문이고, 같은 화면에 같은 곳으로 가는 입구가 둘이면 어느 쪽이 무엇인지
-                흐려진다. 여기는 지표, 저기는 명단이다.
-              */}
-              <StatTile label="경기" value={String(matches.length)} icon="calendar-outline" accent />
-              {/*
-                「멤버」는 하단 탭 「팀」의 people-outline을 쓰지 않는다.
-                거기는 눌러서 가는 화면 이름이고 여기는 아무 데도 안 가는 지표다 —
-                스탯 바에 진입이 없다는 건 검사가 이미 붙들고 있다. 같은 그림을 쓰면
-                그림이 「누를 수 있다」고 거짓말한다. 한 겹 안쪽인 person-outline을 쓴다.
-              */}
-              <StatTile label="멤버" value={String(members.length)} icon="person-outline" accent />
-              {/*
-                trending-up이 아니다 — 값이 내려가도 화살표가 위를 가리켜 거짓말이 된다.
-                checkmark 계열도 아니다. 앱에서 그건 「했다」는 동작 완료를 뜻해서
-                지표 칸에 쓰면 이미 끝난 일로 읽힌다.
-              */}
-              <StatTile label="참석" value={formatRate(teamRate)} icon="stats-chart-outline" accent />
-            </StatRow>
-
-            {/*
-              기준을 상시로 적는다.
-
-              이 화면에는 참석률 창이 둘 있다. 위 「참석」은 monthlyAttendanceRate(이번 달)이고,
-              아래 멤버 행과 「내 기록」은 memberAttendanceRate(최근 3개월)다. 팀 지표는
-              「이번 달 어땠나」, 개인 지표는 표본이 작아 흔들리니 3개월 — 둘 다 근거가 있어서
-              합치지 않는다(attendanceRate.ts 머리말).
-
-              그래서 접어두지 않는다. 눌러야 보이는 안내는 안 누른 사람이 계속 오해하는데,
-              여기서는 두 창이 한 화면에 같이 서 있어서 오해가 기본값이 된다.
-              ⓘ는 누르는 표식이 아니라 「이건 안내다」라는 뜻이다.
-            */}
-            <View style={styles.statNote}>
-              <Ionicons name="information-circle-outline" size={13} color={colors.textFaint} />
-              <Text style={styles.statNoteText}>이번 달 치른 경기 기준이에요</Text>
-            </View>
-          </View>
 
           {/* 초대 코드 공유는 총무 전용이 아니다 — 홈의 "친구 초대하기"가 멤버를 여기로 보내는데
               총무만 볼 수 있으면 멤버는 눌러도 아무것도 못 하는 막다른 길이 된다. */}
@@ -432,6 +373,80 @@ export function TeamHomeTab({
           겹치면 여백이 두 겹이 된다. 초대 카드도 같은 이유로 여기 있었는데, 순서를 바꾸며
           content 안으로 들어가면서 자기 여백을 뺐다. 지금 밖에 있는 것은 배너 하나다. */}
       <View style={styles.content}>
+        {/*
+          팀 지표 카드 — 히어로 밖이다.
+
+          히어로 안에 있을 때 카드 높이 211px 중 아래 80px을 이 블록이 먹었다. 그 위에
+          팀명·역할·설정·Since·구장·소개까지 다섯 줄이 쌓여서, 무엇이 주인공인지 자리로는
+          알 수 없었다. 히어로는 「이 팀이 누구인가」고 여기는 「어떻게 굴러가는가」다.
+
+          팀 소개 줄(지역·정기·평균·실력)도 같이 왔다. 히어로에서 그 줄은 혼자만 전체 폭인
+          데다 바로 아래 스탯 바가 훨씬 무거워서, 두 덩어리 사이에 낀 자투리로 보였다 —
+          카드 밖으로 넘친 게 아니라(재 봤다: 카드 top 50/bottom 261, 그 줄 153~181)
+          속한 데가 없어서 떠 보인 것이다. 지표와 한 카드에 두면 성격이 같아 붙는다.
+        */}
+        <View style={styles.teamProfileCard}>
+  {profileBits.length > 0 && (
+    <Text style={styles.profileLine} numberOfLines={2}>
+      {profileBits.join(' · ')}
+    </Text>
+  )}
+
+  {/* 경기 / 멤버 / 이번 달 참석률 — 팀 프로필의 요약 지표.
+      「공지」였다. 공지 개수는 팀이 어떤지 말해주지 않는다 — 세 개든 서른 개든
+      그 팀이 잘 모이는지와 무관하다. 참석률로 바꾼다.
+      계산은 홈의 통계 타일과 같은 함수(attendanceRate)를 쓴다.
+      공통 StatTile을 쓴다: 라벨이 위, 숫자가 아래라 격자를 훑을 때 숫자끼리 같은
+      높이에서 비교된다. 숫자만 초록으로 둬서 라벨은 조용히 물러난다. */}
+  <View style={styles.teamStats}>
+    <StatRow>
+      {/*
+        「경기」는 matches.length — 팀 생성 이래 전부다. 라벨을 「이번 달 경기」로
+        바꾸려면 계산도 바꿔야 하고, 그러면 참석률의 「이번 달」·멤버 지표의
+        「최근 3개월」에 이어 세 번째 창이 생긴다. 계산을 두고 라벨을 값에 맞춘다.
+
+        0은 「-」로 바꾸지 않는다. 경기 0회와 멤버 0명은 실제로 0이지 데이터가
+        없는 게 아니다. 「-」는 셀 것이 없어 비율을 못 내는 참석률에만 쓴다.
+
+        「멤버」에는 진입을 걸지 않는다 — 아래 로스터 카드 제목이 이미 멤버 탭의
+        문이고, 같은 화면에 같은 곳으로 가는 입구가 둘이면 어느 쪽이 무엇인지
+        흐려진다. 여기는 지표, 저기는 명단이다.
+      */}
+      <StatTile label="경기" value={String(matches.length)} icon="calendar-outline" accent />
+      {/*
+        「멤버」는 하단 탭 「팀」의 people-outline을 쓰지 않는다.
+        거기는 눌러서 가는 화면 이름이고 여기는 아무 데도 안 가는 지표다 —
+        스탯 바에 진입이 없다는 건 검사가 이미 붙들고 있다. 같은 그림을 쓰면
+        그림이 「누를 수 있다」고 거짓말한다. 한 겹 안쪽인 person-outline을 쓴다.
+      */}
+      <StatTile label="멤버" value={String(members.length)} icon="person-outline" accent />
+      {/*
+        trending-up이 아니다 — 값이 내려가도 화살표가 위를 가리켜 거짓말이 된다.
+        checkmark 계열도 아니다. 앱에서 그건 「했다」는 동작 완료를 뜻해서
+        지표 칸에 쓰면 이미 끝난 일로 읽힌다.
+      */}
+      <StatTile label="참석" value={formatRate(teamRate)} icon="stats-chart-outline" accent />
+    </StatRow>
+
+    {/*
+      기준을 상시로 적는다.
+
+      이 화면에는 참석률 창이 둘 있다. 위 「참석」은 monthlyAttendanceRate(이번 달)이고,
+      아래 멤버 행과 「내 기록」은 memberAttendanceRate(최근 3개월)다. 팀 지표는
+      「이번 달 어땠나」, 개인 지표는 표본이 작아 흔들리니 3개월 — 둘 다 근거가 있어서
+      합치지 않는다(attendanceRate.ts 머리말).
+
+      그래서 접어두지 않는다. 눌러야 보이는 안내는 안 누른 사람이 계속 오해하는데,
+      여기서는 두 창이 한 화면에 같이 서 있어서 오해가 기본값이 된다.
+      ⓘ는 누르는 표식이 아니라 「이건 안내다」라는 뜻이다.
+    */}
+    <View style={styles.statNote}>
+      <Ionicons name="information-circle-outline" size={13} color={colors.textFaint} />
+      <Text style={styles.statNoteText}>이번 달 치른 경기 기준이에요</Text>
+    </View>
+  </View>
+        </View>
+
           {/* 다음 경기 카드를 걷어냈다 — 홈이 같은 경기를 더 자세히(참여 현황·CTA까지) 보여준다.
               팀 화면의 주인공은 멤버다. */}
 
@@ -885,10 +900,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 18,
-    paddingHorizontal: 20,
-    paddingTop: 10,
   },
-  teamStats: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 4 },
+  /* 히어로에서 나온 지표 카드. 자기 여백은 카드가 갖고, 안의 두 블록은 gap으로 띄운다 */
+  teamProfileCard: {
+    ...shadow.card,
+    backgroundColor: colors.card,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderCurve: 'continuous',
+    padding: 16,
+    gap: 10,
+  },
+  teamStats: { gap: 10 },
   /* 코드·QR·공유 세 칸. 코드가 폭을 다 먹고 QR이 오른쪽에 붙는다 — 공유는 아래 한 줄 */
   inviteCard: {
     /* content(padding 20, gap 14) 안으로 들어왔다 — 자기 marginHorizontal·marginTop을

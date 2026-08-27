@@ -54,6 +54,25 @@
 //
 // 리다이렉트하고 $?를 눈으로 확인한 뒤에 커밋한다.
 //
+// ── 출력을 파일로 받으면 먼저 지울 것 ───────────────────────────────
+//
+// 위 리다이렉트에 함정이 하나 더 있다. **파일은 지난 실행의 결과를 들고 살아남는다.**
+//
+//   npx tsx scripts/one.check.ts && node scripts/checks.mjs > /tmp/chk.txt 2>&1
+//   grep "전부 통과" /tmp/chk.txt      ← 앞이 실패해 checks가 안 돌아도 통과가 찍힌다
+//
+// 실제로 겪었다. 앞 명령이 컴파일 오류로 죽어 checks.mjs가 아예 안 돌았는데, 직전
+// 실행이 남긴 파일에서 「32개 전부 통과」를 읽고 통과로 보고할 뻔했다.
+//
+// 파이프 금지와 짝이다. 그때는 **성공 코드**가 실패를 덮었고, 이번엔 **성공 출력**이
+// 남아 있었다. 둘 다 「안 돈 실행」과 「통과한 실행」의 출력이 같아지는 경로다.
+//
+//   rm -f /tmp/chk.txt
+//   node scripts/checks.mjs > /tmp/chk.txt 2>&1; RC=$?
+//   echo "exit=$RC"        ← 파일이 아니라 이 값이 판정이다
+//
+// 지우고 실행하고, 판정은 $?로 한다. 파일 내용은 무엇이 실패했는지 읽을 때만 쓴다.
+//
 // 쓰는 법:  node scripts/checks.mjs        (또는 npm run check)
 import { readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';

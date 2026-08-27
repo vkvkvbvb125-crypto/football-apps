@@ -65,8 +65,21 @@ const tab = read('src/features/team/components/TeamHomeTab.tsx');
 // 한 단언으로 묶어 붙들고 있다). 여기서 새 표현을 만들면 같은 값이 세 가지로 적힌다.
 {
   const meta = onlyMatch(tab, /\{\[\s*\n\s*toPosition\(me\.position\)[\s\S]*?\.join\(' · '\)\}/, '내 행 메타');
-  assert.ok(/formatRecentAttendance\(memberAttendanceRate\(memberRateMatches, me\)\)/.test(meta),
-    `내 행이 공용 참석 표기를 안 쓴다: ${meta.slice(0, 120)}`);
+  /*
+    「참여율 N%」다 — 레퍼런스에 맞춰 이 자리에서만 뒤집었다.
+
+    옛 단언은 formatRecentAttendance(「최근 N경기 중 M회」)를 요구했다. 그 표기로
+    앱을 통일한 근거는 퍼센트가 표본 크기를 감춘다는 것이었고(2경기 중 1회도 50%),
+    지금도 맞다 — 「내 기록」 카드와 멤버 목록은 그대로 두고 memberrow.check가
+    그 둘을 계속 묶어 본다.
+
+    여기만 다른 이유는 한 줄에 셋이 들어가서다. 「골레이로 · 골키퍼 · 최근 6경기 중
+    4회」는 폭을 넘겨 잘리고, 잘린 뒷부분은 표본을 보여주지도 못한다.
+  */
+  assert.ok(/참여율 \$\{formatRate\(memberAttendanceRate\(memberRateMatches, me\)\)\}/.test(meta),
+    `내 행이 「참여율 N%」로 안 적는다: ${meta.slice(0, 140)}`);
+  // 창은 그대로다 — 최근 3개월(memberAttendanceRate)이지 이번 달(monthlyAttendanceRate)이 아니다
+  assert.ok(!/monthlyAttendanceRate/.test(meta), '내 행이 팀 지표의 창(이번 달)을 쓴다');
   // 실력 등급은 안 넣는다 — 본인이 자기 등급을 보면 팀 분위기가 깨진다
   assert.ok(!/skillTag/.test(meta), '내 행 메타에 실력 등급이 붙었다');
   // 등번호·주발은 「내 정보」 카드가 맡는다

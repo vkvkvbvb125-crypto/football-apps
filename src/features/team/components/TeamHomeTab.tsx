@@ -15,12 +15,11 @@ import { SoftTint } from '../../../components/BentoCard';
 import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
-import { POSITION_INFO, positionLabel, toPosition } from '../positions';
+import { positionLabel, toPosition } from '../positions';
 import { avatarLetterOf, initialOf } from '../initials';
 import {
   type AttendanceRate,
   formatRate,
-  formatRecentAttendance,
   memberAttendanceRate,
   type MemberRateMatch,
 } from '../../attendance/utils/attendanceRate';
@@ -613,10 +612,24 @@ export function TeamHomeTab({
                           </Text>
                         </View>
                       </View>
+                      {/*
+                        레퍼런스는 「공격 · 골키퍼 · 참여율 67%」다. 이 자리에서만
+                        표기를 뒤집는다.
+
+                        옛 판단: 「최근 N경기 중 M회」로 앱 전체를 통일했다. 근거는
+                        퍼센트가 표본 크기를 감춘다는 것이었다 — 2경기 중 1회도 50%고
+                        100경기 중 50회도 50%다. 그 근거는 지금도 맞고, 「내 기록」
+                        카드와 멤버 목록은 그대로 둔다.
+
+                        여기만 바꾸는 이유는 한 줄에 셋이 들어가기 때문이다.
+                        「골레이로 · 골키퍼 · 최근 6경기 중 4회」는 폭을 넘겨 잘리고,
+                        잘린 「최근 6경기 중…」은 표본을 보여주지도 못한다.
+                        표본이 3 미만이면 memberAttendanceRate가 애초에 「-」를 준다.
+                      */}
                       <Text style={styles.selfMeta} numberOfLines={1}>
                         {[
-                          toPosition(me.position) ? POSITION_INFO[toPosition(me.position)!].ko : null,
-                          formatRecentAttendance(memberAttendanceRate(memberRateMatches, me)),
+                          toPosition(me.position) ? positionLabel(toPosition(me.position)) : null,
+                          `참여율 ${formatRate(memberAttendanceRate(memberRateMatches, me))}`,
                         ]
                           .filter(Boolean)
                           .join(' · ')}

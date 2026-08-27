@@ -71,6 +71,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const scoreError = useScoreStore((st) => st.error);
   const clearScoreError = useScoreStore((st) => st.clearError);
   const scoreMap = useScoreStore((st) => st.byMatch);
+  const scoreFailedMatchId = useScoreStore((st) => st.failedMatchId);
+  const scoreLoadingMatchId = useScoreStore((st) => st.loadingMatchId);
 
   const assignments = useAssignmentStore((s) => s.assignments);
   const loaded = useAssignmentStore((s) => s.loaded);
@@ -255,6 +257,10 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
               onChangeB={(v) => setScore(nearestMatch.id, 'B', v)}
               isAdmin={!!isAdmin}
               onFinish={handleFinishMatch}
+              /* 못 읽은 0에서 +를 누르면 1이 서버 값을 덮는다 — 그 경기만 잠근다 */
+              scoreUnavailable={scoreFailedMatchId === nearestMatch.id}
+              loadingScores={scoreLoadingMatchId === nearestMatch.id}
+              onRetryLoad={() => loadScores(nearestMatch.id)}
               saveError={scoreError}
               onDismissError={clearScoreError}
             />

@@ -25,6 +25,20 @@ interface Props {
   quarter?: number;
   totalQuarters?: number;
   /**
+   * 점수를 못 읽은 상태.
+   *
+   * 이때 +/− 와 초기화를 막는다. 화면이 들고 있는 0은 「진짜 0」이 아니라 「못 읽은 0」이라,
+   * 거기서 +를 누르면 1이 서버 값을 덮는다. 초기화는 더 나쁘다 — 읽지도 않고 0을 보내는데
+   * 「초기화했으니 0이 맞다」로 읽혀서 나중에도 안 걸린다.
+   *
+   * 카드 전체를 로딩으로 덮지 않는다. 이 화면의 주 기능은 타이머고 점수는 곁이다 —
+   * 점수를 못 읽었다고 타이머까지 못 쓰면 경기가 멈춘다.
+   */
+  scoreUnavailable?: boolean;
+  loadingScores?: boolean;
+  /** 다시 읽기. 자동 재시도는 안 넣는다 — 근거는 scoreStore.loadScores 주석에 있다 */
+  onRetryLoad?: () => void;
+  /**
    * 저장 실패 문구.
    *
    * 점수는 낙관적으로 먼저 화면에 반영되므로, 서버 저장이 실패하면 숫자가 되돌아간다.
@@ -57,6 +71,9 @@ export function ScoreboardPanel({
   totalQuarters = 4,
   saveError,
   onDismissError,
+  scoreUnavailable = false,
+  loadingScores = false,
+  onRetryLoad,
 }: Props) {
   const winner = scoreA === scoreB ? null : scoreA > scoreB ? 'A' : 'B';
   const hasScore = scoreA > 0 || scoreB > 0;
@@ -75,6 +92,9 @@ export function ScoreboardPanel({
       onFinish,
       false
     );
+
+  /** 못 읽었으면 손대지 않는다 — 화면의 0이 서버 값을 덮는다 */
+  const locked = scoreUnavailable || loadingScores;
 
   const handleReset = () =>
     askThen('스코어 초기화', '기록한 점수를 0으로 되돌릴까요?', '초기화', () => {
@@ -109,15 +129,17 @@ export function ScoreboardPanel({
               <View style={styles.btnRow}>
                 <Pressable
                   onPress={() => onChangeA(Math.max(0, scoreA - 1))}
-                  style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+                  disabled={locked}
+                  style={({ pressed }) => [styles.btn, locked && styles.btnOff, pressed && styles.pressed]}
                 >
-                  <Text style={styles.btnText}>−</Text>
+                  <Text style={[styles.btnText, locked && styles.btnTextOff]}>−</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => onChangeA(scoreA + 1)}
-                  style={({ pressed }) => [styles.btn, styles.btnPlus, pressed && styles.pressed]}
+                  disabled={locked}
+                  style={({ pressed }) => [styles.btn, styles.btnPlus, locked && styles.btnOff, pressed && styles.pressed]}
                 >
-                  <Text style={styles.btnTextOn}>+</Text>
+                  <Text style={[styles.btnTextOn, locked && styles.btnTextOff]}>+</Text>
                 </Pressable>
               </View>
             )}
@@ -132,15 +154,17 @@ export function ScoreboardPanel({
               <View style={styles.btnRow}>
                 <Pressable
                   onPress={() => onChangeB(Math.max(0, scoreB - 1))}
-                  style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+                  disabled={locked}
+                  style={({ pressed }) => [styles.btn, locked && styles.btnOff, pressed && styles.pressed]}
                 >
-                  <Text style={styles.btnText}>−</Text>
+                  <Text style={[styles.btnText, locked && styles.btnTextOff]}>−</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => onChangeB(scoreB + 1)}
-                  style={({ pressed }) => [styles.btn, styles.btnPlus, pressed && styles.pressed]}
+                  disabled={locked}
+                  style={({ pressed }) => [styles.btn, styles.btnPlus, locked && styles.btnOff, pressed && styles.pressed]}
                 >
-                  <Text style={styles.btnTextOn}>+</Text>
+                  <Text style={[styles.btnTextOn, locked && styles.btnTextOff]}>+</Text>
                 </Pressable>
               </View>
             )}
@@ -152,6 +176,25 @@ export function ScoreboardPanel({
           이제 점수는 match_scores에 남는다 — 안내가 사실이 아니게 됐다.
           대신 저장이 실패했을 때만 말한다.
         */}
+        {/*
+          점수를 못 읽었을 때. 카드 안에만 뜨고 타이머는 그대로 돈다.
+
+          「다시 시도」를 사람이 누른다. 자동 재시도를 걸면 경기 중 몇 분이고 열려 있는
+          화면에서 배경 폴링이 계속 돌아 배터리를 먹는다 — 그 판단의 근거는
+          scoreStore.loadScores 주석에 있다.
+        */}
+        {scoreUnavailable && (
+          <View style={styles.saveErr}>
+            <Ionicons name="cloud-offline-outline" size={14} color={colors.danger} />
+            <Text style={styles.saveErrText}>점수를 불러오지 못했어요</Text>
+            {!!onRetryLoad && (
+              <Pressable onPress={onRetryLoad} hitSlop={8} accessibilityRole="button" accessibilityLabel="점수 다시 불러오기">
+                <Text style={styles.retryText}>{loadingScores ? '불러오는 중…' : '다시 시도'}</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
         {!!saveError && (
           <Pressable onPress={onDismissError} accessibilityRole="button" style={styles.saveErr}>
             <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
@@ -168,8 +211,12 @@ export function ScoreboardPanel({
       {isAdmin && (
         <View style={styles.actions}>
           {hasScore && (
-            <Pressable onPress={handleReset} style={({ pressed }) => [styles.reset, pressed && styles.pressed]}>
-              <Text style={styles.resetText}>스코어 초기화</Text>
+            <Pressable
+              onPress={handleReset}
+              disabled={locked}
+              style={({ pressed }) => [styles.reset, locked && styles.btnOff, pressed && styles.pressed]}
+            >
+              <Text style={[styles.resetText, locked && styles.btnTextOff]}>스코어 초기화</Text>
             </Pressable>
           )}
 
@@ -263,6 +310,10 @@ const styles = StyleSheet.create({
   btnText: { color: colors.textMuted, fontSize: 17, fontWeight: '700' },
   btnTextOn: { color: colors.green, fontSize: 17, fontWeight: '700' },
 
+  /* 못 읽었을 때의 버튼 — 눌러도 서버 값을 덮을 뿐이라 아예 못 누르게 한다 */
+  btnOff: { opacity: 0.35 },
+  btnTextOff: { color: colors.textFaint },
+  retryText: { color: colors.green, fontSize: 12, fontWeight: '800' },
   saveErr: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -378,5 +378,84 @@ clear_votes
 [ "$(vote a)" = "1" ] || { echo "!! 두 번 적용하니 정책이 깨졌다"; exit 1; }
 echo "재실행     : 2회 적용 안전"
 
+# ── 투표 updated_at 트리거 (20260828) ────────────────────────────
+#
+# 이 컬럼은 장식이 아니라 값을 만든다 — capacity.ts가 대기 순번을 updated_at 순으로
+# 매긴다. 그래서 「안 오른다」와 「너무 자주 오른다」가 둘 다 사고다.
+#   안 오르면  : 마음을 바꾼 사람이 처음 응답 시각을 들고 정원 안에 남는다
+#   자주 오르면: 같은 pill을 다시 누른 것만으로 맨 뒤로 밀린다
+# when 절이 그 둘 사이를 가른다. 여기서 보는 것도 그 둘이다.
+
+ts_of() { $PSQL -tAc "select extract(epoch from updated_at)::text from attendance_votes where match_id='cccccccc-0000-0000-0000-00000000000c' and team_member_id='bbbbbbbb-0000-0000-0000-000000000002'" | tail -1 | tr -d ' '; }
+gt() { awk -v a="$1" -v b="$2" 'BEGIN{exit !(a>b)}'; }
+
+# 고치기 전 — 구멍이 실제로 있는지부터. 없으면 이 마이그레이션은 아무것도 안 고친다.
+#
+# 위 준비 단계가 migrations/*.sql을 전부 붓는다 — 이 트리거도 이미 걸려 있다.
+# 그래서 롤백을 먼저 태워야 여기가 진짜 「고치기 전」이 된다. 안 그러면 구멍 확인이
+# 「이미 고쳐져 있다」로 실패하는데, 그건 마이그레이션이 틀려서가 아니다.
+$PSQL < supabase/rollback/20260828_votes_updated_at_trigger.sql
+clear_votes
+[ "$(vote c)" = "0" ] || { echo "!! 재료 준비 실패 — 마감 없는 경기에 표가 안 들어간다"; exit 1; }
+t0=$(ts_of)
+[ "$(upsert c absent)" = "0" ] || { echo "!! 재료 준비 실패 — 재투표가 막힌다"; exit 1; }
+[ "$(ts_of)" = "$t0" ] || { echo "!! 고치기 전인데 updated_at이 이미 오른다 — 다른 것이 갱신하고 있다"; exit 1; }
+echo "고치기 전  : 재투표해도 updated_at이 그대로 (구멍 확인)"
+
+$PSQL < supabase/migrations/20260828_votes_updated_at_trigger.sql
+
+# 상태가 바뀌면 오른다 — 앱이 타는 경로(upsert)로 본다
+clear_votes
+vote c >/dev/null
+t0=$(ts_of)
+[ "$(upsert c absent)" = "0" ] || { echo "!! 트리거를 붙이니 재투표가 막힌다"; exit 1; }
+t1=$(ts_of)
+gt "$t1" "$t0" || { echo "!! 상태가 바뀌었는데 updated_at이 안 오른다"; exit 1; }
+echo "상태 바뀜  : updated_at 오름"
+
+# 상태가 같으면 그대로 — 같은 pill 재탭 경로다.
+# upsert(앱 경로)와 맨 UPDATE 둘 다 본다. when 절이 빠지면 여기서 걸린다.
+[ "$(upsert c absent)" = "0" ] || { echo "!! 같은 상태 upsert가 막힌다"; exit 1; }
+[ "$(ts_of)" = "$t1" ] || { echo "!! 상태가 같은데 updated_at이 올랐다 — 재탭만으로 대기 순번이 밀린다"; exit 1; }
+[ "$(revote c absent)" = "absent" ] || { echo "!! 같은 상태 UPDATE가 막힌다"; exit 1; }
+[ "$(ts_of)" = "$t1" ] || { echo "!! 상태가 같은 UPDATE에서 updated_at이 올랐다"; exit 1; }
+echo "상태 같음  : updated_at 그대로 (upsert · UPDATE 둘 다)"
+
+# INSERT에는 안 낀다. 과거 시각을 실어 넣어 그대로 남는지 본다 —
+# before insert 트리거가 있으면 now()로 덮인다. 「default가 찍었나 트리거가 찍었나」는
+# 값만 봐서는 구별이 안 된다(둘 다 now()다). 덮이는지로 가른다.
+clear_votes
+$PSQL -c "insert into attendance_votes (match_id,team_member_id,status,updated_at) values ('cccccccc-0000-0000-0000-00000000000c','bbbbbbbb-0000-0000-0000-000000000002','attend', now() - interval '3 days')" >/dev/null
+[ "$($PSQL -tAc "select updated_at < now() - interval '2 days' from attendance_votes where match_id='cccccccc-0000-0000-0000-00000000000c'" | tail -1 | tr -d ' ')" = "t" ]   || { echo "!! INSERT에 트리거가 끼어들어 시각을 덮었다"; exit 1; }
+clear_votes
+vote c >/dev/null
+[ "$($PSQL -tAc "select updated_at > now() - interval '1 minute' from attendance_votes where match_id='cccccccc-0000-0000-0000-00000000000c'" | tail -1 | tr -d ' ')" = "t" ]   || { echo "!! INSERT에서 default now()가 안 찍었다"; exit 1; }
+echo "INSERT     : default now()가 찍고 트리거는 안 낌"
+
+# ③-a 정책이 여전히 도는가. 트리거를 붙이면서 정책이 무너지는 게 이 조합의 사고다 —
+# 트리거만 보고 정책을 안 보면 놓친다.
+[ "$(vote a)" = "1" ] || { echo "!! 트리거를 붙이니 마감 지난 경기에 표가 들어간다"; exit 1; }
+[ "$(vote d)" = "1" ] || { echo "!! 트리거를 붙이니 locked 경기에 표가 들어간다"; exit 1; }
+echo "기존 조건  : ③-a 정책 여전히 돔 (마감 지남 · locked 거절)"
+
+# 두 번 적용해도 안전한가
+$PSQL < supabase/migrations/20260828_votes_updated_at_trigger.sql
+clear_votes
+vote c >/dev/null
+t0=$(ts_of)
+upsert c absent >/dev/null
+gt "$(ts_of)" "$t0" || { echo "!! 두 번 적용하니 트리거가 안 돈다"; exit 1; }
+echo "재실행     : 2회 적용 안전"
+
+# 롤백 — 동작으로 본다. 뗀 뒤에는 재투표해도 안 올라야 한다(원래 동작).
+$PSQL < supabase/rollback/20260828_votes_updated_at_trigger.sql
+clear_votes
+vote c >/dev/null
+t0=$(ts_of)
+upsert c absent >/dev/null
+[ "$(ts_of)" = "$t0" ] || { echo "!! 롤백했는데 updated_at이 여전히 오른다"; exit 1; }
+echo "롤백       : 되돌아감 (재투표해도 안 오름 = 원래 동작)"
+$PSQL < supabase/migrations/20260828_votes_updated_at_trigger.sql
+
 echo
-echo "d1 ok / d2 ok / d3 ok / votes-deadline ok"
+echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok"

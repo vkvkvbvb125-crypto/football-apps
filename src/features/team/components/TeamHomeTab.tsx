@@ -302,11 +302,17 @@ export function TeamHomeTab({
               <Text style={styles.teamMeta} numberOfLines={1}>
                 {`Since ${createdAt.getFullYear()}.${String(createdAt.getMonth() + 1).padStart(2, '0')}`}
               </Text>
-              {[activeTeam.team.home_place_name, '풋살'].filter(Boolean).length > 0 && (
-                <Text style={styles.teamMeta} numberOfLines={1}>
-                  {[activeTeam.team.home_place_name, '풋살'].filter(Boolean).join(' · ')}
-                </Text>
-              )}
+              {/*
+                「풋살」을 지웠다 — 상수라 정보가 0이다.
+
+                이 앱에 풋살 아닌 팀은 없다. 종목 컬럼도, 고를 자리도 없다. 구장명이
+                없는 팀에서는 이 줄이 「풋살」 한 단어만 남았고(렌더에서 확인했다),
+                있는 팀에서도 뒤 절반은 모두에게 같은 말이었다.
+
+                구장명은 지표 카드의 소개 줄로 갔다. 지역·구장·정기·평균·실력은 전부
+                「이 팀은 어떤 팀인가」라 층위가 같다 — 히어로에 남겨 두면 그 줄 하나만
+                다른 데 속한 채로 떠 있게 된다.
+              */}
               {/*
                 소개는 팀명 바로 아래다 — 헤더 블록에 속한다.
                 예전엔 엠블럼 아래 별도 줄이라 통계 3칸과 붙어서, 팀 소개인지

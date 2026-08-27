@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { onlyMatch } from './lib/anchor.ts';
 import { WEEKDAYS, regularLabel } from '../src/features/team/weekdays.ts';
 import { recentAvgHeadcount } from '../src/features/attendance/utils/attendanceRate.ts';
 
@@ -117,6 +118,38 @@ assert.equal(regularLabel([2, 9], '20:00'), '매주 수요일 20:00');
   assert.ok(!/미설정/.test(rendered), `빈 항목을 "미설정"으로 채운다 — 줄이 정보가 아니라 빈칸 목록이 된다: ${rendered.slice(0, 80)}`);
   // 그 자리가 실제로 profileBits를 그리는지 — 못 찾은 것과 빈 것을 가른다
   assert.ok(/profileBits/.test(rendered), '그 자리가 profileBits를 안 그린다');
+}
+
+// ── 상수는 화면에 안 적는다 ─────────────────────────────────────────
+//
+// 히어로에 「풋살」 줄이 있었다. 이 앱에 풋살 아닌 팀은 없다 — 종목 컬럼도, 고를 자리도
+// 없다. 구장명이 없는 팀에서는 그 줄이 「풋살」 한 단어로 렌더됐고, 있는 팀에서도 뒤
+// 절반은 모두에게 같은 말이었다. 모두에게 같은 값은 그 팀에 대해 아무것도 안 말한다.
+//
+// 되살아나기 쉬운 종류라 붙든다. 「종목이 안 보인다」는 지적은 자연스럽고, 그때
+// 한 줄 더하는 것도 쉽다. 되살리려면 먼저 종목이 팀마다 다른 값이 돼야 한다.
+{
+  // 그리는 글자만 본다 — 위 주석에 「풋살」이 남아 있어야 근거가 보존된다
+  //   (「이름이 없는가」와 「쓰이지 않는가」는 다르다: anchor.ts 세 번째 구분)
+  const tabSrc = read('src/features/team/components/TeamHomeTab.tsx');
+  const tabFile = fileURLToPath(new URL('../src/features/team/components/TeamHomeTab.tsx', import.meta.url));
+  const tabSf = ts.createSourceFile(tabFile, tabSrc, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+
+  const shown: string[] = [];
+  const collect = (n: ts.Node) => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) shown.push(n.text);
+    else if (ts.isJsxText(n)) shown.push(n.text);
+    ts.forEachChild(n, collect);
+  };
+  collect(tabSf);
+  assert.ok(shown.length > 0, '그리는 글자를 하나도 못 모았다 — 파싱이 안 됐다');
+  assert.ok(!shown.includes('풋살'), '「풋살」이 화면에 돌아왔다 — 모든 팀이 풋살이라 정보가 0이다');
+
+  // 구장명은 사라진 게 아니라 소개 줄로 갔다. 둘을 한 단언으로 묶는다 —
+  // 「풋살을 지웠다」만 붙들면 구장명까지 같이 사라진 것을 못 잡는다
+  const homeScreen = read('src/features/team/screens/TeamHomeScreen.tsx');
+  const bits = onlyMatch(homeScreen, /const profileBits = \[[\s\S]*?\]\.filter\(Boolean\);/, 'profileBits');
+  assert.ok(/home_place_name/.test(bits), '구장명이 소개 줄에 안 들어갔다 — 지우자는 게 아니었다');
 }
 
 console.log('teamprofile.check: ok');

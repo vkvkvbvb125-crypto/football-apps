@@ -170,6 +170,8 @@ export function TeamHomeScreen({ navigation, route }: any) {
   */
   const profileBits = [
     activeTeam.team.region_label,
+    // 구장명이 히어로에서 여기로 왔다. 지역 바로 뒤다 — 넓은 데서 좁은 데로 좁혀진다
+    activeTeam.team.home_place_name,
     regular,
     activeTeam.team.avg_headcount ? `평균 ${activeTeam.team.avg_headcount}명` : null,
     activeTeam.team.skill_level ? TEAM_SKILL_LABEL[activeTeam.team.skill_level] : null,

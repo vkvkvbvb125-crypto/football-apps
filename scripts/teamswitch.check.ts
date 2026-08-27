@@ -4,6 +4,7 @@
 // 화면으로는 안 보인다 — 팀이 하나뿐인 계정에서는 무엇을 망가뜨려도 똑같이 돈다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { onlyMatch } from './lib/anchor.ts';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const store = read('src/features/team/stores/teamStore.ts');
@@ -107,9 +108,19 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
   // 팀이 있을 때도 그 화면이 등록돼 있어야 한다
   assert.ok(/name="TeamOnboarding"[\s\S]{0,400}name="TeamSettings"/.test(root),
     '팀이 있는 상태에서 TeamOnboarding 라우트가 없다 — 시트의 「새 팀」이 죽는다');
-  // 그리고 팀이 생기면 스스로 내려와야 한다
-  assert.ok(/navigation\.canGoBack\(\)/.test(start),
-    'TeamStartScreen이 스택에 얹혔을 때 빠져나오지 못한다');
+  /*
+    그리고 팀이 생기면 스스로 내려와야 한다.
+
+    예전엔 /navigation.canGoBack()/ 하나로 봤는데 그 꼴이 파일에 둘이다 —
+    이 이펙트와 헤더의 뒤로 버튼 렌더. 이펙트를 지워도 버튼 줄이 통과시켰다.
+    「팀이 바뀌면 내려온다」는 한 자리를 말하는 단언이니 그 자리를 특정한다.
+  */
+  const backOut = onlyMatch(
+    start,
+    /if \(activeTeamId !== openedWith\.current && navigation\.canGoBack\(\)\)[\s\S]*?navigation\.goBack\(\);/,
+    'TeamStartScreen의 자동 내려오기'
+  );
+  assert.ok(backOut, 'TeamStartScreen이 스택에 얹혔을 때 빠져나오지 못한다');
 }
 
 // ── 9. 팀 전환 시트가 연 새 경로가 막다른 길이 아닌가 ──────────────

@@ -97,8 +97,14 @@ const stat = (s: ReturnType<typeof buildBannerSlides>, i: number) => {
 {
   const src = readFileSync(new URL('../src/features/home/components/HomeBanner.tsx', import.meta.url), 'utf8');
 
-  // 한 장이면 자동 전환도 인디케이터도 없다
-  assert.ok(/count > 1 &&/.test(src), '슬라이드가 하나여도 자동 전환이 돈다');
+  /*
+    한 장이면 인디케이터를 안 그린다.
+
+    자동 전환 쪽은 여기서 보지 않는다. 예전엔 /count > 1 &&/ 하나로 둘을 다 봤는데,
+    그 꼴이 파일에 둘(자동 전환 조건, 인디케이터 조건)이라 자동 전환에서 빼도
+    인디케이터 줄이 통과시켰다 — 「어느 하나만 있어도 통과」다.
+    자동 전환은 아래 autoExpr가 그 식 자체를 집어서 본다. 그쪽 한 곳으로 모은다.
+  */
   assert.ok(/\{count > 1 && \(/.test(src), '슬라이드가 하나여도 점을 그린다');
 
   /*
@@ -110,6 +116,7 @@ const stat = (s: ReturnType<typeof buildBannerSlides>, i: number) => {
   const autoExpr = src.match(/const auto = ([^;]+);/);
   assert.ok(autoExpr, '자동 전환 조건을 못 찾음');
   for (const [needle, why] of [
+    ['count > 1', '슬라이드가 하나여도 자동 전환이 돈다'],
     ['isFocused', '포커스를 잃어도 계속 돈다 — 돌아왔을 때 엉뚱한 슬라이드에 있다'],
     ['reduceMotion', '「동작 줄이기」를 켜도 계속 돈다'],
     ['suspended', '손으로 민 뒤에도 곧바로 다시 돈다'],
@@ -134,6 +141,9 @@ const stat = (s: ReturnType<typeof buildBannerSlides>, i: number) => {
   assert.ok(/if \(scrollingRef\?\.current\) return;/.test(src), '세로 스크롤 중에도 넘어간다');
   // 타이머 정리
   assert.ok(/return \(\) => clearInterval\(id\);/.test(src), 'interval을 정리하지 않는다');
+  /* 이건 「어디선가 정리한다」를 묻는 단언이라 매치가 2회다(미는 순간·언마운트).
+     한쪽이 사라져도 안 잡힌다 — 알고 두는 것이다. 두 자리가 서로 다른 경로를 막고 있어서
+     한쪽만 남아도 그 자체로 누수는 아니다. 「이 자리」를 봐야 할 이유가 생기면 파서로 가라 */
   assert.ok(/clearTimeout\(resumeTimer\.current\)/.test(src), '재개 타이머를 정리하지 않는다');
 
   // 페이지에 flex를 주면 가로로 눌려서 인디케이터만 넘어가고 화면은 그대로가 된다.

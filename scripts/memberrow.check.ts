@@ -203,6 +203,27 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
     제목 Text 노드를 파서로 집는다 — 파일 어딘가에 members.length가 있는지가 아니라
     그 줄이 무엇을 그리는지를 본다.
   */
+  /*
+    styles.sectionTitle을 쓰는 Text가 이 파일에 둘이다 — 로스터 제목과 「내 정보」.
+    처음엔 마지막 것을 집어 「내 정보」를 로스터 제목으로 읽었다(순서를 바꾸자 드러났다).
+    로스터 제목은 onGoMembers로 가는 sectionHead 안에 있다 — 그 컨테이너부터 찾는다.
+  */
+  let head: ts.JsxElement | null = null;
+  const findHead = (n: ts.Node) => {
+    if (
+      ts.isJsxElement(n) &&
+      // sectionHeadLink가 이 이름을 부분문자열로 품는다 — 닫는 중괄호까지 본다.
+      // 안 그러면 컨테이너가 아니라 그 안의 Pressable을 집는다(실제로 그랬다)
+      n.openingElement.getText().includes('style={styles.sectionHead}') &&
+      n.getText().includes('onPress={onGoMembers}')
+    ) {
+      head = n;
+    }
+    ts.forEachChild(n, findHead);
+  };
+  findHead(sf);
+  assert.ok(head, '로스터 제목이 든 sectionHead를 못 찾았다');
+
   let title: ts.JsxElement | null = null;
   const findTitle = (n: ts.Node) => {
     if (
@@ -214,7 +235,7 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
     }
     ts.forEachChild(n, findTitle);
   };
-  findTitle(sf);
+  findTitle(head as ts.Node);
   assert.ok(title, '로스터 제목을 못 찾았다');
   const titleText = (title as ts.JsxElement).children.map((c) => c.getText()).join('').trim();
   assert.equal(titleText, '멤버', `로스터 제목이 「멤버」가 아니다: ${titleText}`);

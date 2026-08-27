@@ -428,139 +428,11 @@ export function TeamHomeTab({
 
         )}
 
-        {/*
-          초대 블록은 팀 프로필 카드 밖이다.
-          안에 있으면 카드 안에 카드가 되어 경계가 어디까지인지 알 수 없었다 —
-          엠블럼·팀명·통계는 「이 팀은 무엇인가」이고 초대는 「지금 할 일」이라 성격도 다르다.
-
-          제목·설명이 돌아왔다. 뺐던 근거는 「상시 권유는 소음이고, 이미 여섯 명인 팀 홈이
-          그만큼 길어진다」였는데, 그건 조건 분기(셋 이하만 큰 카드)를 없애면서 큰 쪽을
-          버린 판단이었다. 조건을 안 두고 항상 카드로 노출하기로 정해졌으니 그 근거는
-          더 이상 이 자리의 것이 아니다 — 카드가 길어지는 값은 QR이 대면 초대를 그 자리에서
-          끝내주는 것으로 돌려받는다.
-
-          QR을 아이콘에서 실물로 바꿨다. 뺐던 근거는 「작게 그리면 스캔이 안 된다」였고
-          그건 지금도 맞다 — 그래서 22px 아이콘이었다. 크게 그리면 그 근거가 해소된다.
-          아래 QR_SIZE 주석에 얼마나 커야 하는지의 계산이 있다.
-
-          카드의 QR은 누르는 것이 아니다. 대면 초대는 여기서 끝난다 — 상대가 그 자리에서
-          찍으면 되고, 시트를 한 번 더 열 이유가 없다. 시트로 가는 문은 공유 버튼이 맡는다.
-          그래서 카드는 대면, 시트는 원격 공유와 링크 복사로 역할이 갈린다.
-        */}
-        <View style={styles.inviteCard}>
-          {/* 초록 기운 — 앱의 다른 카드가 쓰는 것과 같은 방식이다 */}
-          <SoftTint tone="green" radius={radius.card} />
-
-          <View style={styles.inviteTop}>
-            <View style={styles.inviteCopy}>
-              <Text style={styles.inviteTitle}>팀에 친구를 초대해보세요!</Text>
-              <Text style={styles.inviteDesc}>
-                {'링크나 코드를 공유하면\n친구가 바로 팀에 참여할 수 있어요.'}
-              </Text>
-            </View>
-
-            {/* 흰 판 위에 그린다. QR은 명암 대비로 읽히는데 다크 표면 위에서는 못 읽는다 */}
-            <View style={styles.inviteQrPlate}>
-              <QRCode value={inviteUrl} size={QR_SIZE} backgroundColor="#FFFFFF" color="#000000" />
-            </View>
-          </View>
-
-          <View style={styles.inviteBottom}>
-            <Pressable
-              onPress={onCopyInviteCode}
-              style={({ pressed }) => [styles.inviteCodeBox, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel={`초대 코드 ${activeTeam.team.invite_code} 복사`}
-            >
-              <Text style={styles.inviteLabel}>초대 코드</Text>
-              <View style={styles.inviteCodeRow}>
-                <Text style={styles.inviteCode} numberOfLines={1}>
-                  {inviteCodeDisplay}
-                </Text>
-                <Ionicons
-                  name={copied ? 'checkmark' : 'copy-outline'}
-                  size={15}
-                  color={copied ? colors.green : colors.textDim}
-                />
-              </View>
-            </Pressable>
-
-            <Pressable
-              onPress={onOpenInvite}
-              accessibilityRole="button"
-              accessibilityLabel="초대 링크 공유하기"
-              style={({ pressed }) => [styles.inviteShare, pressed && styles.pressed]}
-            >
-              <Ionicons name="share-social-outline" size={16} color={colors.bgRoot} />
-              <Text style={styles.inviteShareText}>링크 공유하기</Text>
-            </Pressable>
-          </View>
-        </View>
-
       {/* 배너·초대는 content 밖이다 — banner의 marginHorizontal 20이 content의 padding 20과
           겹치면 여백이 두 겹이 된다. 부모에서도 이 둘만 ScrollView 직속이었다. */}
       <View style={styles.content}>
           {/* 다음 경기 카드를 걷어냈다 — 홈이 같은 경기를 더 자세히(참여 현황·CTA까지) 보여준다.
               팀 화면의 주인공은 멤버다. */}
-
-          {/*
-            총무에게도 보인다. 예전엔 !isAdmin 조건이 붙어 있었는데, 바로 아래 「내 기록」이
-            「총무도 선수다. 역할과 무관하게 항상 보인다」고 적어 둔 것과 같은 파일 안에서
-            어긋났다. 총무도 자기 포지션·등번호가 필요하다.
-          */}
-          {!!me && (
-            <View style={[styles.card, { gap: 12 }]}>
-              {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
-              <SoftTint tone="green" radius={radius.card} />
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>내 정보</Text>
-                <Pressable
-                  onPress={onOpenMemberList}
-                  hitSlop={14}
-                  accessibilityRole="button"
-                  accessibilityLabel="내 정보 수정"
-                >
-                  <Text style={styles.moreText}>수정 ›</Text>
-                </Pressable>
-              </View>
-              <View style={styles.myInfoRow}>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <Text style={styles.myInfoLabel}>주 포지션</Text>
-                  {/* 값이 없으면 「미지정」이 아니라 「설정하기」다. 「미지정」은 상태를 알려줄 뿐
-                      할 일을 가리키지 않는다 — 어디서 정하는지 모르면 그대로 비어 있다 */}
-                  {toPosition(me.position) ? (
-                    <View style={styles.myInfoChip}>
-                      <Text style={styles.myInfoChipText}>{positionLabel(toPosition(me.position))}</Text>
-                    </View>
-                  ) : (
-                    <Pressable
-                      onPress={onOpenMemberList}
-                      accessibilityRole="button"
-                      accessibilityLabel="주 포지션 설정하기"
-                      style={({ pressed }) => [styles.myInfoChip, styles.myInfoChipEmpty, pressed && styles.pressed]}
-                    >
-                      <Text style={styles.myInfoChipEmptyText}>설정하기</Text>
-                    </Pressable>
-                  )}
-                </View>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <Text style={styles.myInfoLabel}>실력</Text>
-                  {/* 실력은 총무가 매기는 값이라 본인에게 「설정하기」를 주지 않는다 —
-                      누르면 못 바꾸는 곳으로 보내는 셈이다. 비어 있으면 그냥 「-」 */}
-                  <View style={[styles.myInfoChip, styles.myInfoChipAlt]}>
-                    <Text style={[styles.myInfoChipText, styles.myInfoChipTextAlt]}>{me.skillTag ?? '-'}</Text>
-                  </View>
-                </View>
-
-                {/* 등번호 — 숫자만 두면 무슨 숫자인지 모른다. 유니폼 안에 넣어 뜻이 드러나게 */}
-                <View style={styles.jersey}>
-                  <Ionicons name="shirt-outline" size={44} color={colors.greenDeep} />
-                  <Text style={styles.jerseyNumber}>{me.jerseyNumber ?? '–'}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
 
         {/* 팀 홈에서는 카드 껍데기를 벗긴다. 배너 아래로 똑같은 상자만 쌓이면
             화면에 리듬이 없다 — 가로로 흐르는 아바타 줄이 상자들 사이에서 숨통이 된다.
@@ -747,6 +619,134 @@ export function TeamHomeTab({
                     </StatRow>
                   </View>
                 )}
+
+                {/*
+                  총무에게도 보인다. 예전엔 !isAdmin 조건이 붙어 있었는데, 바로 아래 「내 기록」이
+                  「총무도 선수다. 역할과 무관하게 항상 보인다」고 적어 둔 것과 같은 파일 안에서
+                  어긋났다. 총무도 자기 포지션·등번호가 필요하다.
+                */}
+                {!!me && (
+                  <View style={[styles.card, { gap: 12 }]}>
+                    {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
+                    <SoftTint tone="green" radius={radius.card} />
+                    <View style={styles.sectionHead}>
+                      <Text style={styles.sectionTitle}>내 정보</Text>
+                      <Pressable
+                        onPress={onOpenMemberList}
+                        hitSlop={14}
+                        accessibilityRole="button"
+                        accessibilityLabel="내 정보 수정"
+                      >
+                        <Text style={styles.moreText}>수정 ›</Text>
+                      </Pressable>
+                    </View>
+                    <View style={styles.myInfoRow}>
+                      <View style={{ flex: 1, gap: 5 }}>
+                        <Text style={styles.myInfoLabel}>주 포지션</Text>
+                        {/* 값이 없으면 「미지정」이 아니라 「설정하기」다. 「미지정」은 상태를 알려줄 뿐
+                            할 일을 가리키지 않는다 — 어디서 정하는지 모르면 그대로 비어 있다 */}
+                        {toPosition(me.position) ? (
+                          <View style={styles.myInfoChip}>
+                            <Text style={styles.myInfoChipText}>{positionLabel(toPosition(me.position))}</Text>
+                          </View>
+                        ) : (
+                          <Pressable
+                            onPress={onOpenMemberList}
+                            accessibilityRole="button"
+                            accessibilityLabel="주 포지션 설정하기"
+                            style={({ pressed }) => [styles.myInfoChip, styles.myInfoChipEmpty, pressed && styles.pressed]}
+                          >
+                            <Text style={styles.myInfoChipEmptyText}>설정하기</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <View style={{ flex: 1, gap: 5 }}>
+                        <Text style={styles.myInfoLabel}>실력</Text>
+                        {/* 실력은 총무가 매기는 값이라 본인에게 「설정하기」를 주지 않는다 —
+                            누르면 못 바꾸는 곳으로 보내는 셈이다. 비어 있으면 그냥 「-」 */}
+                        <View style={[styles.myInfoChip, styles.myInfoChipAlt]}>
+                          <Text style={[styles.myInfoChipText, styles.myInfoChipTextAlt]}>{me.skillTag ?? '-'}</Text>
+                        </View>
+                      </View>
+
+                      {/* 등번호 — 숫자만 두면 무슨 숫자인지 모른다. 유니폼 안에 넣어 뜻이 드러나게 */}
+                      <View style={styles.jersey}>
+                        <Ionicons name="shirt-outline" size={44} color={colors.greenDeep} />
+                        <Text style={styles.jerseyNumber}>{me.jerseyNumber ?? '–'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+
+                {/*
+                  초대 블록은 팀 프로필 카드 밖이다.
+                  안에 있으면 카드 안에 카드가 되어 경계가 어디까지인지 알 수 없었다 —
+                  엠블럼·팀명·통계는 「이 팀은 무엇인가」이고 초대는 「지금 할 일」이라 성격도 다르다.
+
+                  제목·설명이 돌아왔다. 뺐던 근거는 「상시 권유는 소음이고, 이미 여섯 명인 팀 홈이
+                  그만큼 길어진다」였는데, 그건 조건 분기(셋 이하만 큰 카드)를 없애면서 큰 쪽을
+                  버린 판단이었다. 조건을 안 두고 항상 카드로 노출하기로 정해졌으니 그 근거는
+                  더 이상 이 자리의 것이 아니다 — 카드가 길어지는 값은 QR이 대면 초대를 그 자리에서
+                  끝내주는 것으로 돌려받는다.
+
+                  QR을 아이콘에서 실물로 바꿨다. 뺐던 근거는 「작게 그리면 스캔이 안 된다」였고
+                  그건 지금도 맞다 — 그래서 22px 아이콘이었다. 크게 그리면 그 근거가 해소된다.
+                  아래 QR_SIZE 주석에 얼마나 커야 하는지의 계산이 있다.
+
+                  카드의 QR은 누르는 것이 아니다. 대면 초대는 여기서 끝난다 — 상대가 그 자리에서
+                  찍으면 되고, 시트를 한 번 더 열 이유가 없다. 시트로 가는 문은 공유 버튼이 맡는다.
+                  그래서 카드는 대면, 시트는 원격 공유와 링크 복사로 역할이 갈린다.
+                */}
+                <View style={styles.inviteCard}>
+                  {/* 초록 기운 — 앱의 다른 카드가 쓰는 것과 같은 방식이다 */}
+                  <SoftTint tone="green" radius={radius.card} />
+
+                  <View style={styles.inviteTop}>
+                    <View style={styles.inviteCopy}>
+                      <Text style={styles.inviteTitle}>팀에 친구를 초대해보세요!</Text>
+                      <Text style={styles.inviteDesc}>
+                        {'링크나 코드를 공유하면\n친구가 바로 팀에 참여할 수 있어요.'}
+                      </Text>
+                    </View>
+
+                    {/* 흰 판 위에 그린다. QR은 명암 대비로 읽히는데 다크 표면 위에서는 못 읽는다 */}
+                    <View style={styles.inviteQrPlate}>
+                      <QRCode value={inviteUrl} size={QR_SIZE} backgroundColor="#FFFFFF" color="#000000" />
+                    </View>
+                  </View>
+
+                  <View style={styles.inviteBottom}>
+                    <Pressable
+                      onPress={onCopyInviteCode}
+                      style={({ pressed }) => [styles.inviteCodeBox, pressed && styles.pressed]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`초대 코드 ${activeTeam.team.invite_code} 복사`}
+                    >
+                      <Text style={styles.inviteLabel}>초대 코드</Text>
+                      <View style={styles.inviteCodeRow}>
+                        <Text style={styles.inviteCode} numberOfLines={1}>
+                          {inviteCodeDisplay}
+                        </Text>
+                        <Ionicons
+                          name={copied ? 'checkmark' : 'copy-outline'}
+                          size={15}
+                          color={copied ? colors.green : colors.textDim}
+                        />
+                      </View>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={onOpenInvite}
+                      accessibilityRole="button"
+                      accessibilityLabel="초대 링크 공유하기"
+                      style={({ pressed }) => [styles.inviteShare, pressed && styles.pressed]}
+                    >
+                      <Ionicons name="share-social-outline" size={16} color={colors.bgRoot} />
+                      <Text style={styles.inviteShareText}>링크 공유하기</Text>
+                    </Pressable>
+                  </View>
+                </View>
 
                 {/* 팀 나가기는 팀 설정 맨 아래로 옮겼다 — 되돌리기 어려운 동작이라
                     매일 보는 홈에 둘 이유가 없다. 나가기 확인에서 미납액도 함께 경고한다 */}

@@ -305,4 +305,40 @@ const num = (src: string, re: RegExp, what: string) => {
   assert.equal(dirs.length, 2, `히어로 배경 두 겹의 방향이 갈렸다 (우상→좌하가 ${dirs.length}겹)`);
 }
 
+// ── 4버튼은 한 줄이다 ───────────────────────────────────────────────
+//
+// 2×2였다. 근거가 「1×4는 412px에서 칸당 88px이라 「공지사항」 네 글자가 잘린다」였는데
+// 재 보니 안 잘린다 — 88px은 맞고 글자 폭을 안 잰 값이었다. 렌더로 확인한 수:
+//
+//   420px 기기  칸 86  글자 45  여유 41
+//   360px 기기  칸 71  글자 45  여유 26
+//   320px 기기  칸 61  글자 45  여유 16   ← 가장 좁은 자리에서도 남는다
+//
+// 여기서 붙드는 것은 「한 줄인가」다. 폭은 화면마다 다르니 소스로 못 재고, 줄바꿈만
+// 막으면 된다 — flexWrap이 돌아오면 좁은 기기에서 조용히 2×2가 된다.
+{
+  const tab = read('src/features/team/components/TeamHomeTab.tsx').split('\r').join('');
+  const blockOf = (name: string) => {
+    const i = onlyIndexOf(tab, `  ${name}: {`, `${name} 스타일`);
+    return tab.slice(i, tab.indexOf('\n  },', i));
+  };
+
+  const grid = onlyMatch(tab, /tiles: \{[^}]+\}/, '타일 그리드');
+  assert.ok(!/flexWrap/.test(grid), `타일 그리드에 flexWrap이 돌아왔다 — 좁은 기기에서 2×2가 된다: ${grid}`);
+  assert.ok(/flexDirection: 'row'/.test(grid), '타일이 가로로 안 선다');
+
+  const tile = blockOf('tile');
+  // flexBasis '48%'면 둘씩 끊긴다. 0 + grow 1이라야 넷이 남는 폭을 똑같이 나눈다
+  assert.ok(/flexBasis: 0,/.test(tile), `타일이 비율 기반 폭으로 돌아갔다 — 넷이 한 줄에 안 선다: ${tile.replace(/\s+/g, ' ').slice(0, 80)}`);
+  assert.ok(/flexGrow: 1,/.test(tile), '타일이 남는 폭을 안 나눈다');
+
+  // 글자가 자기 폭만 필요한 것은 세로 배치이기 때문이다. 가로로 눕히면
+  // 아이콘 22 + gap + 글자 45가 한 줄에 들어가야 해서 위 여유가 사라진다
+  assert.ok(!/flexDirection: 'row'/.test(tile), '타일 안이 가로 배치가 됐다 — 아이콘과 글자가 폭을 나눠 쓴다');
+
+  // 넷을 같은 모양으로 그린다 — 하나만 달라지면 줄이 흔들린다
+  const defs = onlyMatch(tab, /const TILES: [\s\S]*?\n\];/, 'TILES 정의');
+  assert.equal((defs.match(/\{ key: '/g) ?? []).length, 4, '타일이 넷이 아니다');
+}
+
 console.log('uidetail.check: ok');

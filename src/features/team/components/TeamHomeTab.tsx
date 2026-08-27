@@ -1161,16 +1161,33 @@ const styles = StyleSheet.create({
   statNote: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
   statNoteText: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
 
-  /* 2×2. 1×4는 412px에서 칸당 88px이라 「공지사항」 네 글자가 잘린다.
-     칸 크기는 비율로 잡는다 — 고정 px를 두면 폭이 다른 기기에서 한 칸이 밀린다 */
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  /*
+    1×4다. 한 줄에 넷.
+
+    2×2였고 근거가 「1×4는 412px에서 칸당 88px이라 「공지사항」 네 글자가 잘린다」였다.
+    재 봤더니 안 잘린다 — 그 88px은 맞는데 글자 폭을 안 잰 값이었다.
+
+      그리드 폭 372, gap 10  →  칸 폭 (372 - 30) / 4 = 85.5px
+      「공지사항」 실제 렌더 폭 = 45px (13px / weight 800, Noto Sans KR)
+      여유 40.5px — 칸의 절반이 남는다
+
+    타일이 세로 배치(아이콘 위, 글자 아래)라 글자는 자기 폭만 필요하다. 가로 배치였다면
+    아이콘 22 + gap 8 + 글자 45 = 75로 빠듯했겠지만 그건 지금 모양이 아니다.
+
+    paddingVertical을 18에서 14로 줄였다. 칸이 좁아지면서 85×85 정사각이 되는데,
+    네 개가 나란한 줄에서는 칸이 세로로 긴 것보다 납작한 쪽이 한 덩어리로 읽힌다.
+
+    칸 크기는 비율로 잡는다 — 고정 px를 두면 폭이 다른 기기에서 한 칸이 밀린다.
+    flexBasis 0 + flexGrow 1이면 넷이 남는 폭을 똑같이 나눈다.
+  */
+  tiles: { flexDirection: 'row', gap: 10 },
   tile: {
-    flexBasis: '48%',
+    flexBasis: 0,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 18,
+    gap: 6,
+    paddingVertical: 14,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,

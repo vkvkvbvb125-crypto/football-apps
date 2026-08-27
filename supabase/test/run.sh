@@ -249,5 +249,134 @@ echo "D-4 유령팀 : 멤버 0명 → teams_select가 감춤 (팀 삭제 불필�
   || { echo "!! 로그인 없이 불렀는데 삭제를 허용한다 (fail-open)"; exit 1; }
 echo "D-5 무인증 : 거부 (fail-closed)"
 
+# ── 투표 마감 정책 (20260828) ────────────────────────────────────
+#
+# RLS를 보는 첫 검사다. D-1~D-3는 postgres(슈퍼유저)로 돌았는데 슈퍼유저는 RLS를 통과한다 —
+# 여기서는 set role authenticated로 바꿔야 정책이 실제로 걸린다. auth.uid()는 위에서
+# GUC를 읽게 만들어 뒀으므로 request.jwt.claim.sub 한 줄로 「누구로 부르는지」가 바뀐다.
+#
+# 조건을 더하면서 기존 조건이 무너지는 게 정책 변경의 흔한 사고다. 새로 막는 것만 보면
+# 놓친다 — locked/completed와 「남의 표」도 매번 다시 본다.
+seed
+$PSQL <<'SQL'
+-- Supabase가 authenticated에게 주는 권한을 여기서 흉내 낸다.
+-- auth 스키마 usage가 빠지면 정책 안의 auth.uid()에서 「permission denied for schema auth」가
+-- 나고, 그러면 **모든 쓰기가 거절된다** — 정책이 옳아서 막힌 건지 권한이 없어 막힌 건지
+-- 구별이 안 된다. 실제로 「고치기 전인데 이미 막힌다」로 한 번 헛짚었다.
+grant usage on schema auth to authenticated;
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+
+-- 경기 넷: 마감 지남 / 마감 전 / 마감 없음(기본 seed의 것) / locked / completed
+insert into matches (id,team_id,match_date,vote_deadline,status,created_by) values
+  ('cccccccc-0000-0000-0000-00000000000a','aaaaaaaa-0000-0000-0000-000000000001',now()+interval '1 day', now()-interval '1 hour','open','bbbbbbbb-0000-0000-0000-000000000001'),
+  ('cccccccc-0000-0000-0000-00000000000b','aaaaaaaa-0000-0000-0000-000000000001',now()+interval '2 day', now()+interval '1 hour','open','bbbbbbbb-0000-0000-0000-000000000001'),
+  ('cccccccc-0000-0000-0000-00000000000c','aaaaaaaa-0000-0000-0000-000000000001',now()+interval '3 day', null,'open','bbbbbbbb-0000-0000-0000-000000000001'),
+  ('cccccccc-0000-0000-0000-00000000000d','aaaaaaaa-0000-0000-0000-000000000001',now()+interval '4 day', now()+interval '1 hour','locked','bbbbbbbb-0000-0000-0000-000000000001'),
+  ('cccccccc-0000-0000-0000-00000000000e','aaaaaaaa-0000-0000-0000-000000000001',now()+interval '5 day', now()+interval '1 hour','completed','bbbbbbbb-0000-0000-0000-000000000001');
+SQL
+
+# 멤버로 한 표 넣어 본다. 되면 0, 막히면 1.
+vote() {   # vote <match-suffix> [status]
+  docker exec -i $C psql -U postgres -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL && echo 0 || echo 1
+set role authenticated;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+insert into attendance_votes (match_id,team_member_id,status)
+values ('cccccccc-0000-0000-0000-00000000000$1','bbbbbbbb-0000-0000-0000-000000000002','${2:-attend}');
+SQL
+}
+# RLS가 막은 UPDATE는 **오류가 아니라 0행**이다 — using 절이 행을 걸러내면 psql은 그냥
+# 성공한다. 그래서 종료 코드로 판정하면 「통과했다」로 읽힌다(실제로 한 번 그렇게 읽었다).
+# 값이 실제로 바뀌었는지를 본다.
+status_of() { $PSQL -tAc "select status from attendance_votes where match_id='cccccccc-0000-0000-0000-00000000000$1' and team_member_id='bbbbbbbb-0000-0000-0000-000000000002'" | tail -1 | tr -d ' '; }
+revote() { # revote <match-suffix> <status>
+  docker exec -i $C psql -U postgres -q >/dev/null 2>&1 <<SQL
+set role authenticated;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+update attendance_votes set status='$2'
+ where match_id='cccccccc-0000-0000-0000-00000000000$1' and team_member_id='bbbbbbbb-0000-0000-0000-000000000002';
+SQL
+  status_of "$1"
+}
+# 앱이 실제로 쓰는 경로. INSERT ... ON CONFLICT DO UPDATE는 UPDATE와 달리 using에
+# 걸리면 조용히 넘어가지 않고 오류를 낸다 — 그래서 화면이 실패를 알 수 있다.
+upsert() { # upsert <match-suffix> <status>
+  docker exec -i $C psql -U postgres -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL && echo 0 || echo 1
+set role authenticated;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+insert into attendance_votes (match_id,team_member_id,status)
+values ('cccccccc-0000-0000-0000-00000000000$1','bbbbbbbb-0000-0000-0000-000000000002','$2')
+on conflict (match_id, team_member_id) do update set status = excluded.status;
+SQL
+}
+rows() { $PSQL -tAc "select count(*) from attendance_votes where match_id='cccccccc-0000-0000-0000-00000000000$1'" | tail -1; }
+clear_votes() { $PSQL -c "delete from attendance_votes where match_id::text like 'cccccccc-0000-0000-0000-00000000000%'" >/dev/null; }
+
+# 고치기 전 — 옛 정책을 되돌려 구멍이 실제로 있는지부터 본다.
+# 없으면 이 마이그레이션은 아무것도 안 고치는 것이다.
+$PSQL < supabase/rollback/20260828_votes_deadline_policy.sql
+[ "$(vote a)" = "0" ] || { echo "!! 고치기 전인데 마감 지난 경기가 이미 막힌다 — 전제가 틀렸다"; exit 1; }
+echo "고치기 전  : 마감 지난 open 경기에 표가 들어감 (구멍 확인)"
+clear_votes
+
+$PSQL < supabase/migrations/20260828_votes_deadline_policy.sql
+
+# 새로 막는 것
+[ "$(vote a)" = "1" ] || { echo "!! 마감 지난 경기에 INSERT가 통과한다"; exit 1; }
+[ "$(rows a)" = "0" ] || { echo "!! 거절됐다는데 행이 남았다"; exit 1; }
+echo "마감 지남  : INSERT 거절"
+
+# UPDATE도 막혀야 한다. 마감 전에 넣어 두고 시계를 넘긴다 —
+# 「마감 전에 찍어 둔 표를 마감 뒤에 바꾸기」가 실제 경로다.
+[ "$(vote b)" = "0" ] || { echo "!! 마감 전 경기에 INSERT가 막힌다"; exit 1; }
+echo "마감 전    : INSERT 통과"
+[ "$(revote b absent)" = "absent" ] || { echo "!! 마감 전 경기에 UPDATE가 막힌다"; exit 1; }
+[ "$(upsert b undecided)" = "0" ] || { echo "!! 마감 전 경기에 upsert가 막힌다"; exit 1; }
+[ "$(status_of b)" = "undecided" ] || { echo "!! 마감 전 upsert가 값을 안 바꿨다"; exit 1; }
+echo "마감 전    : UPDATE·upsert 통과"
+
+$PSQL -c "update matches set vote_deadline=now()-interval '1 hour' where id='cccccccc-0000-0000-0000-00000000000b'" >/dev/null
+[ "$(revote b attend)" = "undecided" ] || { echo "!! 마감이 지났는데 UPDATE로 값이 바뀌었다"; exit 1; }
+[ "$(upsert b attend)" = "1" ] || { echo "!! 마감이 지났는데 upsert가 통과한다 — 앱이 쓰는 경로다"; exit 1; }
+[ "$(status_of b)" = "undecided" ] || { echo "!! 거절됐다는데 값이 바뀌었다"; exit 1; }
+echo "마감 지남  : UPDATE 0행 · upsert 오류 · 값 그대로"
+
+# null — 이 마이그레이션의 유일한 위험이다.
+# `and m.vote_deadline >= now()`라고만 쓰면 조건이 unknown이 되어 마감을 안 정한 팀이
+# 통째로 막힌다. 화면으로는 절대 안 잡히는 종류다.
+[ "$(vote c)" = "0" ] || { echo "!! 마감을 안 정한 경기(null)에 INSERT가 막힌다 — null 처리가 빠졌다"; exit 1; }
+[ "$(revote c absent)" = "absent" ] || { echo "!! 마감을 안 정한 경기(null)에 UPDATE가 막힌다"; exit 1; }
+[ "$(upsert c undecided)" = "0" ] || { echo "!! 마감을 안 정한 경기(null)에 upsert가 막힌다"; exit 1; }
+echo "마감 없음  : INSERT/UPDATE 통과 (null이 거절로 안 새어감)"
+
+# 기존 조건이 안 무너졌는가
+[ "$(vote d)" = "1" ] || { echo "!! locked 경기에 표가 들어간다 — 기존 조건이 무너졌다"; exit 1; }
+[ "$(vote e)" = "1" ] || { echo "!! completed 경기에 표가 들어간다 — 기존 조건이 무너졌다"; exit 1; }
+echo "기존 조건  : locked / completed 여전히 거절"
+
+# 남의 표 — team_member_id 조건이 안 무너졌는가.
+# 마감 전 경기(c)에 총무의 membership으로 넣어 본다. 멤버로 로그인한 채다.
+if docker exec -i $C psql -U postgres -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<'SQL'
+set role authenticated;
+set request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+insert into attendance_votes (match_id,team_member_id,status)
+values ('cccccccc-0000-0000-0000-00000000000c','bbbbbbbb-0000-0000-0000-000000000001','attend');
+SQL
+then echo "!! 남의 표를 넣을 수 있다 — team_member_id 조건이 무너졌다"; exit 1; fi
+echo "기존 조건  : 남의 표 여전히 거절"
+
+# 롤백 — 메타데이터가 아니라 동작으로 본다
+clear_votes
+$PSQL < supabase/rollback/20260828_votes_deadline_policy.sql
+[ "$(vote a)" = "0" ] || { echo "!! 롤백했는데 마감 지난 경기가 여전히 막힌다"; exit 1; }
+echo "롤백       : 되돌아감 (구멍이 다시 열림 = 원래 동작)"
+
+# 두 번 적용해도 안전한가
+$PSQL < supabase/migrations/20260828_votes_deadline_policy.sql
+$PSQL < supabase/migrations/20260828_votes_deadline_policy.sql
+clear_votes
+[ "$(vote a)" = "1" ] || { echo "!! 두 번 적용하니 정책이 깨졌다"; exit 1; }
+echo "재실행     : 2회 적용 안전"
+
 echo
-echo "d1 ok / d2 ok / d3 ok"
+echo "d1 ok / d2 ok / d3 ok / votes-deadline ok"

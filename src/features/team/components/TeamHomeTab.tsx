@@ -219,23 +219,32 @@ export function TeamHomeTab({
                 이 카드의 밑색은 우상단 L* 25.83 → 좌하단 12.69다. 카드 자신의 명도 폭이
                 13.1이라, 얹는 빛이 그보다 한참 작으면 밑색의 기울기에 묻힌다.
 
-                  greenTint (0.12)  합성 31.60  ΔL* 5.76  → 「오른쪽이 조금 밝다」로만 읽혔다
-                  green   에 0.22   합성 36.29  ΔL* 10.45 → 줄기로 선다. 이걸 쓴다
-                  green   에 0.30+              ΔL* 14+   → 글자와 다투기 시작한다
+                  greenTint (0.12)  ΔL* 5.76   「오른쪽이 조금 밝다」로만 읽혔다
+                  green   에 0.22   ΔL* 10.45  줄기는 서지만 폭이 없다 — 모서리에서 바로 꺼진다
+                  green   에 0.40   ΔL* 17.51  띠로 읽힌다. 이걸 쓴다
 
                 토큰 재사용(greenTint)이 새 값 0이라 먼저 그려 봤는데, 두 번 렌더해서
                 나란히 놓고 보니 줄기가 안 섰다. 새로 정한 값은 알파 하나뿐이다 —
                 색은 colors.green 그대로고, 이 파일이 이미 일회성 오버레이를 인라인
                 rgba로 쓰고 있다(스크림 0.45/0.85, 엠블럼 바탕 0.55).
 
-                locations의 0.55는 줄기의 길이다. 1.0이면 카드 전체가 초록으로 물들어
+                스톱이 셋인 이유는 **띠에 폭을 주기 위해서**다. 둘이면 모서리가 가장 밝고
+                거기서 바로 꺼져서 「모서리가 밝다」로만 보인다. 0.30까지 0.40 → 0.16으로
+                빠르게 떨어뜨려 밝은 코어를 만들고, 거기서 0.72까지 길게 끌어 꼬리를 둔다.
+                코어가 띠의 폭이고 꼬리가 방향이다.
+
+                마지막 스톱 0.72는 줄기의 길이다. 1.0이면 카드 전체가 초록으로 물들어
                 밑색의 어두운 쪽이 사라진다 — 대각선이 아니라 그냥 밝은 카드가 된다.
+
+                0.40을 쓸 수 있게 된 건 「팀 설정 ›」이 우상단에서 내려왔기 때문이다.
+                그 초록 글자가 모서리에 있을 때는 대비가 3.34:1까지 떨어졌다.
+                지금 자리에서는 4.75:1로 본문 기준(4.5)을 넘는다.
               */}
               <LinearGradient
-                colors={['rgba(34,197,94,0.22)', 'transparent']}
+                colors={['rgba(34,197,94,0.40)', 'rgba(34,197,94,0.16)', 'transparent']}
                 start={{ x: 1, y: 0 }}
                 end={{ x: 0, y: 1 }}
-                locations={[0, 0.55]}
+                locations={[0, 0.3, 0.72]}
                 style={StyleSheet.absoluteFill}
               />
             </View>
@@ -287,40 +296,6 @@ export function TeamHomeTab({
                     {isAdmin ? '총무' : '팀원'}
                   </Text>
                 </View>
-                {/*
-                  팀 설정 진입 — 팀명 줄 오른쪽 끝이다.
-
-                  4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
-                  헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
-                  서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
-                  그 호출부에 갈 방법만 없는 상태였다.
-
-                  되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
-                  팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
-                  팀원은 팀을 나갈 방법이 없었다. 조건을 걸지 않는다 — 총무·팀원 모두 연다.
-
-                  라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
-                  헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
-                  가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
-
-                  전체 폭 행이던 것을 링크로 줄이면서 부제(총무는 「정기모임 · 회비 …」,
-                  팀원은 「팀 나가기」)를 뺐다. 한 줄짜리 링크에는 담을 자리가 없고,
-                  팀명 줄 오른쪽에 두 줄이 들어가면 팀명이 밀린다.
-                  ⚠ 팀원에게 그 화면이 「팀 나가기」 한 줄뿐이라는 안내가 이 자리에서 사라진다.
-                    팀 설정 화면을 팀원용으로 다시 설계하는 일이라 서랍에 있고, 여기서는 안 푼다.
-
-                  ⚠ 이미지 대조 전 임시값이다. 기존 sectionHeadLink·moreText 토큰을 그대로 쓰고
-                    새 값을 하나도 정하지 않았다. 자리·크기·테두리·배경은 (나)에서 맞춘다.
-                */}
-                <Pressable
-                  onPress={onOpenTeamSettings}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="팀 설정"
-                  style={({ pressed }) => [styles.sectionHeadLink, { marginLeft: 'auto' }, pressed && styles.pressed]}
-                >
-                  <Text style={styles.moreText}>팀 설정 ›</Text>
-                </Pressable>
               </View>
               {/*
                 Since를 지역·풋살에서 떼어 낸다.
@@ -353,6 +328,12 @@ export function TeamHomeTab({
                 지표의 설명인지 자리로는 알 수 없었다.
               */}
 
+              {/*
+                소개 줄과 「팀 설정」이 한 행이다. 소개가 없는 팀원에게도 이 행은 남는다 —
+                링크가 소개 유무에 따라 자리를 옮기면 그 화면으로 가는 문이 매번 다른 데 있다.
+              */}
+              <View style={styles.sloganLine}>
+                <View style={{ flex: 1 }}>
               {/* 슬로건 — 총무만 고친다. 비어 있으면 총무에게만 "한 줄 소개" 자리를 보여주고,
                   팀원에게는 아예 안 띄운다(빈 줄이 있는지도 알 필요가 없다). */}
               {sloganEditing ? (
@@ -396,6 +377,45 @@ export function TeamHomeTab({
                   </Pressable>
                 )
               )}
+                </View>
+                {/*
+                  팀 설정 진입 — 소개 줄 오른쪽 끝이다.
+
+                  4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
+                  헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
+                  서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
+                  그 호출부에 갈 방법만 없는 상태였다.
+
+                  되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
+                  팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
+                  팀원은 팀을 나갈 방법이 없었다. 조건을 걸지 않는다 — 총무·팀원 모두 연다.
+
+                  라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
+                  헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
+                  가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
+
+                  전체 폭 행이던 것을 링크로 줄이면서 부제(총무는 「정기모임 · 회비 …」,
+                  팀원은 「팀 나가기」)를 뺐다. 한 줄짜리 링크에는 담을 자리가 없고,
+                  팀명 줄 오른쪽에 두 줄이 들어가면 팀명이 밀린다.
+                  ⚠ 팀원에게 그 화면이 「팀 나가기」 한 줄뿐이라는 안내가 이 자리에서 사라진다.
+                    팀 설정 화면을 팀원용으로 다시 설계하는 일이라 서랍에 있고, 여기서는 안 푼다.
+
+                  자리가 팀명 줄에서 소개 줄로 내려왔다. 두 가지가 같이 풀린다 —
+                  팀명 줄이 팀명+뱃지만 갖게 되어 세 줄의 무게가 위에서 아래로 고르게 눕고,
+                  이 링크가 히어로 우상단에서 빠진다. 거기는 빛줄기가 가장 밝은 자리라
+                  초록 글자의 대비가 무너지던 곳이다(재 봤다: 지금 자리 3.96:1 → 옮긴 자리
+                  5.33:1, 본문 기준 4.5:1). 빛줄기를 더 세게 쓸 수 있게 된 것도 이 이동 덕이다.
+                */}
+                <Pressable
+                  onPress={onOpenTeamSettings}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="팀 설정"
+                  style={({ pressed }) => [styles.sectionHeadLink, { marginLeft: 'auto' }, pressed && styles.pressed]}
+                >
+                  <Text style={styles.moreText}>팀 설정 ›</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
 
@@ -865,14 +885,22 @@ const styles = StyleSheet.create({
   roleTagAdmin: { borderColor: '#6B5426' },
   roleTagText: { color: colors.textFaint, fontSize: 10, fontWeight: '800' },
   roleTagTextAdmin: { color: colors.gold },
-  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 20 },
-  bannerBody: { flex: 1, gap: 6 },
+  /*
+    상하 여백이 대칭이다. paddingTop만 20이고 아래가 0이던 시절엔 엠블럼과 소개 줄이
+    카드 바닥에 그대로 닿았다(재 봤다: 카드 y50~136, 엠블럼 바닥 136 — 여백 0px).
+    카드가 낮아서 빽빽했던 게 아니라 아래가 잘려 있었다.
+  */
+  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 20 },
+  /* 6은 세 줄이 한 덩어리로 뭉쳐 보였다. 12면 줄마다 숨이 생기고 엠블럼 높이와도 맞는다 */
+  bannerBody: { flex: 1, gap: 12 },
   emblem: {
     // rounded-square. 원형은 인스타 프로필을 그대로 옮긴 모양이었는데, 이건 사람 사진이
     // 아니라 팀 로고다 — 엠블럼은 방패·사각이 원형보다 자연스럽고, 아래 Bento 격자의
     // 사각 타일들과도 모양이 맞는다.
-    width: 66,
-    height: 66,
+    // 76은 본문 세 줄(25 + 12 + 13 + 12 + 14 = 76)과 같은 높이다. 둘이 나란히 서면
+    // 위아래가 딱 맞아 카드 안이 두 덩어리로 정돈된다. 66일 땐 본문보다 10px 짧았다.
+    width: 76,
+    height: 76,
     // tile(16)에서 hero(20)로. 66 기준 24%에서 30%가 된다 — 사각형 정체성은 남기면서
     // 모서리가 눈에 띄게 둥글어진다. 카드 자신과 같은 곡률이라 안에 든 요소로 묶인다.
     // pill(원형)은 위 근거를 뒤집는 것이라 안 간다.
@@ -912,6 +940,8 @@ const styles = StyleSheet.create({
   teamMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   slogan: { color: colors.textBody, fontSize: 12, fontWeight: '600' },
   sloganRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  /* 소개(남는 폭 전부) + 「팀 설정 ›」(오른쪽 끝) */
+  sloganLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sloganEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sloganInput: {
     flex: 1,

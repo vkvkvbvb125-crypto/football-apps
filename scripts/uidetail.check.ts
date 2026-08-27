@@ -257,6 +257,50 @@ const num = (src: string, re: RegExp, what: string) => {
     빛이 시작해 카드가 두 방향으로 갈린다 — 눈으로는 「뭔가 탁하다」로만 보이고
     원인이 안 보인다. 두 겹 다 우상 → 좌하여야 한다.
   */
+  /*
+    히어로 여백 — 위아래가 같아야 한다.
+
+    paddingTop만 20이고 아래가 없던 시절엔 엠블럼과 소개 줄이 카드 바닥에 그대로
+    닿았다(재 봤다: 카드 y50~136, 엠블럼 바닥 136 — 아래 여백 0px). 카드가 낮아서
+    빽빽했던 게 아니라 아래가 잘려 있었던 것이다. 위만 고치면 같은 증상이 돌아온다.
+  */
+  const row = blockOf('bannerRow');
+  assert.ok(/paddingVertical: 20/.test(row), `히어로 상하 여백이 비대칭이다: ${row.replace(/\s+/g, ' ').slice(0, 90)}`);
+  assert.ok(!/paddingTop:/.test(row), '히어로에 paddingTop이 따로 붙었다 — 아래가 다시 잘린다');
+
+  /*
+    본문 세 줄과 엠블럼이 같은 높이다.
+
+    엠블럼 76 = 팀명 25 + gap 12 + Since 13 + gap 12 + 소개 14. 둘이 나란히 서면
+    위아래가 맞아 카드 안이 두 덩어리로 정돈된다. gap을 바꾸면 이 등식이 깨지므로
+    같이 본다 — 한쪽만 고치면 화면에서는 「뭔가 안 맞는다」로만 보인다.
+  */
+  const bodyGap = Number(onlyMatch(tab, /bannerBody: \{ flex: 1, gap: (\d+) \}/, '본문 gap').match(/gap: (\d+)/)![1]);
+  const emblemSize = Number(onlyMatch(blockOf('emblem'), /width: (\d+)/, '엠블럼 폭').match(/(\d+)/)![1]);
+  assert.equal(25 + bodyGap + 13 + bodyGap + 14, emblemSize,
+    `엠블럼(${emblemSize})과 본문 세 줄(gap ${bodyGap} 기준 ${52 + bodyGap * 2})의 높이가 다르다`);
+
+  /*
+    「팀 설정 ›」이 우상단에 없다.
+
+    거기는 빛줄기가 가장 밝은 자리고 이 링크는 초록 글자다 — 팀명 줄에 있을 때
+    대비가 3.34:1까지 떨어졌다(본문 기준 4.5:1). 소개 줄로 내려오면서 4.75:1이 됐고,
+    그래서 빛줄기 알파를 0.22에서 0.40으로 올릴 수 있었다. 둘은 한 판단이라 같이 본다.
+  */
+  const line = onlyMatch(tab, /sloganLine: \{[^}]+\}/, '소개 줄');
+  assert.ok(/flexDirection: 'row'/.test(line), '소개 줄이 행이 아니다 — 「팀 설정」이 같은 높이에 못 선다');
+  const nameRow = tab.slice(
+    onlyIndexOf(tab, '<View style={styles.teamNameRow}>', '팀명 줄'),
+    onlyIndexOf(tab, 'sloganLine}>', '소개 줄 여는 태그')
+  );
+  assert.ok(!/onOpenTeamSettings/.test(nameRow), '「팀 설정」이 팀명 줄로 돌아갔다 — 빛줄기가 가장 밝은 자리다');
+
+  // 빛줄기는 스톱이 셋이다. 둘이면 모서리에서 바로 꺼져 「띠」가 아니라 「밝은 모서리」가 된다
+  const beam = onlyMatch(tab, /colors=\{\['rgba\(34,197,94,[\d.]+\)', 'rgba\(34,197,94,[\d.]+\)', 'transparent'\]\}/, '빛줄기 색');
+  assert.ok(beam.length > 0);
+  const stops = onlyMatch(tab, /locations=\{\[0, 0\.3, 0\.72\]\}/, '빛줄기 스톱');
+  assert.ok(stops.length > 0, '빛줄기 스톱이 바뀌었다 — 코어(0~0.3)와 꼬리(~0.72)가 띠의 폭과 방향이다');
+
   const dirs = tab.match(/start=\{\{ x: 1, y: 0 \}\}\s*\n\s*end=\{\{ x: 0, y: 1 \}\}/g) ?? [];
   assert.equal(dirs.length, 2, `히어로 배경 두 겹의 방향이 갈렸다 (우상→좌하가 ${dirs.length}겹)`);
 }

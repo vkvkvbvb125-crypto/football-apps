@@ -532,7 +532,16 @@ export function TeamHomeTab({
                     홈에서 같은 문제를 한 번 겪고 sectionLinkRow가 44px를 만들게 고쳤다.
                     앱에 이미 있는 표현이라 새 종류를 만드는 것도 아니다.
                   */}
-                    <Text style={styles.sectionTitle}>멤버</Text>
+                    {/*
+                      숫자를 제목에 적는다 — 레퍼런스에 맞춰 뒤집은 판단이다.
+
+                      한때 뺐다. 근거는 「스탯 바가 같은 수를 이미 말한다」였고 그것도
+                      사실이다. 레퍼런스는 겹침을 알면서 둘 다 뒀고, 재보니 두 수가
+                      다른 것을 말한다 — 스탯 바의 「멤버 6」은 팀 지표고, 여기 「6명」은
+                      바로 옆 「전체보기 ›」가 여는 목록의 크기다. 아바타 줄이 다섯에서
+                      끊기고 「+N」으로 접히는 구조라, 전체 수를 말하는 자리가 제목뿐이다.
+                    */}
+                    <Text style={styles.sectionTitle}>멤버 {members.length}명</Text>
                     <Pressable
                       onPress={onGoMembers}
                       hitSlop={10}

@@ -238,9 +238,19 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   findTitle(head as ts.Node);
   assert.ok(title, '로스터 제목을 못 찾았다');
   const titleText = (title as ts.JsxElement).children.map((c) => c.getText()).join('').trim();
-  assert.equal(titleText, '멤버', `로스터 제목이 「멤버」가 아니다: ${titleText}`);
-  assert.ok(!/members\.length/.test(titleText),
-    `로스터 제목에 숫자가 붙었다 — 스탯 바가 같은 수를 이미 말한다: ${titleText}`);
+  /*
+    제목에 숫자가 붙는다 — 레퍼런스에 맞춰 뒤집었다.
+
+    옛 단언은 그 반대였다: 「로스터 제목에 숫자가 붙었다 — 스탯 바가 같은 수를 이미
+    말한다」. 그 근거를 지우지 않는 이유는, 지우면 다음 사람이 겹침을 발견하고 또
+    뺄 것이기 때문이다. 겹치는 것은 맞다. 알면서 둔다.
+
+    두 수가 다른 것을 말한다 — 스탯 바의 「멤버 6」은 팀 지표고, 제목의 「6명」은 옆
+    「전체보기 ›」가 여는 목록의 크기다. 아바타 줄이 다섯에서 끊기고 「+N」으로 접히는
+    구조라 전체 수를 말하는 자리가 제목뿐이다.
+  */
+  assert.ok(/^멤버 \{members\.length\}명$/.test(titleText),
+    `로스터 제목이 「멤버 N명」이 아니다: ${titleText}`);
 
   // 스탯 바에는 진입이 없다. StatTile을 Pressable로 감싸면 입구가 셋이 된다
   // (부정 단언 — bar 구간 안에 onPress를 넣어 실패하는 것을 확인했다)

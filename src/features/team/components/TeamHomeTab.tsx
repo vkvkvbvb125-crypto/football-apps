@@ -14,12 +14,12 @@ import { SoftTint } from '../../../components/BentoCard';
 import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
-import { POSITION_COLOR, POSITION_INFO, positionLabel, toPosition } from '../positions';
+import { POSITION_INFO, positionLabel, toPosition } from '../positions';
 import { initialOf } from '../initials';
 import {
   type AttendanceRate,
-  formatMemberRate,
   formatRate,
+  formatRecentAttendance,
   memberAttendanceRate,
   type MemberRateMatch,
 } from '../../attendance/utils/attendanceRate';
@@ -161,6 +161,9 @@ export function TeamHomeTab({
   onOpenTeamSettings,
   onGoTile,
 }: Props) {
+  /* 내 행에 나온 사람을 뺀 나머지 — 아바타 줄이 쓴다 */
+  const others = visibleMembers.filter((m) => m.id !== selfMemberId);
+
   return (
     <>
         {/* ── 배너: 엠블럼 + 팀명 + 초대 코드 ── 팀 홈에서만 */}
@@ -573,7 +576,12 @@ export function TeamHomeTab({
                     두면 같은 함정이 다시 생긴다. 0명이어도 열린다.
 
                     멤버 탭에서는 제목이 그냥 제목이다. 이미 그 화면이라 갈 곳이 없다.
+
+                    「전체보기」 글자를 붙였다. 셰브론만 있으면 표적이 18px이 되는데,
+                    홈에서 같은 문제를 한 번 겪고 sectionLinkRow가 44px를 만들게 고쳤다.
+                    앱에 이미 있는 표현이라 새 종류를 만드는 것도 아니다.
                   */}
+                    <Text style={styles.sectionTitle}>멤버</Text>
                     <Pressable
                       onPress={onGoMembers}
                       hitSlop={10}
@@ -581,108 +589,108 @@ export function TeamHomeTab({
                       accessibilityLabel="멤버 전체 보기"
                       style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
                     >
-                      {/*
-                        숫자를 뺐다. 바로 위 스탯 바가 같은 수를 이미 말한다 —
-                        「멤버 6」과 「팀원 6명」이 한 화면에서 같은 값을 두 번 적고 있었다.
-                        지표는 스탯 바, 명단은 이 카드로 역할을 갈랐으니 제목은 이름만 든다.
-                      */}
-                      <Text style={styles.sectionTitle}>멤버</Text>
+                      <Text style={styles.moreText}>전체보기</Text>
                       <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
                     </Pressable>
                 </View>
 
-                {/* 팀 홈은 "누가 있나"만 훑는 자리라 가로로 늘어놓는다.
-                    멤버 탭은 포지션·실력을 견주고 관리까지 하는 자리라 세로 목록이 맞다. */}
                 {/*
-                  멤버가 한둘이면 가로 스트립을 쓰지 않는다.
-                  62px짜리 아바타 칸 하나가 화면 폭에 혼자 놓이면 오른쪽이 통째로 비어서
-                  "아직 안 만든 화면"처럼 읽혔다. 같은 정보를 가로로 눕히면 폭을 다 쓴다.
-                  셋부터는 스트립이 줄로 채워지니 그대로 둔다 — 미리보기라 가로가 맞다.
+                  내 행 — 명단 속의 나.
+
+                  soloList(2명 이하)와 가로 로스터(3명 이상) 두 갈래를 이 한 모양으로 합쳤다.
+                  soloList가 생긴 근거는 「62px 아바타 칸 하나가 화면 폭에 혼자 놓이면 오른쪽이
+                  통째로 비어서 아직 안 만든 화면처럼 읽힌다」였는데, 내 행이 항상 전체 폭을
+                  쓰므로 그 원인이 사라진다. 1명 팀도 이 행 하나로 폭이 찬다.
+
+                  메타는 「포지션 · 최근 N경기 중 M회」 둘이다. 포지션은 바로 위 「내 정보」
+                  카드에도 있는데 그대로 둔다 — ⑵에서 「멤버 6」과 「팀원 6명」을 없앤 것과는
+                  다른 경우다. 그때는 같은 값이 **같은 역할**(멤버 수를 세는 일)로 두 번
+                  나왔고, 여기는 역할이 갈린다: 「내 정보」는 고치는 자리(수정 ›)이고
+                  이 행은 명단 속의 나다. 빼면 이 행이 이름과 뱃지뿐이 된다.
+
+                  등번호·주발은 안 넣는다 — 「내 정보」가 맡고 있고 명단 맥락에서 값이 없다.
+                  실력 등급도 안 넣는다(본인이 자기 등급을 보면 팀 분위기가 깨진다).
                 */}
-                {visibleMembers.length <= 2 ? (
-                  <View style={styles.soloList}>
-                    {visibleMembers.map((m) => {
-                      const pos = toPosition(m.position);
-                      /*
-                        이름 → 역할 → 포지션 → 참석률.
-                        끝에 실력 등급(상/중/하)을 붙이고 있었다 — 본인이 자기 등급을 보면
-                        팀 분위기가 깨진다. 값과 팀 분배 로직은 그대로 두고 표시만 뺀다.
-                        (아래 memberRow 경로에서도 같은 이유로 뺐다.)
-                      */
-                      const meta = [
-                        m.role === 'admin' ? '총무' : null,
-                        pos ? POSITION_INFO[pos].ko : null,
-                        formatMemberRate(memberAttendanceRate(memberRateMatches, m)),
-                      ].filter(Boolean);
-                      return (
-                        <Pressable
-                          key={m.id}
-                          onPress={onOpenMemberList}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${m.displayName} 멤버 관리`}
-                          style={({ pressed }) => [styles.soloRow, pressed && styles.pressed]}
-                        >
-                          <View style={styles.soloAvatar}>
-                            {m.avatarUrl ? (
-                              <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
-                            ) : (
-                              <Text style={styles.rosterInitial}>{initialOf(m.displayName)}</Text>
-                            )}
-                          </View>
-                          <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-                            <Text style={styles.soloName} numberOfLines={1}>
-                              {m.displayName}
-                              {m.id === selfMemberId ? ' (나)' : ''}
-                            </Text>
-                            <Text style={styles.rosterMeta} numberOfLines={1}>
-                              {meta.length > 0 ? meta.join(' · ') : '포지션 미지정'}
-                            </Text>
-                          </View>
-                          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rosterRow}>
-                    {visibleMembers.map((m) => {
-                      const pos = toPosition(m.position);
-                      return (
-                        <Pressable key={m.id} onPress={onGoMembers} style={styles.rosterItem}>
-                          <View style={styles.rosterAvatar}>
-                            {/* 사진이 있으면 사진, 없으면 이니셜 */}
-                            {m.avatarUrl ? (
-                              <Image source={{ uri: m.avatarUrl }} style={styles.rosterPhoto} />
-                            ) : (
-                              <Text style={styles.rosterInitial}>{initialOf(m.displayName)}</Text>
-                            )}
-                            {m.role === 'admin' && (
-                              <View style={styles.rosterAdminDot}>
-                                <Text style={styles.rosterAdminText}>총무</Text>
-                              </View>
-                            )}
-                          </View>
-                          <Text style={styles.rosterName} numberOfLines={1}>
-                            {m.displayName}
-                            {m.id === selfMemberId ? ' (나)' : ''}
+                {!!me && (
+                  <Pressable
+                    onPress={onOpenMemberList}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${me.displayName} 내 정보 보기`}
+                    style={({ pressed }) => [styles.selfRow, pressed && styles.pressed]}
+                  >
+                    <View style={styles.selfAvatar}>
+                      {me.avatarUrl ? (
+                        <Image source={{ uri: me.avatarUrl }} style={styles.selfPhoto} />
+                      ) : (
+                        <Text style={styles.selfInitial}>{initialOf(me.displayName)}</Text>
+                      )}
+                    </View>
+
+                    <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
+                      <View style={styles.selfNameRow}>
+                        <Text style={styles.selfName} numberOfLines={1}>
+                          {me.displayName} (나)
+                        </Text>
+                        <View style={[styles.roleTag, isAdmin && styles.roleTagAdmin]}>
+                          <Text style={[styles.roleTagText, isAdmin && styles.roleTagTextAdmin]}>
+                            {isAdmin ? '총무' : '팀원'}
                           </Text>
-                          <Text style={styles.rosterMeta} numberOfLines={1}>
-                            <Text style={pos ? { color: POSITION_COLOR[pos] } : undefined}>
-                              {pos ? POSITION_INFO[pos].ko : '미지정'}
-                            </Text>
-                            {m.skillTag ? ` · ${m.skillTag}` : ''}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                    {members.length > 5 && (
-                      <Pressable onPress={onGoMembers} style={styles.rosterItem}>
-                        <View style={[styles.rosterAvatar, styles.rosterMore]}>
-                          <Text style={styles.rosterMoreText}>+{members.length - 5}</Text>
                         </View>
+                      </View>
+                      <Text style={styles.selfMeta} numberOfLines={1}>
+                        {[
+                          toPosition(me.position) ? POSITION_INFO[toPosition(me.position)!].ko : null,
+                          formatRecentAttendance(memberAttendanceRate(memberRateMatches, me)),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    </View>
+
+                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                  </Pressable>
+                )}
+
+                {/*
+                  나머지 아바타 줄.
+
+                  내 행에 나온 사람은 여기서 뺀다 — 같은 사람을 한 카드에 두 번 그리지 않는다.
+                  그래서 「+N」은 7명부터 뜬다(나 + 5명까지는 줄에 다 보인다). 레퍼런스는
+                  5개 + 「+1」이라 6명처럼 보이지만, 그건 줄이 나를 포함할 때의 그림이다.
+                  「몇 명인가」는 스탯 바가 말하므로 이 줄이 수를 책임지지 않는다.
+
+                  0명이면 그리지 않는다 — 빈 가로줄이 「아직 안 만든 화면」으로 읽히던
+                  그 문제가 여기서만 남는다.
+                */}
+                {others.length > 0 && (
+                  <View style={styles.avatarRow}>
+                    {others.slice(0, 5).map((m, i) => (
+                      <Pressable
+                        key={m.id}
+                        onPress={onGoMembers}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${m.displayName} 멤버 보기`}
+                        style={[styles.avatarChip, i > 0 && styles.avatarChipOverlap]}
+                      >
+                        {m.avatarUrl ? (
+                          <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
+                        ) : (
+                          <Text style={styles.avatarInitial}>{initialOf(m.displayName)}</Text>
+                        )}
+                      </Pressable>
+                    ))}
+                    {others.length > 5 && (
+                      /* +N도 눌린다. 눌리는 원 옆에 안 눌리는 원이 서면 그게 더 나쁘다 */
+                      <Pressable
+                        onPress={onGoMembers}
+                        accessibilityRole="button"
+                        accessibilityLabel={`나머지 ${others.length - 5}명 보기`}
+                        style={[styles.avatarChip, styles.avatarChipOverlap, styles.avatarMore]}
+                      >
+                        <Text style={styles.avatarMoreText}>+{others.length - 5}</Text>
                       </Pressable>
                     )}
-                  </ScrollView>
+                  </View>
                 )}
 
                 {/*
@@ -945,46 +953,72 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionTitle: { color: colors.text, ...font.section },
-  soloList: { gap: 4 },
-  soloRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 4 },
-  soloAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  /*
+    내 행 — 전체 폭 한 줄. 카드보다 한 단계 밝은 면이라 명단에서 떠 있다.
+    soloList(2명 이하 전용)를 대신한다: 그건 「62px 아바타 하나가 폭에 혼자 놓이면
+    오른쪽이 빈다」를 풀려던 것이었고, 이 행이 항상 폭을 다 쓰므로 그 원인이 사라졌다.
+  */
+  selfRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardAlt,
+    gap: 12,
+    padding: 12,
+    borderRadius: radius.card,
+    borderCurve: 'continuous',
+    backgroundColor: colors.cardRaised,
   },
-  soloName: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
-  avatarPhoto: { width: '100%', height: '100%', borderRadius: 999 },
-  rosterRow: { gap: 14, paddingVertical: 2 },
-  rosterItem: { width: 62, alignItems: 'center', gap: 5 },
-  rosterAvatar: {
-    width: 52,
-    height: 52,
+  /* 아바타 줄(36)보다 확실히 크다 — 대략 1.5배. 초록 링으로 「나」를 표시한다 */
+  selfAvatar: {
+    width: 54,
+    height: 54,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     backgroundColor: colors.inputBg,
+    borderWidth: 2,
+    borderColor: colors.green,
   },
-  rosterPhoto: { width: 52, height: 52, borderRadius: 26 },
-  rosterInitial: { color: colors.textStrong, fontSize: 14, fontWeight: '800' },
-  rosterAdminDot: {
-    position: 'absolute',
-    bottom: -3,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 999,
-    backgroundColor: colors.gold,
+  selfPhoto: { width: '100%', height: '100%' },
+  selfInitial: { color: colors.textStrong, fontSize: 16, fontWeight: '800' },
+  selfNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  selfName: { color: colors.textStrong, fontSize: 15, fontWeight: '800', flexShrink: 1 },
+  selfMeta: { color: colors.textDim, fontSize: 12, fontWeight: '600' },
+
+  /*
+    아바타 줄 — 서로 파고든다.
+
+    앱의 첫 겹침 UI다. absolute + left 누적이 아니라 음수 마진을 쓴다 — row 안에서
+    그냥 흐르게 두고 마진만 당기면 되고, absolute는 개수마다 좌표를 계산해야 한다.
+
+    -9는 지름 36의 25%다. 그 이상 당기면 이니셜 두 글자가 가려지기 시작한다.
+
+    각 칸에 배경색과 같은 테두리를 두른다. 안 두르면 뒤 아바타의 원이 앞 아바타에
+    그대로 얹혀 경계가 사라진다 — 겹침이 「겹쳤다」가 아니라 「뭉갰다」로 보인다.
+
+    쌓임 방향은 **뒤 칸이 위**다. 나중에 그린 형제가 위로 오는 게 기본이라 zIndex를
+    따로 주지 않아도 그렇게 된다 — 화면에서 확인했다(서준 위에 도윤이 얹힌다).
+    반대로 하려면(앞이 위) 각 칸에 내림차순 zIndex를 줘야 하는데, 그렇게 하면 왼쪽
+    끝 사람만 온전히 보이고 오른쪽으로 갈수록 잘린다. 지금 방향이 명단 순서와 맞는다.
+  */
+  avatarRow: { flexDirection: 'row', alignItems: 'center' },
+  avatarChip: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: colors.inputBg,
+    borderWidth: 2,
+    borderColor: colors.bgRoot,
   },
-  rosterAdminText: { color: colors.bgRoot, fontSize: 10, fontWeight: '800' },
-  rosterName: { color: colors.textStrong, fontSize: 11, fontWeight: '700' },
-  rosterMeta: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
-  rosterMore: { backgroundColor: colors.greenTint, borderColor: colors.greenDeep },
-  rosterMoreText: { color: colors.green, fontSize: 13, fontWeight: '800' },
+  avatarChipOverlap: { marginLeft: -9 },
+  avatarPhoto: { width: '100%', height: '100%' },
+  avatarInitial: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
+  avatarMore: { backgroundColor: colors.greenTint },
+  avatarMoreText: { color: colors.green, fontSize: 12, fontWeight: '800' },
+
   myRecord: {
     marginHorizontal: 20,
     marginTop: 16,

@@ -225,8 +225,32 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   // (부정 단언 — bar 구간 안에 onPress를 넣어 실패하는 것을 확인했다)
   assert.ok(!/Pressable|onPress/.test(bar.getText()), '스탯 바에 진입이 붙었다 — 멤버 탭 입구가 셋이 된다');
 
-  // 제목의 진입은 남아 있어야 한다. 2명 이하 팀은 로스터 칩이 없어 이 길뿐이다
-  assert.ok(/onPress=\{onGoMembers\}/.test(homeTab), '제목에서 멤버 탭으로 가는 길이 사라졌다');
+  /*
+    제목의 진입은 남아 있어야 한다.
+
+    예전엔 /onPress={onGoMembers}/ 하나로 봤는데 그 꼴이 이 파일에 셋이다 —
+    제목의 「전체보기」, 아바타 줄의 각 칸, 「+N」. 제목 것을 지워도 나머지 둘이
+    통과시켰다. 「이 자리인가」를 묻는 단언이라 자리를 특정한다.
+
+    제목 진입은 sectionHeadLink를 쓰는 Pressable이다. 아바타 줄은 avatarChip이라
+    스타일로 갈린다.
+  */
+  let titleEntry: ts.JsxOpeningElement | null = null;
+  const findEntry = (n: ts.Node) => {
+    if (
+      ts.isJsxOpeningElement(n) &&
+      n.tagName.getText() === 'Pressable' &&
+      n.attributes.properties.some(
+        (a) => ts.isJsxAttribute(a) && a.name.getText() === 'onPress' && a.initializer?.getText() === '{onGoMembers}'
+      ) &&
+      n.attributes.properties.some((a) => a.getText().includes('sectionHeadLink'))
+    ) {
+      titleEntry = n;
+    }
+    ts.forEachChild(n, findEntry);
+  };
+  findEntry(sf);
+  assert.ok(titleEntry, '제목에서 멤버 탭으로 가는 길이 사라졌다');
 }
 
 console.log('memberrow ok');

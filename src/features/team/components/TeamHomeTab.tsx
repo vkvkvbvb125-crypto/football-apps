@@ -682,56 +682,33 @@ export function TeamHomeTab({
                   어긋났다. 총무도 자기 포지션·등번호가 필요하다.
                 */}
                 {!!me && (
-                  <View style={[styles.card, { gap: 12 }]}>
-                    {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
-                    <SoftTint tone="green" radius={radius.card} />
-                    <View style={styles.sectionHead}>
-                      <Text style={styles.sectionTitle}>내 정보</Text>
-                      <Pressable
-                        onPress={onOpenMemberList}
-                        hitSlop={14}
-                        accessibilityRole="button"
-                        accessibilityLabel="내 정보 수정"
-                      >
-                        <Text style={styles.moreText}>수정 ›</Text>
-                      </Pressable>
-                    </View>
-                    <View style={styles.myInfoRow}>
-                      <View style={{ flex: 1, gap: 5 }}>
-                        <Text style={styles.myInfoLabel}>주 포지션</Text>
-                        {/* 값이 없으면 「미지정」이 아니라 「설정하기」다. 「미지정」은 상태를 알려줄 뿐
-                            할 일을 가리키지 않는다 — 어디서 정하는지 모르면 그대로 비어 있다 */}
-                        {toPosition(me.position) ? (
-                          <View style={styles.myInfoChip}>
-                            <Text style={styles.myInfoChipText}>{positionLabel(toPosition(me.position))}</Text>
-                          </View>
-                        ) : (
-                          <Pressable
-                            onPress={onOpenMemberList}
-                            accessibilityRole="button"
-                            accessibilityLabel="주 포지션 설정하기"
-                            style={({ pressed }) => [styles.myInfoChip, styles.myInfoChipEmpty, pressed && styles.pressed]}
-                          >
-                            <Text style={styles.myInfoChipEmptyText}>설정하기</Text>
-                          </Pressable>
-                        )}
-                      </View>
-                      <View style={{ flex: 1, gap: 5 }}>
-                        <Text style={styles.myInfoLabel}>실력</Text>
-                        {/* 실력은 총무가 매기는 값이라 본인에게 「설정하기」를 주지 않는다 —
-                            누르면 못 바꾸는 곳으로 보내는 셈이다. 비어 있으면 그냥 「-」 */}
-                        <View style={[styles.myInfoChip, styles.myInfoChipAlt]}>
-                          <Text style={[styles.myInfoChipText, styles.myInfoChipTextAlt]}>{me.skillTag ?? '-'}</Text>
-                        </View>
-                      </View>
+                  <Pressable
+                    onPress={onOpenMemberList}
+                    accessibilityRole="button"
+                    accessibilityLabel="내 정보 수정"
+                    style={({ pressed }) => [styles.myInfoRow, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.myInfoRowTitle}>내 정보</Text>
+                    {/*
+                      값은 요약만 — 「골레이로 · 하 · 7번」. 고치는 건 이 행이 여는
+                      화면이 한다. 카드였을 때는 라벨·칩·유니폼이 세 칸으로 서 있었는데,
+                      셋 다 여기서 못 고치는 값이라 칸만 차지했다.
 
-                      {/* 등번호 — 숫자만 두면 무슨 숫자인지 모른다. 유니폼 안에 넣어 뜻이 드러나게 */}
-                      <View style={styles.jersey}>
-                        <Ionicons name="shirt-outline" size={44} color={colors.greenDeep} />
-                        <Text style={styles.jerseyNumber}>{me.jerseyNumber ?? '–'}</Text>
-                      </View>
-                    </View>
-                  </View>
+                      빈 값은 안 적는다. 「미지정」을 채우면 줄이 정보가 아니라 빈칸
+                      목록이 되고, 그건 팀 소개 줄에서 이미 안 하기로 한 것이다.
+                      전부 비면 아래 「설정하기」가 대신 선다.
+                    */}
+                    <Text style={styles.myInfoRowValue} numberOfLines={1}>
+                      {[
+                        toPosition(me.position) ? positionLabel(toPosition(me.position)) : null,
+                        me.skillTag,
+                        me.jerseyNumber ? `${me.jerseyNumber}번` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || '설정하기'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                  </Pressable>
                 )}
 
 
@@ -906,7 +883,8 @@ const styles = StyleSheet.create({
     // 주인공이다」를 이미 그렇게 말하고 있어서 새 어휘를 만들 이유가 없다.
     //
     // dashed였다. 이 앱에서 dashed는 「비었으니 채워라」라는 뜻을 이미 갖고 있고
-    // (myInfoChipEmpty의 「설정하기」), 엠블럼도 그 뜻으로 읽혔다. 문제는 로고가
+    // (HomeScreen의 emptyNoteBtn, 멤버 탭·팀 전환 시트의 빈 자리), 엠블럼도 그 뜻으로
+    // 읽혔다. 문제는 로고가
     // **있을 때까지** dashed였다는 것이다 — 다 채운 자리에 채우라는 표시가 남았다.
     // 빈 상태의 안내는 안에 있는 EMBLEM 글자가 이미 하고 있으니 테두리에서 뺀다.
     borderWidth: 2,
@@ -1029,30 +1007,33 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     padding: 20,
   },
-  myInfoRow: { flexDirection: 'row', gap: 12 },
-  myInfoLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
-  myInfoChip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: colors.greenTint,
+  /*
+    내 정보 — 카드가 아니라 한 줄 행이다.
+
+    카드였을 때 「내 기록」 바로 아래 같은 어두운 상자가 연달아 서서, 이 파일이 이미
+    적어 둔 「배너 아래로 똑같은 상자만 쌓이면 리듬이 없다」가 그대로 벌어졌다.
+    면을 갈라 구분하는 수단은 이미 썼다 — 둘 다 SoftTint tone="green"이라 또 가르려면
+    새 톤을 만들어야 하고, 그러면 「모든 카드에 같은 결」이라는 판단이 무너진다.
+    합치는 것도 아니다: 「내 기록」은 쌓인 값이고 이쪽은 내가 설정하는 값이다.
+
+    행으로 낮춘 근거는 주 동작이 하나라는 것이다. 안에 있던 세 값(포지션·실력·등번호)은
+    전부 여기서 못 고치고 여는 화면에서 고친다 — 카드 안에서 칸을 차지할 이유가 없었다.
+  */
+  myInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: colors.greenDeep,
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
   },
-  myInfoChipText: { color: colors.green, fontSize: 12, fontWeight: '800' },
-  myInfoChipEmpty: { borderStyle: 'dashed', borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
-  myInfoChipEmptyText: { color: colors.green, fontSize: 13, fontWeight: '700' },
-  myInfoChipAlt: { backgroundColor: colors.inputBg, borderColor: colors.border },
-  myInfoChipTextAlt: { color: colors.textStrong },
-  jersey: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-  jerseyNumber: {
-    position: 'absolute',
-    color: colors.green,
-    fontSize: 13,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-  },
+  myInfoRowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  /* 값이 남는 폭을 다 쓰고 셰브론 앞에서 끊는다 */
+  myInfoRowValue: { color: colors.textDim, fontSize: 12, fontWeight: '600', flex: 1, textAlign: 'right' },
   rosterStrip: { paddingHorizontal: 4, paddingTop: 4 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },

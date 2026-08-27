@@ -190,7 +190,14 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   /* 「총 경기」였다. 계산이 matches.length(팀 생성 이래 전부)라 「총」이 값과 맞았지만,
      기간이 없는 「경기」도 누적을 가리키는 데 거짓이 아니고 옆 두 칸과 길이가 맞는다.
      계산은 그대로다 — 라벨만 값에 맞춰 줄였다. */
-  assert.deepEqual(tiles, ['경기', '멤버', '참석'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
+  /*
+    「참석」이었다. 레퍼런스에 맞춰 「참여율」로 바꿨다.
+
+    기준 안내 줄(「이번 달 치른 경기 기준이에요」)이 상시 노출에서 ⓘ를 눌러 펴는
+    것으로 바뀌면서, 라벨이 그 몫을 일부 져야 했다 — 「참석」은 횟수로도 읽히지만
+    「참여율」은 이름에 비율이 들어 있어 안 눌러도 종류가 읽힌다.
+  */
+  assert.deepEqual(tiles, ['경기', '멤버', '참여율'], `스탯 바 라벨이 바뀌었다: ${tiles.join(' / ')}`);
 
   /*
     로스터 제목에는 숫자를 안 적는다.
@@ -252,9 +259,20 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   assert.ok(/^멤버 \{members\.length\}명$/.test(titleText),
     `로스터 제목이 「멤버 N명」이 아니다: ${titleText}`);
 
-  // 스탯 바에는 진입이 없다. StatTile을 Pressable로 감싸면 입구가 셋이 된다
-  // (부정 단언 — bar 구간 안에 onPress를 넣어 실패하는 것을 확인했다)
-  assert.ok(!/Pressable|onPress/.test(bar.getText()), '스탯 바에 진입이 붙었다 — 멤버 탭 입구가 셋이 된다');
+  /*
+    스탯 바에는 **화면을 옮기는** 진입이 없다.
+
+    예전엔 `!/Pressable|onPress/`로 봤다. 값 옆 ⓘ가 눌리는 것이 되면서 그 단언이
+    ⓘ까지 잡는다 — 막으려던 것과 다른 것을 막게 됐다. 막으려던 것은 「스탯 바를
+    눌러 멤버 탭으로 간다」이고, 그건 제목·아바타 줄에 이미 둘 있어서 셋이 되면
+    어느 것이 무엇인지 흐려진다. ⓘ는 아무 데도 안 간다.
+
+    그래서 「누르는가」가 아니라 「어디로 보내는가」를 본다.
+  */
+  const barText = bar.getText();
+  assert.ok(!/onGoMembers|onGoTile|navigation\./.test(barText), '스탯 바에 진입이 붙었다 — 멤버 탭 입구가 셋이 된다');
+  // StatTile을 Pressable로 감싸는 것도 같은 일이다 — 칸 전체가 눌리면 그게 입구가 된다
+  assert.ok(!/<Pressable[\s\S]*?<StatTile/.test(barText), '스탯 바의 칸이 통째로 눌린다 — 입구가 된다');
 
   /*
     제목의 진입은 남아 있어야 한다.

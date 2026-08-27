@@ -8,6 +8,7 @@
 // 겹치는지 판단이 남아 있어서, 지금은 옮기기만 하고 다듬지 않았다.
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SoftTint } from '../../../components/BentoCard';
@@ -164,6 +165,9 @@ export function TeamHomeTab({
   onOpenTeamSettings,
   onGoTile,
 }: Props) {
+  /* 기준 안내는 ⓘ를 눌러 편다 — 레퍼런스가 값 옆에 아이콘만 두기 때문이다 */
+  const [rateNoteOpen, setRateNoteOpen] = useState(false);
+
   /* 내 행에 나온 사람을 뺀 나머지 — 아바타 줄이 쓴다 */
   const others = visibleMembers.filter((m) => m.id !== selfMemberId);
 
@@ -485,25 +489,37 @@ export function TeamHomeTab({
         checkmark 계열도 아니다. 앱에서 그건 「했다」는 동작 완료를 뜻해서
         지표 칸에 쓰면 이미 끝난 일로 읽힌다.
       */}
-      <StatTile label="참석" value={formatRate(teamRate)} icon="stats-chart-outline" accent />
+      <StatTile
+        label="참여율"
+        value={formatRate(teamRate)}
+        icon="stats-chart-outline"
+        accent
+        hint
+        onPressHint={() => setRateNoteOpen((v: boolean) => !v)}
+      />
     </StatRow>
 
     {/*
-      기준을 상시로 적는다.
+      기준 안내 — 자리를 옮겼다. 레퍼런스에 맞춰 뒤집은 판단이다.
 
-      이 화면에는 참석률 창이 둘 있다. 위 「참석」은 monthlyAttendanceRate(이번 달)이고,
-      아래 멤버 행과 「내 기록」은 memberAttendanceRate(최근 3개월)다. 팀 지표는
-      「이번 달 어땠나」, 개인 지표는 표본이 작아 흔들리니 3개월 — 둘 다 근거가 있어서
-      합치지 않는다(attendanceRate.ts 머리말).
+      예전 근거는 이랬고 지금도 사실이다: 「이 화면에는 참석률 창이 둘 있다. 위는
+      monthlyAttendanceRate(이번 달)이고 아래 멤버 행과 「내 기록」은
+      memberAttendanceRate(최근 3개월)다. 둘 다 근거가 있어 합치지 않는다
+      (attendanceRate.ts 머리말). 그래서 접어두지 않는다 — 눌러야 보이는 안내는
+      안 누른 사람이 계속 오해하는데, 두 창이 한 화면에 같이 서 있어서 오해가
+      기본값이 된다.」
 
-      그래서 접어두지 않는다. 눌러야 보이는 안내는 안 누른 사람이 계속 오해하는데,
-      여기서는 두 창이 한 화면에 같이 서 있어서 오해가 기본값이 된다.
-      ⓘ는 누르는 표식이 아니라 「이건 안내다」라는 뜻이다.
+      레퍼런스는 「참여율 67% ⓘ」로 값 옆에 아이콘만 둔다. 자리를 그렇게 옮기되,
+      아무 일도 안 하는 아이콘은 두지 않았다 — 누르면 이 줄이 펼쳐진다.
+      상시 노출을 잃은 만큼 라벨을 「참석」에서 「참여율」로 바꿨다. 이름에 「율」이
+      들어가면 적어도 「비율이다」는 안 눌러도 읽힌다.
     */}
-    <View style={styles.statNote}>
-      <Ionicons name="information-circle-outline" size={13} color={colors.textFaint} />
-      <Text style={styles.statNoteText}>이번 달 치른 경기 기준이에요</Text>
-    </View>
+    {rateNoteOpen && (
+      <View style={styles.statNote}>
+        <Ionicons name="information-circle-outline" size={13} color={colors.textFaint} />
+        <Text style={styles.statNoteText}>이번 달 치른 경기 기준이에요</Text>
+      </View>
+    )}
   </View>
         </View>
 

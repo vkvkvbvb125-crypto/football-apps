@@ -184,6 +184,8 @@ export function StatTile({
   icon,
   accent,
   tone = 'green',
+  hint,
+  onPressHint,
 }: {
   label: string;
   value: string;
@@ -205,6 +207,15 @@ export function StatTile({
    * 색이 숫자의 뜻을 뒤집으면 안 된다.
    */
   tone?: 'green' | 'danger';
+  /**
+   * 값 옆에 붙는 ⓘ — 선택이다.
+   *
+   * 레퍼런스가 「참여율 67% ⓘ」로 값과 같은 줄에 둔다. 예전엔 격자 아래 별도 줄로
+   * 「ⓘ 이번 달 치른 경기 기준이에요」를 상시로 적었다. 레퍼런스에 맞춰 자리를 옮기되,
+   * 아무 일도 안 하는 아이콘은 두지 않는다 — 눌러서 그 문장을 펼친다.
+   */
+  hint?: boolean;
+  onPressHint?: () => void;
 }) {
   return (
     <View style={styles.stat}>
@@ -212,12 +223,19 @@ export function StatTile({
         {!!icon && <Ionicons name={icon} size={13} color={colors.textMuted} />}
         <Text style={styles.statLabel}>{label}</Text>
       </View>
-      <Text
-        style={[styles.statValue, accent && { color: tone === 'danger' ? colors.danger : colors.green }]}
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
+      <View style={styles.statValueRow}>
+        <Text
+          style={[styles.statValue, accent && { color: tone === 'danger' ? colors.danger : colors.green }]}
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+        {hint && (
+          <Pressable onPress={onPressHint} hitSlop={10} accessibilityRole="button" accessibilityLabel="기준 안내">
+            <Ionicons name="information-circle-outline" size={13} color={colors.textFaint} />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -321,6 +339,8 @@ const styles = StyleSheet.create({
 
   statRow: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, gap: 4 },
+  /* 값과 ⓘ가 같은 줄 — 레퍼런스가 그 자리다. 아이콘은 값 뒤에 붙어 따라 움직인다 */
+  statValueRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   /* 아이콘은 라벨과 같은 줄, 같은 색이다 — 숫자보다 물러나 있어야 숫자끼리 비교된다 */
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel: { ...font.micro, color: colors.textMuted, fontWeight: '700' },

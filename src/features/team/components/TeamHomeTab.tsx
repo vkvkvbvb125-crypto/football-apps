@@ -116,7 +116,6 @@ interface Props {
   isAdmin: boolean;
   /** 팀 프로필에서 채워진 항목. 비어 있으면 총무에게 채우라고 권한다 */
   profileBits: (string | null)[];
-  myRateLabel: string;
   /** 내가 아직 안 낸 돈 — unpaid.ts가 세 곳과 같은 정의로 낸 값이다 */
   myUnpaid: number;
   memberRateMatches: MemberRateMatch[];
@@ -156,7 +155,6 @@ export function TeamHomeTab({
   selfMemberId,
   isAdmin,
   profileBits,
-  myRateLabel,
   myUnpaid,
   memberRateMatches,
   onOpenMemberList,
@@ -697,16 +695,34 @@ export function TeamHomeTab({
                 {!!me && (
                   <View style={styles.myRecord}>
                     <SoftTint tone="green" radius={radius.card} />
-                    <Text style={styles.myRecordTitle}>내 기록</Text>
-                    <StatRow>
-                      {/* 값이 「최근 6경기 중 4회」라 라벨에 「최근」을 또 쓰면 겹친다.
-                          기간은 값의 「최근 N경기」가 이미 말한다 (최근 3개월 창) */}
-                      <StatTile
-                        label="참석"
-                        value={myRateLabel}
-                        icon="stats-chart-outline"
-                        accent
-                      />
+                    {/*
+                      「내 기록」이었다. 레퍼런스가 「팀 기록」이고 칸 구성도 다르다 —
+                      좌: 최근 경기 성적, 우: 미납 금액. 참석은 이 카드에서 빠졌다.
+                      레퍼런스가 그 값을 위 멤버 행(「참여율 67%」)으로 옮겼기 때문이다.
+                    */}
+                    <Text style={styles.myRecordTitle}>팀 기록</Text>
+                    <View style={styles.recordCols}>
+                      {/*
+                        성적 — 빈 칸이다. 빈 칸을 만들지 않는다는 기존 판단을 여기서만
+                        접는다: 레퍼런스에 이 칸이 있고 카드 모양이 레퍼런스와 같아야 한다.
+
+                        채울 수 없는 이유는 데이터다. 승패를 내려면 「내가 어느 조였나」
+                        (team_assignments)와 「그 조가 몇 점이었나」(match_scores)가 한
+                        경기에서 만나야 하는데 프로덕션에서 그 교집합이 0이었다.
+                        완료 경기도 0이다(6/6이 open). 어떤 정의를 골라도 한 경기도
+                        계산되지 않는다.
+
+                        그래서 「없음」이 아니라 「무엇을 하면 쌓이는지」를 적는다.
+                        빈 칸이 할 수 있는 일은 그것뿐이다.
+                      */}
+                      <View style={styles.recordCol}>
+                        <View style={styles.statLabelRow}>
+                          <Ionicons name="trophy-outline" size={13} color={colors.textMuted} />
+                          <Text style={styles.recordLabel}>최근 경기 성적</Text>
+                        </View>
+                        <Text style={styles.recordEmpty}>경기 결과를 기록하면{'\n'}성적이 쌓여요</Text>
+                      </View>
+
                       {/*
                         미납이 돌아왔다.
 
@@ -716,21 +732,29 @@ export function TeamHomeTab({
                         이 칸은 확인이라 얼마인지를 말한다. 액수를 탭 뱃지에 적으면
                         「무슨 숫자지」가 되고 자릿수에 따라 탭 폭이 흔들린다.
 
-                        기간을 안 적는다. 「최근 30일 기준」을 붙일 뻔했는데 myUnpaidAmount는
-                        날짜로 안 자른다 — 지난 정산에 남은 미납도 여전히 내가 낼 돈이라
-                        전부 센다(unpaid.ts). 잔액이지 기간 값이 아니다.
+                        ⚠ 레퍼런스는 이 자리에 「최근 30일 기준」을 적는다. 그대로 옮기지
+                          않았다 — myUnpaidAmount는 날짜로 안 자른다(unpaid.ts: 「지난
+                          정산에 미납이 남아 있어도 그건 여전히 내가 낼 돈이다」). 30일을
+                          적으면 31일 전 미납이 그 숫자에 들어 있으므로 화면이 자기 값을
+                          두고 거짓말을 한다. 창을 실제로 30일로 자르는 쪽도 안 골랐다:
+                          같은 함수를 하단 탭 뱃지와 팀 나가기 경고가 함께 보고 있어서
+                          한 화면 때문에 자르면 세 자리의 값이 갈린다.
+                          자리는 레퍼런스대로 두고 문장만 사실로 적는다.
 
                         tone="danger" — 크면 나쁜 숫자에 초록이 붙으면 색이 뜻을 뒤집는다.
                         0원이면 accent를 끈다. 낼 돈이 없는 것은 강조할 일이 아니다.
                       */}
-                      <StatTile
-                        label="내 미납"
-                        value={`${myUnpaid.toLocaleString()}원`}
-                        icon="card-outline"
-                        accent={myUnpaid > 0}
-                        tone="danger"
-                      />
-                    </StatRow>
+                      <View style={styles.recordCol}>
+                        <StatTile
+                          label="미납 금액"
+                          value={`${myUnpaid.toLocaleString()}원`}
+                          icon="card-outline"
+                          accent={myUnpaid > 0}
+                          tone="danger"
+                        />
+                        <Text style={styles.recordCaption}>지난 정산까지 전부</Text>
+                      </View>
+                    </View>
                   </View>
                 )}
 
@@ -1204,6 +1228,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   myRecordTitle: { color: colors.text, ...font.title },
+  /* 좌우 두 칸 — 레퍼런스 구성이다. 성적(빈 칸)과 미납 */
+  recordCols: { flexDirection: 'row', gap: 12 },
+  recordCol: { flex: 1, gap: 4 },
+  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  recordLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  /* 빈 칸의 글자는 값이 아니라 안내다 — 숫자 자리의 크기·색을 쓰지 않는다 */
+  recordEmpty: { color: colors.textFaint, fontSize: 12, fontWeight: '600', lineHeight: 17 },
+  /* 값 아래 한 줄. 레퍼런스의 「최근 30일 기준」 자리인데 문장은 사실로 적는다 */
+  recordCaption: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
   /* 기준 안내 — 스탯 바 바로 아래. 값보다 물러나야 하므로 가장 옅은 글자색이다 */
   statNote: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
   statNoteText: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },

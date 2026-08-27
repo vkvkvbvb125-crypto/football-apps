@@ -276,7 +276,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
    * 셀 경기가 없으면 null이 온다 — 「0경기 중 0회」는 정보가 아니라 빈칸이라 「-」로 둔다.
    */
   const myRate = me ? memberAttendanceRate(memberRateMatches, me) : null;
-  const myRateLabel = (myRate && formatRecentAttendance(myRate)) ?? '-';
 
   return (
     <ScreenGradient>
@@ -362,7 +361,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
             selfMemberId={activeTeam.membershipId}
             isAdmin={isAdmin}
             profileBits={profileBits}
-            myRateLabel={myRateLabel}
             myUnpaid={myUnpaidAmount(settlementCurrent, settlementPast, activeTeam.membershipId)}
             memberRateMatches={memberRateMatches}
             onOpenMemberList={() => setMemberListVisible(true)}

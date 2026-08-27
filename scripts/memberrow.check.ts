@@ -60,20 +60,20 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
 
 // ── 4. 참석 표기가 두 곳에서 같은가 ────────────────────────────────
 //
-// 멤버 행(TeamMembersTab)과 「내 기록」(TeamHomeScreen의 myRateLabel)은 같은 값을
-// 적는다 — 둘 다 memberAttendanceRate(memberRateMatches, ...)라 창(최근 3개월 · 가입 후)이
-// 같다. 그런데 표현이 갈리면 사용자는 두 숫자가 같은 것인지 알 수 없다.
+// 멤버 행(TeamMembersTab)과 팀 홈의 참석 표기는 같은 값을 적는다 — 둘 다
+// memberAttendanceRate(memberRateMatches, ...)라 창(최근 3개월 · 가입 후)이 같다.
+// 표현이 갈리면 사용자는 두 숫자가 같은 것인지 알 수 없다.
 //
 // 실제로 두 번 갈렸다: 한 번 맞췄다가 STEP 2에서 멤버 행만 바꾸며 또 갈렸다.
-// 따로 검사하면 한쪽만 바뀌었을 때 못 잡으므로, 둘을 한 단언으로 묶는다.
+// 따로 검사하면 한쪽만 바뀌었을 때 못 잡으므로 둘을 한 단언으로 묶었다.
+//
+// ⚠ 짝의 한쪽이 옮겨갔다. 팀 홈에서 그 값을 적던 자리는 「내 기록」 카드였는데,
+//   레퍼런스에 맞춰 카드가 「팀 기록」(좌 성적 · 우 미납)으로 바뀌면서 참석이 빠지고
+//   위 내 행 메타로 갔다(「참여율 67%」). 표기도 그 자리에서만 뒤집혔다 —
+//   그쪽은 memberstrip.check가 붙들고, 창이 같은지도 거기서 본다.
+//   여기서는 멤버 행이 공용 함수를 계속 쓰는지를 본다.
 {
   assert.ok(/formatRecentAttendance/.test(tab), '멤버 행이 공용 표기 함수를 안 쓴다');
-  assert.ok(/formatRecentAttendance\(myRate\)/.test(screen),
-    '「내 기록」이 공용 표기 함수를 안 쓴다 — 멤버 행과 같은 값을 다르게 적게 된다');
-
-  // 손으로 만든 문구가 남아 있으면 함수를 써도 갈린다
-  assert.ok(!/\$\{myRate\.attended\}회/.test(screen),
-    '「내 기록」이 문구를 직접 만든다 (「4회 (67%)」) — 멤버 행과 갈린다');
   assert.ok(!/formatMemberRate/.test(tab), '멤버 행에 퍼센트 표기가 남아 있다');
 
   /*
@@ -160,7 +160,12 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   };
   collectRows(sf);
 
-  assert.deepEqual([...rows.keys()].sort(), ['myRecord', 'teamStats'], `StatRow의 자리가 바뀌었다: ${[...rows.keys()].join(' / ')}`);
+  /*
+    한때 둘이었다: teamStats와 myRecord. 「팀 기록」 카드가 레퍼런스 구성(좌 성적 ·
+    우 미납)으로 바뀌면서 그쪽은 StatRow를 안 쓴다 — 두 칸의 내용이 서로 달라서
+    (한쪽은 빈 안내, 한쪽은 값) 같은 격자에 못 넣는다.
+  */
+  assert.deepEqual([...rows.keys()].sort(), ['teamStats'], `StatRow의 자리가 바뀌었다: ${[...rows.keys()].join(' / ')}`);
 
   const bar = rows.get('teamStats')!;
   const labelsOf = (root: ts.Node) => {

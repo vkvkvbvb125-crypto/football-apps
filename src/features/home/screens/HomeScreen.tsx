@@ -1,8 +1,15 @@
 // src/features/home/screens/HomeScreen.tsx — 시안 적용판
 // 구성: 공지 배너 / 히어로 카드 / 이번주 경기 / 팀 정산 현황 / 최근 공지.
-// 홈에서는 투표하지 않는다. 참여 현황만 보여주고 투표는 일정 탭으로 보낸다 —
-// 홈은 다음 경기 하나만 다루기 때문에, 여기서 투표하면 그 경기 말고는 찍을 방법이 없어진다.
-// 경기 카드 하단은 버튼 이름만 역할에 따라 갈린다(총무: 경기 관리 / 팀원: 투표하러 가기).
+// 카드에서는 투표하지 않는다 — 카드 하단 버튼은 일정 탭으로 보낸다. 홈은 다음 경기
+// 하나만 다루기 때문에, 카드에서 찍게 하면 그 경기 말고는 찍을 방법이 없어진다.
+// 버튼 이름만 역할에 따라 갈린다(총무: 경기 관리 / 팀원: 투표하러 가기).
+//
+// 단 「참여 현황 보기」가 여는 명단 시트에서는 찍는다. 시트가 경기 하나를 통째로
+// 다루는 자리라 위 근거가 안 걸리고, 명단을 보다가 「나 불참으로 바꿔야지」가 되는
+// 자리가 거기다. 그래서 이 화면은 vote를 부른다(:onVote).
+// 실패 문구는 시트가 자기 자리에 그린다 — 이 화면은 attendanceStore.error를 구독하지
+// 않는다. 구독하면 loadMatches()가 시작할 때 error를 null로 밀어서 방금 뜬 문구가
+// 화면 진입 이펙트 한 번에 사라진다(RosterSheet 머리말).
 //
 // ⚠ 훅 순서 주의: `if (!activeTeam) return null;` 뒤에서 훅을 부르면 activeTeam이
 // null → 로드 완료로 바뀌는 순간 훅 개수가 달라져 앱이 죽는다("Rendered more hooks").
@@ -47,6 +54,8 @@ import { fetchMatchWeather, weatherEmoji, weatherLabel } from '../../attendance/
 import { RosterSheet, type RosterMember } from '../../attendance/components/RosterSheet';
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
+import { resolveCapacity } from '../../attendance/utils/capacity';
+import { DEFAULT_CAPACITY } from '../../attendance/components/ScheduleRow';
 import { relativeTime } from '../../../lib/relativeTime';
 import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
 import { matchLabel } from '../../attendance/utils/matchLabel';
@@ -313,15 +322,34 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   if (!activeTeam) return null;
 
-  const attendCount = next ? next.votes.filter((v) => v.status === 'attend').length : 0;
-  const absentCount = next ? next.votes.filter((v) => v.status === 'absent').length : 0;
-  // 미정 = 아직 투표 안 한 사람 + 미정으로 찍은 사람
-  const undecidedCount = Math.max(0, members.length - attendCount - absentCount);
+  /*
+   * 정원·대기 계산은 일정 화면과 같은 함수를 쓴다.
+   *
+   * 손으로 셌었다: votes.filter(attend).length. 그러면 정원 12에 15명이 참석하면
+   * 홈은 「참석 15」, 일정 화면은 「참석 12」로 같은 경기에 두 숫자가 뜬다
+   * (resolveCapacity의 attendCount는 min(참석, 정원)이다). 대기 순번도 없었다.
+   */
+  const capacity = next?.capacity ?? DEFAULT_CAPACITY;
+  const cap = next
+    ? resolveCapacity(next.votes, capacity, members.length, activeTeam.membershipId)
+    : null;
+  const attendCount = cap?.attendCount ?? 0;
+  const absentCount = cap?.absentCount ?? 0;
+  const undecidedCount = cap?.pendingCount ?? 0;
   const myVote = next?.votes.find((v) => v.team_member_id === activeTeam.membershipId)?.status ?? null;
 
-  /** 참여율 — 투표에 잡힌 전체 인원 대비 참석 비율 */
-  const voteTotal = attendCount + undecidedCount + absentCount;
-  const attendRate = voteTotal > 0 ? Math.round((attendCount / voteTotal) * 100) : 0;
+  /*
+   * 진행바 분모는 정원이다 — 멤버 수가 아니다.
+   *
+   * 멤버 수를 쓰면 1명 팀에서 그 한 명이 참석하는 순간 바가 꽉 찬다. 정원 12명이라고
+   * 적힌 카드 옆에서다. MatchDetailCard가 이미 같은 이유로 고친 계산인데(:70-76)
+   * 홈에 고치기 전 버전이 남아 있었다.
+   *
+   * 「참여율 %」도 같이 뺐다. 그 숫자는 바와 같은 값이라 분모가 바뀌면 뜻도 바뀌는데,
+   * 「참여율」이라는 말은 멤버 대비로 읽힌다. 명단 시트 footer와 같은 문장으로 적는다 —
+   * 홈·시트·일정이 한 경기를 두고 같은 말을 한다.
+   */
+  const fillRate = Math.min(100, Math.round((attendCount / Math.max(1, capacity)) * 100));
 
   // 일정 화면과 같은 판정을 쓴다 (utils/voting.ts) — 여기서 따로 계산하면 또 어긋난다
   const voteOpen = next ? isVotingOpen(next) : false;
@@ -580,11 +608,14 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
             <View style={styles.cardDivider} />
 
-            {/* 참여 현황은 총무·팀원이 똑같이 본다. 투표는 일정 화면에서만 한다 —
-                홈은 다음 경기 하나만 보여주므로, 여기서 투표하면 그 경기 말고는 찍을 수가 없다. */}
+            {/* 참여 현황은 총무·팀원이 똑같이 본다. 이 카드 안에서는 투표하지 않는다 —
+                홈은 다음 경기 하나만 보여주므로, 여기서 찍게 하면 그 경기 말고는 찍을 수가 없다.
+                (아래 「참여 현황 보기」가 여는 명단 시트에서는 찍는다 — 머리말 참고) */}
             <View style={styles.statsHead}>
               <Text style={styles.statsTitle}>참여 현황</Text>
-              <Text style={styles.statsRate}>참여율 {attendRate}%</Text>
+              <Text style={styles.statsRate}>
+                참석 {attendCount} / 정원 {capacity}명
+              </Text>
             </View>
 
             {/* 아이콘 셋에 숫자만 붙어 있어서 「0명 1명 0명」이 각각 무엇인지 알 수 없었다.
@@ -606,9 +637,10 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
                 <Text style={styles.statText}>{absentCount}</Text>
               </View>
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${attendRate}%` }]} />
+                <View style={[styles.progressFill, { width: `${fillRate}%` }]} />
               </View>
             </View>
+
 
             <View style={styles.cardBtnRow}>
               <Pressable
@@ -886,7 +918,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           visible={rosterOpen}
           onClose={() => setRosterOpen(false)}
           matchLabel={matchLabel(next.match_date, next.location)}
-          capacity={next.capacity ?? 12}
+          capacity={capacity}
           deadlineLabel={undefined}
           members={rosterMembers}
           isAdmin={!!isAdmin}

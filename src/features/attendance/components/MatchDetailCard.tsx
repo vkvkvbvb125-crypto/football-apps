@@ -10,7 +10,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { colors, radius } from '../../../theme';
 import { MatchWeatherBlock, type MatchWeather } from './MatchWeatherBlock';
-import type { CapacityResult } from '../utils/capacity';
+import { attendButtonLabel, type CapacityResult } from '../utils/capacity';
 import type { AttendanceStatus } from '../../../types/database';
 import { SoftTint } from '../../../components/BentoCard';
 
@@ -75,8 +75,9 @@ export function MatchDetailCard(p: Props) {
    */
   const total = Math.max(1, p.capacity);
 
-  const attendLabel =
-    myWaitPosition > 0 ? `대기 ${myWaitPosition}번` : isFull && p.myVote !== 'attend' ? '대기 신청' : '참석';
+  // 라벨은 공용 함수가 만든다. 같은 삼항식을 여기 베껴 두고 있었는데, 그러면
+  // 「대기 N번」이라는 말을 만드는 자리가 둘이 된다 — 한쪽만 고치면 화면마다 다른 말을 한다
+  const attendLabel = attendButtonLabel(p.capacityResult, p.myVote);
 
   /*
    * 알약 세 개의 상태.

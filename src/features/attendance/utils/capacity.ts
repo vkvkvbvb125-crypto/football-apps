@@ -1,5 +1,10 @@
 // src/features/attendance/utils/capacity.ts
 // 정원·대기자 로직 — 홈/일정/명단이 같은 숫자를 쓰도록 한 곳에서 계산한다.
+//
+// 승격 함수(nextPromotion)가 있었다. 지웠다 — 대기는 저장된 상태가 아니라 매번
+// updated_at 오름차순 정렬로 다시 계산되는 것이라, 참석자가 취소하면 다음 사람이
+// 저절로 정원 안으로 들어온다. 승격시킬 대상을 따로 고를 일이 없다.
+// 죽은 export로 남겨 두면 다음 사람이 「승격 로직이 여기 있구나」로 읽는다.
 import type { AttendanceStatus } from '../../../types/database';
 
 export interface VoteLike {
@@ -66,7 +71,3 @@ export function attendButtonLabel(cap: CapacityResult, myVote?: AttendanceStatus
   return '참석';
 }
 
-/** 참석자가 취소했을 때 자동 승격 대상 (대기 1번) */
-export function nextPromotion(cap: CapacityResult) {
-  return cap.waitlist[0] ?? null;
-}

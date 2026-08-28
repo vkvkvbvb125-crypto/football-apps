@@ -15,7 +15,7 @@ import { SoftTint } from '../../../components/BentoCard';
 import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
-import { positionLabel, toPosition } from '../positions';
+import { POSITION_INFO, positionLabel, toPosition } from '../positions';
 import { avatarTint } from '../avatarTint';
 import { initialOf } from '../initials';
 import {
@@ -166,8 +166,11 @@ export function TeamHomeTab({
   /* 기준 안내는 ⓘ를 눌러 편다 — 레퍼런스가 값 옆에 아이콘만 두기 때문이다 */
   const [rateNoteOpen, setRateNoteOpen] = useState(false);
 
-  /* 내 행에 나온 사람을 뺀 나머지 — 아바타 줄이 쓴다 */
-  const others = visibleMembers.filter((m) => m.id !== selfMemberId);
+  /* 나를 맨 앞에 — 명단에서 자기를 먼저 찾는다. 나머지는 원래 순서 그대로 */
+  const orderedMembers = [
+    ...visibleMembers.filter((m) => m.id === selfMemberId),
+    ...visibleMembers.filter((m) => m.id !== selfMemberId),
+  ];
 
   return (
     <>
@@ -576,131 +579,86 @@ export function TeamHomeTab({
                 </View>
 
                 {/*
-                  내 행 — 명단 속의 나.
+                  멤버 줄 — 가로 스크롤, 칸마다 아바타 · 이름 · 포지션 세 층이다.
 
-                  soloList(2명 이하)와 가로 로스터(3명 이상) 두 갈래를 이 한 모양으로 합쳤다.
-                  soloList가 생긴 근거는 「62px 아바타 칸 하나가 화면 폭에 혼자 놓이면 오른쪽이
-                  통째로 비어서 아직 안 만든 화면처럼 읽힌다」였는데, 내 행이 항상 전체 폭을
-                  쓰므로 그 원인이 사라진다. 1명 팀도 이 행 하나로 폭이 찬다.
+                  두 가지를 뒤집었고 근거를 둘 다 남긴다.
 
-                  메타는 「포지션 · 최근 N경기 중 M회」 둘이다. 포지션은 바로 위 「내 정보」
-                  카드에도 있는데 그대로 둔다 — ⑵에서 「멤버 6」과 「팀원 6명」을 없앤 것과는
-                  다른 경우다. 그때는 같은 값이 **같은 역할**(멤버 수를 세는 일)로 두 번
-                  나왔고, 여기는 역할이 갈린다: 「내 정보」는 고치는 자리(수정 ›)이고
-                  이 행은 명단 속의 나다. 빼면 이 행이 이름과 뱃지뿐이 된다.
+                  ① 겹침을 없앴다. 「앱의 첫 겹침 UI다. 음수 마진이 사라지면 아바타가
+                     그냥 나란히 선다」로 만든 줄이었고, 겹침 천장을 세 번 다시 계산했다
+                     (두 글자 6.9 / 한 글자 12.45 / 아이콘 9). 레퍼런스는 칸마다 간격이
+                     있고 각 칸이 이름과 포지션을 이고 있다 — 겹치면 그 글자들이 갈 데가
+                     없다. 겹침은 「누가 있는지만 훑는 줄」의 모양이고, 이건 명단이다.
 
-                  등번호·주발은 안 넣는다 — 「내 정보」가 맡고 있고 명단 맥락에서 값이 없다.
-                  실력 등급도 안 넣는다(본인이 자기 등급을 보면 팀 분위기가 깨진다).
+                  ② 「내 행 강조」를 없앴다. 전체 폭 한 줄로 나만 크게 그리던 것이었고,
+                     근거는 「1명 팀에서 62px 아바타 하나가 폭에 혼자 놓이면 오른쪽이
+                     통째로 빈다」였다. 지금은 모두가 같은 크기의 칸이고, 1명 팀이면
+                     내 칸 하나 + 초대 칸이라 줄이 비지 않는다 — 그 원인이 사라졌다.
+                     내 칸은 크기가 아니라 초록 링과 좌상단 뱃지로 구분한다.
+
+                  가로 스크롤이라 인원이 늘어도 줄이 안 접힌다. 「+N」이 없어진 것도
+                  그래서다 — 접어서 감출 이유가 없다.
                 */}
-                {!!me && (
-                  <Pressable
-                    onPress={onOpenMemberList}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${me.displayName} 내 정보 보기`}
-                    style={({ pressed }) => [styles.selfRow, pressed && styles.pressed]}
-                  >
-                    <View style={styles.selfAvatar}>
-                      {me.avatarUrl ? (
-                        <Image source={{ uri: me.avatarUrl }} style={styles.selfPhoto} />
-                      ) : (
-                        <Text style={styles.selfInitial}>{initialOf(me.displayName)}</Text>
-                      )}
-                    </View>
-
-                    <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-                      <View style={styles.selfNameRow}>
-                        <Text style={styles.selfName} numberOfLines={1}>
-                          {me.displayName} (나)
-                        </Text>
-                        <View style={[styles.roleTag, isAdmin && styles.roleTagAdmin]}>
-                          <Text style={[styles.roleTagText, isAdmin && styles.roleTagTextAdmin]}>
-                            {isAdmin ? '총무' : '팀원'}
-                          </Text>
-                        </View>
-                      </View>
-                      {/*
-                        레퍼런스는 「공격 · 골키퍼 · 참여율 67%」다. 이 자리에서만
-                        표기를 뒤집는다.
-
-                        옛 판단: 「최근 N경기 중 M회」로 앱 전체를 통일했다. 근거는
-                        퍼센트가 표본 크기를 감춘다는 것이었다 — 2경기 중 1회도 50%고
-                        100경기 중 50회도 50%다. 그 근거는 지금도 맞고, 「내 기록」
-                        카드와 멤버 목록은 그대로 둔다.
-
-                        여기만 바꾸는 이유는 한 줄에 셋이 들어가기 때문이다.
-                        「골레이로 · 골키퍼 · 최근 6경기 중 4회」는 폭을 넘겨 잘리고,
-                        잘린 「최근 6경기 중…」은 표본을 보여주지도 못한다.
-                        표본이 3 미만이면 memberAttendanceRate가 애초에 「-」를 준다.
-                      */}
-                      <Text style={styles.selfMeta} numberOfLines={1}>
-                        {[
-                          toPosition(me.position) ? positionLabel(toPosition(me.position)) : null,
-                          `참여율 ${formatRate(memberAttendanceRate(memberRateMatches, me))}`,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </Text>
-                    </View>
-
-                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                  </Pressable>
-                )}
-
-                {/*
-                  나머지 아바타 줄.
-
-                  내 행에 나온 사람은 여기서 뺀다 — 같은 사람을 한 카드에 두 번 그리지 않는다.
-                  그래서 「+N」은 7명부터 뜬다(나 + 5명까지는 줄에 다 보인다). 레퍼런스는
-                  5개 + 「+1」이라 6명처럼 보이지만, 그건 줄이 나를 포함할 때의 그림이다.
-                  「몇 명인가」는 스탯 바가 말하므로 이 줄이 수를 책임지지 않는다.
-
-                  0명이면 그리지 않는다 — 빈 가로줄이 「아직 안 만든 화면」으로 읽히던
-                  그 문제가 여기서만 남는다.
-                */}
-                {others.length > 0 && (
-                  <View style={styles.avatarRow}>
-                    {others.slice(0, 5).map((m, i) => {
-                      const tint = avatarTint(m.id);
-                      return (
-                        <Pressable
-                          key={m.id}
-                          onPress={onGoMembers}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${m.displayName} 멤버 보기`}
-                          style={[
-                            styles.avatarChip,
-                            { backgroundColor: tint.bg },
-                            i > 0 && styles.avatarChipOverlap,
-                          ]}
-                        >
-                          {m.avatarUrl ? (
-                            <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
-                          ) : (
-                            /*
-                              레퍼런스는 사람마다 다른 일러스트 아바타다. 자산이 없어서
-                              사람 아이콘 + 사람마다 다른 배경색으로 근사한다.
-                              한때 이니셜 한 글자였다 — 겹쳐 놓는 36px 원에서 글자는
-                              읽히지도 않으면서 줄 전체를 「글자 줄」로 보이게 했다.
-                              색은 avatarTint가 id에서 뽑아 같은 사람에게 늘 같다.
-                            */
-                            <Ionicons name="person" size={18} color={tint.fg} />
-                          )}
-                        </Pressable>
-                      );
-                    })}
-                    {others.length > 5 && (
-                      /* +N도 눌린다. 눌리는 원 옆에 안 눌리는 원이 서면 그게 더 나쁘다 */
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.memberStrip}
+                >
+                  {orderedMembers.map((m) => {
+                    const isMe = m.id === selfMemberId;
+                    const tint = avatarTint(m.id);
+                    const pos = toPosition(m.position);
+                    return (
                       <Pressable
-                        onPress={onGoMembers}
+                        key={m.id}
+                        onPress={isMe ? onOpenMemberList : onGoMembers}
                         accessibilityRole="button"
-                        accessibilityLabel={`나머지 ${others.length - 5}명 보기`}
-                        style={[styles.avatarChip, styles.avatarChipOverlap, styles.avatarMore]}
+                        accessibilityLabel={isMe ? `${m.displayName} 내 정보 보기` : `${m.displayName} 멤버 보기`}
+                        style={({ pressed }) => [styles.memberCell, pressed && styles.pressed]}
                       >
-                        <Text style={styles.avatarMoreText}>+{others.length - 5}</Text>
+                        <View>
+                          <View style={[styles.memberAvatar, { backgroundColor: tint.bg }, isMe && styles.memberAvatarMe]}>
+                            {m.avatarUrl ? (
+                              <Image source={{ uri: m.avatarUrl }} style={styles.avatarPhoto} />
+                            ) : (
+                              /* 레퍼런스는 사람마다 다른 일러스트다. 자산이 없어서 사람 아이콘 +
+                                 사람마다 다른 배경색(avatarTint, id에서 뽑아 늘 같다)으로 근사한다 */
+                              <Ionicons name="person" size={24} color={tint.fg} />
+                            )}
+                          </View>
+                          {/* 내 칸 표시 — 크기가 아니라 뱃지다. 좌상단이라 이름·포지션을 안 가린다 */}
+                          {isMe && (
+                            <View style={styles.memberSelfBadge}>
+                              <Ionicons name="star" size={9} color={colors.bgRoot} />
+                            </View>
+                          )}
+                        </View>
+                        <Text style={[styles.memberName, isMe && styles.memberNameMe]} numberOfLines={1}>
+                          {isMe ? `${m.displayName} (나)` : m.displayName}
+                        </Text>
+                        {/* 포지션이 없으면 줄 자체를 안 그린다 — 「미지정」은 정보가 아니라 빈칸이다 */}
+                        {!!pos && (
+                          <Text style={styles.memberPos} numberOfLines={1}>
+                            {POSITION_INFO[pos].ko}
+                          </Text>
+                        )}
                       </Pressable>
-                    )}
-                  </View>
-                )}
+                    );
+                  })}
+
+                  {/* 줄 끝의 초대 — 명단의 마지막 칸이 「한 명 더」다. 별도 버튼을 세우면
+                      멤버 줄과 초대가 서로 다른 블록이 되어 그 연결이 사라진다 */}
+                  <Pressable
+                    onPress={onOpenInvite}
+                    accessibilityRole="button"
+                    accessibilityLabel="팀원 초대하기"
+                    style={({ pressed }) => [styles.memberCell, pressed && styles.pressed]}
+                  >
+                    <View style={styles.memberInviteCircle}>
+                      <Ionicons name="add" size={26} color={colors.green} />
+                    </View>
+                    <Text style={styles.memberInviteText}>초대</Text>
+                  </Pressable>
+                </ScrollView>
 
                 {/*
                   내 기록 — 총무도 선수다. 역할과 무관하게 항상 보인다.
@@ -1184,6 +1142,58 @@ const styles = StyleSheet.create({
   /* 값이 남는 폭을 다 쓰고 셰브론 앞에서 끊는다 */
   myInfoRowValue: { color: colors.textDim, fontSize: 12, fontWeight: '600', flex: 1, textAlign: 'right' },
   rosterStrip: { paddingHorizontal: 4, paddingTop: 4 },
+  /*
+    멤버 줄 — 가로 스크롤. 칸마다 아바타 · 이름 · 포지션.
+
+    겹침 아바타 줄을 대신한다. 그쪽은 「누가 있는지만 훑는 줄」이라 원이 서로 파고들어도
+    됐지만, 이 줄은 칸마다 이름과 포지션을 이고 있어서 겹치면 글자가 갈 데가 없다.
+    (겹침 천장을 세 번 다시 계산한 이력은 커밋 로그에 있다 — 두 글자 6.9 / 한 글자
+    12.45 / 아이콘 9. 내용이 바뀔 때마다 다시 재야 하는 값이었다.)
+
+    paddingHorizontal 4는 스크롤 양끝의 숨통이다. 0이면 첫 칸이 카드 모서리에 붙고,
+    스크롤 중간에 멈췄을 때 칸이 잘린 건지 끝난 건지 안 보인다.
+  */
+  memberStrip: { flexDirection: 'row', gap: 14, paddingHorizontal: 4, paddingVertical: 2 },
+  /* 칸 폭을 고정한다 — 이름 길이에 따라 칸이 들쭉날쭉하면 줄이 흔들린다 */
+  memberCell: { width: 56, alignItems: 'center', gap: 6 },
+  memberAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  /* 내 칸 — 크기가 아니라 링으로 구분한다. 히어로 엠블럼·예전 내 행과 같은 값이다 */
+  memberAvatarMe: { borderWidth: 2, borderColor: colors.green },
+  /* 좌상단 뱃지. 아바타 바깥으로 조금 나와야 링과 안 겹쳐 보인다 */
+  memberSelfBadge: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 16,
+    height: 16,
+    borderRadius: radius.pill,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberName: { color: colors.textStrong, fontSize: 11, fontWeight: '800' },
+  memberNameMe: { color: colors.green },
+  memberPos: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
+  /* 초대 칸 — 아바타 자리에 점선 원. 이 앱에서 dashed는 「비었으니 채워라」다 */
+  memberInviteCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.greenDeep,
+    backgroundColor: colors.greenTint,
+  },
+  memberInviteText: { color: colors.green, fontSize: 11, fontWeight: '800' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionTitle: { color: colors.text, ...font.section },

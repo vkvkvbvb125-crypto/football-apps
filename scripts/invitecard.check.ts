@@ -73,9 +73,18 @@ const screen = read('src/features/team/screens/TeamHomeScreen.tsx');
     assert.notEqual(tag, 'Pressable', '카드 QR이 눌린다 — 대면 초대가 시트를 한 번 더 거친다');
   }
 
-  // 시트로 가는 문은 공유 버튼 하나다
+  /*
+    시트로 가는 문이 둘이다 — 레퍼런스가 그렇다.
+
+    한때 하나였다. 초대 카드의 공유 버튼뿐이었고, 근거는 「같은 곳으로 가는 입구가
+    둘이면 어느 쪽이 무엇인지 흐려진다」였다.
+
+    레퍼런스는 멤버 줄 끝에 「+ 초대」 칸을 두고 초대 카드도 따로 둔다. 오는 맥락이
+    다르다 — 멤버 줄의 칸은 명단을 보다가 「한 명 더」이고, 카드는 초대를 하려고
+    찾아온 자리다. 도착지만 같다.
+  */
   const opens = tab.split('onPress={onOpenInvite}').length - 1;
-  assert.equal(opens, 1, `카드에서 시트를 여는 곳이 ${opens}개다 — 하나여야 한다`);
+  assert.equal(opens, 2, `초대 시트를 여는 곳이 ${opens}개다 — 멤버 줄 끝 칸과 초대 카드 둘이다`);
 }
 
 // ── 3. 시트는 남아 있고, 시트에만 있는 것도 남아 있다 ──────────────

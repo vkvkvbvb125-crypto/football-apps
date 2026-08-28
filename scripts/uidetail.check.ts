@@ -269,16 +269,30 @@ const num = (src: string, re: RegExp, what: string) => {
   assert.ok(!/paddingTop:/.test(row), '히어로에 paddingTop이 따로 붙었다 — 아래가 다시 잘린다');
 
   /*
-    본문 세 줄과 엠블럼이 같은 높이다.
+    엠블럼이 원이다 — 레퍼런스에 맞춰 뒤집었다.
 
-    엠블럼 76 = 팀명 25 + gap 12 + Since 13 + gap 12 + 소개 14. 둘이 나란히 서면
-    위아래가 맞아 카드 안이 두 덩어리로 정돈된다. gap을 바꾸면 이 등식이 깨지므로
-    같이 본다 — 한쪽만 고치면 화면에서는 「뭔가 안 맞는다」로만 보인다.
+    한때 rounded-square였고 근거가 있었다: 「엠블럼은 방패·사각이 원형보다 자연스럽고
+    아래 Bento 격자의 사각 타일들과도 모양이 맞는다.」 그 근거는 코드 주석에 남겨 뒀다 —
+    지우면 다음 사람이 「엠블럼인데 왜 원이지」로 되돌린다.
+
+    radius를 pill로 붙든다. 76/2 같은 값을 쓰면 크기를 바꾸는 날 원이 아니게 되는데,
+    화면에서는 「살짝 찌그러졌다」로만 보이고 왜인지는 안 보인다.
+  */
+  assert.ok(/borderRadius: radius\.pill,/.test(blockOf('emblem')), '엠블럼이 원이 아니다');
+
+  /*
+    본문이 네 줄이고 엠블럼이 카드 높이를 결정하지 않는다.
+
+    한때 엠블럼 76 = 세 줄(25 + 12 + 13 + 12 + 14)로 높이를 맞췄는데, 레퍼런스가
+    구장 · 종목 줄을 되살려 네 줄이 되면서 본문이 더 길어졌다. 이제 카드 높이는
+    본문이 정하고 엠블럼은 그 안에 든다 — 엠블럼이 본문보다 커지면 카드가 엠블럼
+    때문에 늘어나고, 그때 본문 위아래에 설명할 수 없는 여백이 생긴다.
   */
   const bodyGap = Number(onlyMatch(tab, /bannerBody: \{ flex: 1, gap: (\d+) \}/, '본문 gap').match(/gap: (\d+)/)![1]);
   const emblemSize = Number(onlyMatch(blockOf('emblem'), /width: (\d+)/, '엠블럼 폭').match(/(\d+)/)![1]);
-  assert.equal(25 + bodyGap + 13 + bodyGap + 14, emblemSize,
-    `엠블럼(${emblemSize})과 본문 세 줄(gap ${bodyGap} 기준 ${52 + bodyGap * 2})의 높이가 다르다`);
+  const bodyHeight = 25 + 13 + 13 + 14 + bodyGap * 3; // 팀명 · Since · 구장·종목 · 소개
+  assert.ok(emblemSize <= bodyHeight,
+    `엠블럼(${emblemSize})이 본문 네 줄(${bodyHeight})보다 커서 카드 높이를 정한다`);
 
   /*
     「팀 설정 ›」이 우상단에 없다.
@@ -287,13 +301,13 @@ const num = (src: string, re: RegExp, what: string) => {
     대비가 3.34:1까지 떨어졌다(본문 기준 4.5:1). 소개 줄로 내려오면서 4.75:1이 됐고,
     그래서 빛줄기 알파를 0.22에서 0.40으로 올릴 수 있었다. 둘은 한 판단이라 같이 본다.
   */
-  const line = onlyMatch(tab, /sloganLine: \{[^}]+\}/, '소개 줄');
-  assert.ok(/flexDirection: 'row'/.test(line), '소개 줄이 행이 아니다 — 「팀 설정」이 같은 높이에 못 선다');
-  const nameRow = tab.slice(
+  const body = tab.slice(
     onlyIndexOf(tab, '<View style={styles.teamNameRow}>', '팀명 줄'),
-    onlyIndexOf(tab, 'sloganLine}>', '소개 줄 여는 태그')
+    onlyIndexOf(tab, '<View style={styles.settingsSlot}>', '팀 설정 칸')
   );
-  assert.ok(!/onOpenTeamSettings/.test(nameRow), '「팀 설정」이 팀명 줄로 돌아갔다 — 빛줄기가 가장 밝은 자리다');
+  assert.ok(!/onOpenTeamSettings/.test(body), '「팀 설정」이 본문 안으로 돌아갔다 — 우상단은 빛줄기가 가장 밝은 자리다');
+  assert.ok(/settingsSlot: \{ alignSelf: 'center', marginTop: \d+ \}/.test(tab),
+    '팀 설정 칸이 가운데보다 아래에 안 선다 — flex-end면 소개 줄과 한 줄로 읽힌다');
 
   // 빛줄기는 스톱이 셋이다. 둘이면 모서리에서 바로 꺼져 「띠」가 아니라 「밝은 모서리」가 된다
   const beam = onlyMatch(tab, /colors=\{\['rgba\(34,197,94,[\d.]+\)', 'rgba\(34,197,94,[\d.]+\)', 'transparent'\]\}/, '빛줄기 색');

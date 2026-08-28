@@ -314,16 +314,24 @@ export function TeamHomeTab({
                 {`Since ${createdAt.getFullYear()}.${String(createdAt.getMonth() + 1).padStart(2, '0')}`}
               </Text>
               {/*
-                「풋살」을 지웠다 — 상수라 정보가 0이다.
+                소속 구장 · 종목 줄이 히어로로 돌아왔다 — 레퍼런스에 맞춰 뒤집었다.
 
-                이 앱에 풋살 아닌 팀은 없다. 종목 컬럼도, 고를 자리도 없다. 구장명이
-                없는 팀에서는 이 줄이 「풋살」 한 단어만 남았고(렌더에서 확인했다),
-                있는 팀에서도 뒤 절반은 모두에게 같은 말이었다.
+                한때 이 줄을 통째로 뺐다. 근거는 「「풋살」은 상수라 정보가 0이다 — 이 앱에
+                풋살 아닌 팀은 없고 종목 컬럼도 고를 자리도 없다」였고, 구장명은 지표 카드의
+                소개 줄로 보냈다. 그 사실(종목이 상수라는 것)은 지금도 맞다.
 
-                구장명은 지표 카드의 소개 줄로 갔다. 지역·구장·정기·평균·실력은 전부
-                「이 팀은 어떤 팀인가」라 층위가 같다 — 히어로에 남겨 두면 그 줄 하나만
-                다른 데 속한 채로 떠 있게 된다.
+                레퍼런스는 「한국체대…강동점 · 풋살」로 둘 다 히어로에 둔다. 상수라도 그
+                자리에 있어야 네 줄의 리듬이 서고, 구장명 혼자 남으면 「· 풋살」이 없어
+                줄이 짧아 헐렁해진다. 정보량이 아니라 형태로 두는 줄이다.
+
+                구장명은 소개 줄(profileBits)에서 뺐다 — 두 곳에 같은 값이 있으면
+                고칠 때 한쪽만 고친다.
               */}
+              {[activeTeam.team.home_place_name, '풋살'].filter(Boolean).length > 0 && (
+                <Text style={styles.teamMeta} numberOfLines={1}>
+                  {[activeTeam.team.home_place_name, '풋살'].filter(Boolean).join(' · ')}
+                </Text>
+              )}
               {/*
                 소개는 팀명 바로 아래다 — 헤더 블록에 속한다.
                 예전엔 엠블럼 아래 별도 줄이라 통계 3칸과 붙어서, 팀 소개인지
@@ -380,44 +388,43 @@ export function TeamHomeTab({
                 )
               )}
                 </View>
-                {/*
-                  팀 설정 진입 — 소개 줄 오른쪽 끝이다.
-
-                  4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
-                  헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
-                  서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
-                  그 호출부에 갈 방법만 없는 상태였다.
-
-                  되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
-                  팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
-                  팀원은 팀을 나갈 방법이 없었다. 조건을 걸지 않는다 — 총무·팀원 모두 연다.
-
-                  라벨은 「팀 설정」이다. 「운영 설정」이었던 이유는 헤더 톱니(개인 설정)와
-                  헷갈리지 않으려는 것이었는데, 「팀」이 붙으면 그 구분이 더 곧게 선다.
-                  가는 화면의 제목도 「팀 설정」이라 이름이 갈리지 않는다.
-
-                  전체 폭 행이던 것을 링크로 줄이면서 부제(총무는 「정기모임 · 회비 …」,
-                  팀원은 「팀 나가기」)를 뺐다. 한 줄짜리 링크에는 담을 자리가 없고,
-                  팀명 줄 오른쪽에 두 줄이 들어가면 팀명이 밀린다.
-                  ⚠ 팀원에게 그 화면이 「팀 나가기」 한 줄뿐이라는 안내가 이 자리에서 사라진다.
-                    팀 설정 화면을 팀원용으로 다시 설계하는 일이라 서랍에 있고, 여기서는 안 푼다.
-
-                  자리가 팀명 줄에서 소개 줄로 내려왔다. 두 가지가 같이 풀린다 —
-                  팀명 줄이 팀명+뱃지만 갖게 되어 세 줄의 무게가 위에서 아래로 고르게 눕고,
-                  이 링크가 히어로 우상단에서 빠진다. 거기는 빛줄기가 가장 밝은 자리라
-                  초록 글자의 대비가 무너지던 곳이다(재 봤다: 지금 자리 3.96:1 → 옮긴 자리
-                  5.33:1, 본문 기준 4.5:1). 빛줄기를 더 세게 쓸 수 있게 된 것도 이 이동 덕이다.
-                */}
-                <Pressable
-                  onPress={onOpenTeamSettings}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="팀 설정"
-                  style={({ pressed }) => [styles.sectionHeadLink, { marginLeft: 'auto' }, pressed && styles.pressed]}
-                >
-                  <Text style={styles.moreText}>팀 설정 ›</Text>
-                </Pressable>
               </View>
+            </View>
+            {/*
+              팀 설정 — 히어로 오른쪽, 세로로 가운데보다 조금 아래다.
+
+              4버튼 그리드를 걷어낼 때 「설정」 타일을 헤더 톱니와 중복으로 보고 지웠는데,
+              헤더 톱니는 개인 설정(MySettings)이고 그 타일은 팀 운영 설정이었다.
+              서로 다른 화면이라 진입로가 통째로 사라졌다 — 라우트와 호출부는 살아 있고
+              그 호출부에 갈 방법만 없는 상태였다.
+
+              되살릴 때 isAdmin으로 감쌌던 것이 두 번째 구멍이었다. 그 뒤 팀 나가기를
+              팀 설정 맨 아래로 옮겼는데, 그 화면으로 가는 문이 여기 하나뿐이라
+              팀원은 팀을 나갈 방법이 없었다. 조건을 걸지 않는다 — 총무·팀원 모두 연다.
+
+              ⚠ 이제 문이 둘이다. 아래 4버튼에도 「팀 설정」이 있다. 레퍼런스가 둘 다
+                두었으니 둘 다 둔다 — 위는 히어로를 보다가 바로 여는 길이고, 아래는
+                네 기능을 훑다가 여는 길이라 도착지만 같고 오는 맥락이 다르다.
+                (teamsettings.check이 진입로 개수를 세고 있어서 그 수도 같이 갱신했다)
+
+              자리가 팀명 줄 → 소개 줄 → 행 오른쪽 칸으로 두 번 옮겼다. 팀명 줄에 있을
+              때는 우상단이라 빛줄기가 가장 밝은 자리와 겹쳐 초록 글자의 대비가
+              3.96:1까지 떨어졌다(본문 기준 4.5:1). 지금 자리는 그 밝은 구석에서 멀다.
+
+              모양이 링크에서 아웃라인 알약으로 바뀌었다 — 레퍼런스가 버튼이다.
+              히어로 안에서 유일하게 누를 수 있는 것이라(엠블럼·소개는 총무만) 테두리가
+              있는 편이 「이건 버튼」을 말한다.
+            */}
+            <View style={styles.settingsSlot}>
+              <Pressable
+                onPress={onOpenTeamSettings}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="팀 설정"
+                style={({ pressed }) => [styles.settingsPill, pressed && styles.pressed]}
+              >
+                <Text style={styles.settingsPillText}>팀 설정 ›</Text>
+              </Pressable>
             </View>
           </View>
 
@@ -980,17 +987,22 @@ const styles = StyleSheet.create({
   /* 6은 세 줄이 한 덩어리로 뭉쳐 보였다. 12면 줄마다 숨이 생기고 엠블럼 높이와도 맞는다 */
   bannerBody: { flex: 1, gap: 12 },
   emblem: {
-    // rounded-square. 원형은 인스타 프로필을 그대로 옮긴 모양이었는데, 이건 사람 사진이
-    // 아니라 팀 로고다 — 엠블럼은 방패·사각이 원형보다 자연스럽고, 아래 Bento 격자의
-    // 사각 타일들과도 모양이 맞는다.
-    // 76은 본문 세 줄(25 + 12 + 13 + 12 + 14 = 76)과 같은 높이다. 둘이 나란히 서면
-    // 위아래가 딱 맞아 카드 안이 두 덩어리로 정돈된다. 66일 땐 본문보다 10px 짧았다.
+    /*
+      원이다 — 레퍼런스에 맞춰 뒤집었다.
+
+      한때 rounded-square였고 근거가 있었다: 「원형은 인스타 프로필을 그대로 옮긴
+      모양인데 이건 사람 사진이 아니라 팀 로고다 — 엠블럼은 방패·사각이 원형보다
+      자연스럽고, 아래 Bento 격자의 사각 타일들과도 모양이 맞는다.」
+      그 근거를 지우지 않는 이유는, 지우면 다음 사람이 「엠블럼인데 왜 원이지」로
+      되돌리기 때문이다. 격자와 안 맞는 것도 사실이다.
+
+      레퍼런스가 원이고, 원이면 우하단 체크 뱃지가 테두리에 얹히는 자리가 자연스러워진다
+      (사각에서는 모서리와 뱃지가 서로 방향이 달라 겹침이 어색했다).
+      radius를 pill로 두면 크기를 바꿔도 계속 원이다 — 76/2 같은 계산을 안 남긴다.
+    */
     width: 76,
     height: 76,
-    // tile(16)에서 hero(20)로. 66 기준 24%에서 30%가 된다 — 사각형 정체성은 남기면서
-    // 모서리가 눈에 띄게 둥글어진다. 카드 자신과 같은 곡률이라 안에 든 요소로 묶인다.
-    // pill(원형)은 위 근거를 뒤집는 것이라 안 간다.
-    borderRadius: radius.hero,
+    borderRadius: radius.pill,
     overflow: 'hidden',
     backgroundColor: 'rgba(7,16,13,0.55)',
     // 내 행 아바타(selfAvatar)와 같은 링이다 — 값도 같다. 앱에서 「이 동그라미가
@@ -998,9 +1010,8 @@ const styles = StyleSheet.create({
     //
     // dashed였다. 이 앱에서 dashed는 「비었으니 채워라」라는 뜻을 이미 갖고 있고
     // (HomeScreen의 emptyNoteBtn, 멤버 탭·팀 전환 시트의 빈 자리), 엠블럼도 그 뜻으로
-    // 읽혔다. 문제는 로고가
-    // **있을 때까지** dashed였다는 것이다 — 다 채운 자리에 채우라는 표시가 남았다.
-    // 빈 상태의 안내는 안에 있는 EMBLEM 글자가 이미 하고 있으니 테두리에서 뺀다.
+    // 읽혔다. 문제는 로고가 **있을 때까지** dashed였다는 것이다 — 다 채운 자리에
+    // 채우라는 표시가 남았다. 빈 상태의 안내는 안에 있는 EMBLEM 글자가 이미 하고 있다.
     borderWidth: 2,
     borderColor: colors.green,
     alignItems: 'center',
@@ -1026,8 +1037,25 @@ const styles = StyleSheet.create({
   teamMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   slogan: { color: colors.textBody, fontSize: 12, fontWeight: '600' },
   sloganRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  /* 소개(남는 폭 전부) + 「팀 설정 ›」(오른쪽 끝) */
+  /* 소개 줄. 「팀 설정」이 행 오른쪽 칸으로 빠지면서 이 행에는 소개만 남았다 */
   sloganLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  /*
+    팀 설정 칸 — 세로로 가운데보다 조금 아래다.
+
+    flex-end로 바닥에 붙이면 소개 줄과 같은 높이가 되어 둘이 한 줄로 읽힌다.
+    center면 팀명 줄 쪽으로 올라붙어 우상단(빛줄기가 가장 밝은 자리)에 가까워진다.
+    가운데에서 12만큼 내린 자리가 그 둘 사이다.
+  */
+  settingsSlot: { alignSelf: 'center', marginTop: 12 },
+  settingsPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    /* 채우지 않는다 — 히어로 배경의 빛줄기가 알약 뒤로 그대로 흘러야 한 카드로 읽힌다 */
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  settingsPillText: { color: colors.textStrong, fontSize: 12, fontWeight: '700' },
   sloganEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sloganInput: {
     flex: 1,

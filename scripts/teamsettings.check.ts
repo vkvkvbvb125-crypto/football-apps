@@ -96,7 +96,10 @@ const home = read('src/features/team/screens/TeamHomeScreen.tsx');
 // 팀원 「팀 나가기」)가 사라졌다. 그 자리를 비워 두지 않고 링크 문구를 값으로 붙든다 —
 // 부제가 있던 단언을 지우기만 하면 이 지점의 검사가 통째로 없어진다.
 {
-  assert.ok(/<Text style=\{styles\.moreText\}>팀 설정 ›<\/Text>/.test(tab), '진입 링크 문구가 「팀 설정 ›」이 아니다');
+  // 링크에서 아웃라인 알약 버튼으로 바뀌었다(레퍼런스). 문구는 그대로 값으로 붙든다 —
+  // 스타일 이름이 moreText → settingsPillText로 옮겨갔을 뿐 묻는 것은 같다
+  assert.ok(/<Text style=\{styles\.settingsPillText\}>팀 설정 ›<\/Text>/.test(tab),
+    '진입 버튼 문구가 「팀 설정 ›」이 아니다');
   const titles = screen.match(/<Text style={styles\.headerTitle}>([^<]+)<\/Text>/g) ?? [];
   assert.ok(titles.length >= 2, '팀 설정 화면의 제목을 못 찾았다');
   const names = new Set(titles.map((t) => t.replace(/<[^>]+>/g, '')));

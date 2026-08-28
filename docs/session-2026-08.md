@@ -146,6 +146,19 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
 - **DB 오류 번역** — 서비스 계층(`services/*.ts`)은 안 봤다. 스토어만 정리했다
 - **접근성** — `components/` 계층에 `accessibilityRole` 없는 Pressable이 다수
 - **`space` 토큰이 죽어 있다** — 실사용 0회, 하드코딩 spacing이 화면당 35~88개
+- **`attendance_votes`에 DELETE 정책이 없다 — 넣은 표를 지울 수 없다.** RLS가 켜져
+  있고 정책이 select/insert/update 셋뿐이라 삭제는 기본 거부다. 2026-08-28 프로덕션
+  검증에서 제약으로 작용했다(넣으면 못 지우니 내 표가 이미 있는 경기만 골라 UPDATE로만
+  움직였다). **지금은 의도로 보인다** — 취소가 삭제가 아니라 `undecided`로 표현되고,
+  그 선택지는 명단 시트(`CHOICES`)와 카드 pill 양쪽에 일급으로 있다. 행이 남아야
+  「응답했는데 미정」과 「아직 응답 안 함」이 갈린다. 삭제가 필요해지는 날은 그 구분을
+  버리기로 할 때이고, 그때 정책을 더한다.
+
+- **`matches_update_admin`에 `with check`가 없다.** `using`만 있어서 총무는 상태를
+  양방향으로 바꿀 수 있다 — `completed → open`도 된다. 되돌리기에는 도움이 됐지만
+  (같은 검증에서 썼다), **UI에는 없는 경로가 API에는 열려 있다**는 뜻이다.
+  ⑧ owner 개념·「경기 종료」와 같이 볼 자리다.
+
 - **이니셜 함수가 셋이고 규칙이 셋이다.** 사본이 `team/initials.ts`(`slice(1)`),
   `AssignmentScreen`(같은 규칙을 복사), `SettleTargetsSheet`(`slice(0,2)`)에 있다.
   「김범준」이 각각 「범준」·「범준」·「김범」이 된다.

@@ -17,6 +17,8 @@ import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../../settlement/stores/settlementStore';
 import { myUnpaidAmount } from '../../settlement/utils/unpaid';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
+import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
+import { WEEKDAYS } from '../weekdays';
 import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
 import { AnnouncementListModal } from '../../announcements/components/AnnouncementListModal';
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
@@ -41,6 +43,7 @@ import { TabHeader } from '../../../components/TabHeader';
 import { RowCard } from '../../../components/Surface';
 import {
   monthlyAttendanceRate,
+  lastMonthAttendanceRate,
   memberAttendanceRate,
   formatRecentAttendance,
 } from '../../attendance/utils/attendanceRate';
@@ -253,11 +256,14 @@ export function TeamHomeScreen({ navigation, route }: any) {
     }, '지우기');
 
   const emblemInitials = activeTeam.team.name.replace(/\s/g, '').slice(0, 2).toUpperCase();
-  /** 다음 경기 — 킥오프 3시간 뒤까지는 "다음"으로 본다 (홈·경기운영과 같은 기준) */
-  const nextMatch =
-    matches
-      .filter((m) => new Date(m.match_date).getTime() >= Date.now() - 3 * 60 * 60 * 1000)
-      .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())[0] ?? null;
+  /*
+    다음 경기 — 킥오프 3시간 뒤까지는 「다음」으로 본다.
+
+    이 식이 3 * 60 * 60 * 1000을 손으로 들고 있었다. matchWindow.ts로 유예를 모을 때
+    AssingmentScreen·HomeScreen의 **이름 붙은 상수** 둘만 잡혔고, 여기는 인라인이라
+    검색에 안 걸렸다 — 「사본이 둘인 줄 알았는데 셋이었다」가 이 자리다.
+  */
+  const nextMatch = liveMatchesFrom(matches)[0] ?? null;
   const attendCount = nextMatch?.votes.filter((v) => v.status === 'attend').length ?? 0;
   /** 오늘 0시 기준 남은 날 — 시각까지 빼면 저녁 경기가 "D-0"과 "D-1"을 오간다 */
   const daysUntil = nextMatch
@@ -306,6 +312,54 @@ export function TeamHomeScreen({ navigation, route }: any) {
    *
    * 셀 경기가 없으면 null이 온다 — 「0경기 중 0회」는 정보가 아니라 빈칸이라 「-」로 둔다.
    */
+  /*
+    이번 달 활동 카드의 재료.
+
+    지난 달은 monthlyAttendanceRate를 안 고치고 now만 지난달 말일로 넘긴다
+    (lastMonthAttendanceRate). sameMonth가 연·월만 비교하므로 그것으로 충분하다 —
+    자세한 근거는 그 함수 머리말에 있다.
+
+    내 참석 횟수는 팀 지표와 창이 같아야 한다(둘 다 이번 달). 다른 창을 쓰면 「경기
+    4회 중 3회 참여」가 서로 다른 4와 3이 된다. 그래서 여기서 따로 센다 —
+    memberAttendanceRate는 최근 3개월이라 이 자리에 못 쓴다.
+  */
+  const thisMonthRate = teamRate;
+  const lastMonthRate = lastMonthAttendanceRate(rateMatches, members);
+  const myMonthCount = me
+    ? matches.filter((m) => {
+        const d = new Date(m.match_date);
+        const now = new Date();
+        if (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth()) return false;
+        if (d.getTime() > now.getTime()) return false;
+        return m.votes.some((v) => v.team_member_id === me.id && v.status === 'attend');
+      }).length
+    : 0;
+
+  /*
+    다음 경기 — 「지금 다루는 경기」 중 가장 가까운 것이다(matchWindow).
+    홈 카드·경기운영과 같은 경계를 쓴다: 킥오프 3시간까지는 아직 다음 경기다.
+  */
+  const nextMatchDateLabel = nextMatch
+    ? (() => {
+        const d = new Date(nextMatch.match_date);
+        /* Date.getDay()는 0=일이고 WEEKDAYS는 0=월이다(DB가 그렇게 저장한다).
+           그 둘을 그냥 이으면 요일이 하루씩 밀린다 — 여기서 옮겨 맞춘다 */
+        return `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAYS[(d.getDay() + 6) % 7]})`;
+      })()
+    : null;
+  const nextMatchPlaceLabel = nextMatch
+    ? [
+        new Date(nextMatch.match_date).toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }),
+        nextMatch.location,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null;
+
   const myRate = me ? memberAttendanceRate(memberRateMatches, me) : null;
 
   return (
@@ -376,6 +430,12 @@ export function TeamHomeScreen({ navigation, route }: any) {
             sloganText={sloganText}
             matches={matches}
             teamRate={teamRate}
+            thisMonthRate={thisMonthRate}
+            lastMonthRate={lastMonthRate}
+            myMonthCount={myMonthCount}
+            nextMatchDateLabel={nextMatchDateLabel}
+            nextMatchPlaceLabel={nextMatchPlaceLabel}
+            onGoSchedule={() => navigation.navigate('Attendance')}
             inviteCodeDisplay={inviteCodeDisplay}
             copied={copied}
             onPickEmblem={handlePickEmblem}

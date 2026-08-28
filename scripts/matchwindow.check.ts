@@ -26,10 +26,26 @@ const store = read('src/features/settlement/stores/settlementStore.ts');
 {
   assert.equal(MATCH_GRACE_MS, 3 * 60 * 60 * 1000, '유예가 3시간이 아니다');
 
-  // 사본 회귀 — 값을 만드는 그 줄이 화면에 다시 생기면 잡는다
-  for (const [name, src] of [['경기운영', assign], ['홈', home]] as const) {
-    assert.ok(!/const \w*GRACE\w*_MS = /.test(src), `${name}에 유예 상수 사본이 돌아왔다`);
-    assert.ok(/liveMatchesFrom\(matches\)/.test(src), `${name}이 공용 경계를 안 쓴다`);
+  /*
+    사본이 셋이었다. 이름 붙은 상수 둘(MATCH_GRACE_MS · NEXT_MATCH_GRACE_MS)만 눈에
+    띄었고, TeamHomeScreen은 3 * 60 * 60 * 1000을 식 안에 그대로 써서 이름으로
+    검색해도 안 걸렸다. **인라인 상수는 이름이 없어서 사본을 셀 때 빠진다.**
+
+    그 사실을 적은 주석에 그 식이 그대로 들어 있으므로, 이름이 아니라 **코드**를 본다 —
+    주석을 걷어낸 뒤에 찾는다(anchor.ts 세 번째 구분: 근거 주석에는 그 이름이 남는다).
+  */
+  const codeOnly = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  for (const [name, src] of [
+    ['경기운영', assign],
+    ['홈', home],
+    ['팀 홈', read('src/features/team/screens/TeamHomeScreen.tsx')],
+  ] as const) {
+    const code = codeOnly(src);
+    assert.ok(!/const \w*GRACE\w*_MS = /.test(code), `${name}에 유예 상수 사본이 돌아왔다`);
+    assert.ok(!/3 \* 60 \* 60 \* 1000/.test(code), `${name}에 유예가 인라인으로 박혔다 — 이름이 없어 다음에 또 못 센다`);
+    assert.ok(/liveMatchesFrom\(matches\)/.test(code), `${name}이 공용 경계를 안 쓴다`);
   }
 
   // 킥오프 3시간 경계 — 안쪽은 살아 있고 바깥은 끝났다

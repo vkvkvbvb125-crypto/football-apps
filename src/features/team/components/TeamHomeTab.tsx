@@ -126,6 +126,17 @@ interface Props {
    * 이 화면 안에 머물러서, 그 분기를 한 곳에 둔다. 타일마다 onPress를 따로 두면
    * 넷이 같은 모양인데 하나만 다르게 동작하는 것이 어디서 갈리는지 안 보인다.
    */
+  /** 이번 달 팀 지표 — 「경기 N회」와 그 참여율 */
+  thisMonthRate: AttendanceRate;
+  /** 지난 달 — 보조줄의 비교값. 값이 하나뿐이면 많은지 적은지 알 수 없다 */
+  lastMonthRate: AttendanceRate;
+  /** 이번 달 내가 참석한 횟수 */
+  myMonthCount: number;
+  /** 「8/30 (토)」 — 없으면 null */
+  nextMatchDateLabel: string | null;
+  /** 「20:00 · A구장」 — 없으면 null */
+  nextMatchPlaceLabel: string | null;
+  onGoSchedule: () => void;
   onGoTile: (key: TileKey) => void;
   /** 안 읽은 공지가 있는가 — 「공지사항」 타일의 붉은 점 */
   hasUnreadNotice: boolean;
@@ -160,6 +171,12 @@ export function TeamHomeTab({
   onOpenMemberList,
   onGoMembers,
   onOpenTeamSettings,
+  thisMonthRate,
+  lastMonthRate,
+  myMonthCount,
+  nextMatchDateLabel,
+  nextMatchPlaceLabel,
+  onGoSchedule,
   onGoTile,
   hasUnreadNotice,
 }: Props) {
@@ -775,6 +792,73 @@ export function TeamHomeTab({
 
 
                 {/*
+                  이번 달 활동 — 경기 · 참여 · 다음 경기.
+
+                  세 칸이 서로 다른 것을 센다. 앞의 둘은 팀과 나를 나란히 놓는 자리다 —
+                  「팀이 4번 모였고 나는 3번 갔다」가 한 줄에서 읽혀야 한다.
+
+                  보조줄이 각 값의 기준이다. 값만 있으면 「4회가 많은 건가」를 알 수 없다:
+                    경기   지난 달과 비교한다 — 팀이 더 자주 모이는지 덜 모이는지
+                    참여   내 참여율 — 횟수는 팀 경기 수에 딸리므로 비율이 있어야 검산된다
+                    다음   시간·구장 — 날짜만 있으면 준비할 수가 없다
+
+                  ⚠ 창이 셋이 됐다: 이번 달(경기·참여) · 지난 달(보조줄) · 최근 3개월
+                    (멤버 줄의 「참여율」). 셋 다 근거가 다르다 — 앞 둘은 달을 비교하려는
+                    것이고, 최근 3개월만 개인 표본이 작아서다.
+                    「참여」의 참여율은 이번 달 기준이라 멤버 줄의 최근 3개월과 다르다.
+                    같은 화면에 두 참여율이 있으니 라벨이 그 차이를 져야 한다 —
+                    여기는 카드 제목이 「이번 달 활동」이라 그 아래 값은 전부 이번 달이다.
+                */}
+                <Pressable
+                  onPress={onGoSchedule}
+                  accessibilityRole="button"
+                  accessibilityLabel="이번 달 활동 자세히 보기"
+                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                >
+                  <SoftTint tone="green" radius={radius.card} />
+                  <View style={styles.sectionHead}>
+                    <View style={styles.cardHeadLeft}>
+                      <Ionicons name="calendar-outline" size={15} color={colors.green} />
+                      <Text style={styles.sectionTitle}>이번 달 활동</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                  </View>
+
+                  <View style={styles.monthCols}>
+                    <View style={styles.monthCol}>
+                      <View style={styles.cardHeadLeft}>
+                        <Ionicons name="football-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.monthLabel}>경기</Text>
+                      </View>
+                      <Text style={styles.monthValue}>{thisMonthRate.matchCount}회</Text>
+                      <Text style={styles.monthSub}>지난 달 {lastMonthRate.matchCount}회</Text>
+                    </View>
+
+                    <View style={styles.monthCol}>
+                      <View style={styles.cardHeadLeft}>
+                        <Ionicons name="person-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.monthLabel}>참여</Text>
+                      </View>
+                      <Text style={styles.monthValue}>{myMonthCount}회</Text>
+                      <Text style={styles.monthSub}>참여율 {formatRate(thisMonthRate)}</Text>
+                    </View>
+
+                    <View style={styles.monthCol}>
+                      <View style={styles.cardHeadLeft}>
+                        <Ionicons name="calendar-clear-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.monthLabel}>다음 경기</Text>
+                      </View>
+                      {/* 없으면 「-」다. 「없음」이라고 쓰면 값의 자리에 문장이 들어와
+                          옆 두 칸의 숫자와 높이가 안 맞는다 */}
+                      <Text style={styles.monthValue}>{nextMatchDateLabel ?? '-'}</Text>
+                      <Text style={styles.monthSub} numberOfLines={1}>
+                        {nextMatchPlaceLabel ?? '예정 없음'}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                {/*
                   초대 카드 — 납작해졌다. QR이 카드에서 빠지고 시트로 갔다.
 
                   QR을 카드에 실물로 박아 뒀던 근거는 이랬다: 「대면 초대는 여기서 끝난다 —
@@ -1208,6 +1292,14 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionHeadLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionTitle: { color: colors.text, ...font.section },
+  /* 카드 제목 앞 아이콘 — 제목과 한 줄로 붙는다 */
+  cardHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  /* 세 칸 — 서로 다른 것을 센다. 라벨 · 큰 값 · 기준 줄 */
+  monthCols: { flexDirection: 'row', gap: 10 },
+  monthCol: { flex: 1, gap: 4 },
+  monthLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  monthValue: { color: colors.green, ...font.title, ...font.num },
+  monthSub: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
   /*
     내 행 — 전체 폭 한 줄. 카드보다 한 단계 밝은 면이라 명단에서 떠 있다.
     soloList(2명 이하 전용)를 대신한다: 그건 「62px 아바타 하나가 폭에 혼자 놓이면

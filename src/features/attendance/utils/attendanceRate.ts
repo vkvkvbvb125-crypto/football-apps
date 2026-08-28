@@ -74,6 +74,32 @@ export function monthlyAttendanceRate(
   return { rate: slots === 0 ? null : attended / slots, attended, slots, matchCount };
 }
 
+/**
+ * 지난 달 팀 지표 — 「이번 달 활동」 카드의 보조줄(「지난 달 3회」)이 쓴다.
+ *
+ * monthlyAttendanceRate를 안 고치고 **now만 지난달 말일로 넘긴다.** 이 트릭은 읽는
+ * 사람이 바로 못 알아보므로 적어 둔다:
+ *
+ *   sameMonth가 연·월만 비교한다. 그래서 now가 지난달 안의 아무 시각이면 그 달이
+ *   「이번 달」이 된다. 말일 23:59:59를 넘기면 「아직 안 치른 경기」 컷(d > now)도
+ *   그 달 끝을 기준으로 걸려서 지난달 경기가 전부 들어온다.
+ *
+ * 달의 길이를 안 센다 — new Date(y, m, 0)이 「전월의 마지막 날」이다(day 0이 하루 전).
+ * 2월이든 12월이든 같은 식이 맞고, 12월이면 m이 0이라 자동으로 전년 12월이 된다.
+ *
+ * 창이 셋이 됐다: 이번 달(팀 지표) · 지난 달(이 함수) · 최근 3개월(개인 지표).
+ * 셋 다 근거가 다르다 — 위 두 개는 「달마다 어땠나」를 비교하려는 것이고,
+ * 개인 지표만 표본이 작아 3개월이다.
+ */
+export function lastMonthAttendanceRate(
+  matches: RateMatch[],
+  members: RateMember[],
+  now = new Date()
+): AttendanceRate {
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+  return monthlyAttendanceRate(matches, members, lastMonthEnd);
+}
+
 /** "67%" — 셀 것이 없으면 "-" */
 export function formatRate(r: AttendanceRate): string {
   return r.rate == null ? '-' : `${Math.round(r.rate * 100)}%`;

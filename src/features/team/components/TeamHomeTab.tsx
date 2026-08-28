@@ -7,7 +7,6 @@
 // 가로 로스터(rosterRow)는 STEP 3의 제거 후보다 — 스탯 바의 「멤버 N명」과 역할이
 // 겹치는지 판단이 남아 있어서, 지금은 옮기기만 하고 다듬지 않았다.
 import { Ionicons } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -57,23 +56,6 @@ import type { MatchWithVotes } from '../../attendance/services/attendanceService
  * 쓰기 동작에만 걸려 있다. 여기서 가리면 팀원이 볼 수 있는 화면을 못 보게 된다 —
  * 팀 설정 진입을 총무 전용으로 감쌌다가 팀원이 팀을 나갈 수 없게 됐던 것과 같은 실수다.
  */
-/**
- * 카드 QR의 한 변(pt). 기존 토큰에 없는 새 상수다 — 근거가 시각 균형이 아니라
- * **스캔 가능성**이라서, 여백이나 폭 램프에서 고를 값이 아니다.
- *
- * inviteUrl이 83바이트다 → ECC M 기준 버전 5 → 37×37 모듈.
- * 412pt 폭 기기에서 124pt는 약 42mm이고 모듈 하나가 약 1.1mm가 된다. 넉넉하다.
- * 60pt(≈20mm)면 모듈이 0.55mm까지 내려가 근거리에서 겨우 읽히는 수준이다.
- *
- * 레퍼런스의 두 조건이 서로 안 맞았다 — 「카드 폭의 1/3」(≈124)과 「높이가 제목+설명
- * 두 줄만큼」(≈60)이 정사각형에서 동시에 성립하지 않는다. 「실제로 스캔되는 크기」가
- * 함께 명시돼 있어 폭 쪽을 남겼다.
- *
- * 줄이려면 이 계산부터 다시 하라. 그리고 inviteUrl이 길어지면(프로젝트 URL이 바뀌거나
- * 파라미터가 붙으면) 버전이 6·7로 올라가 같은 크기에서 모듈이 더 작아진다 —
- * 지금 여유는 URL 길이에 매여 있다.
- */
-const QR_SIZE = 124;
 
 /*
   하단 4버튼이 가는 곳 — 레퍼런스에 맞춰 항목을 갈았다.
@@ -116,7 +98,6 @@ interface Props {
   /** 4자리씩 끊은 초대 코드. 복사·QR은 원문을 쓴다 */
   inviteCodeDisplay: string;
   /** invite-redirect 함수 URL — 카드의 QR에 담긴다. 시트가 쓰는 것과 같은 값이다 */
-  inviteUrl: string;
   copied: boolean;
   onPickEmblem: () => void;
   onClearEmblem: () => void;
@@ -160,7 +141,6 @@ export function TeamHomeTab({
   matches,
   teamRate,
   inviteCodeDisplay,
-  inviteUrl,
   copied,
   onPickEmblem,
   onClearEmblem,
@@ -795,76 +775,78 @@ export function TeamHomeTab({
 
 
                 {/*
-                  초대 블록은 팀 프로필 카드 밖이다.
-                  안에 있으면 카드 안에 카드가 되어 경계가 어디까지인지 알 수 없었다 —
-                  엠블럼·팀명·통계는 「이 팀은 무엇인가」이고 초대는 「지금 할 일」이라 성격도 다르다.
+                  초대 카드 — 납작해졌다. QR이 카드에서 빠지고 시트로 갔다.
 
-                  그 「지금 할 일」이 화면 위쪽을 차지할 이유는 아니었다. 초대는 한 번 하고
-                  끝나는 일이고 멤버·기록은 매번 보는 것이다 — 갓 만든 팀에서도 초대는
-                  며칠이면 끝나지만 그 자리는 팀이 사라질 때까지 남는다. 일시적 과업에
-                  첫 화면을 내주면 남은 기간 내내 손해다. 그래서 멤버·내 기록 아래로 내렸다.
-                  (배너 바로 아래였을 때는 6명 팀에서 멤버 섹션과 내 기록이 둘 다 스크롤 밖이었다)
+                  QR을 카드에 실물로 박아 뒀던 근거는 이랬다: 「대면 초대는 여기서 끝난다 —
+                  상대가 그 자리에서 찍으면 되고 시트를 한 번 더 열 이유가 없다. 그래서
+                  카드는 대면, 시트는 원격 공유로 역할이 갈린다.」 그때 「카드 QR이 스캔
+                  가능하면 시트 QR은 무엇을 하는가」를 물었고, 답은 「시트 QR도 남긴다」였다.
 
-                  제목·설명이 돌아왔다. 뺐던 근거는 「상시 권유는 소음이고, 이미 여섯 명인 팀 홈이
-                  그만큼 길어진다」였는데, 그건 조건 분기(셋 이하만 큰 카드)를 없애면서 큰 쪽을
-                  버린 판단이었다. 조건을 안 두고 항상 카드로 노출하기로 정해졌으니 그 근거는
-                  더 이상 이 자리의 것이 아니다 — 카드가 길어지는 값은 QR이 대면 초대를 그 자리에서
-                  끝내주는 것으로 돌려받는다.
+                  레퍼런스는 카드에 QR을 안 둔다. 그래서 그 물음의 답이 뒤집힌다 —
+                  **시트가 QR 전담이 된다.** 카드는 코드·링크(원격)를 맡고, 대면은
+                  「QR 보기」 한 번을 거친다. 대면 초대에 탭이 하나 늘어나는 것이
+                  이 구조의 값이고, 돌려받는 것은 카드 높이다: QR 124px + 흰 판 여백이
+                  빠지면서 카드가 227px에서 절반 아래로 줄어 아래 4버튼이 첫 화면에 들어온다.
 
-                  QR을 아이콘에서 실물로 바꿨다. 뺐던 근거는 「작게 그리면 스캔이 안 된다」였고
-                  그건 지금도 맞다 — 그래서 22px 아이콘이었다. 크게 그리면 그 근거가 해소된다.
-                  아래 QR_SIZE 주석에 얼마나 커야 하는지의 계산이 있다.
-
-                  카드의 QR은 누르는 것이 아니다. 대면 초대는 여기서 끝난다 — 상대가 그 자리에서
-                  찍으면 되고, 시트를 한 번 더 열 이유가 없다. 시트로 가는 문은 공유 버튼이 맡는다.
-                  그래서 카드는 대면, 시트는 원격 공유와 링크 복사로 역할이 갈린다.
+                  초대 블록이 팀 프로필 카드 밖인 것은 그대로다. 안에 있으면 카드 안에
+                  카드가 되어 경계가 어디까지인지 알 수 없었다 — 엠블럼·팀명·통계는
+                  「이 팀은 무엇인가」이고 초대는 「지금 할 일」이라 성격도 다르다.
                 */}
                 <View style={styles.inviteCard}>
                   {/* 초록 기운 — 앱의 다른 카드가 쓰는 것과 같은 방식이다 */}
                   <SoftTint tone="green" radius={radius.card} />
 
                   <View style={styles.inviteTop}>
-                    <View style={styles.inviteCopy}>
-                      <Text style={styles.inviteTitle}>팀에 친구를 초대해보세요!</Text>
-                      <Text style={styles.inviteDesc}>
-                        {'링크나 코드를 공유하면\n친구가 바로 팀에 참여할 수 있어요.'}
-                      </Text>
+                    <View style={styles.inviteIcon}>
+                      <Ionicons name="person-add" size={18} color={colors.green} />
                     </View>
-
-                    {/* 흰 판 위에 그린다. QR은 명암 대비로 읽히는데 다크 표면 위에서는 못 읽는다 */}
-                    <View style={styles.inviteQrPlate}>
-                      <QRCode value={inviteUrl} size={QR_SIZE} backgroundColor="#FFFFFF" color="#000000" />
+                    <View style={styles.inviteCopy}>
+                      <Text style={styles.inviteTitle}>친구를 초대해보세요!</Text>
+                      <Text style={styles.inviteDesc}>
+                        초대 코드나 링크를 공유하면 친구가 바로 팀에 참여할 수 있어요
+                      </Text>
                     </View>
                   </View>
 
-                  <View style={styles.inviteBottom}>
-                    <Pressable
-                      onPress={onCopyInviteCode}
-                      style={({ pressed }) => [styles.inviteCodeBox, pressed && styles.pressed]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`초대 코드 ${activeTeam.team.invite_code} 복사`}
-                    >
-                      <Text style={styles.inviteLabel}>초대 코드</Text>
-                      <View style={styles.inviteCodeRow}>
-                        <Text style={styles.inviteCode} numberOfLines={1}>
-                          {inviteCodeDisplay}
-                        </Text>
-                        <Ionicons
-                          name={copied ? 'checkmark' : 'copy-outline'}
-                          size={15}
-                          color={copied ? colors.green : colors.textDim}
-                        />
-                      </View>
-                    </Pressable>
+                  <Pressable
+                    onPress={onCopyInviteCode}
+                    style={({ pressed }) => [styles.inviteCodeBox, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`초대 코드 ${activeTeam.team.invite_code} 복사`}
+                  >
+                    <Text style={styles.inviteCode} numberOfLines={1}>
+                      {inviteCodeDisplay}
+                    </Text>
+                    <Ionicons
+                      name={copied ? 'checkmark' : 'copy-outline'}
+                      size={15}
+                      color={copied ? colors.green : colors.textDim}
+                    />
+                  </Pressable>
 
+                  {/*
+                    둘 다 같은 시트를 연다. 나누는 것은 「무엇을 하러 가는가」다 —
+                    원격이면 링크, 대면이면 QR. 시트가 둘 다 갖고 있어서 도착지는 같지만,
+                    버튼이 하나뿐이면 대면 초대를 하려는 사람이 「링크 공유」를 눌러야 한다.
+                  */}
+                  <View style={styles.inviteActions}>
                     <Pressable
                       onPress={onOpenInvite}
                       accessibilityRole="button"
                       accessibilityLabel="초대 링크 공유하기"
-                      style={({ pressed }) => [styles.inviteShare, pressed && styles.pressed]}
+                      style={({ pressed }) => [styles.inviteAction, pressed && styles.pressed]}
                     >
-                      <Ionicons name="share-social-outline" size={16} color={colors.bgRoot} />
-                      <Text style={styles.inviteShareText}>링크 공유하기</Text>
+                      <Ionicons name="link-outline" size={15} color={colors.green} />
+                      <Text style={styles.inviteActionText}>링크 공유 ›</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={onOpenInvite}
+                      accessibilityRole="button"
+                      accessibilityLabel="초대 QR 보기"
+                      style={({ pressed }) => [styles.inviteAction, pressed && styles.pressed]}
+                    >
+                      <Ionicons name="qr-code-outline" size={15} color={colors.green} />
+                      <Text style={styles.inviteActionText}>QR 보기</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -1072,9 +1054,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   teamStats: { gap: 10 },
-  /* 코드·QR·공유 세 칸. 코드가 폭을 다 먹고 QR이 오른쪽에 붙는다 — 공유는 아래 한 줄 */
+  /* 초대 카드 — 아이콘+글 / 코드 / 두 동작. QR은 시트가 맡아 카드에서 빠졌다 */
   inviteCard: {
-    /* content(padding 20, gap 14) 안으로 들어왔다 — 자기 marginHorizontal·marginTop을
+    /* content(padding 20, gap 10) 안으로 들어왔다 — 자기 marginHorizontal·marginTop을
        그대로 두면 여백이 두 겹이 된다 */
     padding: 14,
     gap: 12,
@@ -1086,41 +1068,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardAlt,
     overflow: 'hidden',
   },
-  /* 상단 — 좌 글, 우 QR. QR이 텍스트보다 크므로 위로 맞춘다 */
-  inviteTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  inviteCopy: { flex: 1, gap: 6 },
-  inviteTitle: { ...font.section, color: colors.textStrong },
-  inviteDesc: { color: colors.textMuted, fontSize: 11, fontWeight: '600', lineHeight: 17 },
-  inviteQrPlate: {
-    backgroundColor: '#FFFFFF',
-    padding: 8,
-    borderRadius: radius.button,
-    borderCurve: 'continuous',
+  /* 상단 — 좌 아이콘, 우 글. 아이콘은 제목 높이에 맞춰 위로 붙인다 */
+  inviteTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  inviteIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.greenTint,
   },
-
-  /* 하단 — 좌 코드, 우 공유. 둘 다 44 표적이라 바닥이 맞는다 */
-  inviteBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  inviteCopy: { flex: 1, gap: 4 },
+  inviteTitle: { ...font.section, color: colors.textStrong },
+  inviteDesc: { color: colors.textMuted, fontSize: 11, fontWeight: '600', lineHeight: 16 },
   /* 코드 전체가 복사 버튼이다 — 표적이 버튼만큼 커야 한다 */
   inviteCodeBox: {
-    flex: 1,
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     minHeight: 44,
-    justifyContent: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
     borderRadius: radius.button,
     borderCurve: 'continuous',
     backgroundColor: colors.inputBg,
   },
-  inviteCodeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  inviteShare: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    height: 44, flex: 1,
-    borderRadius: radius.button, borderCurve: 'continuous',
-    backgroundColor: colors.green,
+  /* 두 동작 — 채우지 않는다. 초대 카드 자체가 이미 초록 테두리라 안이 또 초록이면 겹친다 */
+  inviteActions: { flexDirection: 'row', gap: 10 },
+  inviteAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 40,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.greenDeep,
   },
-  inviteShareText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
-  inviteLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
+  inviteActionText: { color: colors.green, fontSize: 13, fontWeight: '800' },
   inviteCode: {
     flex: 1,
     color: colors.green,

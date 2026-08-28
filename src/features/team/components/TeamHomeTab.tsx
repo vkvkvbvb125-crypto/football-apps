@@ -952,8 +952,13 @@ const styles = StyleSheet.create({
 
     안쪽(padding)을 올려서 같은 비를 만드는 방법도 있는데 안 골랐다 — 320px 기기에서
     내용 폭을 좌우 합쳐 8px 더 깎는다. 바깥을 줄이는 쪽은 아무것도 안 깎는다.
+
+    paddingTop만 8이다. 히어로는 이 컨테이너 밖이라(자기 marginHorizontal이 있다)
+    이 값이 곧 히어로와 첫 카드 사이가 되는데, 레퍼런스에서 스탯 바는 히어로에 붙어
+    한 덩어리로 읽힌다 — 원래 히어로 안에 있던 블록이고 뜻도 이어진다.
+    20이면 다른 카드 사이(10)보다 오히려 넓어서 둘이 남처럼 떨어져 있었다.
   */
-  content: { padding: 20, gap: 10 },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 10 },
   banner: {
     ...shadow.raised,
     // 배경 레이어가 절대배치로 깔린다 — 안 막으면 모서리 밖으로 칠해져 radius가 사라진다

@@ -126,10 +126,24 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
   // 경기 종료 → 정산 생성까지 한 번에 잇는다 (settlement-flow.md 총무 플로우).
   // 정산 탭에 떨궈만 두면 총무가 목록에서 그 경기를 다시 찾아 눌러야 했다.
-  const handleFinishMatch = () => {
+  //
+  // 상태 변경을 기다린다. 예전엔 await이 없어서 updateMatchStatus가 실패해도 정산
+  // 화면으로 넘어갔다 — 스토어가 오류를 error에 담고 rethrow하지 않으니 여기서는
+  // 성공과 구별할 방법도 없었다. 총무는 「종료했다」고 믿는데 경기는 open으로 남는다.
+  // 그 상태가 화면에서 보이는 곳은 없다: 목록 판정은 날짜로 하고, completed가 하는
+  // 일은 투표 잠금 하나뿐이라 「종료했는데 아직 투표가 열려 있다」로만 나타난다.
+  //
+  // 실패하면 넘어가지 않는다. 스토어가 세운 문구가 일정 화면에 뜨고, 총무는 다시
+  // 누를 수 있다. 성공했을 때만 정산으로 보낸다.
+  //
+  // error를 읽어 판단하지 않고 반환값을 본다 — 앞선 실패가 스토어에 남아 있으면
+  // 성공한 이번 것을 실패로 읽는다.
+  const handleFinishMatch = async () => {
     if (!nearestMatch) return;
-    updateMatchStatus(nearestMatch.id, 'completed');
-    navigation.navigate('Settlement', { createForMatchId: nearestMatch.id });
+    const id = nearestMatch.id;
+    const ok = await updateMatchStatus(id, 'completed');
+    if (!ok) return;
+    navigation.navigate('Settlement', { createForMatchId: id });
   };
 
   return (

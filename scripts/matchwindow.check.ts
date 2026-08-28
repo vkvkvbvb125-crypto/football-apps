@@ -83,4 +83,38 @@ const store = read('src/features/settlement/stores/settlementStore.ts');
   assert.ok(!/matchWindow|MATCH_GRACE_MS/.test(up), '일정 목록이 유예 경계로 합쳐졌다 — 다른 물음이다');
 }
 
+// ── 「경기 종료」는 성공했을 때만 정산으로 보낸다 ───────────────────
+//
+// await이 없었다. updateMatchStatus가 실패해도 정산 화면으로 넘어갔고, 스토어가
+// 오류를 error에 담고 rethrow하지 않으니 부르는 쪽은 성공과 구별할 수도 없었다.
+// 총무는 「종료했다」고 믿는데 경기는 open으로 남는다.
+//
+// 화면에서 안 보이는 종류다. 목록 판정은 날짜로 하고 completed가 하는 일은 투표
+// 잠금 하나뿐이라, 「종료했는데 아직 투표가 열려 있다」로만 나타난다.
+{
+  const screen = read('src/features/assignment/screens/AssignmentScreen.tsx');
+  const store = read('src/features/attendance/stores/attendanceStore.ts');
+
+  const body = onlyMatch(screen, /const handleFinishMatch = [\s\S]*?\n  \};/, '종료 핸들러');
+  assert.ok(/await updateMatchStatus\(/.test(body), `상태 변경을 안 기다린다: ${body.replace(/\s+/g, ' ').slice(0, 90)}`);
+
+  const iAwait = body.indexOf('await updateMatchStatus(');
+  const iNav = body.indexOf('navigation.navigate(');
+  assert.ok(iNav > iAwait, '상태 변경보다 먼저 화면을 옮긴다');
+  // 실패하면 안 넘어간다
+  assert.ok(/if \(!ok\) return;/.test(body), '실패해도 정산으로 보낸다');
+  assert.ok(body.indexOf('if (!ok) return;') < iNav, '막는 자리가 이동 뒤에 있다');
+
+  /*
+    error를 읽어 판단하지 않는다.
+
+    성공해도 앞선 실패가 스토어에 남아 있으면 그걸 이번 실패로 읽는다. 그래서 스토어가
+    시작할 때 error를 비우고 결과를 돌려준다 — createMatch가 같은 이유로 이미 그렇다.
+  */
+  assert.ok(!/getState\(\)\.error/.test(body), '스토어 error를 읽어 성공을 판단한다 — 앞선 실패가 남아 있으면 틀린다');
+  const action = onlyMatch(store, /updateMatchStatus: async \(matchId, status\) => \{[\s\S]*?\n  \},/, 'updateMatchStatus');
+  assert.ok(/set\(\{ error: null \}\);/.test(action), 'updateMatchStatus가 시작할 때 앞선 오류를 안 비운다');
+  assert.ok(/return true;/.test(action) && /return false;/.test(action), 'updateMatchStatus가 성패를 안 돌려준다');
+}
+
 console.log('matchwindow ok');

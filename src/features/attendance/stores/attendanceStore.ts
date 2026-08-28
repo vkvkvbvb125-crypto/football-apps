@@ -41,7 +41,17 @@ interface AttendanceState {
   lastCreateResult: { created: number; skipped: string[] } | null;
   clearCreateResult: () => void;
   updateMatch: (matchId: string, input: UpdateMatchInput) => Promise<void>;
-  updateMatchStatus: (matchId: string, status: MatchStatus) => Promise<void>;
+  /**
+   * 바뀌었으면 true.
+   *
+   * createMatch와 같은 이유다 — Promise<void>면 실패해도 부르는 쪽이 알 수 없다.
+   * 「경기 종료 → 정산으로」가 그 경로였다: 상태 변경이 실패해도 정산 화면으로
+   * 넘어가서, 총무는 종료했다고 믿는데 경기는 open으로 남았다.
+   *
+   * error를 읽어 판단하지 않는다. 성공해도 앞선 실패가 남아 있으면 그걸 이번 실패로
+   * 읽는다 — 그래서 시작할 때 비우고 결과를 돌려준다.
+   */
+  updateMatchStatus: (matchId: string, status: MatchStatus) => Promise<boolean>;
   deleteMatch: (matchId: string) => Promise<void>;
   vote: (matchId: string, status: AttendanceStatus) => Promise<void>;
 }
@@ -166,11 +176,14 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     }
   },
   updateMatchStatus: async (matchId, status) => {
+    set({ error: null });
     try {
       await updateMatchStatusRequest(matchId, status);
       await get().loadMatches();
+      return true;
     } catch (err) {
       set({ error: toUserMessage(err, {}, 'updateMatchStatus') });
+      return false;
     }
   },
   deleteMatch: async (matchId) => {

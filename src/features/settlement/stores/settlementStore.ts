@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { supabase } from '../../../lib/supabase';
 import { whereLabel } from '../utils';
+import { liveSince } from '../../attendance/utils/matchWindow';
 import { toUserMessage } from '../../../lib/dbError';
 
 export interface ShareRow {
@@ -164,13 +165,25 @@ export const useSettlementStore = create<State>((set, get) => ({
       const current = mapped.find((s) => s.status === 'open') ?? null;
       const past = mapped.filter((s) => s.status === 'done');
 
-      // 정산이 없는 종료 경기 = 미등록 카드
       const settledIds = new Set(mapped.map((s) => s.matchId));
+      /*
+        정산 미등록 = 끝난 경기 중 정산이 없는 것.
+
+        「끝났다」의 경계가 match_date < now 였다. 경기운영·홈은 킥오프 3시간까지를
+        「지금 다루는 경기」로 보는데 여기만 유예가 없어서, 그 3시간 동안 한 경기가
+        두 화면에서 다르게 읽혔다:
+
+          킥오프 10분 뒤 — 경기운영: 「운영 중」(타이머가 돈다)
+                           정산:     「정산 미등록」(끝났으니 정산해라)
+
+        끝났다는 지금 다루는 경기가 아니라는 뜻이다. 정의를 둘로 두지 않는다 —
+        liveSince가 그 경계 하나를 낸다(matchWindow.ts).
+      */
       const { data: finished } = await supabase
         .from('matches')
         .select('id, match_date, location, attendance_votes ( status )')
         .eq('team_id', teamId)
-        .lt('match_date', new Date().toISOString())
+        .lt('match_date', liveSince().toISOString())
         .order('match_date', { ascending: false })
         .limit(5);
 

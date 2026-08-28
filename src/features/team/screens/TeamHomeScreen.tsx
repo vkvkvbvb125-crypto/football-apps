@@ -108,9 +108,42 @@ export function TeamHomeScreen({ navigation, route }: any) {
 
   const announcements = useAnnouncementsStore((s) => s.announcements);
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
+  const myReadIds = useAnnouncementsStore((s) => s.myReadIds);
+  const loadMyReads = useAnnouncementsStore((s) => s.loadMyReads);
+  const markAnnouncementsRead = useAnnouncementsStore((s) => s.markRead);
   const createAnnouncement = useAnnouncementsStore((s) => s.createAnnouncement);
   const updateAnnouncement = useAnnouncementsStore((s) => s.updateAnnouncement);
   const deleteAnnouncement = useAnnouncementsStore((s) => s.deleteAnnouncement);
+
+  /*
+    안 읽은 공지가 있는가 — 팀 홈 「공지사항」 타일의 붉은 점.
+
+    announcement_reads 표는 처음부터 있었는데 **읽는 쪽도 쓰는 쪽도 없었다.**
+    markAnnouncementsRead는 만들어 두고 호출자가 0이었고(작성자 제외 로직까지 들어
+    있는 채로), 스토어는 총무용 집계(readCounts)만 들고 있었다.
+
+    그래서 점 하나를 붙이는 데 세 가지가 같이 필요하다:
+      ① 내가 읽은 id를 읽어오는 조회      (loadMyReads)
+      ② 목록을 실제로 볼 때 읽음을 남기는 곳 (아래 notices 탭 진입)
+      ③ 그 둘의 차                          (여기)
+    ②가 없으면 점이 영원히 켜져 있고, ①이 없으면 켤지 말지를 모른다.
+
+    내가 쓴 공지는 안 센다 — markAnnouncementsRead가 작성자를 제외하므로 읽음 기록이
+    영영 안 생기고, 그러면 총무는 자기 공지 때문에 점이 안 꺼진다.
+  */
+  const hasUnreadNotice = announcements.some(
+    (a) => a.author_id !== activeTeam?.membershipId && !myReadIds.has(a.id),
+  );
+
+  useEffect(() => {
+    if (announcements.length > 0) void loadMyReads();
+  }, [announcements.length]);
+
+  // 목록을 여는 것이 읽는 것이다 — 그 화면에 도착하면 남긴다
+  useEffect(() => {
+    if (tab === 'notices' && announcements.length > 0) void markAnnouncementsRead(announcements);
+  }, [tab, announcements.length]);
+
   const [formVisible, setFormVisible] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementRow | null>(null);
   const [listVisible, setListVisible] = useState(false);
@@ -370,9 +403,10 @@ export function TeamHomeScreen({ navigation, route }: any) {
               섞이면 「왜 하나만 다르지」가 그 자리에서 안 읽힌다.
             */
             onGoTile={(key) => {
-              if (key === 'notices') setTab('notices');
-              else navigation.navigate({ schedule: 'Attendance', assignment: 'Assignment', settlement: 'Settlement' }[key]);
+              if (key === 'settings') navigation.navigate('TeamSettings');
+              else setTab(key);
             }}
+            hasUnreadNotice={hasUnreadNotice}
           />
         )}
 

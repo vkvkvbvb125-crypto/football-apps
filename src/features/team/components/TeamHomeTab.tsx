@@ -75,13 +75,30 @@ import type { MatchWithVotes } from '../../attendance/services/attendanceService
  */
 const QR_SIZE = 124;
 
-export type TileKey = 'schedule' | 'assignment' | 'settlement' | 'notices';
+/*
+  하단 4버튼이 가는 곳 — 레퍼런스에 맞춰 항목을 갈았다.
+
+  전: 일정 · 경기운영 · 정산 · 공지사항
+  후: 게시판 · 공지사항 · 멤버 관리 · 팀 설정
+
+  앞의 셋(일정 · 경기운영 · 정산)이 빠진 이유는 **하단 탭에 이미 그 셋이 있다**는
+  것이다. 팀 화면 안에 하단 탭과 같은 문을 또 두면, 누르는 사람은 두 길이 다른 곳으로
+  가는 줄 안다. 남는 넷은 전부 팀 안쪽 화면이라 하단 탭에 자리가 없다.
+
+  ⚠ 「팀 설정」은 히어로의 알약과 도착지가 같다. 레퍼런스가 둘 다 두었으니 둘 다 둔다 —
+    위는 히어로를 보다가 바로 여는 길이고 여기는 네 기능을 훑다가 여는 길이라
+    오는 맥락이 다르다.
+  ⚠ 「공지사항」은 notices 탭의 유일한 문이다. 그 탭은 STEP 1에서 갈라 두고 진입로가
+    없었다 — 「공지는 홈이 맡는다」로 적어 뒀던 자리인데, 홈이 맡는 것은 **최근 공지
+    미리보기**이고 목록·작성·읽음은 이 탭이 맡는다. 그래서 문이 필요하다.
+*/
+export type TileKey = 'board' | 'notices' | 'members' | 'settings';
 
 const TILES: { key: TileKey; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
-  { key: 'schedule', icon: 'calendar-outline', label: '일정' },
-  { key: 'assignment', icon: 'football-outline', label: '경기운영' },
-  { key: 'settlement', icon: 'card-outline', label: '정산' },
+  { key: 'board', icon: 'chatbubbles-outline', label: '게시판' },
   { key: 'notices', icon: 'megaphone-outline', label: '공지사항' },
+  { key: 'members', icon: 'people-outline', label: '멤버 관리' },
+  { key: 'settings', icon: 'settings-outline', label: '팀 설정' },
 ];
 
 interface Props {
@@ -129,6 +146,8 @@ interface Props {
    * 넷이 같은 모양인데 하나만 다르게 동작하는 것이 어디서 갈리는지 안 보인다.
    */
   onGoTile: (key: TileKey) => void;
+  /** 안 읽은 공지가 있는가 — 「공지사항」 타일의 붉은 점 */
+  hasUnreadNotice: boolean;
 }
 
 export function TeamHomeTab({
@@ -162,6 +181,7 @@ export function TeamHomeTab({
   onGoMembers,
   onOpenTeamSettings,
   onGoTile,
+  hasUnreadNotice,
 }: Props) {
   /* 기준 안내는 ⓘ를 눌러 편다 — 레퍼런스가 값 옆에 아이콘만 두기 때문이다 */
   const [rateNoteOpen, setRateNoteOpen] = useState(false);
@@ -886,7 +906,12 @@ export function TeamHomeTab({
                       accessibilityLabel={t.label}
                       style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
                     >
-                      <Ionicons name={t.icon} size={22} color={colors.green} />
+                      <View>
+                        <Ionicons name={t.icon} size={22} color={colors.green} />
+                        {/* 안 읽은 공지가 있을 때만. 점은 개수를 안 적는다 —
+                            「볼 것이 있다」만 말하고 몇 개인지는 그 화면이 말한다 */}
+                        {t.key === 'notices' && hasUnreadNotice && <View style={styles.tileDot} />}
+                      </View>
                       <Text style={styles.tileLabel}>{t.label}</Text>
                     </Pressable>
                   ))}
@@ -1347,6 +1372,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardRaised,
   },
   tileLabel: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  /* 아이콘 우상단의 점 — 하단 탭 정산 뱃지와 같은 어휘다 */
+  tileDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.danger,
+  },
 
   adminRow: {
     flexDirection: 'row',

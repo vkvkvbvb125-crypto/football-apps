@@ -41,6 +41,24 @@ export async function markAnnouncementsRead(
   if (error) throw error;
 }
 
+/**
+ * 내가 읽은 공지 id — 안 읽은 공지가 있는지 세려면 이게 있어야 한다.
+ *
+ * announcement_reads는 처음부터 있었는데 **읽는 쪽이 아무도 없었다.** 스토어가 든 것은
+ * readCounts(공지별 읽은 사람 수 — 총무의 「N명 읽음」)뿐이라 「내가 읽었나」는 어디에도
+ * 없었다. 그래서 팀 홈의 「공지사항」 버튼에 붉은 점을 붙이려면 이 조회가 먼저다.
+ */
+export async function fetchMyReadAnnouncementIds(userId: string, announcementIds: string[]) {
+  if (announcementIds.length === 0) return new Set<string>();
+  const { data, error } = await supabase
+    .from('announcement_reads')
+    .select('announcement_id')
+    .eq('user_id', userId)
+    .in('announcement_id', announcementIds);
+  if (error) throw error;
+  return new Set((data ?? []).map((r) => r.announcement_id as string));
+}
+
 /** 공지별 읽은 사람 수 — 총무 화면의 "N명 읽음" */
 export async function fetchAnnouncementReadCounts(announcementIds: string[]) {
   if (announcementIds.length === 0) return {} as Record<string, number>;

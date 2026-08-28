@@ -11,6 +11,7 @@ import {
   type AnnouncementRow,
   markAnnouncementsRead,
   fetchAnnouncementReadCounts,
+  fetchMyReadAnnouncementIds,
   type UpdateAnnouncementInput,
 } from '../services/announcementsService';
 import { toUserMessage } from '../../../lib/dbError';
@@ -28,11 +29,32 @@ interface AnnouncementsState {
   readCounts: Record<string, number>;
   /** 알림 패널에 공지가 보였다 → 읽음으로 남기고 집계를 다시 센다 */
   markRead: (announcements: AnnouncementRow[]) => Promise<void>;
+  /** 내가 읽은 공지 id — 「안 읽은 공지가 있는가」의 재료다 */
+  myReadIds: Set<string>;
+  loadMyReads: () => Promise<void>;
 }
 
 export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
   announcements: [],
   readCounts: {},
+  /**
+   * 내가 읽은 공지 id.
+   *
+   * 이걸 안 들고 있으면 「안 읽은 공지가 있는가」를 못 센다. 팀 홈의 「공지사항」 버튼에
+   * 붙는 붉은 점이 그 답을 쓴다 — 점만 붙이고 이 집합이 없으면 점이 영원히 켜져 있다.
+   */
+  myReadIds: new Set<string>(),
+
+  loadMyReads: async () => {
+    const userId = useAuthStore.getState().session?.user.id;
+    const ids = get().announcements.map((a) => a.id);
+    if (!userId || ids.length === 0) return;
+    try {
+      set({ myReadIds: await fetchMyReadAnnouncementIds(userId, ids) });
+    } catch {
+      // 읽음 조회는 부가 정보다 — 실패하면 점을 안 띄우지 화면을 막지 않는다
+    }
+  },
   loaded: false,
   loading: false,
   error: null,
@@ -43,6 +65,8 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
     if (!userId || announcements.length === 0) return;
     try {
       await markAnnouncementsRead(announcements, userId, activeTeam?.membershipId ?? null);
+      // 방금 읽은 것을 바로 반영한다 — 다시 조회하면 왕복이 한 번 더 든다
+      set({ myReadIds: new Set([...get().myReadIds, ...announcements.map((a) => a.id)]) });
       // 집계는 총무만 본다 — 팀원 화면에서까지 매번 세어올 이유가 없다
       if (isAdmin) {
         const counts = await fetchAnnouncementReadCounts(announcements.map((a) => a.id));

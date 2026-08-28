@@ -20,6 +20,7 @@ import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
 import { SoftTint } from '../../../components/BentoCard';
+import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 
 type View3 = 'timer' | 'assign' | 'score';
 const TABS: { key: View3; label: string }[] = [
@@ -36,9 +37,8 @@ const GROUP_COLOR = [colors.green, colors.blue, colors.gold, '#C084FC', '#F472B6
 /** 쿼터 수 — 경기마다 다르게 정하는 기능이 아직 없어 앱 전체가 4쿼터를 쓴다 */
 const TOTAL_QUARTERS = 4;
 
-// 킥오프 3시간 뒤까지는 "운영 중"으로 본다 (홈 화면 NEXT_MATCH_GRACE_MS와 같은 기준).
+// 유예 3시간은 utils/matchWindow.ts에 있다 — 홈 화면과 값도 근거도 한 곳에서 본다.
 // 이 선을 넘긴 경기는 분배/타이머/스코어 대상에서 빠진다 — 2주 전 경기가 계속 떠 있던 원인.
-const MATCH_GRACE_MS = 3 * 60 * 60 * 1000;
 
 function initialOf(name: string) {
   return name.length > 2 ? name.slice(1) : name;
@@ -95,12 +95,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const memberOf = (teamMemberId: string) => members.find((m) => m.id === teamMemberId);
   const nameFor = (teamMemberId: string) => memberOf(teamMemberId)?.displayName ?? '멤버';
 
-  const liveMatches = useMemo(() => {
-    const from = Date.now() - MATCH_GRACE_MS;
-    return matches
-      .filter((m) => new Date(m.match_date).getTime() >= from)
-      .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
-  }, [matches]);
+  const liveMatches = useMemo(() => liveMatchesFrom(matches), [matches]);
 
   /**
    * 투표가 없는 경기도 보여준다.

@@ -50,7 +50,7 @@ export function buildBannerSlides(input: BannerInput): BannerSlide[] {
     slides.push({
       kind: 'stat',
       label: '다음 경기',
-      // 지난 경기가 next로 잡히는 유예 구간이 있어(NEXT_MATCH_GRACE_MS) 음수도 나온다
+      // 지난 경기가 next로 잡히는 유예 구간이 있어(matchWindow의 MATCH_GRACE_MS) 음수도 나온다
       value: days === 0 ? 'D-DAY' : days > 0 ? `D-${days}` : `D+${-days}`,
       sub: input.nextMatch.location ?? undefined,
     });

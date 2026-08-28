@@ -55,6 +55,7 @@ import { RosterSheet, type RosterMember } from '../../attendance/components/Rost
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { resolveCapacity } from '../../attendance/utils/capacity';
+import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 import { DEFAULT_CAPACITY } from '../../attendance/components/ScheduleRow';
 import { relativeTime } from '../../../lib/relativeTime';
 import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
@@ -62,8 +63,7 @@ import { matchLabel } from '../../attendance/utils/matchLabel';
 import { HomeBanner } from '../components/HomeBanner';
 import { buildBannerSlides } from '../components/bannerSlides';
 
-/** 킥오프 3시간 뒤까지는 "다음 경기"로 본다 (경기운영 탭 MATCH_GRACE_MS와 같은 기준) */
-const NEXT_MATCH_GRACE_MS = 3 * 60 * 60 * 1000;
+/* 유예 3시간은 utils/matchWindow.ts에 있다 — 경기운영 탭과 값도 근거도 한 곳에서 본다 */
 
 // ── 히어로 이미지 ─────────────────────────────────────────────
 // 크기 기준을 화면 폭이 아니라 "히어로 높이"로 잡고 위치도 비율로 준다. px로 고정하면
@@ -285,14 +285,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   useSettlementRealtime(current?.id ?? null, reloadSettlements);
 
   // ── 여기부터 모든 훅은 조기 리턴보다 위에 있어야 한다 ──────────────
-  const next = useMemo(() => {
-    const from = Date.now() - NEXT_MATCH_GRACE_MS;
-    return (
-      matches
-        .filter((m) => new Date(m.match_date).getTime() >= from)
-        .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())[0] ?? null
-    );
-  }, [matches]);
+  const next = useMemo(() => liveMatchesFrom(matches)[0] ?? null, [matches]);
 
   const weather = useMatchWeather(next);
 

@@ -137,6 +137,14 @@ interface Props {
   /** 「20:00 · A구장」 — 없으면 null */
   nextMatchPlaceLabel: string | null;
   onGoSchedule: () => void;
+  /** 다음 경기 — 없으면 null. 카드는 그래도 그린다 */
+  nextMatch: { location: string | null } | null;
+  /** 「8월 30일 (토) 20:00」 */
+  nextMatchWhenLabel: string;
+  nextAttend: number;
+  nextPending: number;
+  nextAbsent: number;
+  onOpenRoster: () => void;
   onGoTile: (key: TileKey) => void;
   /** 안 읽은 공지가 있는가 — 「공지사항」 타일의 붉은 점 */
   hasUnreadNotice: boolean;
@@ -177,6 +185,12 @@ export function TeamHomeTab({
   nextMatchDateLabel,
   nextMatchPlaceLabel,
   onGoSchedule,
+  nextMatch,
+  nextMatchWhenLabel,
+  nextAttend,
+  nextPending,
+  nextAbsent,
+  onOpenRoster,
   onGoTile,
   hasUnreadNotice,
 }: Props) {
@@ -859,6 +873,90 @@ export function TeamHomeTab({
                 </Pressable>
 
                 {/*
+                  다음 경기 — 레퍼런스에 맞춰 되살렸다.
+
+                  걷어냈던 근거는 「홈이 같은 경기를 더 자세히(참여 현황·CTA까지)
+                  보여준다 · 팀 화면의 주인공은 멤버다」였다. 그 사실은 지금도 맞다 —
+                  홈 카드가 더 자세하고, 이 카드는 날짜·구장·응답 세 수만 말한다.
+                  레퍼런스가 팀 화면에도 두었으니 되살리되 **얕게** 둔다:
+                  깊은 것은 홈이 맡고 여기는 「언제 어디」와 「몇 명인지」다.
+
+                  ⚠ 구장 사진 자리가 플레이스홀더다. 재 봤다 — matches에 사진 컬럼이
+                    없고, venues 테이블에도 사진 컬럼이 없으며(name·주소·좌표·편의시설),
+                    프로덕션 venues는 0행이고 경기의 venue_id도 전부 null이다.
+                    구장 이름이 matches.location 텍스트에만 있다.
+                    사진을 쓰려면 venues.photo_url + venues에 행이 쌓이는 경로 +
+                    경기 생성 때 venue_id를 채우는 경로 셋이 필요하다(서랍에 있다).
+                    그때까지 초록 그라데이션 위에 구장 아이콘을 둔다 — 빈 회색 사각은
+                    「이미지를 못 불러왔다」로 읽힌다.
+
+                  예정 경기가 없어도 카드를 숨기지 않는다. 숨기면 화면 구성이 팀마다
+                  달라지고, 「다음 경기가 없다」는 것 자체가 알아야 할 상태다.
+                */}
+                <View style={styles.card}>
+                  <SoftTint tone="green" radius={radius.card} />
+                  <View style={styles.sectionHead}>
+                    <Text style={styles.sectionTitle}>다음 경기</Text>
+                    {!!nextMatch && (
+                      <Pressable
+                        onPress={onOpenRoster}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="참석 현황 보기"
+                        style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
+                      >
+                        <Text style={styles.moreText}>참석 현황 ›</Text>
+                      </Pressable>
+                    )}
+                  </View>
+
+                  {nextMatch ? (
+                    <>
+                      <View style={styles.nextRow}>
+                        <View style={styles.nextThumb}>
+                          <LinearGradient
+                            colors={[colors.greenDeep, colors.cardRaised]}
+                            start={{ x: 1, y: 0 }}
+                            end={{ x: 0, y: 1 }}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <Ionicons name="location" size={20} color={colors.green} />
+                        </View>
+                        <View style={styles.nextBody}>
+                          <Text style={styles.nextWhen}>{nextMatchWhenLabel}</Text>
+                          <View style={styles.nextWhereRow}>
+                            <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+                            <Text style={styles.nextWhere} numberOfLines={1}>
+                              {nextMatch.location ?? '구장 미정'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* 세 수 — 점 색이 라벨을 대신하지 않는다. 색맹인 사람에게는 글자만 남는다 */}
+                      <View style={styles.nextCounts}>
+                        {(
+                          [
+                            ['참석', nextAttend, colors.green],
+                            ['미정', nextPending, colors.textMuted],
+                            ['불참', nextAbsent, colors.danger],
+                          ] as const
+                        ).map(([label, n, dot]) => (
+                          <View key={label} style={styles.nextCount}>
+                            <View style={[styles.nextDot, { backgroundColor: dot }]} />
+                            <Text style={styles.nextCountText}>
+                              {label} {n}명
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={styles.nextEmpty}>예정된 경기가 없어요</Text>
+                  )}
+                </View>
+
+                {/*
                   초대 카드 — 납작해졌다. QR이 카드에서 빠지고 시트로 갔다.
 
                   QR을 카드에 실물로 박아 뒀던 근거는 이랬다: 「대면 초대는 여기서 끝난다 —
@@ -1300,6 +1398,27 @@ const styles = StyleSheet.create({
   monthLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
   monthValue: { color: colors.green, ...font.title, ...font.num },
   monthSub: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
+  /* 좌 썸네일, 우 언제·어디. 썸네일은 카드 폭의 1/3쯤 */
+  nextRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  nextThumb: {
+    width: 92,
+    height: 64,
+    borderRadius: radius.button,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextBody: { flex: 1, gap: 4 },
+  nextWhen: { color: colors.textStrong, fontSize: 15, fontWeight: '800' },
+  nextWhereRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  nextWhere: { color: colors.textMuted, fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  /* 세 수 — 카드 아래 한 줄 */
+  nextCounts: { flexDirection: 'row', gap: 14 },
+  nextCount: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  nextDot: { width: 6, height: 6, borderRadius: radius.pill },
+  nextCountText: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
+  nextEmpty: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
   /*
     내 행 — 전체 폭 한 줄. 카드보다 한 단계 밝은 면이라 명단에서 떠 있다.
     soloList(2명 이하 전용)를 대신한다: 그건 「62px 아바타 하나가 폭에 혼자 놓이면

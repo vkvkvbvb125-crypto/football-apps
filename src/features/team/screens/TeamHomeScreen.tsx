@@ -339,6 +339,28 @@ export function TeamHomeScreen({ navigation, route }: any) {
     다음 경기 — 「지금 다루는 경기」 중 가장 가까운 것이다(matchWindow).
     홈 카드·경기운영과 같은 경계를 쓴다: 킥오프 3시간까지는 아직 다음 경기다.
   */
+  /*
+    다음 경기 카드의 재료.
+
+    응답 셋은 정원을 안 본다 — 이 카드가 말하는 것은 「몇 명이 뭐라고 했나」이지
+    「몇 명이 확정인가」가 아니다. 정원 대비 확정은 홈 카드가 맡고, 거기는
+    resolveCapacity를 쓴다. 여기서 같은 함수를 쓰면 참석 수가 정원에서 잘려
+    「참석 15명」이 「참석 12명」으로 보이는데, 세 수를 나란히 놓은 줄에서는
+    그 잘림이 「불참·미정과 합이 안 맞는다」로 보인다.
+
+    미정은 「미정으로 찍은 사람 + 아직 안 찍은 사람」이다. 멤버 수에서 나머지를 뺀다.
+  */
+  const nextAttend = nextMatch?.votes.filter((v) => v.status === 'attend').length ?? 0;
+  const nextAbsent = nextMatch?.votes.filter((v) => v.status === 'absent').length ?? 0;
+  const nextPending = nextMatch ? Math.max(0, members.length - nextAttend - nextAbsent) : 0;
+  const nextMatchWhenLabel = nextMatch
+    ? (() => {
+        const d = new Date(nextMatch.match_date);
+        return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[(d.getDay() + 6) % 7]}) ${d
+          .toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+      })()
+    : '';
+
   const nextMatchDateLabel = nextMatch
     ? (() => {
         const d = new Date(nextMatch.match_date);
@@ -436,6 +458,14 @@ export function TeamHomeScreen({ navigation, route }: any) {
             nextMatchDateLabel={nextMatchDateLabel}
             nextMatchPlaceLabel={nextMatchPlaceLabel}
             onGoSchedule={() => navigation.navigate('Attendance')}
+            nextMatch={nextMatch}
+            nextMatchWhenLabel={nextMatchWhenLabel}
+            nextAttend={nextAttend}
+            nextPending={nextPending}
+            nextAbsent={nextAbsent}
+            /* 참석 현황은 일정 화면이 명단 시트로 연다 — 팀 화면에 같은 시트를 또
+               두면 두 벌이 되고, 거기서 투표까지 되면 홈·일정과 경로가 셋이 된다 */
+            onOpenRoster={() => navigation.navigate('Attendance')}
             inviteCodeDisplay={inviteCodeDisplay}
             copied={copied}
             onPickEmblem={handlePickEmblem}

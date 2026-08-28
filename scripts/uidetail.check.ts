@@ -315,7 +315,13 @@ const num = (src: string, re: RegExp, what: string) => {
   const stops = onlyMatch(tab, /locations=\{\[0, 0\.3, 0\.72\]\}/, '빛줄기 스톱');
   assert.ok(stops.length > 0, '빛줄기 스톱이 바뀌었다 — 코어(0~0.3)와 꼬리(~0.72)가 띠의 폭과 방향이다');
 
-  const dirs = tab.match(/start=\{\{ x: 1, y: 0 \}\}\s*\n\s*end=\{\{ x: 0, y: 1 \}\}/g) ?? [];
+  /* 히어로 구간 안에서만 센다 — 같은 방향의 그라디언트가 카드 밖에도 생겼다
+     (다음 경기 카드의 썸네일 플레이스홀더). 파일 전체를 세면 그것까지 잡힌다 */
+  const heroBg = tab.slice(
+    onlyIndexOf(tab, '<View style={styles.banner}>', '히어로 여는 태그'),
+    onlyIndexOf(tab, '<View style={styles.bannerRow}>', '히어로 본문 행')
+  );
+  const dirs = heroBg.match(/start=\{\{ x: 1, y: 0 \}\}\s*\n\s*end=\{\{ x: 0, y: 1 \}\}/g) ?? [];
   assert.equal(dirs.length, 2, `히어로 배경 두 겹의 방향이 갈렸다 (우상→좌하가 ${dirs.length}겹)`);
 }
 

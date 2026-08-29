@@ -1290,21 +1290,7 @@ const styles = StyleSheet.create({
     행으로 낮춘 근거는 주 동작이 하나라는 것이다. 안에 있던 세 값(포지션·실력·등번호)은
     전부 여기서 못 고치고 여는 화면에서 고친다 — 카드 안에서 칸을 차지할 이유가 없었다.
   */
-  myInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: radius.control,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardAlt,
-  },
-  myInfoRowTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
   /* 값이 남는 폭을 다 쓰고 셰브론 앞에서 끊는다 */
-  myInfoRowValue: { color: colors.textDim, fontSize: 12, fontWeight: '600', flex: 1, textAlign: 'right' },
   rosterStrip: { paddingHorizontal: 4, paddingTop: 4 },
   /*
     멤버 줄 — 가로 스크롤. 칸마다 아바타 · 이름 · 포지션.
@@ -1403,32 +1389,7 @@ const styles = StyleSheet.create({
     soloList(2명 이하 전용)를 대신한다: 그건 「62px 아바타 하나가 폭에 혼자 놓이면
     오른쪽이 빈다」를 풀려던 것이었고, 이 행이 항상 폭을 다 쓰므로 그 원인이 사라졌다.
   */
-  selfRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: radius.card,
-    borderCurve: 'continuous',
-    backgroundColor: colors.cardRaised,
-  },
   /* 아바타 줄(36)보다 확실히 크다 — 대략 1.5배. 초록 링으로 「나」를 표시한다 */
-  selfAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: colors.inputBg,
-    borderWidth: 2,
-    borderColor: colors.green,
-  },
-  selfPhoto: { width: '100%', height: '100%' },
-  selfInitial: { color: colors.textStrong, fontSize: 16, fontWeight: '800' },
-  selfNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  selfName: { color: colors.textStrong, fontSize: 15, fontWeight: '800', flexShrink: 1 },
-  selfMeta: { color: colors.textDim, fontSize: 12, fontWeight: '600' },
 
   /*
     아바타 줄 — 서로 파고든다.
@@ -1446,19 +1407,6 @@ const styles = StyleSheet.create({
     반대로 하려면(앞이 위) 각 칸에 내림차순 zIndex를 줘야 하는데, 그렇게 하면 왼쪽
     끝 사람만 온전히 보이고 오른쪽으로 갈수록 잘린다. 지금 방향이 명단 순서와 맞는다.
   */
-  avatarRow: { flexDirection: 'row', alignItems: 'center' },
-  avatarChip: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    /* 배경색은 avatarTint가 사람마다 인라인으로 준다 — 여기 값은 사진이 있을 때의 바탕 */
-    backgroundColor: colors.inputBg,
-    borderWidth: 2,
-    borderColor: colors.bgRoot,
-  },
   /*
     -9는 지름 36의 25%다.
 
@@ -1485,32 +1433,11 @@ const styles = StyleSheet.create({
     아바타 내용을 또 바꾸는 사람은 이 값도 같이 봐야 한다 —
     memberstrip.check이 아이콘 크기와 겹침을 한 단언으로 묶어 두고 있다.
   */
-  avatarChipOverlap: { marginLeft: -9 },
   avatarPhoto: { width: '100%', height: '100%' },
-  avatarMore: { backgroundColor: colors.greenTint },
-  avatarMoreText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 
-  myRecord: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    gap: 12,
-    borderRadius: radius.card,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  myRecordTitle: { color: colors.text, ...font.title },
   /* 좌우 두 칸 — 레퍼런스 구성이다. 성적(빈 칸)과 미납 */
-  recordCols: { flexDirection: 'row', gap: 12 },
-  recordCol: { flex: 1, gap: 4 },
-  statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  recordLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
   /* 빈 칸의 글자는 값이 아니라 안내다 — 숫자 자리의 크기·색을 쓰지 않는다 */
-  recordEmpty: { color: colors.textFaint, fontSize: 12, fontWeight: '600', lineHeight: 17 },
   /* 값 아래 한 줄. 레퍼런스의 「최근 30일 기준」 자리인데 문장은 사실로 적는다 */
-  recordCaption: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
   /* 기준 안내 — 스탯 바 바로 아래. 값보다 물러나야 하므로 가장 옅은 글자색이다 */
   statNote: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10 },
   statNoteText: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },

@@ -713,6 +713,73 @@ export function TeamHomeTab({
                   점수↔배정 교집합이 0이라 채울 수 없다는 사실은 그대로다(서랍 ⑥).
                 */}
                 {/*
+                  이번 달 활동 — 경기 · 참여 · 다음 경기.
+
+                  세 칸이 서로 다른 것을 센다. 앞의 둘은 팀과 나를 나란히 놓는 자리다 —
+                  「팀이 4번 모였고 나는 3번 갔다」가 한 줄에서 읽혀야 한다.
+
+                  보조줄이 각 값의 기준이다. 값만 있으면 「4회가 많은 건가」를 알 수 없다:
+                    경기   지난 달과 비교한다 — 팀이 더 자주 모이는지 덜 모이는지
+                    참여   내 참여율 — 횟수는 팀 경기 수에 딸리므로 비율이 있어야 검산된다
+                    다음   시간·구장 — 날짜만 있으면 준비할 수가 없다
+
+                  ⚠ 창이 셋이 됐다: 이번 달(경기·참여) · 지난 달(보조줄) · 최근 3개월
+                    (멤버 줄의 「참여율」). 셋 다 근거가 다르다 — 앞 둘은 달을 비교하려는
+                    것이고, 최근 3개월만 개인 표본이 작아서다.
+                    「참여」의 참여율은 이번 달 기준이라 멤버 줄의 최근 3개월과 다르다.
+                    같은 화면에 두 참여율이 있으니 라벨이 그 차이를 져야 한다 —
+                    여기는 카드 제목이 「이번 달 활동」이라 그 아래 값은 전부 이번 달이다.
+                */}
+                <Pressable
+                  onPress={onGoSchedule}
+                  accessibilityRole="button"
+                  accessibilityLabel="이번 달 활동 자세히 보기"
+                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                >
+                  <SoftTint tone="green" radius={radius.card} />
+                  <View style={styles.sectionHead}>
+                    <View style={styles.cardHeadLeft}>
+                      <Ionicons name="calendar-outline" size={15} color={colors.green} />
+                      <Text style={styles.sectionTitle}>이번 달 활동</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                  </View>
+
+                  <View style={styles.monthCols}>
+                    <View style={styles.monthCol}>
+                      <View style={styles.cardHeadLeft}>
+                        <Ionicons name="football-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.monthLabel}>경기</Text>
+                      </View>
+                      <Text style={styles.monthValue}>{thisMonthRate.matchCount}회</Text>
+                      <Text style={styles.monthSub}>지난 달 {lastMonthRate.matchCount}회</Text>
+                    </View>
+
+                    <View style={styles.monthCol}>
+                      <View style={styles.cardHeadLeft}>
+                        <Ionicons name="person-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.monthLabel}>참여</Text>
+                      </View>
+                      <Text style={styles.monthValue}>{myMonthCount}회</Text>
+                      <Text style={styles.monthSub}>참여율 {formatRate(thisMonthRate)}</Text>
+                    </View>
+
+                    <View style={styles.monthCol}>
+                      <View style={styles.cardHeadLeft}>
+                        <Ionicons name="calendar-clear-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.monthLabel}>다음 경기</Text>
+                      </View>
+                      {/* 없으면 「-」다. 「없음」이라고 쓰면 값의 자리에 문장이 들어와
+                          옆 두 칸의 숫자와 높이가 안 맞는다 */}
+                      <Text style={styles.monthValue}>{nextMatchDateLabel ?? '-'}</Text>
+                      <Text style={styles.monthSub} numberOfLines={1}>
+                        {nextMatchPlaceLabel ?? '예정 없음'}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+
+                {/*
                   다음 경기 — 레퍼런스에 맞춰 되살렸다.
 
                   걷어냈던 근거는 「홈이 같은 경기를 더 자세히(참여 현황·CTA까지)

@@ -457,5 +457,79 @@ upsert c absent >/dev/null
 echo "롤백       : 되돌아감 (재투표해도 안 오름 = 원래 동작)"
 $PSQL < supabase/migrations/20260828_votes_updated_at_trigger.sql
 
+# ── matches 수정 정책 — with check가 없어도 새 행이 검사된다 (20260829) ──
+#
+# 서랍에 「matches_update_admin에 with check가 없다 — completed → open이 API로 열려
+# 있다」로 적어 뒀던 항목이다. 재보니 **구멍이 아니다.** 두 가지를 여기서 동작으로 남긴다.
+#
+# ① Postgres는 UPDATE 정책에 with check가 없으면 **using을 with check 자리에도 쓴다.**
+#    그래서 「내가 총무인 팀의 경기를 남의 팀으로 옮기기」가 이미 막혀 있다.
+#    using만 있는 정책이 전부 뚫려 있다고 읽으면 안 된다 — 문서에 적힌 기본값이다.
+# ② 방향(completed → open)은 정책으로는 어차피 못 막는다. with check는 새 행만,
+#    using은 옛 행만 본다. 방향을 막으려면 트리거여야 한다(old·new를 같이 본다).
+#    그래서 「with check를 더하면 방향이 막힌다」는 처음부터 성립하지 않았다.
+#
+# 항목을 지우고 이 검사대를 남긴다. 다음에 같은 진단이 또 나올 자리라, 「재봤고
+# 이랬다」가 동작으로 있어야 한다.
+
+$PSQL <<'SQL' >/dev/null
+insert into teams (id,name,invite_code,created_by)
+  values ('aaaaaaaa-0000-0000-0000-000000000002','남의팀','zzzz9999','22222222-2222-2222-2222-222222222222')
+  on conflict (id) do nothing;
+insert into team_members (id,team_id,user_id,role)
+  values ('bbbbbbbb-0000-0000-0000-000000000009','aaaaaaaa-0000-0000-0000-000000000002','22222222-2222-2222-2222-222222222222','admin')
+  on conflict (id) do nothing;
+SQL
+
+M=cccccccc-0000-0000-0000-00000000000c
+as_admin() { # as_admin <SET 절>
+  docker exec -i $C psql -U postgres -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL && echo 0 || echo 1
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+update matches set $1 where id='$M';
+SQL
+}
+col() { $PSQL -tAc "select $1 from matches where id='$M'" | tail -1 | tr -d ' '; }
+
+# ① 새 행이 검사된다 — with check를 안 썼는데도 팀 이동이 막힌다
+[ "$(as_admin "team_id='aaaaaaaa-0000-0000-0000-000000000002'")" = "1" ] \
+  || { echo "!! with check 없이 경기를 남의 팀으로 옮길 수 있다 — 기본값이 바뀌었나"; exit 1; }
+[ "$(col team_id)" = "aaaaaaaa-0000-0000-0000-000000000001" ] || { echo "!! 거절됐다는데 팀이 바뀌었다"; exit 1; }
+echo "새 행 검사 : using만 있어도 팀 이동이 막힌다 (Postgres가 using을 with check로 쓴다)"
+
+# ② 정상 경로는 그대로 통과한다. 앱이 실제로 보내는 세 갈래다
+[ "$(as_admin "match_date=now()+interval '3 days', location='새 구장', vote_deadline=now()+interval '2 days', quarter_minutes=12")" = "0" ] \
+  || { echo "!! 경기 수정(날짜·장소·마감·쿼터)이 막힌다"; exit 1; }
+[ "$(as_admin "team_count=3")" = "0" ] || { echo "!! 팀 수 변경이 막힌다"; exit 1; }
+[ "$(as_admin "status='completed'")" = "0" ] || { echo "!! 경기 종료가 막힌다"; exit 1; }
+[ "$(col status)" = "completed" ] || { echo "!! 종료했는데 상태가 안 바뀌었다"; exit 1; }
+echo "정상 경로  : 수정 · 팀 수 · 종료 전부 통과"
+
+# ③ 방향은 안 막힌다 — 정책으로는 못 막는 것이라 안 막았다
+[ "$(as_admin "status='open'")" = "0" ] || { echo "!! completed → open이 막혔다 — 정책으로는 못 막아야 한다"; exit 1; }
+[ "$(col status)" = "open" ] || { echo "!! 되돌렸는데 상태가 안 바뀌었다"; exit 1; }
+echo "방향       : completed → open 통과 (정책은 old·new를 같이 못 본다 — 트리거의 일)"
+
+# ④ 기존 조건 — 이 팀 사람이 아니면 못 건드린다
+#
+# 2222로 시험하면 안 된다. 앞의 D-3(위임)이 그 사람을 팀 1의 총무로 만들어 둔다 —
+# 처음에 그걸로 짰다가 「남의 팀 총무가 경기를 고칠 수 있다」로 실패했고, 정책이
+# 아니라 **검사대의 앞선 단계가 남긴 상태** 때문이었다.
+#
+# ⚠ 그리고 종료 코드로 판정하면 안 된다. **RLS가 막은 UPDATE는 오류가 아니라 0행이라
+#   psql이 성공으로 끝난다.** 여기서 세 번째로 걸렸다(③-a의 마감 정책, ③-b의 트리거,
+#   그리고 이것). 「거절됐다」와 「바꿀 행이 없었다」의 출력이 같으므로 **값을 본다.**
+$PSQL <<'SQL' >/dev/null
+insert into auth.users (id) values ('33333333-3333-3333-3333-333333333333') on conflict (id) do nothing;
+SQL
+before_loc="$(col location)"
+docker exec -i $C psql -U postgres -q >/dev/null 2>&1 <<SQL
+set role authenticated;
+set request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+update matches set location='남이 고침' where id='$M';
+SQL
+[ "$(col location)" = "$before_loc" ] || { echo "!! 팀에 없는 사람이 경기를 고쳤다"; exit 1; }
+echo "기존 조건  : 팀 밖 사람은 여전히 거절 (값 그대로)"
+
 echo
-echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok"
+echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok / matches-update ok"

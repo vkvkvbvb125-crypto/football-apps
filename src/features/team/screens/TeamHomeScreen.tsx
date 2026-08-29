@@ -15,7 +15,6 @@ import { useAuthStore } from '../../auth/stores/authStore';
 import { useTeamStore } from '../stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore } from '../../settlement/stores/settlementStore';
-import { myUnpaidAmount } from '../../settlement/utils/unpaid';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 import { WEEKDAYS } from '../weekdays';
@@ -512,7 +511,6 @@ export function TeamHomeScreen({ navigation, route }: any) {
             selfMemberId={activeTeam.membershipId}
             isAdmin={isAdmin}
             profileBits={profileBits}
-            myUnpaid={myUnpaidAmount(settlementCurrent, settlementPast, activeTeam.membershipId)}
             memberRateMatches={memberRateMatches}
             onOpenMemberList={() => setMemberListVisible(true)}
             onGoMembers={() => setTab('members')}

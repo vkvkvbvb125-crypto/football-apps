@@ -119,8 +119,6 @@ interface Props {
   isAdmin: boolean;
   /** 팀 프로필에서 채워진 항목. 비어 있으면 총무에게 채우라고 권한다 */
   profileBits: (string | null)[];
-  /** 내가 아직 안 낸 돈 — unpaid.ts가 세 곳과 같은 정의로 낸 값이다 */
-  myUnpaid: number;
   memberRateMatches: MemberRateMatch[];
   onOpenMemberList: () => void;
   onGoMembers: () => void;
@@ -180,7 +178,6 @@ export function TeamHomeTab({
   selfMemberId,
   isAdmin,
   profileBits,
-  myUnpaid,
   memberRateMatches,
   onOpenMemberList,
   onGoMembers,
@@ -699,186 +696,22 @@ export function TeamHomeTab({
                 </ScrollView>
 
                 {/*
-                  내 기록 — 총무도 선수다. 역할과 무관하게 항상 보인다.
+                  「팀 기록」 카드와 「내 정보」 행을 걷어냈다 — 레퍼런스에 없다.
 
-                  카드로 감쌌다. 멤버 목록과 같은 들여쓰기라 김범준 항목의 하위 항목처럼
-                  읽혔다 — 경계가 있어야 「목록」과 「내 것」이 끊긴다.
+                  ⚠ 미납 금액이 팀 화면에서 완전히 빠진다. 그 값을 여기 되살렸던 근거는
+                    「점은 알림(볼 것이 있다), 칸은 확인(얼마인지)」이었다. 알림 쪽은
+                    그대로다 — 하단 탭 정산 뱃지의 빨간 점은 안 건드렸다. 액수를 확인하는
+                    자리가 정산 화면 하나로 줄어든다.
 
-                  참석률을 횟수와 나란히 적는다. 멤버 행은 「3개월 67%」, 여기는 「4회」였다.
-                  같은 값인데 표현이 달라 사용자가 검산할 수 없었다. 기준을 맞춘다.
+                  「내 정보」의 값(포지션·실력·등번호)은 사라지지 않았다. 포지션은 위
+                  멤버 줄의 내 칸에 있고, 셋 다 고치는 곳은 멤버 목록의 내 행이다 —
+                  이 행이 하던 일은 「그 화면으로 보내기」였고 그 문은 「전체보기 ›」와
+                  내 칸이 이미 갖고 있다.
 
-                  득점 칸은 없다. match_scores는 팀 단위라 개인 득점 데이터가 없고,
-                  빈 칸을 만들어 두면 채울 때까지 계속 미완성으로 보인다.
+                  성적 빈 칸도 같이 사라진다. 「빈 칸을 만들지 않는다」를 접고 레퍼런스에
+                  맞춰 만들었던 것인데, 레퍼런스가 그 카드를 통째로 뺐으니 근거가 없어졌다.
+                  점수↔배정 교집합이 0이라 채울 수 없다는 사실은 그대로다(서랍 ⑥).
                 */}
-                {!!me && (
-                  <View style={styles.myRecord}>
-                    <SoftTint tone="green" radius={radius.card} />
-                    {/*
-                      「내 기록」이었다. 레퍼런스가 「팀 기록」이고 칸 구성도 다르다 —
-                      좌: 최근 경기 성적, 우: 미납 금액. 참석은 이 카드에서 빠졌다.
-                      레퍼런스가 그 값을 위 멤버 행(「참여율 67%」)으로 옮겼기 때문이다.
-                    */}
-                    <Text style={styles.myRecordTitle}>팀 기록</Text>
-                    <View style={styles.recordCols}>
-                      {/*
-                        성적 — 빈 칸이다. 빈 칸을 만들지 않는다는 기존 판단을 여기서만
-                        접는다: 레퍼런스에 이 칸이 있고 카드 모양이 레퍼런스와 같아야 한다.
-
-                        채울 수 없는 이유는 데이터다. 승패를 내려면 「내가 어느 조였나」
-                        (team_assignments)와 「그 조가 몇 점이었나」(match_scores)가 한
-                        경기에서 만나야 하는데 프로덕션에서 그 교집합이 0이었다.
-                        완료 경기도 0이다(6/6이 open). 어떤 정의를 골라도 한 경기도
-                        계산되지 않는다.
-
-                        그래서 「없음」이 아니라 「무엇을 하면 쌓이는지」를 적는다.
-                        빈 칸이 할 수 있는 일은 그것뿐이다.
-                      */}
-                      <View style={styles.recordCol}>
-                        <View style={styles.statLabelRow}>
-                          <Ionicons name="trophy-outline" size={13} color={colors.textMuted} />
-                          <Text style={styles.recordLabel}>최근 경기 성적</Text>
-                        </View>
-                        <Text style={styles.recordEmpty}>경기 결과를 기록하면{'\n'}성적이 쌓여요</Text>
-                      </View>
-
-                      {/*
-                        미납이 돌아왔다.
-
-                        「돈 이야기는 정산 화면의 일이고 여기 두면 팀 홈이 독촉장이 된다」며
-                        하단 탭의 빨간 점으로 옮겼던 값이다. 점은 그대로 둔다 — 둘은 다른
-                        일을 한다. 점은 알림이라 어느 화면에 있든 「볼 것이 있다」만 말하고,
-                        이 칸은 확인이라 얼마인지를 말한다. 액수를 탭 뱃지에 적으면
-                        「무슨 숫자지」가 되고 자릿수에 따라 탭 폭이 흔들린다.
-
-                        ⚠ 레퍼런스는 이 자리에 「최근 30일 기준」을 적는다. 그대로 옮기지
-                          않았다 — myUnpaidAmount는 날짜로 안 자른다(unpaid.ts: 「지난
-                          정산에 미납이 남아 있어도 그건 여전히 내가 낼 돈이다」). 30일을
-                          적으면 31일 전 미납이 그 숫자에 들어 있으므로 화면이 자기 값을
-                          두고 거짓말을 한다. 창을 실제로 30일로 자르는 쪽도 안 골랐다:
-                          같은 함수를 하단 탭 뱃지와 팀 나가기 경고가 함께 보고 있어서
-                          한 화면 때문에 자르면 세 자리의 값이 갈린다.
-                          자리는 레퍼런스대로 두고 문장만 사실로 적는다.
-
-                        tone="danger" — 크면 나쁜 숫자에 초록이 붙으면 색이 뜻을 뒤집는다.
-                        0원이면 accent를 끈다. 낼 돈이 없는 것은 강조할 일이 아니다.
-                      */}
-                      <View style={styles.recordCol}>
-                        <StatTile
-                          label="미납 금액"
-                          value={`${myUnpaid.toLocaleString()}원`}
-                          icon="card-outline"
-                          accent={myUnpaid > 0}
-                          tone="danger"
-                        />
-                        <Text style={styles.recordCaption}>지난 정산까지 전부</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                {/*
-                  총무에게도 보인다. 예전엔 !isAdmin 조건이 붙어 있었는데, 바로 아래 「내 기록」이
-                  「총무도 선수다. 역할과 무관하게 항상 보인다」고 적어 둔 것과 같은 파일 안에서
-                  어긋났다. 총무도 자기 포지션·등번호가 필요하다.
-                */}
-                {!!me && (
-                  <Pressable
-                    onPress={onOpenMemberList}
-                    accessibilityRole="button"
-                    accessibilityLabel="내 정보 수정"
-                    style={({ pressed }) => [styles.myInfoRow, pressed && styles.pressed]}
-                  >
-                    <Text style={styles.myInfoRowTitle}>내 정보</Text>
-                    {/*
-                      값은 요약만 — 「골레이로 · 하 · 7번」. 고치는 건 이 행이 여는
-                      화면이 한다. 카드였을 때는 라벨·칩·유니폼이 세 칸으로 서 있었는데,
-                      셋 다 여기서 못 고치는 값이라 칸만 차지했다.
-
-                      빈 값은 안 적는다. 「미지정」을 채우면 줄이 정보가 아니라 빈칸
-                      목록이 되고, 그건 팀 소개 줄에서 이미 안 하기로 한 것이다.
-                      전부 비면 아래 「설정하기」가 대신 선다.
-                    */}
-                    <Text style={styles.myInfoRowValue} numberOfLines={1}>
-                      {[
-                        toPosition(me.position) ? positionLabel(toPosition(me.position)) : null,
-                        me.skillTag,
-                        me.jerseyNumber ? `${me.jerseyNumber}번` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || '설정하기'}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                  </Pressable>
-                )}
-
-
-                {/*
-                  이번 달 활동 — 경기 · 참여 · 다음 경기.
-
-                  세 칸이 서로 다른 것을 센다. 앞의 둘은 팀과 나를 나란히 놓는 자리다 —
-                  「팀이 4번 모였고 나는 3번 갔다」가 한 줄에서 읽혀야 한다.
-
-                  보조줄이 각 값의 기준이다. 값만 있으면 「4회가 많은 건가」를 알 수 없다:
-                    경기   지난 달과 비교한다 — 팀이 더 자주 모이는지 덜 모이는지
-                    참여   내 참여율 — 횟수는 팀 경기 수에 딸리므로 비율이 있어야 검산된다
-                    다음   시간·구장 — 날짜만 있으면 준비할 수가 없다
-
-                  ⚠ 창이 셋이 됐다: 이번 달(경기·참여) · 지난 달(보조줄) · 최근 3개월
-                    (멤버 줄의 「참여율」). 셋 다 근거가 다르다 — 앞 둘은 달을 비교하려는
-                    것이고, 최근 3개월만 개인 표본이 작아서다.
-                    「참여」의 참여율은 이번 달 기준이라 멤버 줄의 최근 3개월과 다르다.
-                    같은 화면에 두 참여율이 있으니 라벨이 그 차이를 져야 한다 —
-                    여기는 카드 제목이 「이번 달 활동」이라 그 아래 값은 전부 이번 달이다.
-                */}
-                <Pressable
-                  onPress={onGoSchedule}
-                  accessibilityRole="button"
-                  accessibilityLabel="이번 달 활동 자세히 보기"
-                  style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-                >
-                  <SoftTint tone="green" radius={radius.card} />
-                  <View style={styles.sectionHead}>
-                    <View style={styles.cardHeadLeft}>
-                      <Ionicons name="calendar-outline" size={15} color={colors.green} />
-                      <Text style={styles.sectionTitle}>이번 달 활동</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                  </View>
-
-                  <View style={styles.monthCols}>
-                    <View style={styles.monthCol}>
-                      <View style={styles.cardHeadLeft}>
-                        <Ionicons name="football-outline" size={13} color={colors.textMuted} />
-                        <Text style={styles.monthLabel}>경기</Text>
-                      </View>
-                      <Text style={styles.monthValue}>{thisMonthRate.matchCount}회</Text>
-                      <Text style={styles.monthSub}>지난 달 {lastMonthRate.matchCount}회</Text>
-                    </View>
-
-                    <View style={styles.monthCol}>
-                      <View style={styles.cardHeadLeft}>
-                        <Ionicons name="person-outline" size={13} color={colors.textMuted} />
-                        <Text style={styles.monthLabel}>참여</Text>
-                      </View>
-                      <Text style={styles.monthValue}>{myMonthCount}회</Text>
-                      <Text style={styles.monthSub}>참여율 {formatRate(thisMonthRate)}</Text>
-                    </View>
-
-                    <View style={styles.monthCol}>
-                      <View style={styles.cardHeadLeft}>
-                        <Ionicons name="calendar-clear-outline" size={13} color={colors.textMuted} />
-                        <Text style={styles.monthLabel}>다음 경기</Text>
-                      </View>
-                      {/* 없으면 「-」다. 「없음」이라고 쓰면 값의 자리에 문장이 들어와
-                          옆 두 칸의 숫자와 높이가 안 맞는다 */}
-                      <Text style={styles.monthValue}>{nextMatchDateLabel ?? '-'}</Text>
-                      <Text style={styles.monthSub} numberOfLines={1}>
-                        {nextMatchPlaceLabel ?? '예정 없음'}
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-
                 {/*
                   다음 경기 — 레퍼런스에 맞춰 되살렸다.
 

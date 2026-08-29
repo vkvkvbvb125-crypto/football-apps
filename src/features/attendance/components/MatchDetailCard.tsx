@@ -27,6 +27,8 @@ interface Props {
   matchType?: string | null;
   placeLabel: string; // "풋살장 A구장" | "장소 미정"
   venueKind: 'indoor' | 'outdoor' | 'pending';
+  /** 구장 이름을 눌러 지도를 연다. 좌표가 없으면 부모가 안 넘긴다 */
+  onOpenPlace?: () => void;
   daysUntil: number;
   timeLabel: string;
   weather: MatchWeather | null;
@@ -147,15 +149,40 @@ export function MatchDetailCard(p: Props) {
               </View>
             )}
           </View>
-          <View style={styles.placeRow}>
-            <Ionicons name="location-outline" size={12} color={colors.textMuted} />
-            <Text style={styles.place} numberOfLines={1}>
-              {p.placeLabel}
-            </Text>
-            <View style={[styles.venueTag, { backgroundColor: tag.bg }]}>
-              <Text style={[styles.venueTagText, { color: tag.fg }]}>{tag.label}</Text>
+          {/*
+            구장 이름을 누르면 지도가 뜬다 — 58ff35f에서 빠졌던 진입로다.
+
+            옛 일정 목록에는 `{!!match.location && <Pressable onPress={() => setDetailMatch(match)}>`
+            가 있었는데, 이 카드로 재설계하면서 안 옮겨졌다. 그 커밋 diff에
+            「PlaceDetailModal … 은 기존 그대로 사용합니다」가 삭제로 찍혀 있다 —
+            빼기로 한 게 아니라 이관 누락이다. 컴포넌트는 그대로 살아 있었다.
+
+            onOpenPlace가 없거나 장소가 없으면 안 누르게 둔다. 좌표가 없는 경기
+            (장소 미정)에서도 모달은 열리지만 이름만 나오고 지도는 안 그려지는데,
+            그건 「눌렀더니 아무것도 없다」로 읽힌다. 카드가 그 판단을 하지 않고
+            부모가 넘길지 말지로 정한다 — 좌표가 있는지는 부모가 안다.
+          */}
+          {p.onOpenPlace ? (
+            <Pressable onPress={p.onOpenPlace} hitSlop={4} style={styles.placeRow}>
+              <Ionicons name="location-outline" size={12} color={colors.green} />
+              <Text style={[styles.place, styles.placeLink]} numberOfLines={1}>
+                {p.placeLabel}
+              </Text>
+              <View style={[styles.venueTag, { backgroundColor: tag.bg }]}>
+                <Text style={[styles.venueTagText, { color: tag.fg }]}>{tag.label}</Text>
+              </View>
+            </Pressable>
+          ) : (
+            <View style={styles.placeRow}>
+              <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+              <Text style={styles.place} numberOfLines={1}>
+                {p.placeLabel}
+              </Text>
+              <View style={[styles.venueTag, { backgroundColor: tag.bg }]}>
+                <Text style={[styles.venueTagText, { color: tag.fg }]}>{tag.label}</Text>
+              </View>
             </View>
-          </View>
+          )}
         </View>
         {p.isAdmin && (
           // 팝오버는 전체 화면 Modal 안에 절대 위치로 뜬다 — 그래서 화면 좌표(measureInWindow)가 필요하다.
@@ -287,6 +314,8 @@ const styles = StyleSheet.create({
   place: { color: colors.textMuted, fontSize: 12, fontWeight: '600', flexShrink: 1 },
   venueTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
   venueTagText: { fontSize: 10, fontWeight: '800' },
+  /* 누를 수 있는 구장 이름 — 초록으로만 표시한다. 밑줄은 이 앱의 어휘가 아니다 */
+  placeLink: { color: colors.green },
 
   pending: {
     flexDirection: 'row',

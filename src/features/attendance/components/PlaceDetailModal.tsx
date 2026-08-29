@@ -43,6 +43,25 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
     Linking.openURL(url);
   };
 
+  /*
+    키가 없으면 지도를 안 그린다.
+
+    EXPO_PUBLIC_KAKAO_MAPS_JS_KEY는 .env.example에만 있고 .env에는 없다(2026-08-29
+    확인). 없는 채로 그리면 SDK 스크립트가 appkey=undefined로 로드돼 조용히 실패하고
+    **빈 상자**가 남는다 — 「지도를 못 불러왔다」와 「원래 이런 화면이다」가 구별되지 않는다.
+
+    그럴 때는 카카오맵으로 바로 여는 버튼만 둔다. 길찾기 링크는 키가 필요 없어서
+    (map.kakao.com/link/to) 그건 언제나 동작한다.
+  */
+  if (!KAKAO_MAPS_JS_KEY) {
+    return (
+      <Pressable style={styles.webFallback} onPress={openDirections}>
+        <Ionicons name="map-outline" size={20} color={colors.green} />
+        <Text style={styles.webFallbackText}>여기를 눌러 카카오맵으로 열기</Text>
+      </Pressable>
+    );
+  }
+
   // react-native-webview는 웹 플랫폼을 지원하지 않아서(자체적으로 에러 문구만 렌더링),
   // 웹에서는 지도 미리보기 대신 카카오맵으로 바로 여는 버튼만 보여준다. 앱(iOS/Android)에서는 지도 미리보기가 뜬다.
   if (Platform.OS === 'web') {

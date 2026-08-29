@@ -57,6 +57,7 @@ import { matchDateTimeLabel, matchLabel } from '../utils/matchLabel';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
 import { fetchPartnerVenues, venueMeta } from '../services/venueService';
 import type { PlaceResult } from '../services/placeService';
+import { PlaceDetailModal } from '../components/PlaceDetailModal';
 import type { MatchWithVotes } from '../services/attendanceService';
 
 interface SelectedPlace {
@@ -157,6 +158,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const [rosterMatchId, setRosterMatchId] = useState<string | null>(null);
   const [matchWeatherById, setMatchWeatherById] = useState<Record<string, ServiceWeather>>({});
   const [weatherDecisions, setWeatherDecisions] = useState<Record<string, 'keep' | 'indoor'>>({});
+  /* 구장 이름을 눌렀을 때 여는 지도 모달 — 58ff35f에서 빠졌던 것을 되살렸다 */
+  const [detailMatch, setDetailMatch] = useState<MatchWithVotes | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [partnerVenues, setPartnerVenues] = useState<VenueOption[]>([]);
 
@@ -483,6 +486,17 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                       ddayLabel={ddayLabel(selectedMatch.match_date)}
                       matchType={selectedMatch.match_type}
                       placeLabel={selectedMatch.location ?? '장소 미정'}
+                      /*
+                        좌표가 있을 때만 넘긴다 — 없으면 카드가 안 누르게 그린다.
+                        좌표 없이 열면 이름만 있는 모달이 뜨고 「눌렀더니 아무것도 없다」가 된다.
+                        모달은 이 화면이 든다(옛 구조 그대로) — 카드는 그리는 것만 하고,
+                        전체 화면 Modal은 명단 시트·팝오버와 같이 화면 쪽에 모여 있다.
+                      */
+                      onOpenPlace={
+                        selectedMatch.location && selectedMatch.latitude != null && selectedMatch.longitude != null
+                          ? () => setDetailMatch(selectedMatch)
+                          : undefined
+                      }
                       venueKind={venueKindOf(selectedMatch)}
                       daysUntil={daysUntilOf(selectedMatch.match_date)}
                       timeLabel={d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })}
@@ -732,6 +746,21 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
           </View>
         </Pressable>
       </Modal>
+
+      {detailMatch && (
+        <PlaceDetailModal
+          visible
+          onClose={() => setDetailMatch(null)}
+          name={detailMatch.location ?? ''}
+          category={detailMatch.place_category}
+          /* 주소는 새 경기에 안 저장한다(카카오 응답이고 쓰는 데가 없었다).
+             기존 경기에는 남아 있어 모달이 있으면 그리고 없으면 그 줄을 생략한다 —
+             모달이 이미 `{!!address && …}`로 그렇게 짜여 있다 */
+          address={detailMatch.address}
+          latitude={detailMatch.latitude}
+          longitude={detailMatch.longitude}
+        />
+      )}
 
       <RosterSheet
         /*

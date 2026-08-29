@@ -16,6 +16,10 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { colors, font, radius, shadow } from '../../../theme';
 import { POSITION_INFO, positionLabel, toPosition } from '../positions';
 import { avatarTint } from '../avatarTint';
+/* 「14일 전」 — 게시판 카드와 목록이 같은 함수를 쓴다. 한쪽만 「어제」면 같은 글이
+   화면마다 다르게 보인다(relativeTime.ts 머리말) */
+import { relativeTime } from '../../../lib/relativeTime';
+import type { RecentPost } from '../../board/services/boardService';
 import { initialOf } from '../initials';
 import {
   type AttendanceRate,
@@ -145,6 +149,8 @@ interface Props {
   nextPending: number;
   nextAbsent: number;
   onOpenRoster: () => void;
+  /** 최근 글 셋 — 카드가 그리는 요약 */
+  recentPosts: RecentPost[];
   onGoTile: (key: TileKey) => void;
   /** 안 읽은 공지가 있는가 — 「공지사항」 타일의 붉은 점 */
   hasUnreadNotice: boolean;
@@ -191,6 +197,7 @@ export function TeamHomeTab({
   nextPending,
   nextAbsent,
   onOpenRoster,
+  recentPosts,
   onGoTile,
   hasUnreadNotice,
 }: Props) {
@@ -957,6 +964,70 @@ export function TeamHomeTab({
                 </View>
 
                 {/*
+                  최근 게시글 — 게시판을 화면에서 걷어냈다가 레퍼런스에 맞춰 되살렸다.
+
+                  걷어낼 때 「코드와 DB는 그대로 둔다: 이미 쌓인 글이 있고, 되살릴 때
+                  마이그레이션부터 다시 보게 되면 비용이 훨씬 크다」고 적어 뒀는데
+                  그 판단이 값을 했다 — 되살리는 데 든 것이 TeamBoardTab의 주석 두 줄이다.
+
+                  카드는 요약만 그린다. 좋아요·고정·카테고리는 게시판 탭이 맡는다 —
+                  여기서 다 그리면 탭에 들어갈 이유가 없어지고, 카드가 목록이 된다.
+                */}
+                <View style={styles.card}>
+                  <SoftTint tone="green" radius={radius.card} />
+                  <View style={styles.sectionHead}>
+                    <Text style={styles.sectionTitle}>최근 게시글</Text>
+                    <Pressable
+                      onPress={() => onGoTile('board')}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="게시글 전체보기"
+                      style={({ pressed }) => [styles.sectionHeadLink, pressed && styles.pressed]}
+                    >
+                      <Text style={styles.moreText}>전체보기 ›</Text>
+                    </Pressable>
+                  </View>
+
+                  {recentPosts.length === 0 ? (
+                    <Text style={styles.nextEmpty}>아직 게시글이 없어요</Text>
+                  ) : (
+                    recentPosts.map((p) => (
+                      <Pressable
+                        key={p.id}
+                        onPress={() => onGoTile('board')}
+                        accessibilityRole="button"
+                        accessibilityLabel={`게시글 ${p.firstLine}`}
+                        style={({ pressed }) => [styles.postRow, pressed && styles.pressed]}
+                      >
+                        <View style={styles.postBody}>
+                          {/*
+                            posts에 title이 없어서 body 첫 줄이 제목 자리다(boardService의
+                            fetchRecentPosts 주석에 근거가 있다). 길이는 안 자르고
+                            numberOfLines로 말줄임에 맡긴다 — 문자열을 직접 자르면
+                            글자 폭이 기기마다 달라 어떤 화면에서는 여백이 남는다.
+                          */}
+                          <Text style={styles.postTitle} numberOfLines={1}>
+                            {p.firstLine}
+                          </Text>
+                          <Text style={styles.postMeta} numberOfLines={1}>
+                            {`${p.authorName} · ${relativeTime(p.createdAt)}`}
+                          </Text>
+                        </View>
+
+                        {/* 이미지가 없으면 썸네일 자리를 안 만든다 — 빈 사각은
+                            「이미지를 못 불러왔다」로 읽힌다 */}
+                        {!!p.imageUrl && <Image source={{ uri: p.imageUrl }} style={styles.postThumb} />}
+
+                        <View style={styles.postComments}>
+                          <Ionicons name="chatbubble-outline" size={12} color={colors.textFaint} />
+                          <Text style={styles.postCommentText}>{p.commentCount}</Text>
+                        </View>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+
+                {/*
                   초대 카드 — 납작해졌다. QR이 카드에서 빠지고 시트로 갔다.
 
                   QR을 카드에 실물로 박아 뒀던 근거는 이랬다: 「대면 초대는 여기서 끝난다 —
@@ -1419,6 +1490,14 @@ const styles = StyleSheet.create({
   nextDot: { width: 6, height: 6, borderRadius: radius.pill },
   nextCountText: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
   nextEmpty: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
+  /* 글 한 줄 — 좌 제목·작성자, 우 썸네일·댓글 수 */
+  postRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  postBody: { flex: 1, gap: 2 },
+  postTitle: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
+  postMeta: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
+  postThumb: { width: 36, height: 36, borderRadius: radius.chip },
+  postComments: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  postCommentText: { color: colors.textFaint, fontSize: 11, fontWeight: '700' },
   /*
     내 행 — 전체 폭 한 줄. 카드보다 한 단계 밝은 면이라 명단에서 떠 있다.
     soloList(2명 이하 전용)를 대신한다: 그건 「62px 아바타 하나가 폭에 혼자 놓이면

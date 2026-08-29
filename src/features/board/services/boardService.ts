@@ -219,3 +219,77 @@ export async function deleteComment(commentId: string) {
   const { error } = await supabase.from('post_comments').delete().eq('id', commentId);
   if (error) throw error;
 }
+/** 팀 홈 「최근 게시글」 카드가 쓰는 한 줄 요약 */
+export interface RecentPost {
+  id: string;
+  /** posts에 title이 없다 — body 첫 줄을 제목 자리에 쓴다. 자세한 근거는 카드 쪽 주석 */
+  firstLine: string;
+  authorName: string;
+  createdAt: string;
+  imageUrl: string | null;
+  commentCount: number;
+}
+
+/**
+ * 최근 글 몇 개 — 카드 전용의 좁은 조회다.
+ *
+ * fetchPosts를 그대로 쓰지 않는 이유는 **필요 없는 것을 같이 읽기 때문**이다.
+ * 그쪽은 왕복이 다섯이다: posts + post_likes + post_comments + profiles + post_pins.
+ * 카드가 그리는 것은 제목 · 작성자 · 날짜 · 썸네일 · 댓글 수뿐이라 좋아요·고정·
+ * likedByMe가 필요 없다. 여기는 왕복이 둘이다(posts + post_comments).
+ *
+ * 팀 홈은 원래 fetchPosts를 부르고 있었다. 게시판을 화면에서 걷어낸 뒤에도 그 호출이
+ * 남아서, **왕복 다섯을 쓰고 2개만 저장한 뒤 아무 데도 안 그렸다.** 이 함수가 그 자리를
+ * 대신한다 — 카드가 생겼는데 왕복은 다섯에서 둘로 줄었다.
+ *
+ * 게시판 탭에 들어가면 fetchPosts가 따로 돈다. 스토어를 두어 둘이 나눠 쓰는 방법이
+ * 있는데 안 골랐다: BoardPanel이 목록을 로컬 state로 들고 있어서, 공유하려면 그
+ * 컴포넌트를 스토어로 옮겨야 한다. 게시판은 이번에 **복원**한 것이지 다시 설계한 것이
+ * 아니다 — 되살리면서 구조까지 바꾸면 「복원이 맞았는지」를 판단할 수 없게 된다.
+ * 카드가 커지거나(좋아요·고정까지 그린다면) 셋째 소비처가 생기면 그때 스토어로 간다.
+ *
+ * 작성자 이름은 profiles를 또 읽지 않고 팀 멤버 목록에서 찾는다 — 부르는 쪽이
+ * 이미 들고 있는 값이라 왕복 하나를 아낀다(BoardPanel도 같은 방식이다).
+ */
+export async function fetchRecentPosts(
+  teamId: string,
+  limit: number,
+  nameByUserId: Map<string, string>,
+): Promise<RecentPost[]> {
+  const { data: rows, error } = await supabase
+    .from('posts')
+    .select('id, author_id, body, image_url, created_at')
+    .eq('team_id', teamId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  if (!rows || rows.length === 0) return [];
+
+  const ids = rows.map((r) => r.id);
+  const { data: comments } = await supabase.from('post_comments').select('post_id').in('post_id', ids);
+  const countByPost = new Map<string, number>();
+  (comments ?? []).forEach((c) => countByPost.set(c.post_id, (countByPost.get(c.post_id) ?? 0) + 1));
+
+  return rows.map((r) => ({
+    id: r.id,
+    /*
+      body 첫 줄이 제목 자리다.
+
+      posts에 title 컬럼이 없다 — 원래 제목 없는 자유게시판 구조이고 category로만
+      나눈다. 컬럼을 더하면 이미 쌓인 글 전부의 제목이 빈칸이 되고 채울 방법이 없다.
+
+      자르는 것은 줄 단위까지만 하고 길이는 안 자른다. 화면에서 numberOfLines={1}로
+      말줄임에 맡긴다 — 문자열을 직접 자르면 글자 폭이 기기마다 달라 어떤 화면에서는
+      여백이 남고 어떤 화면에서는 여전히 넘친다.
+
+      ⚠ 긴 첫 줄이 들어오면 제목처럼 안 읽힌다. 지금 데이터는 한 줄짜리 짧은 글이라
+        그대로 제목이 되는데, 문단으로 시작하는 글이면 잘린 문장이 제목 자리에 온다.
+        그래도 「제목 없음」보다는 낫다 — 무엇에 관한 글인지의 단서가 거기 있다.
+    */
+    firstLine: (r.body ?? '').split('\n')[0].trim() || '(내용 없음)',
+    authorName: nameByUserId.get(r.author_id) ?? '멤버',
+    createdAt: r.created_at,
+    imageUrl: r.image_url,
+    commentCount: countByPost.get(r.id) ?? 0,
+  }));
+}

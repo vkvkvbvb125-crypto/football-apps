@@ -6,7 +6,7 @@
 //    (독립 "팀 엠블럼 설정" 카드 + "초대 코드" 카드를 없앴다 → 총무 화면에서 카드 2개 감소)
 // 2) 다른 탭과 동일하게 TabHeader를 붙였다 — 기존 marginTop:60 하드코딩 제거.
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import { myUnpaidAmount } from '../../settlement/utils/unpaid';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 import { WEEKDAYS } from '../weekdays';
+import { fetchRecentPosts, type RecentPost } from '../../board/services/boardService';
 import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
 import { AnnouncementListModal } from '../../announcements/components/AnnouncementListModal';
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
@@ -32,7 +33,6 @@ import { TeamBoardTab } from '../components/TeamBoardTab';
 import { InviteSheet } from '../components/InviteSheet';
 import { regularLabel } from '../weekdays';
 import { fetchTeamSettings } from '../services/teamSettingsService';
-import { fetchPosts, resolveAuthor, type Post } from '../../board/services/boardService';
 import { relativeTime } from '../../../lib/relativeTime';
 import { usePollsStore } from '../../polls/stores/pollsStore';
 import { PollFormModal } from '../../polls/components/PollFormModal';
@@ -106,8 +106,41 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [sloganEditing, setSloganEditing] = useState(false);
   const [sloganText, setSloganText] = useState('');
-  /** 팀 홈 미리보기용 최근 글 2개 — 게시판 화면과 달리 목록 전체를 들고 있지 않는다 */
-  const [recentPosts, setRecentPosts] = useState<Post[]>([]);
+  /*
+    최근 게시글 — 카드가 쓸 요약 셋.
+
+    이 자리에 「팀 홈 미리보기용 최근 글 2개」라는 state가 남아 있었다. 게시판을
+    화면에서 걷어낼 때 그 state만 안 지워졌고, 이후 아무도 set 하지도 읽지도 않았다 —
+    죽은 함수 셋(nextPromotion · attendButtonLabel · markAnnouncementsRead)과 같은
+    종류다. 되살리면서 그 자리를 대체한다.
+
+    작성자 이름은 이미 들고 있는 멤버 목록에서 찾는다. profiles를 또 읽으면 왕복이
+    하나 더 드는데 그 값이 화면에 이미 있다(BoardPanel도 같은 방식이다).
+
+    ⚠ 훅은 전부 `if (!activeTeam) return null` 위에 있어야 한다(이 파일 머리말).
+      그래서 activeTeam은 옵셔널 체이닝으로 읽고, 팀이 없으면 효과가 아무것도 안 한다.
+  */
+  const nameByUserId = useMemo(
+    () => new Map(members.map((m) => [m.userId, m.displayName])),
+    [members],
+  );
+  const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
+  const recentTeamId = activeTeam?.team.id;
+  useEffect(() => {
+    if (!recentTeamId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await fetchRecentPosts(recentTeamId, 3, nameByUserId);
+        if (!cancelled) setRecentPosts(rows);
+      } catch {
+        // 카드가 비는 것으로 끝난다 — 게시판 탭은 자기 오류를 자기가 말한다
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recentTeamId, nameByUserId]);
 
   const announcements = useAnnouncementsStore((s) => s.announcements);
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
@@ -169,11 +202,9 @@ export function TeamHomeScreen({ navigation, route }: any) {
     fetchTeamSettings(activeTeam.team.id)
       .then((st) => setRegular(regularLabel(st?.defaultWeekdays, st?.defaultTime)))
       .catch(() => setRegular(null)); // 프로필 줄의 한 조각이라 실패하면 그 조각만 빠진다
-    if (myUserId) {
-      fetchPosts(activeTeam.team.id, myUserId)
-        .then((list) => setRecentPosts(list.slice(0, 2)))
-        .catch(() => setRecentPosts([])); // 미리보기라 실패하면 섹션만 사라진다
-    }
+    /* 최근 글은 위 전용 효과가 좁은 조회로 가져온다 — 여기서 fetchPosts를 부르던
+       것을 뺐다. 그건 왕복 다섯(posts + likes + comments + profiles + pins)을 쓰고
+       2개만 남긴 뒤, 그 2개를 그리는 화면이 없어진 뒤에도 계속 돌고 있었다. */
   }, [activeTeam?.team.id, myUserId]);
 
   const confirm = (title: string, message: string, onYes: () => void, confirmLabel = '삭제') => {
@@ -496,6 +527,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
               else setTab(key);
             }}
             hasUnreadNotice={hasUnreadNotice}
+            recentPosts={recentPosts}
           />
         )}
 

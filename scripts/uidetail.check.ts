@@ -215,27 +215,42 @@ const num = (src: string, re: RegExp, what: string) => {
   };
 
   /*
-    엠블럼 링 ↔ 내 행 아바타 링.
+    엠블럼 링 ↔ 내 칸 링.
 
-    「이 동그라미가 주인공이다」를 앱은 이미 초록 링으로 말하고 있다(selfAvatar).
-    엠블럼이 그 어휘를 빌려 쓰는 것이라 값이 같아야 한다 — 한쪽만 굵어지거나 색이
-    갈리면 같은 뜻을 다른 모양으로 두 번 말하게 된다.
+    「이 동그라미가 주인공이다」를 앱은 초록 링으로 말한다. 엠블럼이 그 어휘를 빌려
+    쓰는 것이라 값이 같아야 한다 — 한쪽만 굵어지거나 색이 갈리면 같은 뜻을 다른
+    모양으로 두 번 말하게 된다.
+
+    ⚠ 비교 대상이 옮겨갔다. 예전에는 selfAvatar(전체 폭 「내 행」의 54px 아바타)와
+      비교했는데, 멤버 줄이 칸 단위로 바뀌면서 그 행이 사라졌다. 스타일 정의는
+      한동안 파일에 남아 있었고 **이 단언은 화면에 없는 것과 비교하고 있었다** —
+      selfAvatar를 아무 값으로 바꿔도 화면은 안 변하고 검사만 통과/실패했다.
+      「검사가 자기 사본을 시험한다」의 변종이다: 사본이 아니라 죽은 코드를 시험한다.
+
+      지금 살아 있는 짝은 memberAvatarMe다(멤버 줄에서 내 칸의 링). 비교를 없애고
+      값을 직접 보는 방법도 있었는데 안 골랐다 — 둘이 같아야 한다는 것이 이 단언의
+      뜻이고, 값만 보면 한쪽이 바뀌어도 다른 쪽은 안 본다.
   */
   const ring = (name: string) => {
     const b = blockOf(name);
     return {
-      width: onlyMatch(b, /borderWidth: [\d.]+/, `${name} borderWidth`),
-      color: onlyMatch(b, /borderColor: [^,\n]+/, `${name} borderColor`),
+      width: onlyMatch(b, /borderWidth: [\d.]+/, `${name} borderWidth`).trim(),
+      /* 한 줄짜리 스타일(memberAvatarMe)에서는 값 뒤에 닫는 중괄호가 붙는다 —
+         구분자에 }를 넣어야 두 형태가 같은 문자열로 나온다 */
+      color: onlyMatch(b, /borderColor: [^,}\n]+/, `${name} borderColor`).trim(),
     };
   };
   const emblem = ring('emblem');
-  const self = ring('selfAvatar');
+  const selfCell = ring('memberAvatarMe');
   assert.deepEqual(
     emblem,
-    self,
-    `엠블럼 링과 내 행 아바타 링이 갈렸다: ${JSON.stringify(emblem)} vs ${JSON.stringify(self)}`
+    selfCell,
+    `엠블럼 링과 내 칸 링이 갈렸다: ${JSON.stringify(emblem)} vs ${JSON.stringify(selfCell)}`
   );
   assert.ok(/borderColor: colors\.green/.test(emblem.color), '엠블럼 링이 초록이 아니다');
+
+  /* 비교 대상이 화면에 실제로 그려지는가 — 다시 죽은 코드와 비교하지 않도록 */
+  assert.ok(/styles\.memberAvatarMe/.test(tab), '내 칸 링이 어디에도 안 쓰인다 — 죽은 것과 비교하고 있다');
 
   /*
     dashed가 안 돌아왔는가.

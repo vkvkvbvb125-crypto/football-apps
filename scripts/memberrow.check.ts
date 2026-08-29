@@ -161,9 +161,10 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   collectRows(sf);
 
   /*
-    한때 둘이었다: teamStats와 myRecord. 「팀 기록」 카드가 레퍼런스 구성(좌 성적 ·
-    우 미납)으로 바뀌면서 그쪽은 StatRow를 안 쓴다 — 두 칸의 내용이 서로 달라서
-    (한쪽은 빈 안내, 한쪽은 값) 같은 격자에 못 넣는다.
+    한때 둘이었다: teamStats와 myRecord. 그 카드는 지금 화면에 없다 —
+    레퍼런스 구성으로 좌 성적 · 우 미납이 됐다가(그때 StatRow를 안 쓰게 됐고)
+    다음 레퍼런스에서 카드 자체가 빠졌다. 미납이 팀 화면에서 사라진 판단은
+    myrecord.check이 따로 붙들고 있다.
   */
   assert.deepEqual([...rows.keys()].sort(), ['teamStats'], `StatRow의 자리가 바뀌었다: ${[...rows.keys()].join(' / ')}`);
 
@@ -282,12 +283,15 @@ const homeTab = read('src/features/team/components/TeamHomeTab.tsx');
   /*
     제목의 진입은 남아 있어야 한다.
 
-    예전엔 /onPress={onGoMembers}/ 하나로 봤는데 그 꼴이 이 파일에 셋이다 —
-    제목의 「전체보기」, 아바타 줄의 각 칸, 「+N」. 제목 것을 지워도 나머지 둘이
-    통과시켰다. 「이 자리인가」를 묻는 단언이라 자리를 특정한다.
+    예전엔 /onPress={onGoMembers}/ 하나로 봤는데 그 꼴이 이 파일에 여럿이다 —
+    제목의 「전체보기」와 멤버 줄의 각 칸. 제목 것을 지워도 나머지가 통과시켰다.
+    「이 자리인가」를 묻는 단언이라 자리를 특정한다.
 
-    제목 진입은 sectionHeadLink를 쓰는 Pressable이다. 아바타 줄은 avatarChip이라
-    스타일로 갈린다.
+    ⚠ 가르는 기준이 옮겨갔다. 예전에는 「아바타 줄은 avatarChip이라 스타일로
+      갈린다」고 적혀 있었는데, 멤버 줄이 칸 단위로 바뀌면서 avatarChip이 죽은
+      스타일이 됐다. 주석이 없는 것을 가리키고 있었다 — 단언 자체는 sectionHeadLink로
+      자리를 잡고 있어서 통과했지만, 왜 그것으로 갈리는지의 설명이 틀린 상태였다.
+      지금 멤버 줄의 칸은 memberCell이다.
   */
   let titleEntry: ts.JsxOpeningElement | null = null;
   const findEntry = (n: ts.Node) => {

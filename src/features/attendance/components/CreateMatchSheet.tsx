@@ -29,7 +29,6 @@ export interface CreateMatchPayload {
   matchDate: string; // ISO
   venueId: string | null;
   locationText: string | null;
-  address: string | null;
   latitude: number | null;
   longitude: number | null;
   placeCategory: string | null;
@@ -119,7 +118,6 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
       matchDate: matchDate.toISOString(),
       venueId: pendingPlace ? null : mode === 'partner' ? venueId : null,
       locationText: pendingPlace ? null : mode === 'search' ? (searchPlace?.name ?? null) : (venue?.name ?? null),
-      address: mode === 'search' ? (searchPlace?.address ?? null) : null,
       latitude: mode === 'search' ? (searchPlace?.latitude ?? null) : null,
       longitude: mode === 'search' ? (searchPlace?.longitude ?? null) : null,
       placeCategory: mode === 'search' ? (searchPlace?.category ?? null) : venue?.isIndoor ? '실내' : '실외',

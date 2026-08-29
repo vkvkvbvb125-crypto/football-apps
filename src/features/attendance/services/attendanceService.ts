@@ -30,11 +30,26 @@ export async function fetchMatches(teamId: string): Promise<MatchWithVotes[]> {
   }));
 }
 
+/*
+  주소는 저장하지 않는다.
+
+  카카오 로컬 API 응답에서 온 값이고, 카카오 개발자 FAQ가 「응답받은 결과 데이터를
+  별도로 저장하여 사용하는 것은 허용하지 않으며 실시간 호출만 가능하다」고 한다.
+  약관 답변을 기다리는 중이지만 **이 값은 답변과 무관하게 정리 대상이다** — 재보니
+  아무 데서도 안 쓴다.
+
+  쓰는 것처럼 보이는 자리가 하나 있는데 되돌아오는 길이다: 경기를 고칠 때
+  match.address를 읽어 편집 상태에 넣고 그대로 다시 저장한다. 화면에 그리는 곳은
+  검색 결과 목록(PlaceSearchModal, 저장 전 값)과 PlaceDetailModal(호출자 0)뿐이다.
+  검색·필터·정렬에도 안 쓴다.
+
+  ⚠ 컬럼은 안 지웠다. 쓰기만 멈춘다 — 카카오 답이 「기존 데이터도 지워라」로 오면
+    그때 drop한다. 지금 drop하면 되돌리기 어렵고, 답이 반대로 오면 다시 만들어야 한다.
+*/
 export interface CreateMatchInput {
   teamId: string;
   matchDate: string;
   location: string;
-  address: string | null;
   latitude: number | null;
   longitude: number | null;
   placeCategory: string | null;
@@ -50,7 +65,6 @@ export async function createMatch(input: CreateMatchInput) {
     team_id: input.teamId,
     match_date: input.matchDate,
     location: input.location || null,
-    address: input.address,
     latitude: input.latitude,
     longitude: input.longitude,
     place_category: input.placeCategory,
@@ -73,7 +87,6 @@ export async function castVote(matchId: string, teamMemberId: string, status: At
 export interface UpdateMatchInput {
   matchDate: string;
   location: string;
-  address: string | null;
   latitude: number | null;
   longitude: number | null;
   placeCategory: string | null;
@@ -87,7 +100,6 @@ export async function updateMatch(matchId: string, input: UpdateMatchInput) {
     .update({
       match_date: input.matchDate,
       location: input.location || null,
-      address: input.address,
       latitude: input.latitude,
       longitude: input.longitude,
       place_category: input.placeCategory,

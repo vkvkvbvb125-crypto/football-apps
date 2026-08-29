@@ -285,9 +285,16 @@ export function TeamSettingsScreen({ navigation }: any) {
         {/*
           팀 대표 지역 — 팀 화면 설정 탭에서 옮겨 왔다.
 
-          경기 없는 날의 예상 날씨를 이 좌표로 조회한다. 활동 지역(region_code)과는
-          다른 값이다 — 저쪽은 매칭에서 구/군 단위로 거르는 코드고 이쪽은 날씨용 지점이다.
-          둘 다 필요해서 통합하지 않는다.
+          「경기 없는 날의 예상 날씨를 이 좌표로 조회한다」고 적혀 있었는데 **그 조회가
+          없다.** 날씨를 부르는 곳은 경기 좌표를 쓰는 셋뿐이고(AttendanceScreen ·
+          HomeScreen · WeatherBadge) 이 좌표를 읽는 코드는 0건이었다. 만들려다 만
+          기능의 전제가 주석에 남아, 값이 쓰이는 것처럼 보이게 하고 있었다.
+
+          지금 이 값이 하는 일은 이름 하나를 팀 화면에 적는 것이다(히어로의
+          「구장 · 풋살」 줄). 주소·좌표는 저장을 멈췄다 — 카카오 응답이고 쓰는 데가 없다.
+
+          활동 지역(region_code)과는 다른 값이다 — 저쪽은 매칭에서 구/군 단위로 거르는
+          코드고 이쪽은 사람이 읽는 구장 이름이다. 둘 다 필요해서 통합하지 않는다.
         */}
         <View style={styles.card}>
           <View style={styles.cardHead}>
@@ -296,16 +303,18 @@ export function TeamSettingsScreen({ navigation }: any) {
           </View>
           <PlaceSearchModal
             value={activeTeam?.team.home_place_name ? { name: activeTeam.team.home_place_name } : null}
-            onSelect={(place: PlaceResult) =>
-              updateHomeLocation({
-                placeName: place.name,
-                address: place.address,
-                latitude: place.latitude,
-                longitude: place.longitude,
-              })
-            }
+            onSelect={(place: PlaceResult) => updateHomeLocation({ placeName: place.name })}
           />
-          <Text style={styles.hint}>경기 없는 날의 예상 날씨를 이 위치 기준으로 보여줘요</Text>
+          {/*
+            힌트를 고쳤다. 「경기 없는 날의 예상 날씨를 이 위치 기준으로 보여줘요」였는데
+            **그 기능이 없다.** 날씨를 부르는 곳은 경기 좌표를 쓰는 셋뿐이고
+            (AttendanceScreen · HomeScreen · WeatherBadge), 팀 대표 지역 좌표를 읽는
+            코드는 0건이었다. 화면이 없는 기능을 약속하고 있었다.
+
+            좌표 저장도 멈췄다 — 쓰는 데가 없는데 카카오 응답을 저장만 하고 있었다.
+            그래서 지금 이 값이 하는 일은 이름 하나를 팀 화면에 적는 것이다.
+          */}
+          <Text style={styles.hint}>팀 화면에 이 이름이 보여요</Text>
         </View>
 
 

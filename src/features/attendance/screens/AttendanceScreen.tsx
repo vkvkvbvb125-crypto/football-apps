@@ -62,7 +62,6 @@ import type { MatchWithVotes } from '../services/attendanceService';
 interface SelectedPlace {
   name: string;
   category: string | null;
-  address: string | null;
   latitude: number | null;
   longitude: number | null;
 }
@@ -286,7 +285,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         ? {
             name: match.location,
             category: match.place_category,
-            address: match.address,
             latitude: match.latitude,
             longitude: match.longitude,
           }
@@ -325,7 +323,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     updateMatch(editingMatchId, {
       matchDate: matchDate.toISOString(),
       location: selectedPlace?.name ?? '',
-      address: selectedPlace?.address ?? null,
       latitude: selectedPlace?.latitude ?? null,
       longitude: selectedPlace?.longitude ?? null,
       placeCategory: selectedPlace?.category ?? null,
@@ -338,7 +335,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const handleCreateSubmit = async (payload: CreateMatchPayload) => {
     const base = {
       location: payload.locationPending ? '' : (payload.locationText ?? ''),
-      address: payload.locationPending ? null : payload.address,
       latitude: payload.locationPending ? null : payload.latitude,
       longitude: payload.locationPending ? null : payload.longitude,
       placeCategory: payload.locationPending ? null : payload.placeCategory,
@@ -658,7 +654,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 setSelectedPlace({
                   name: place.name,
                   category: place.category,
-                  address: place.address,
                   latitude: place.latitude,
                   longitude: place.longitude,
                 })

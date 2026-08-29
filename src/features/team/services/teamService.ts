@@ -65,11 +65,10 @@ export interface TeamMemberWithProfile {
   dominantFoot: string | null;
 }
 
+/* 이름만 받는다 — 주소·좌표는 아무 데서도 안 읽어서 통로를 좁혔다.
+   타입에 남겨 두면 부르는 쪽이 계속 실어 보내고, 다음 사람이 「저장되는구나」로 읽는다 */
 export interface TeamHomeLocation {
   placeName: string;
-  address: string;
-  latitude: number;
-  longitude: number;
 }
 
 /** 팀 슬로건 — 헤더에 한 줄로 보인다. 비우면 null로 저장해 자리 자체를 없앤다 */
@@ -115,15 +114,23 @@ export async function updateTeamProfile(teamId: string, p: TeamProfileInput) {
   if (error) throw error;
 }
 
+/*
+  팀 대표 지역 — 이름만 저장한다.
+
+  주소·좌표도 같이 넣고 있었는데 **읽는 곳이 하나도 없다.** 화면에 뜨는 것은
+  home_place_name뿐이다(히어로의 「구장 · 풋살」 줄, 팀 설정의 대표 지역 카드).
+  주소·좌표를 쓰는 계산도, 지도도, 거리도 없다.
+
+  카카오 로컬 API 응답에서 온 값이라 저장 자체가 약관 확인 대상이기도 한데,
+  **이건 답변과 무관하게 정리 대상이다** — 쓰지도 않으면서 저장만 하고 있었다.
+
+  ⚠ 컬럼은 안 지웠다. 쓰기만 멈춘다 — 카카오 답이 「기존 데이터도 지워라」로 오면
+    그때 drop한다. 이름(home_place_name)은 남긴다: 화면이 그걸 그린다.
+*/
 export async function updateTeamHomeLocation(teamId: string, location: TeamHomeLocation) {
   const { error } = await supabase
     .from('teams')
-    .update({
-      home_place_name: location.placeName,
-      home_address: location.address,
-      home_latitude: location.latitude,
-      home_longitude: location.longitude,
-    })
+    .update({ home_place_name: location.placeName })
     .eq('id', teamId);
   if (error) throw error;
 }

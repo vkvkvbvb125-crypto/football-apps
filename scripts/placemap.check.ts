@@ -56,4 +56,43 @@ const modal = read('src/features/attendance/components/PlaceDetailModal.tsx');
   assert.ok(/map\.kakao\.com\/link\/to/.test(modal), '길찾기 링크가 없다');
 }
 
+// ── 4. 지도가 안 뜰 때 무엇이 보이는가 ─────────────────────────────
+//
+// 실패 경로가 넷인데 전부 조용하다:
+//   키 없음 · 스크립트 안 받아짐 · 받았는데 kakao.maps 없음(등록 안 된 도메인) ·
+//   load 콜백이 안 불림
+// 「키 없음」만 처리돼 있었고 나머지 셋이 빠져 있었다 — 그때 빈 상자가 남고
+// 「못 불러왔다」와 「원래 이런 화면」의 출력이 같아진다. 이 세션 내내 잡아온 계열이다.
+{
+  const html = onlyMatch(modal, /function buildMapHtml[\s\S]*?\n\}/, 'buildMapHtml');
+  // HTML 쪽이 실패를 알린다
+  assert.ok(/ReactNativeWebView\.postMessage\('mapfail:'/.test(html), '지도 실패를 RN에 안 알린다');
+  for (const why of ['script-load', 'no-sdk', 'timeout', 'render']) {
+    assert.ok(html.includes(`'${why}'`), `실패 경로 ${why}를 안 잡는다`);
+  }
+  // window.onerror가 SDK 스크립트 안의 오류를 잡는다 — try/catch로는 안 잡힌다
+  assert.ok(/window\.onerror = /.test(html), 'SDK 내부 오류를 안 잡는다');
+  // 성공하면 타임아웃이 나중에 실패를 못 부르게 막아야 한다
+  assert.ok(/reported = true;/.test(html), '성공 뒤에도 타임아웃이 실패를 부른다');
+
+  // RN 쪽이 받아서 폴백으로 떨어진다
+  /* 「onMessage=」로 보면 xonMessage= 같은 오타에도 걸린다 — 속성 경계까지 본다 */
+  assert.ok(/\s onMessage=\{\(e\) =>/.test(modal.replace(/\r?\n/g, ' ')), 'WebView가 메시지를 안 받는다');
+  assert.ok(/if \(mapFailed\) return fallback\(/.test(modal), '실패해도 폴백으로 안 떨어진다');
+  assert.ok(/onError=\{\(\) => setMapFailed\(true\)\}/.test(modal), '네트워크 실패를 안 잡는다');
+}
+
+// ── 5. baseUrl이 있고 상수다 ───────────────────────────────────────
+//
+// html 문자열만 주면 문서가 about:blank가 되어 origin이 없다. 그러면 카카오 콘솔에
+// 도메인을 아무리 등록해도 소용이 없다 — 보낼 도메인이 없다.
+// 그리고 이 값은 콘솔 등록과 짝이라 하드코딩하면 어디를 고쳐야 하는지가 안 보인다.
+{
+  assert.ok(/const MAP_BASE_URL = /.test(modal), 'baseUrl이 상수가 아니다');
+  assert.ok(/baseUrl: MAP_BASE_URL/.test(modal), 'WebView에 baseUrl을 안 넘긴다 — origin이 없어 도메인 등록이 무의미하다');
+  // 그 값이 콘솔 등록과 맞춰야 한다는 것을 주석이 말해야 한다
+  const around = modal.slice(Math.max(0, modal.indexOf('const MAP_BASE_URL') - 1200), modal.indexOf('const MAP_BASE_URL'));
+  assert.ok(/콘솔/.test(around), 'baseUrl 옆에 콘솔 등록과 맞춰야 한다는 근거가 없다');
+}
+
 console.log('placemap ok');

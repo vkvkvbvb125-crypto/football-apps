@@ -48,7 +48,7 @@
       ],
       "adaptiveIcon": {
         "backgroundColor": "#000000",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/adaptive-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -61,7 +61,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/KickDay_icon.png",
+          "image": "./assets/adaptive-foreground.png",
           "imageWidth": 180,
           "resizeMode": "contain",
           "backgroundColor": "#0B0F0D"

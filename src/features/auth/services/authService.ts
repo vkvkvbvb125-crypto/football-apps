@@ -275,7 +275,46 @@ export async function resetPassword(email: string) {
   if (error) throw error;
 }
 
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+/**
+ * 로그아웃.
+ *
+ * ⚠ 던지지 않는다. 부르는 자리 넷이 모두 await도 .catch()도 없이 부른다
+ * (TabHeader · MySettings 둘 · TeamStartScreen의 onPress={signOut}).
+ * 던지면 그대로 unhandled rejection이고, 릴리스에서는 RN의 거부 추적기가
+ * __DEV__ 안에만 걸려 아무 데도 안 남는다.
+ *
+ * 사용자가 누른 것은 「이 기기에서 나가기」다. 서버 세션 무효화는 부수 효과다.
+ * supabase-js도 같은 순서로 동작한다 — GoTrueClient._signOut은 서버 호출이
+ * 실패해도 removeCurrentSession()을 먼저 부르고 그 뒤에 오류를 돌려준다.
+ * 그리고 _removeSession은 _notifyAllSubscribers('SIGNED_OUT', null)로 끝난다.
+ * 즉 네트워크가 없어도 로그아웃 자체는 성공한다 — 실패하는 것은 다른 기기의
+ * 세션까지 끊는 일뿐이다.
+ *
+ * (예전엔 `if (error) throw error`였다. 돌려받은 오류를 던지는 것으로 바꿔서,
+ *  이미 끝난 로그아웃에 대해 빨간 화면만 띄우고 정작 「다른 기기는 그대로다」는
+ *  아무도 몰랐다.)
+ *
+ * @returns serverRevoked — 서버 세션까지 무효화됐는가.
+ *          false면 다른 기기의 로그인은 살아 있다.
+ */
+export async function signOut(): Promise<{ serverRevoked: boolean }> {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (!error) return { serverRevoked: true };
+    console.warn('[auth] 서버 세션을 무효화하지 못했다 —', error.message);
+  } catch (err) {
+    console.warn('[auth] 로그아웃 요청이 실패했다 —', err instanceof Error ? err.message : String(err));
+  }
+
+  /*
+    서버 쪽은 못 했다. 사용자가 누른 것은 로컬에서 나가는 것이니 그것만이라도
+    확실히 한다. scope: 'local'은 서버 호출을 건너뛰고 저장소만 비운다 —
+    위에서 이미 지워졌더라도 한 번 더 부르는 것은 무해하다.
+  */
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (err) {
+    console.warn('[auth] 로컬 세션도 지우지 못했다 —', err instanceof Error ? err.message : String(err));
+  }
+  return { serverRevoked: false };
 }

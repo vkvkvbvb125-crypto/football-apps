@@ -60,7 +60,6 @@ const TEAM_SKILL_LABEL = { beginner: '입문', intermediate: '중급', advanced:
 export function TeamHomeScreen({ navigation, route }: any) {
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
-  const signOut = useAuthStore((s) => s.signOut);
   const myUserId = useAuthStore((s) => s.session?.user.id);
   const updateHomeLocation = useTeamStore((s) => s.updateHomeLocation);
   const members = useTeamStore((s) => s.members);

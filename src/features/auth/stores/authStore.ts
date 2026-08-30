@@ -162,7 +162,18 @@ export const useAuthStore = create<AuthState>((set) => {
     clearError: () => set({ error: null, needsEmailConfirm: false }),
 
     signOut: async () => {
-      await signOutService();
+      const { serverRevoked } = await signOutService();
+      /*
+        로그아웃 자체는 이미 끝났다 — supabase-js가 로컬 세션을 지우고
+        SIGNED_OUT을 쏘면 위의 onAuthStateChange가 session을 비운다.
+        여기서는 못 한 것만 알린다. 이 문구는 곧 뜨는 로그인 화면이 그린다
+        (LoginScreen이 authStore.error를 읽어 보여준다).
+      */
+      if (!serverRevoked) {
+        set({
+          error: '이 기기에서는 로그아웃했어요. 네트워크 문제로 다른 기기의 로그인은 그대로예요',
+        });
+      }
     },
   };
 });

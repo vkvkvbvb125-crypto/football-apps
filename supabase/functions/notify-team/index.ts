@@ -67,7 +67,29 @@ export default {
       return Response.json({ sent: 0 });
     }
 
-    const messages = tokens.map((to) => ({ to, title, body, sound: 'default' }));
+    /*
+      channelId를 반드시 넘긴다.
+
+      안 넘기면 안드로이드는 Expo의 폴백 채널로 보낸다 — 실제로 재봤다:
+        channel=expo_notifications_fallback_notification_channel
+        mName=Miscellaneous  mVibrationPattern=null  mLightColor=0
+      그러면 pushService의 ensureAndroidChannel()이 만든 'default' 채널
+      (이름 「킥데이 알림」, 진동 [0,250,250,250], 초록 LED)이 한 번도 안 쓰인다.
+      사용자의 안드로이드 알림 설정에도 「킥데이 알림」이 아니라 「Miscellaneous」로
+      뜬다 — 무엇을 끄는지 모르는 이름이다.
+
+      priority: 'high'는 FCM 우선순위다. 기본값은 Doze 중에 묶여 있다가 나중에
+      한꺼번에 도착할 수 있는데, 여기서 보내는 것이 경기 등록·마감 독촉처럼
+      늦으면 쓸모가 없어지는 것들이다.
+    */
+    const messages = tokens.map((to) => ({
+      to,
+      title,
+      body,
+      sound: 'default',
+      channelId: 'default',
+      priority: 'high',
+    }));
 
     const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',

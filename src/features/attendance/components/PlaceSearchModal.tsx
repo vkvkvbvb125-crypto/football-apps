@@ -170,7 +170,27 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={close}>
         <Pressable style={styles.overlay} onPress={close}>
           <Pressable style={styles.card} onPress={() => {}}>
-            <Text style={styles.title}>경기 장소 검색</Text>
+            {/*
+              제목 줄에 닫기를 둔다.
+
+              이 모달의 출구는 하드웨어 뒤로가기와 스크림(바깥 탭) 둘이었는데
+              **둘 다 눈에 안 보인다.** 스크림이 출구인 줄 모르면 갇힌 것처럼
+              보인다 — 실제로 이번 확인에서 갇혀 앱을 강제 종료했다.
+              (그때는 뒤로가기가 개발 빌드의 LogBox에 먹히고 있었다. 뒤로가기
+               자체는 정상이고, 중첩에서 안쪽만 닫히는 것도 확인했다.)
+            */}
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>경기 장소 검색</Text>
+              <Pressable
+                onPress={close}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="닫기"
+                style={styles.closeBtn}
+              >
+                <Ionicons name="close" size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
 
             <View style={styles.searchRow}>
               <Ionicons name="search" size={15} color={colors.placeholder} />
@@ -278,12 +298,24 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 20,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
   title: {
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 14,
+    /* 닫기가 오른쪽에 붙어도 제목은 카드 가운데에 남는다 — flex:1이 그 몫이다 */
+    flex: 1,
+    /* 닫기 버튼(20 아이콘 + 좌우 여백)만큼 왼쪽을 비워 좌우 균형을 맞춘다 */
+    marginLeft: 28,
+  },
+  closeBtn: {
+    width: 28,
+    alignItems: 'flex-end',
   },
   searchRow: {
     flexDirection: 'row',

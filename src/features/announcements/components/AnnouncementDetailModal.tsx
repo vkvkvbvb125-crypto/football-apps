@@ -54,6 +54,23 @@ export function AnnouncementDetailModal({
                   <Ionicons name="ellipsis-vertical" size={18} color="#8A9490" />
                 </Pressable>
               )}
+              {/*
+                닫기를 헤더에 둔다.
+              
+                이 모달의 출구는 하드웨어 뒤로가기와 스크림뿐이었고 둘 다 눈에 안 보인다.
+                본문이 스크롤되는 「읽는 모달」이라 스크림을 누르려면 카드 밖을 겨눠야
+                하는데, 카드가 화면을 거의 채워서 겨눌 데가 얇다.
+                총무에게는 ⋮ 옆에, 팀원에게는 비어 있던 오른쪽에 붙는다.
+              */}
+              <Pressable
+                onPress={onClose}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="닫기"
+                style={styles.closeBtn}
+              >
+                <Ionicons name="close" size={20} color="#8A9490" />
+              </Pressable>
             </View>
             <ScrollView style={styles.bodyScroll}>
               <Text style={styles.title}>{announcement.title}</Text>
@@ -106,6 +123,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
+  },
+  closeBtn: {
+    marginLeft: 10,
   },
   headerRow: {
     flexDirection: 'row',

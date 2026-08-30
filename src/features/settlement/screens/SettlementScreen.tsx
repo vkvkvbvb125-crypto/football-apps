@@ -543,6 +543,21 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
               <>
                 <ActivityIndicator color={colors.green} />
                 <Text style={styles.linkStatusText}>정산 내역을 불러오는 중이에요</Text>
+                {/*
+                  불러오는 동안에도 나갈 길을 준다.
+                
+                  이 모달은 앱에서 유일하게 출구가 하드웨어 뒤로가기뿐이었다. 감싼 것이
+                  Pressable이 아니라 View라 스크림 탭이 안 되고, 「확인」은 loaded 뒤에만
+                  생긴다. 조회가 오래 걸리거나 매달리면 기다리는 것 말고 할 수 있는 게
+                  없다 — 뒤로가기를 모르는 사용자는 갇힌다.
+                */}
+                <Pressable
+                  onPress={() => setDetailTarget(null)}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.linkStatusBtn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.linkStatusBtnText}>닫기</Text>
+                </Pressable>
               </>
             ) : (
               <>

@@ -18,6 +18,7 @@ import { pickSquareImage, setAvatarUrl, updateProfileFields, uploadAvatar } from
 import { deleteAccount, describeBlockers, fetchDeletionStatus } from '../services/accountService';
 import { colors, radius } from '../../../theme';
 import type { SkillTag } from '../../../types/database';
+import { getPushStatus } from '../../notifications/services/pushService';
 
 const SKILLS: SkillTag[] = ['상', '중', '하'];
 
@@ -42,6 +43,8 @@ export function MySettingsScreen({ navigation }: any) {
 
   const me = members.find((m) => m.id === activeTeam?.membershipId) ?? null;
 
+  // 마운트 때 한 번 읽는다 — 등록은 로그인 직후 RootNavigator에서 이미 끝났다.
+  const [pushStatus] = useState(getPushStatus);
   const [jersey, setJersey] = useState('');
   const [openDoc, setOpenDoc] = useState<TermDoc | null>(null);
   const [phone, setPhone] = useState('');
@@ -398,6 +401,13 @@ export function MySettingsScreen({ navigation }: any) {
                 </View>
               </Pressable>
             ))}
+            {pushStatus !== 'ok' && pushStatus !== 'unknown' && (
+              <Text style={styles.notifyHint}>
+                {pushStatus === 'denied'
+                  ? '기기 설정에서 알림이 꺼져 있어요. 켜야 위 알림이 도착해요'
+                  : '지금 이 기기에서는 푸시를 받을 수 없어요. 앱 안에서는 알림이 그대로 쌓여요'}
+              </Text>
+            )}
             <Text style={styles.notifyHint}>이 팀에서 오는 알림만 조절해요. 다른 팀은 따로 설정합니다</Text>
           </View>
         )}

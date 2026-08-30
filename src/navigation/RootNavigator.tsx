@@ -205,7 +205,8 @@ export function RootNavigator() {
   useEffect(() => {
     if (session) {
       loadMemberships();
-      registerForPushNotifications(session.user.id);
+      // 결과를 안 쓴다 — 실패는 PushStatus로 남고 내 설정 › 알림이 그걸 읽는다.
+      void registerForPushNotifications(session.user.id);
     } else {
       resetTeam();
     }

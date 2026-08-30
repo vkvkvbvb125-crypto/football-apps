@@ -143,6 +143,34 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
 
 ### 다음에 마주칠 것
 
+- **안드로이드 푸시가 동작하지 않는다 — `google-services.json`이 없다.**
+  에뮬레이터 첫 실행에서 잡혔다. `getExpoPushTokenAsync`가 던진다:
+  `Unable to get Firebase Messaging instance. Did you configure googleServicesFile
+  path in app config?`
+  **조사 결론이 틀렸던 다섯 번째다.** 안드로이드 착수 전 조사에서
+  「`google-services.json` 없어도 된다 — Expo 푸시 서비스를 쓴다」고 적었는데,
+  Expo 푸시를 쓰더라도 **안드로이드는 FCM을 거쳐 전달**하므로 그 파일이 필요하다.
+  앞의 넷은 서랍 항목이 틀린 경우였고, 이건 조사 결론이 틀린 경우다.
+
+  필요한 것:
+  ① Firebase 프로젝트 생성 → 안드로이드 앱 등록(`com.kickday.app`)
+  ② `google-services.json`을 받아 `app.json`의 `android.googleServicesFile`에 지정
+  ③ FCM 서버 키를 EAS에 등록(`expo credentials`)
+  iOS는 별도 설정(APNs 키)이 필요하고 이번 확인 범위 밖이다.
+
+  **사용자에게 어떻게 보이는가 — 재봤다. 앱은 죽지 않는다.**
+  `RootNavigator.tsx:208`이 `registerForPushNotifications`를 `await`도 `.catch()`도
+  없이 부른다. 떠 있는 프로미스라 거부는 unhandled rejection이 된다.
+  `node_modules/react-native/Libraries/Core/polyfillPromise.js`에서
+  `enablePromiseRejectionTracker`는 `if (__DEV__)` 안에만 있다 — **릴리스에서는
+  추적기가 아예 안 걸린다.** 개발 빌드라 콘솔에 뜬 것이고, 릴리스에서는 조용히
+  삼켜진다. 에뮬레이터 logcat에도 `FATAL EXCEPTION` 0건이었다.
+
+  그래서 급한 쪽은 크래시가 아니라 **침묵**이다. `push_token`이
+  `profiles`에 영영 안 써지고, 안드로이드 사용자는 푸시를 아무 신호 없이 전혀
+  못 받는다. 총무 쪽에서도 안 보인다 — 알림이 안 간 것과 아무도 안 읽은 것의
+  출력이 같다. 「실패와 미실행의 출력이 같다」 계열이 기능 하나를 통째로 삼킨 경우다.
+
 - **DB 오류 번역** — 서비스 계층(`services/*.ts`)은 안 봤다. 스토어만 정리했다
 - **접근성** — `components/` 계층에 `accessibilityRole` 없는 Pressable이 다수
 - **`space` 토큰이 죽어 있다** — 실사용 0회, 하드코딩 spacing이 화면당 35~88개
@@ -220,6 +248,110 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
 ---
 
 ## 5. 작업 방식에서 배운 것
+
+### 부르고 버리는 프로미스 — 개발 빌드에서만 보인다
+
+에뮬레이터 첫 실행에서 빨간 화면 둘이 떴다. 뿌리는 다른데 모양이 같다.
+
+- 푸시: `RootNavigator.tsx:208`이 `registerForPushNotifications`를 `await`도
+  `.catch()`도 없이 부른다. `google-services.json`이 없어 던진다.
+- 위치: `PlaceSearchModal.tsx:29`의 async IIFE에 `try/catch`가 없다.
+  `getCurrentPositionAsync`가 던진다.
+
+**왜 여태 안 보였나.** 렌더 확인을 전부 웹 브라우저로 했다. 웹에서 unhandled
+rejection은 콘솔 한 줄이고 화면은 멀쩡하다. 개발 빌드는 빨간 화면으로 알려준다.
+
+**릴리스에서는 어떻게 되나 — 재봤다. 안 죽는다. 그게 더 나쁘다.**
+`node_modules/react-native/Libraries/Core/polyfillPromise.js`:
+
+    if (global?.HermesInternal?.hasPromise?.()) {
+      const HermesPromise = global.Promise;
+      if (__DEV__) {
+        ...
+        global.HermesInternal?.enablePromiseRejectionTracker?.(...)
+      }
+    }
+
+추적기가 `__DEV__` 안에만 걸린다. 릴리스에서는 거부가 **아무 데도 안 남는다.**
+그래서 이 계열의 대가는 크래시가 아니라 침묵이다 — 푸시는 토큰이 영영 안 써지고,
+위치는 전국 검색으로 조용히 떨어진다. 둘 다 「했는데 안 됨」과 「안 함」의 출력이 같다.
+
+**전수 조사 결과 (2026-08-30).** `src/` 전체에서 async 정의 115개를 모아
+호출 자리를 훑었다. 실제로 던질 수 있고 아무도 안 잡는 자리는 여섯이다:
+
+| 자리 | 부르는 것 | 던지는 근거 |
+|---|---|---|
+| `RootNavigator.tsx:208` | `registerForPushNotifications` | 관측됨 (FCM 미설정) |
+| `PlaceSearchModal.tsx:29` | `getCurrentPositionAsync` | 관측됨 (측위 실패) |
+| `TabHeader.tsx:298` | `signOut` | `authService.ts:280` `if (error) throw error` |
+| `MySettingsScreen.tsx:175` | `signOut` | 위와 같음 |
+| `SettlementScreen.tsx:176` | `getRememberedSendApp` | `AsyncStorage.getItem` — `.then`만 있고 `.catch` 없음 |
+| `SettlementScreen.tsx:616` | `handleSkip` | 지역 async, `try` 없음 (위험 낮음) |
+
+⚠ **로그아웃 둘이 특히 나쁘다.** 네트워크가 끊긴 채로 로그아웃을 누르면
+`supabase.auth.signOut()`이 던지고, 화면은 아무 말도 안 하며 로그인 상태로 남는다.
+사용자는 「눌렀는데 안 나가졌다」를 보고 다시 누른다.
+
+
+### 전수라고 했는데 전수가 아니었다 — `src` 안만 봤다
+
+위 표를 「전수」로 적었는데 아니었다. 조사가 `src/` 안에서 정의된 async 함수
+이름 115개를 모아 그 이름의 호출 자리만 훑었다. **RN·Expo API는 이름이 `src`
+안에 없어서 처음부터 후보에 못 들어갔다.**
+
+길찾기 URL을 확인하다 `PlaceDetailModal.tsx:113`의 `Linking.openURL(url);`이
+눈에 걸려 알았다. 다시 훑어 넷을 더 찾았다:
+
+| 자리 | 부르는 것 | 무게 |
+|---|---|---|
+| `PlaceDetailModal.tsx:113` | `Linking.openURL` | **지도 폴백의 마지막 수단이다.** 이게 조용히 실패하면 사용자에게 남는 경로가 없다 |
+| `SendMoneySheet.tsx:51` | `AsyncStorage.getItem(...).then()` | `SettlementScreen.tsx:176`과 같은 값을 읽는 두 번째 자리 |
+| `lib/supabase.ts:28` | `supabase.auth.startAutoRefresh()` | 토큰 갱신. 실패하면 세션이 조용히 만료된다 |
+| `lib/supabase.ts:30` | `supabase.auth.stopAutoRefresh()` | 위와 짝 |
+
+`authStore.ts:97`의 `supabase.auth.onAuthStateChange`는 거짓 양성이다 —
+프로미스가 아니라 구독 객체를 돌려준다.
+
+    「이 저장소에서 정의한 것」으로 후보를 만들면 남의 코드가 통째로 빠진다.
+    프로미스를 돌려주는 것은 우리가 쓴 함수보다 우리가 부른 API가 많다.
+
+이 세션의 「없어진 것은 아무도 안 센다」와 축이 같다. 그건 화면 조각이 사라져도
+개별 단언이 조용했던 것이고, 이건 후보 목록을 만드는 규칙 자체가 한쪽을 못 봤다.
+둘 다 **세는 대상을 어디서 가져오는가**의 문제다.
+
+### 검사를 짤 때 걸린 함정 — `.catch`를 좁은 창으로 찾으면 놓친다
+
+1차 조사에서 `notifyTeam` 호출 네 곳을 「안 잡힘」으로 올렸다. 전부 거짓 양성이었다.
+호출이 여러 줄에 걸쳐 있고 `.catch(`가 창(5줄) 밖에 있었다:
+
+    notifyTeam(                      // 95줄 — 여기서 세면
+      activeTeam.team.id,
+      ...
+    ).catch(() => {                  // 102줄 — 창 밖이다
+    });
+
+`markAnnouncementsRead`도 거짓 양성이었다 — 이름이 서비스와 스토어 액션에 둘 다
+있어서 `try/catch` 없는 서비스 쪽 정의로 해석됐다. 실제로 불리는 건
+`useAnnouncementsStore(s => s.markRead)`이고 그쪽은 잡는다.
+
+    창을 줄 수로 잡지 말고 문장 끝까지 잡는다.
+    이름이 겹치면 import를 보고 어느 쪽이 불리는지 정한다.
+
+`anchor.ts`의 다섯 번째 구분(「의도보다 넓게 잡는 것」)의 반대 방향이다 —
+이번엔 **좁게 잡아서** 있는 것을 못 봤다.
+
+### 도구도 「실패와 성공의 출력이 같다」에 걸린다
+
+`adb emu geo fix 127.0276 37.4979`가 **`OK`를 반환하고 안 먹었다.**
+`adb shell dumpsys location`으로 재보니 마지막 위치가 그대로
+`37.421998, -122.084000`(마운틴뷰, AVD 기본값)이었다. 좌표는 Android Studio의
+Extended Controls에서 넣어야 한다.
+
+    도구의 「OK」도 실행 결과가 아니라 접수 확인일 수 있다.
+    바꿨다고 한 값을 다른 경로로 되읽어 확인한다.
+
+이 계열이 이제 도구 쪽까지 왔다. 앞선 것들: 종료 코드(RLS 3회), 오래된 출력 파일
+(`grep`이 이전 실행 결과를 읽음), 화면 단위 검사(없어진 것은 아무도 안 센다).
 
 **RLS가 걸린 테이블의 전수 확인은 앱 경로(anon key)로 하지 않는다.**
 `matches` 중복을 앱으로 조회해 「0건」이라 판단했다가 제약 생성이 실패했다.

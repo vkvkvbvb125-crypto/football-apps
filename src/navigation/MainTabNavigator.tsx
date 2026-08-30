@@ -30,7 +30,13 @@ const IDLE = colors.navIdle;
 /** 탭바를 화면 하단에서 띄우는 간격 — 홈 인디케이터가 있으면 그만큼 더 올린다.
  *  높이/간격은 theme의 tabBar가 원본이다 (화면 스크롤 여백이 같은 값을 본다) */
 const BAR_GAP = tabBar.gap;
-const BAR_SIDE = 8;
+/*
+  바 좌우 여백. 8에서 12로 넓혔다.
+  아래(insets 24 + gap 4 = 28dp)와의 비를 3.5배에서 2.3배로 좁힌 것이다 —
+  8일 때는 아래만 넓어 「떠 있는 알약」이 아니라 「위로 밀린 바」로 읽혔다.
+  세로만 줄이면 좌우와 안 맞는다. 화면으로 보고 함께 정했다.
+*/
+const BAR_SIDE = 12;
 const BAR_H = tabBar.height;
 const BAR_R = 22;
 /*

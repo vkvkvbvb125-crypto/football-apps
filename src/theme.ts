@@ -212,7 +212,18 @@ export const space = [0, 4, 6, 8, 10, 12, 14, 16, 20, 24] as const;
  * MainTabNavigator(바를 그리는 쪽)와 useTabBarPadding(그만큼 여백을 두는 쪽)이
  * 같은 값을 봐야 한다 — 따로 두면 바 높이를 바꿀 때 콘텐츠가 다시 가려진다.
  */
-export const tabBar = { height: 66, gap: 10 } as const;
+/*
+  gap = 바 아래 여백에 더해지는 값. insets.bottom 위에 얹힌다.
+
+  ⚠ 이 값은 두 곳이 함께 본다 — MainTabNavigator의 BAR_GAP(바 위치)과
+    ScreenGradient의 useTabBarPadding()(콘텐츠 아래 여백)이다. 한쪽만 바꾸면
+    마지막 카드가 바 뒤에 깔리거나 헛여백이 생긴다. 반드시 여기서만 바꿔라.
+
+  10에서 4로 줄였다. insets.bottom(제스처 24dp) 위에 10을 더하면 아래가 34dp가
+  되는데 좌우가 8dp라 4배 차이였고, 바가 바닥에서 붕 떠 보였다. 4면 28dp다.
+  0까지 줄이면 제스처 바가 바에 닿는다 — 화면으로 보고 4에서 멈췄다.
+*/
+export const tabBar = { height: 66, gap: 4 } as const;
 
 /**
  * 쌓임 순서.

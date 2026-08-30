@@ -213,34 +213,50 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
   (마지막 것은 앱에서 유일하게 출구가 하드웨어 뒤로가기뿐이던 자리다).
   `scripts/modals.check.ts`가 「모달인데 나갈 길이 없는 것」을 센다.
 
-- **안드로이드 푸시가 동작하지 않는다 — `google-services.json`이 없다.**
-  에뮬레이터 첫 실행에서 잡혔다. `getExpoPushTokenAsync`가 던진다:
-  `Unable to get Firebase Messaging instance. Did you configure googleServicesFile
-  path in app config?`
-  **조사 결론이 틀렸던 다섯 번째다.** 안드로이드 착수 전 조사에서
-  「`google-services.json` 없어도 된다 — Expo 푸시 서비스를 쓴다」고 적었는데,
-  Expo 푸시를 쓰더라도 **안드로이드는 FCM을 거쳐 전달**하므로 그 파일이 필요하다.
-  앞의 넷은 서랍 항목이 틀린 경우였고, 이건 조사 결론이 틀린 경우다.
+- **안드로이드 푸시 — 절반 됐다. 남은 것은 EAS에 FCM 자격증명 등록 하나다.**
 
-  필요한 것:
-  ① Firebase 프로젝트 생성 → 안드로이드 앱 등록(`com.kickday.app`)
-  ② `google-services.json`을 받아 `app.json`의 `android.googleServicesFile`에 지정
-  ③ FCM 서버 키를 EAS에 등록(`expo credentials`)
-  iOS는 별도 설정(APNs 키)이 필요하고 이번 확인 범위 밖이다.
+  `google-services.json`을 받아 `app.json`의 `android.googleServicesFile`에
+  지정하고 prebuild·재빌드했다. **앱 쪽은 전부 끝났다:**
 
-  **사용자에게 어떻게 보이는가 — 재봤다. 앱은 죽지 않는다.**
-  `RootNavigator.tsx:208`이 `registerForPushNotifications`를 `await`도 `.catch()`도
-  없이 부른다. 떠 있는 프로미스라 거부는 unhandled rejection이 된다.
-  `node_modules/react-native/Libraries/Core/polyfillPromise.js`에서
-  `enablePromiseRejectionTracker`는 `if (__DEV__)` 안에만 있다 — **릴리스에서는
-  추적기가 아예 안 걸린다.** 개발 빌드라 콘솔에 뜬 것이고, 릴리스에서는 조용히
-  삼켜진다. 에뮬레이터 logcat에도 `FATAL EXCEPTION` 0건이었다.
+  | | 결과 |
+  |---|---|
+  | `Unable to get Firebase Messaging` | 사라졌다 |
+  | logcat | `FirebaseApp initialization successful` |
+  | 알림 권한 | `POST_NOTIFICATIONS granted=true` |
+  | 알림 채널 | `default`, importance 4 |
+  | 토큰 발급 | `ExponentPushToken[…]` 41자 |
+  | 서버 저장 | `profiles.push_token`에 들어가 있다(읽어서 확인) |
+  | 실패 안내 문구 | 사라졌다 — 판정이 맞았다 |
 
-  그래서 급한 쪽은 크래시가 아니라 **침묵**이다. `push_token`이
-  `profiles`에 영영 안 써지고, 안드로이드 사용자는 푸시를 아무 신호 없이 전혀
-  못 받는다. 총무 쪽에서도 안 보인다 — 알림이 안 간 것과 아무도 안 읽은 것의
-  출력이 같다. 「실패와 미실행의 출력이 같다」 계열이 기능 하나를 통째로 삼킨 경우다.
+  **남은 것 — 실제 발송이 아직 안 된다.** Expo 푸시 API에 토큰을 넣고 보내면
+  이렇게 막힌다:
 
+      InvalidCredentials — Unable to retrieve the FCM server key for the
+      recipient's app.
+
+  Expo 푸시 서비스가 우리 Firebase 프로젝트로 보낼 권한이 없다. 절차(문서 확인함):
+
+    ① Firebase 콘솔 → 프로젝트 설정 → **서비스 계정** → 「새 비공개 키 생성」
+       → JSON 파일이 받아진다
+    ② `eas credentials` → Android → production → Google Service Account →
+       *Manage your Google Service Account Key for Push Notifications (FCM V1)* →
+       *Set up…* → *Upload a new service account key*
+       (또는 expo.dev 대시보드 → 프로젝트 설정 → Credentials → 안드로이드
+        식별자 → Service Credentials → FCM V1 service account key)
+
+  ⚠ **그 JSON은 커밋하지 마라.** `google-services.json`과 정반대다 —
+  진짜 개인키가 들어 있고, 가진 사람이 이 프로젝트로 푸시를 보낼 수 있다.
+  [[식별자가 들어 있다와 감춰야 한다는 다르다]] 참조.
+
+  ⚠ `eas-cli`가 이 환경에 설치돼 있지 않다(`npx eas --version` 실패).
+  ②를 하려면 먼저 설치와 로그인이 필요하다.
+
+  등록이 끝나면 확인할 것: 앱을 백그라운드로 내리고 Expo 푸시 API(또는
+  expo.dev/notifications)로 보내 잠금화면에 뜨는지, 그리고 앱이 켜져 있을 때
+  `setNotificationHandler`가 배너를 띄우는지 둘 다.
+
+- **iOS 푸시는 별개다.** APNs 키와 애플 개발자 계정이 필요하다. 계정을
+  만드는 중이라 이번 범위 밖이다. 안드로이드가 끝나도 iOS는 그대로 남는다.
 - **DB 오류 번역** — 서비스 계층(`services/*.ts`)은 안 봤다. 스토어만 정리했다
 - **접근성** — `components/` 계층에 `accessibilityRole` 없는 Pressable이 다수
 - **`space` 토큰이 죽어 있다** — 실사용 0회, 하드코딩 spacing이 화면당 35~88개
@@ -511,6 +527,75 @@ rejection은 콘솔 한 줄이고 화면은 멀쩡하다. 개발 빌드는 빨�
 그대로다. 그 구분을 적어놓고도 다시 밟았다 — 주석을 걷어낸 뒤 세도록 고쳤다.
 
 
+
+### 「식별자가 들어 있다」와 「감춰야 한다」는 다르다
+
+`google-services.json`을 `.gitignore`에 넣었다가 뺐다. 넣은 근거는
+「프로젝트 식별자가 들어 있다」였는데, 그게 근거가 되지 않는다.
+
+파일 안의 필드 전부:
+
+    project_info: project_number · project_id · storage_bucket
+    client: mobilesdk_app_id · package_name · oauth_client · api_key.current_key
+
+**개인키가 없다.** `api_key.current_key`는 앱에 임베드되는 공개 키라 APK를
+열면 그대로 나온다. 실제 권한은 Firebase 콘솔의 보안 규칙과 서버 키가 정한다.
+이 프로젝트는 FCM만 쓴다 — 네이티브 Firebase 라이브러리가 전부 메시징
+계열이고 firestore·storage·auth·database가 없다. 규칙이 걸릴 표면 자체가 없다.
+
+감출지 말지는 **무엇이 들어 있는가**가 아니라 **그것을 가진 사람이 무엇을 할 수
+있는가**로 정한다. 식별자는 가리켜 줄 뿐 열어 주지 않는다.
+
+같은 Firebase 작업 안에 정반대 파일이 있어서 대비가 선명하다:
+
+| 파일 | 커밋 | 왜 |
+|---|---|---|
+| `google-services.json` | **한다** | 공개 식별자 + 앱에 임베드되는 키. APK에 이미 들어간다 |
+| 서비스 계정 키(FCM V1) | **안 한다** | 진짜 개인키다. 가진 사람이 그 프로젝트로 푸시를 보낼 수 있다 |
+
+⚠ Expo 문서는 앞의 것에 대해 같은 페이지에서 모순된 말을 한다 —
+「민감하니 `.gitignore`에 넣어라」와 「Firebase 프로젝트의 공개 식별자를
+담는다」를 나란히 적어놨다. 그 문장을 근거로 다시 넣지 마라.
+`.gitignore` 그 자리에 근거를 주석으로 남겨뒀다.
+
+커밋해 두면 EAS 빌드가 그냥 된다. `app.json`의 `googleServicesFile` 한 줄로
+끝이고, `app.config.js`도 EAS 환경변수도 필요 없다.
+
+### EAS로 파일을 넘기는 방법 — 조사해 두고 안 쓴 결과
+
+`google-services.json`을 커밋하기로 해서 이번엔 필요 없어졌다. 다만 **APNs
+키처럼 진짜로 감춰야 하는 파일**을 넘길 때 쓸 수 있으니 남긴다.
+
+문서로 확인된 것:
+
+- file 타입 환경변수는 **내용이 아니라 경로를 담는다.** 원문:
+  "Files: Values uploaded as files (for example, `google-services.json` or a
+  certificate) that are made available to jobs as **file paths** on the build runner."
+- CLI는 **`eas env:set`**이다. 문서의 예는 plaintext뿐이고,
+  **file 타입은 EAS 대시보드에서 업로드하라고 안내한다.**
+- **`eas env:create`는 문서에 없다.** 내가 기억으로 그 명령을 댔으면 틀렸을 것이다.
+  이 세션에서 「소스를 읽어 확인」이 세 번 나를 살렸는데, 이건 「문서를 읽어
+  확인」이 살린 경우다.
+
+문서에서 **못 찾은 것**: `app.config.js`가 그 변수를 참조하는 코드 조각.
+환경변수 3개 페이지·FCM 자격증명 페이지·빌드 레퍼런스 목차를 다 봤는데 없다.
+
+추론(표시해 둔다, 검증 안 됨): 경로를 담는 변수를 쓰려면 설정이 `process.env`를
+읽어야 하는데 `app.json`은 정적 JSON이라 못 읽는다. 그래서 동적 설정이 필요하고,
+최소 변경은 `app.json`을 두고 얇은 `app.config.js`를 얹는 것이다:
+
+    module.exports = ({ config }) => ({
+      ...config,
+      android: {
+        ...config.android,
+        googleServicesFile:
+          process.env.GOOGLE_SERVICES_JSON ?? config.android.googleServicesFile,
+      },
+    });
+
+`eas-cli`가 설치돼 있지 않고 이 저장소는 EAS 빌드를 한 번도 안 돌렸다.
+쓰게 되면 `eas build` 한 번으로 확인해야 한다.
+
 ### 계측 도구가 계측 대상 위에 있다
 
 이번 세션에 두 번 걸렸다. 둘 다 「앱이 이상하다」로 읽었는데 도구 쪽 문제였다.
@@ -532,6 +617,21 @@ LogBox 전체화면 오류를 치우고 다시 재니 정상이었다 — 안쪽
     기기에서 확인할 때는 개발 도구 오버레이가 화면을 덮고 있는지 먼저 본다.
     LogBox 토스트·LogBox 전체화면·dev-client 부동 버튼이 그것이다.
     「눌렀는데 안 된다」를 앱 결함으로 적기 전에 그것부터 치운다.
+
+
+**③ `adb reverse` 매핑이 조용히 사라졌다.**
+앱이 흰 화면만 띄워서 「번들이 깨졌나」로 읽었다. `adb reverse --list`가
+비어 있었다 — adb가 재연결되면서(transport_id가 11→39로 바뀌었다) 매핑이
+날아간 것이다. 매핑은 연결마다 새로 걸어야 하는데, 사라졌다는 신호가
+어디에도 없다. 다시 걸었더니 이번엔 Metro가 `ERR_STREAM_UNABLE_TO_PIPE`로
+망가져 있었고, `TaskStop`으로 죽인 셸 뒤에 node 프로세스가 8081을 붙들고
+남아 있어서 새 Metro가 「Port 8081 is being used」로 못 떴다.
+
+세 겹이 전부 계측 쪽이었고, 화면에 보이는 것은 「앱이 흰 화면」 하나였다.
+
+    기기에서 「앱이 이상하다」를 보면 사슬을 끝에서부터 짚는다 —
+    adb 연결 · reverse 매핑 · Metro 응답 · 번들 로그 · 앱 로그.
+    앞의 넷이 다 조용히 실패할 수 있고, 넷 다 증상이 같다.
 
 계열로 보면 「실패와 미실행의 출력이 같다」의 도구판이다. ①은 성공 신호가
 실행을 뜻하지 않았고, ②는 내 조작이 앱에 닿지도 않았는데 앱이 반응을 안 한

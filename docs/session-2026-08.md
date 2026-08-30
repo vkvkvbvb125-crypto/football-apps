@@ -255,6 +255,30 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
   expo.dev/notifications)로 보내 잠금화면에 뜨는지, 그리고 앱이 켜져 있을 때
   `setNotificationHandler`가 배너를 띄우는지 둘 다.
 
+- **알림을 탭해도 아무 데도 안 간다 — 딥링크 처리가 없다.**
+  `RootNavigator.tsx:251-252`의 두 리스너
+  (`addNotificationReceivedListener` · `addNotificationResponseReceivedListener`)가
+  **둘 다 같은 일**을 한다 — `loadNotifications()`로 앱 안의 알림 목록만 갱신한다.
+  응답의 `data`를 읽거나 화면으로 보내는 코드가 없다.
+  에뮬레이터에서 실제로 눌러봤다: 앱이 열리고 마지막에 있던 화면에 떨어진다.
+
+  「새 경기가 등록됐어요」를 눌렀는데 팀 화면이 나오면, 그 알림은 사용자를
+  데려다주지 못하고 「직접 찾아가라」고 하는 셈이다.
+
+  ⚠ **`kind` 정리가 이것의 선행이다.** 라우팅하려면 알림이 자기가 무엇인지
+  알아야 하는데, 지금은 여덟 종류 중 넷만 `kind`를 실어 보낸다. `kind`를
+  넷 다 채우고 나면 그 값으로 보낼 화면을 정할 수 있다:
+
+      new_match / 우천     → 그 경기의 일정 화면
+      deadline             → 그 경기의 명단 시트
+      announcement         → 그 공지 상세
+      정산                 → 정산 탭
+      멘션 / 댓글          → 그 게시글
+
+  그러려면 `kind` 말고 대상 id도 함께 실어야 한다(`data: { kind, matchId }` 같은
+  모양). 지금 `notify-team`은 `data`를 아예 안 싣는다 — Edge Function의 messages가
+  `{ to, title, body, sound, channelId, priority }`뿐이다. 그것도 같이 정해야 한다.
+
 - **iOS 푸시는 별개다.** APNs 키와 애플 개발자 계정이 필요하다. 계정을
   만드는 중이라 이번 범위 밖이다. 안드로이드가 끝나도 iOS는 그대로 남는다.
 - **DB 오류 번역** — 서비스 계층(`services/*.ts`)은 안 봤다. 스토어만 정리했다
@@ -527,6 +551,47 @@ rejection은 콘솔 한 줄이고 화면은 멀쩡하다. 개발 빌드는 빨�
 그대로다. 그 구분을 적어놓고도 다시 밟았다 — 주석을 걷어낸 뒤 세도록 고쳤다.
 
 
+
+
+### 죽은 코드의 다섯 번째 — 부르는 자리는 있고 쓰는 자리가 없다
+
+앞의 넷은 전부 **부르는 자리가 없었다**(화면까지 다 만들고 안 붙임,
+`PlaceDetailModal` 호출자 0, …). 이건 모양이 다르다.
+
+`pushService.ensureAndroidChannel()`은 로그인할 때마다 **실제로 돌았다.**
+안드로이드 채널 `default`를 이름 「킥데이 알림」·importance HIGH·진동
+`[0,250,250,250]`·초록 LED로 만들었다. 채널은 기기에 잘 만들어져 있었다
+(`dumpsys notification`으로 확인).
+
+그런데 `notify-team` Edge Function이 메시지에 `channelId`를 안 실었다.
+그러면 안드로이드는 Expo의 폴백 채널로 보낸다:
+
+    channelId 있음 → channel=default
+    channelId 없음 → channel=expo_notifications_fallback_notification_channel
+                     mName=Miscellaneous  mVibrationPattern=null  mLightColor=0
+
+**함수는 매번 돌았고, 그 결과물만 아무도 안 썼다.** 사용자의 안드로이드 알림
+설정에는 「킥데이 알림」이 아니라 「Miscellaneous」가 떴다 — 무엇을 끄는지
+모르는 이름이다.
+
+### 그리고 이건 소스로는 안 보였다
+
+앞의 넷은 전부 소스에서 찾을 수 있었다. 「이 컴포넌트를 부르는 자리가 있는가」는
+grep으로 세면 나온다. 이건 안 나온다 — 부르는 자리도 있고, 만드는 코드도 있고,
+보내는 코드도 있다. **끊긴 곳이 두 파일 사이의 문자열 하나**였고, 한쪽은 그
+문자열을 아예 안 쓰고 있었다.
+
+드러난 방법은 하나뿐이었다. **같은 기기로 두 번 보내 나란히 재는 것.**
+`channelId`를 실은 것과 안 실은 것을 연달아 보내고 `dumpsys notification`에서
+`channel=`을 읽었다. 그 전까지는 「알림이 온다」까지만 확인했고, 그건 맞았다 —
+오긴 왔다. 어느 채널로 오는지를 안 봤을 뿐이다.
+
+    「동작한다」의 확인이 「의도한 대로 동작한다」의 확인은 아니다.
+    받는 쪽이 무엇을 받았는지까지 봐야 한다.
+
+`scripts/pushsend.check.ts`가 그 문자열 둘을 마주 보게 한다 — 만드는 채널
+이름과 보내는 채널 이름이 같은지. `voteguard`가 SQL과 TS를 한 단언으로 묶은
+것과 같은 모양이고, 이번엔 TS 앱과 Deno Edge Function이다.
 
 ### 「식별자가 들어 있다」와 「감춰야 한다」는 다르다
 

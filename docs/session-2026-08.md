@@ -279,6 +279,13 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
   모양). 지금 `notify-team`은 `data`를 아예 안 싣는다 — Edge Function의 messages가
   `{ to, title, body, sound, channelId, priority }`뿐이다. 그것도 같이 정해야 한다.
 
+- **`notify_new_match`·`notify_deadline` 컬럼을 언제 지울 것인가.**
+  `20260830_notify_prefs_v2.sql`이 값을 `notify_match`로 접었고 코드는 더 이상
+  읽지 않는다. 컬럼은 남겨 뒀다 — 카카오 유래 컬럼 때와 같은 판단이다(5e42779).
+  되돌릴 여지가 필요한 동안만이고, 새 토글이 한 달쯤 돌아 문제없으면 지운다.
+  ⚠ 지울 때 `src/types/database.ts`의 그 두 줄도 같이 지워라. 지금은
+  「읽지 않는다」는 주석과 함께 남아 있다.
+
 - **iOS 푸시는 별개다.** APNs 키와 애플 개발자 계정이 필요하다. 계정을
   만드는 중이라 이번 범위 밖이다. 안드로이드가 끝나도 iOS는 그대로 남는다.
 - **DB 오류 번역** — 서비스 계층(`services/*.ts`)은 안 봤다. 스토어만 정리했다

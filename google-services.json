@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281042869749",
+    "project_id": "kickday-edf2e",
+    "storage_bucket": "kickday-edf2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281042869749:android:9679c911a8e883c0e894bc",
+        "android_client_info": {
+          "package_name": "com.kickday.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJoEr4nSJSqqVmOh8COK6LFlPNDU2NzBI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

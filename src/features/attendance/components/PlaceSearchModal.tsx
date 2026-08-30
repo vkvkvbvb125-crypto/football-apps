@@ -8,6 +8,33 @@ import { colors } from '../../../theme';
 
 const CATEGORIES = ['풋살장', '축구장', '운동장', '체육관'];
 
+/**
+ * 위치를 얻었는가 — 실패 둘이 다른 말을 해야 한다.
+ *
+ * 예전엔 boolean 하나(locationDenied)였다. 그래서 「권한은 있는데 측위가 실패」한
+ * 경우에 coords도 안 세워지고 locationDenied도 안 세워져서, 화면이 아무 말 없이
+ * 전국 결과를 보여줬다 — 「내 주변으로 찾았다」와 「위치를 못 얻어 전국으로 찾았다」의
+ * 출력이 같았다. 에뮬레이터 첫 실행에서 이 갈래가 실제로 났다.
+ */
+type LocationState = 'pending' | 'ok' | 'denied' | 'unavailable';
+
+/**
+ * 측위를 기다리는 한도.
+ *
+ * getCurrentPositionAsync({})는 옵션이 비어 있으면 최고 정확도의 새 측위를 기다린다.
+ * 실내에서 쓰는 앱인데 그 기본값은 맞지 않는다 — GPS가 안 잡히는 체육관에서 무한정
+ * 멈춰 있게 된다. 마지막 위치를 먼저 보고, 없으면 Balanced로 이만큼만 기다린다.
+ */
+const LOCATION_TIMEOUT_MS = 5000;
+
+/** 마지막 위치를 「내 주변」으로 인정해 줄 나이. 이보다 오래된 것은 쓰지 않는다. */
+const LAST_KNOWN_MAX_AGE_MS = 5 * 60 * 1000;
+
+/** expo-location에는 타임아웃 옵션이 없다. 넘기면 null로 끝낸다. */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([p, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
+}
+
 interface PlaceSearchModalProps {
   value: { name: string } | null;
   onSelect: (place: PlaceResult) => void;
@@ -20,22 +47,59 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [locationDenied, setLocationDenied] = useState(false);
+  const [locationState, setLocationState] = useState<LocationState>('pending');
+  /**
+   * 반경 안에 결과가 없어 위치 없이 다시 찾았는가.
+   *
+   * locationState와 축이 다르다 — 저건 「위치를 얻었는가」이고 이건 「그 위치로 찾은
+   * 결과가 있었는가」다. 한 열거형에 섞으면 「위치는 얻었는데 0건이라 넓혔다」를
+   * 표현할 수 없다.
+   */
+  const [widened, setWidened] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 모달이 열릴 때 현재 위치를 가져와서 "내 주변" 검색에 쓴다. 권한 거부 시 위치 없이 전국 검색으로 대체.
+  /*
+    모달이 열릴 때 현재 위치를 가져와 「내 주변」 검색에 쓴다.
+
+    ⚠ try/catch를 걷어내지 마라. getCurrentPositionAsync는 던진다(측위 실패,
+    위치 서비스 꺼짐). 예전엔 이 async IIFE에 catch가 없어서 거부가 그대로
+    떠올랐다 — 개발 빌드는 빨간 화면, 릴리스는 침묵이다(RN의 거부 추적기가
+    __DEV__ 안에만 걸린다). 그리고 던지고 나면 setCoords도 setLocationState도
+    안 불려서 화면이 「찾는 중」인 채로 남는다.
+  */
   useEffect(() => {
-    if (!modalVisible || coords) return;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationDenied(true);
-        return;
+    if (!modalVisible || locationState !== 'pending') return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        if (status !== 'granted') {
+          setLocationState('denied');
+          return;
+        }
+        const last = await Location.getLastKnownPositionAsync({ maxAge: LAST_KNOWN_MAX_AGE_MS });
+        const position =
+          last ??
+          (await withTimeout(
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            LOCATION_TIMEOUT_MS
+          ));
+        if (cancelled) return;
+        if (!position) {
+          setLocationState('unavailable');
+          return;
+        }
+        setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        setLocationState('ok');
+      } catch {
+        if (!cancelled) setLocationState('unavailable');
       }
-      const position = await Location.getCurrentPositionAsync({});
-      setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
     })();
-  }, [modalVisible, coords]);
+    return () => {
+      cancelled = true;
+    };
+  }, [modalVisible, locationState]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -49,13 +113,30 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
     setLoading(true);
     debounceRef.current = setTimeout(() => {
       searchPlaces(trimmed, coords ?? undefined)
-        .then((places) => {
-          setResults(places);
+        .then(async (places) => {
+          /*
+            반경 밖 사용자를 빈손으로 돌려보내지 않는다.
+
+            Edge Function은 좌표가 있으면 radius=20000·sort=distance로 찾는다.
+            20000은 카카오 로컬 API의 상한이라 더 넓힐 수 없다. 그래서 근처에
+            구장이 없는 사용자는 위치를 쓰기 시작하는 순간 0건을 받게 된다 —
+            고치는 것이 손해가 되는 자리다. 0건이면 위치 없이 한 번 더 찾고,
+            그 사실을 화면에 적는다.
+          */
+          if (places.length === 0 && coords) {
+            const nationwide = await searchPlaces(trimmed);
+            setResults(nationwide);
+            setWidened(nationwide.length > 0);
+          } else {
+            setResults(places);
+            setWidened(false);
+          }
           setError(null);
         })
         .catch(() => {
           setError('검색에 실패했어요');
           setResults([]);
+          setWidened(false);
         })
         .finally(() => setLoading(false));
     }, 300);
@@ -68,6 +149,9 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
     setQuery('');
     setResults([]);
     setError(null);
+    setWidened(false);
+    // 위치를 못 얻은 채로 닫았으면 다음에 열 때 다시 시도한다 — 그 사이에 켰을 수 있다.
+    setLocationState((s) => (s === 'ok' ? s : 'pending'));
     setModalVisible(false);
   };
 
@@ -112,8 +196,15 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
               ))}
             </View>
 
-            {locationDenied && (
+            {/* 실패 둘과 「넓혔다」가 각각 다른 말을 한다 — 셋을 한 문구로 합치지 마라 */}
+            {locationState === 'denied' && (
               <Text style={styles.hintText}>위치 권한이 없어서 내 주변이 아닌 전국 검색 결과가 나와요</Text>
+            )}
+            {locationState === 'unavailable' && (
+              <Text style={styles.hintText}>위치를 확인할 수 없어 전국 검색 결과가 나와요</Text>
+            )}
+            {widened && (
+              <Text style={styles.hintText}>내 주변 20km 안에는 없어서 전국에서 찾았어요</Text>
             )}
 
             {loading && <ActivityIndicator style={styles.loading} color={colors.green} />}

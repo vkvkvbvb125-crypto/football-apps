@@ -955,7 +955,33 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 8, gap: 16 },
+  /*
+    좌우 여백은 여기 한 곳에서만 준다.
+
+    예전엔 카드마다 marginHorizontal: 20을 붙였다 — 여덟 곳에 같은 값이 흩어져
+    있었고, 카드를 새로 넣을 때 빠뜨리기 쉬웠다. (실측해 보니 빠뜨린 자리는
+    없었다. 사고가 나기 전에 모은 것이다.)
+
+    ⚠ 화면 끝까지 닿아야 하는 것(가로 스크롤 줄 같은)을 넣게 되면 이 패딩을
+    지우지 말고, 그 자식에게 marginHorizontal: -20을 줘서 빠져나가게 해라.
+    여기를 지우면 나머지 전부가 따라 무너진다.
+  */
+  /*
+    gap 16은 팀 화면의 10과 **다른 것이 맞다.** 통일하지 마라.
+
+    카드 안쪽이 20이니 안팎 비가 1.25다. 팀 화면은 같은 안쪽 20에 바깥 10이라
+    비가 2.0이고, 그건 「카드 여덟이 이어져서 상자 목록으로 읽히는 것」을 막으려고
+    고른 값이다(6248817). 홈은 카드가 넷이고 종류가 뚜렷이 다르다 —
+    공지 배너 · 히어로 · 이번주 경기 · 정산 현황 · 최근 공지. 같은 위험이 없으니
+    같은 처방이 필요하지 않다.
+
+    그리고 팀 커밋이 「HomeScreen은 자기 값(paddingTop 8, gap 16)」이라며
+    **의식적으로 안 건드렸다.** 한 번 판단이 끝난 자리다.
+    16 자체도 0a9cbb3에서 14 → 16으로 올린 값이다(카드 안쪽도 16 → 20으로 함께).
+
+    세 화면이 다른 것을 scripts/screengap.check.ts가 붙들고 있다.
+  */
+  content: { paddingHorizontal: 20, paddingTop: 8, gap: 16 },
 
   /** 화면을 여는 문장 — 여기가 이 화면에서 가장 큰 글자다 */
 
@@ -966,7 +992,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
   },
   topBarTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8, minWidth: 0 },
   topBarTitle: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
@@ -993,7 +1018,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: 20,
     minHeight: 46,
     paddingHorizontal: 14,
     borderRadius: radius.control,
@@ -1038,13 +1062,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 20,
     marginTop: 4,
     marginBottom: -6,
   },
   card: {
     ...shadow.card,
-    marginHorizontal: 20,
     backgroundColor: colors.card,
     borderRadius: radius.card,
     borderWidth: 1,
@@ -1086,7 +1108,6 @@ const styles = StyleSheet.create({
 
   // ── 경기 카드 ─────────────────────────────────────────────
   matchCard: {
-    marginHorizontal: 20,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1189,11 +1210,10 @@ const styles = StyleSheet.create({
   cardNote: { color: colors.textMuted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   /** 정산 Bento 타일 줄 — 카드 안이 아니라 화면에 직접 선다 */
-  bentoRow: { paddingHorizontal: 20 },
+  bentoRow: {},
 
   // 경기가 없을 때만 나오는 안내 카드
   tipCard: {
-    marginHorizontal: 20,
     padding: 16,
     borderRadius: radius.card,
     borderWidth: 1,
@@ -1226,7 +1246,7 @@ const styles = StyleSheet.create({
   // ── 팀 정산 현황 ──────────────────────────────────────────
   // SettlementCard는 정산 탭의 리스트(자체 좌우 패딩 있는 ScrollView) 안에서 쓰도록
   // marginHorizontal 없이 만들어져 있다 — 홈에서는 이 래퍼로 카드 여백을 맞춘다.
-  settlementCardWrap: { marginHorizontal: 20 },
+  settlementCardWrap: {},
   dueRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   walletIcon: {
     width: 46,

@@ -1092,6 +1092,20 @@ function SettlementDetailModal({
 }
 
 const styles = StyleSheet.create({
+  /*
+    gap 12는 근거 없이 흘러온 값이다. 이력을 남긴다.
+
+    6d7d639에서 14 → 12로 바뀌었는데, 그 커밋은 다른 다섯 건을 고치면서
+    「이전 세션의 미커밋 작업 약 3500줄이 함께 담겨 분리할 수 없었다」고
+    스스로 적어 둔 것이다. 간격을 왜 12로 했는지는 아무 데도 없다.
+
+    그래도 유지한다. 지금 바꿀 이유가 없어서다 — 재보니 카드 수가 홈(넷)과
+    팀(여덟) 사이라 12가 어정쩡하게 맞는다. 값을 정당화하는 게 아니라,
+    「근거가 없다는 사실」을 적어 두는 것이다. 나중에 셋을 맞출 일이 생기면
+    여기가 제일 먼저 움직여도 되는 자리다.
+
+    세 화면이 다른 것을 scripts/screengap.check.ts가 붙들고 있다.
+  */
   list: { paddingHorizontal: 20, paddingTop: 4, gap: 12 },
   pressed: { opacity: 0.85 },
   errorText: { color: colors.danger, textAlign: 'center', marginBottom: 8, paddingHorizontal: 20 },

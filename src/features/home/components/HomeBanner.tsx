@@ -211,7 +211,7 @@ function Slide({ slide, height }: { slide: BannerSlide; height: number }) {
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 20,
+    /* 좌우 여백은 HomeScreen의 content가 준다 — 여기서 또 주면 두 배가 된다 */
     borderRadius: radius.hero,
     borderWidth: 1,
     borderColor: colors.border,

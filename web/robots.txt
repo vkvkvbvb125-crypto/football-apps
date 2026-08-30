@@ -1,0 +1,12 @@
+# 정산·초대 링크는 특정 사람에게 보낸 주소다. 검색에 뜰 이유가 없다.
+#
+# 페이지 자체에 남의 정산 내용이 들어 있진 않지만(내용은 앱이 로그인 후 불러온다),
+# 없는 경로를 전부 안내 페이지로 돌려주는 구조라 크롤러가 /s/아무거나 를 긁으면
+# 전부 200으로 응답한다. 쓸모없는 페이지가 무한히 색인되는 걸 막는다.
+User-agent: *
+Disallow: /s/
+Disallow: /invite/
+Disallow: /match/
+Allow: /
+
+Sitemap: https://kickday.app/sitemap.xml

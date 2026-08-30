@@ -40,3 +40,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# supabase CLI 캐시 (project-ref·pooler-url 등이 들어간다)
+supabase/.temp/

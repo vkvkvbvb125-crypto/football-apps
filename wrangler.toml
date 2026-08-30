@@ -1,0 +1,23 @@
+# kickday.app 정적 사이트 배포 설정 (Cloudflare Workers static assets)
+#
+# 대시보드 업로더는 .well-known 같은 숨김 폴더를 빠뜨리거나 중간에 멈추는 일이 있어서
+# 배포는 이 파일 기준으로 CLI에서 한다.
+#
+#   npx wrangler login                 (최초 1회)
+#   npx wrangler deploy
+name = "kickday"
+compatibility_date = "2026-08-12"
+
+# 실제로 쓰는 주소. workers.dev 임시 주소가 아니라 이 도메인으로 링크가 나간다.
+routes = [{ pattern = "kickday.app", custom_domain = true }]
+
+[assets]
+directory = "./web"
+
+# 없는 경로는 index.html을 그대로 돌려준다(주소는 유지).
+# 정산 링크 /s/{id}는 id가 매번 달라 해당 파일을 미리 둘 수 없다 —
+# 이게 없으면 카톡에서 링크를 누른 사람이 404를 본다.
+#
+# _redirects에 `/* /index.html 200`을 따로 두면 안 된다 — 이 설정과 겹쳐서
+# Cloudflare가 무한 루프로 판정하고 배포 자체를 거부한다. 둘 중 하나만 쓴다.
+not_found_handling = "single-page-application"

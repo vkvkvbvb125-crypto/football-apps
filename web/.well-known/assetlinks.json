@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kickday.app",
+      "_comment": "EAS는 빌드 프로필마다 키스토어를 따로 만든다 — 프로필을 추가하면 지문도 하나 더 넣어야 한다. 확인: eas.dev API 또는 EAS 대시보드 > Credentials",
+      "sha256_cert_fingerprints": [
+        "A6:87:0F:6E:AE:32:0D:DB:1F:64:33:61:7E:39:44:44:75:83:70:44:82:6D:23:9B:93:CB:1A:EA:79:42:DE:9E",
+        "FB:BB:30:06:65:08:5A:C7:40:00:CF:1C:0E:73:21:5C:83:40:3D:2A:A6:25:E4:A2:2D:59:25:69:D0:43:14:D2"
+      ]
+    }
+  }
+]

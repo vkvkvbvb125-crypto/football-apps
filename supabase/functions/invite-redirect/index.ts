@@ -7,7 +7,7 @@ function renderPage(code: string | null) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>킥데이 팀 초대</title>
+<title>KickDay 팀 초대</title>
 <style>
   body { font-family: -apple-system, sans-serif; background: #0B0F0D; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 24px; text-align: center; }
   h1 { font-size: 20px; margin-bottom: 8px; }
@@ -16,13 +16,13 @@ function renderPage(code: string | null) {
 </style>
 </head>
 <body>
-  <h1>킥데이 팀에 초대되었어요</h1>
+  <h1>KickDay 팀에 초대되었어요</h1>
   <p>앱으로 자동 이동 중입니다. 이동이 안 되면 아래 코드를 앱에 직접 입력해주세요.</p>
   <div class="code">${safeCode}</div>
   <script>
     var code = ${JSON.stringify(safeCode)};
     if (code) {
-      window.location.href = 'futsalclub://join?code=' + encodeURIComponent(code);
+      window.location.href = 'kickday://join?code=' + encodeURIComponent(code);
     }
   </script>
 </body>

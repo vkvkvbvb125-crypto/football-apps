@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["[APPLE_TEAM_ID].com.kickday.app"],
+        "components": [
+          { "/": "/s/*", "comment": "정산 상세" },
+          { "/": "/invite/*", "comment": "팀 초대" },
+          { "/": "/match/*", "comment": "경기 상세" }
+        ]
+      }
+    ]
+  }
+}

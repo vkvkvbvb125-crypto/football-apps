@@ -1,27 +1,50 @@
 {
   "expo": {
-    "name": "킥데이",
+    "name": "KickDay",
     "slug": "futsal-club",
-    "scheme": "futsalclub",
+    "scheme": "kickday",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.futsalclub.app",
+      "bundleIdentifier": "com.kickday.app",
+      "associatedDomains": [
+        "applinks:kickday.app",
+        "applinks:www.kickday.app"
+      ],
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "supertoss",
           "kakaobank",
           "kbbank",
-          "shinhan-sr-ansimclick"
+          "shinhan-sr-ansimclick",
+          "kakaokompassauth",
+          "storykompassauth",
+          "kakaolink"
         ]
       },
       "buildNumber": "1"
     },
     "android": {
-      "package": "com.futsalclub.app",
+      "package": "com.kickday.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "kickday.app"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -46,6 +69,12 @@
       ],
       "expo-web-browser",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "프로필 사진을 바꾸려면 사진 접근이 필요해요."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
@@ -59,7 +88,24 @@
         }
       ],
       "expo-audio",
-      "expo-font"
+      "expo-font",
+      "./plugins/withSendAppQueries",
+      [
+        "@react-native-seoul/kakao-login",
+        {
+          "kakaoAppKey": "540666fcaf16d5cb3c838064fec13b99"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ]
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

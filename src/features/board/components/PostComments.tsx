@@ -21,36 +21,8 @@ import {
   resolveAuthor,
   type PostComment,
 } from '../services/boardService';
+import { notifyTargets } from '../utils/notifyTargets';
 
-/**
- * 댓글 한 건으로 알림 받을 사람들.
- *
- * 글쓴이 + 그 글에 이미 댓글을 단 사람들. 나 자신은 뺀다 — 내 댓글로 나에게
- * 알림이 오면 안 된다.
- *
- * 이전 댓글 작성자를 넣는 이유: 대화가 오가는데 첫 댓글 단 사람만 모르는 상태가
- * 된다. 두 번째 댓글부터는 글쓴이보다 그 사람들이 더 당사자다.
- *
- * ⚠ 이 목록은 댓글이 쌓일수록 늘어난다. 10명이 댓글 단 글에 새 댓글이 달리면
- *   10명에게 간다. 지금은 그게 의도다 — 게시판 토글(notify_board)로 끌 수 있고,
- *   팀 규모가 십수 명이라 상한이 실질적인 의미가 없다.
- *   「알림이 많다」가 나오면 여기가 그 자리다. 그때 고를 수 있는 것들:
- *     · 최근 N명만 (오래된 참여자는 대화에서 빠졌다고 본다)
- *     · 내가 마지막으로 댓글 단 뒤 새 댓글이 있으면 한 번만 (묶어 보내기)
- *     · 글쓴이 + 나를 멘션한 사람만 (지금보다 좁힌다)
- *   상한을 지금 넣지 않는 이유는, 어느 규칙이 맞는지는 실제로 시끄러워져 봐야
- *   알 수 있고, 그전에 넣은 상한은 근거 없는 숫자로 남기 때문이다.
- *
- * 합집합 구조는 멘션을 얹을 자리이기도 하다 — 「댓글에서 글쓴이를 멘션」할 때
- * 같은 사람에게 두 번 울리지 않게 한다.
- */
-function notifyTargets(
-  postAuthorId: string,
-  myUserId: string,
-  priorCommenterIds: string[]
-): string[] {
-  return [...new Set([postAuthorId, ...priorCommenterIds])].filter((id) => id !== myUserId);
-}
 
 interface PostCommentsProps {
   postId: string;

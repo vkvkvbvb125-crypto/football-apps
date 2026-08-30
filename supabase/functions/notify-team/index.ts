@@ -14,9 +14,17 @@ export default {
      * 사용자가 끈 적 없는 알림이 사라진다. 새 종류를 추가할 때도 기본은 "보낸다"여야 한다.
      */
     const PREF_COLUMN: Record<string, string> = {
-      new_match: 'notify_new_match',
+      // 경기 — 새 경기 · 투표 독촉 · 우천 안내가 한 토글을 쓴다
+      new_match: 'notify_match',
+      deadline: 'notify_match',
+      weather: 'notify_match',
+      // 공지
       announcement: 'notify_announcement',
-      deadline: 'notify_deadline',
+      // 게시판 — 멘션 · 댓글
+      mention: 'notify_board',
+      comment: 'notify_board',
+      // 정산
+      settlement: 'notify_settlement',
     };
     const prefColumn = kind ? PREF_COLUMN[kind] : undefined;
 

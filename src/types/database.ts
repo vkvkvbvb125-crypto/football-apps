@@ -82,8 +82,12 @@ export interface Database {
           position: string | null;
           skill_level: SkillLevel;
           jersey_number: number | null;
-          notify_new_match: boolean;
+          notify_match: boolean;
           notify_announcement: boolean;
+          notify_board: boolean;
+          notify_settlement: boolean;
+          /* 옛 컬럼 — 읽지 않는다. 지우지도 않았다(20260830_notify_prefs_v2.sql) */
+          notify_new_match: boolean;
           notify_deadline: boolean;
           joined_at: string;
         };
@@ -95,8 +99,11 @@ export interface Database {
           position?: string | null;
           skill_level?: SkillLevel;
           jersey_number?: number | null;
-          notify_new_match?: boolean;
+          notify_match?: boolean;
           notify_announcement?: boolean;
+          notify_board?: boolean;
+          notify_settlement?: boolean;
+          notify_new_match?: boolean;
           notify_deadline?: boolean;
         };
         Update: Partial<Database['public']['Tables']['team_members']['Insert']>;

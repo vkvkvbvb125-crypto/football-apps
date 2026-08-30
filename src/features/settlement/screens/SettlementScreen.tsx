@@ -279,7 +279,7 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
       .map((sh) => members.find((m) => m.id === sh.teamMemberId)?.userId)
       .filter((id): id is string => !!id);
     if (unpaidUserIds.length === 0) return;
-    notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 회비 독촉`, '아직 회비를 입금하지 않으셨어요', undefined, unpaidUserIds).catch(
+    notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 회비 독촉`, '아직 회비를 입금하지 않으셨어요', undefined, unpaidUserIds, 'settlement').catch(
       () => {}
     );
     setReminded(true);

@@ -87,7 +87,8 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
       everyone ? `${myName}님이 팀 전체를 불렀어요` : `${myName}님이 회원님을 언급했어요`,
       preview,
       undefined,
-      targets
+      targets,
+      'mention'
     ).catch(() => {});
   };
 

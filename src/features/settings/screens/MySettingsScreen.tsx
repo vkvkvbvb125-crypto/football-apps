@@ -383,9 +383,35 @@ export function MySettingsScreen({ navigation }: any) {
             <Text style={styles.cardTitle}>알림</Text>
             {(
               [
-                { col: 'notify_new_match' as const, label: '새 일정 알림', on: me.notifyNewMatch },
-                { col: 'notify_announcement' as const, label: '공지 알림', on: me.notifyAnnouncement },
-                { col: 'notify_deadline' as const, label: '참석 마감 알림', on: me.notifyDeadline },
+                /*
+                  알림 종류는 여덟인데 토글은 넷이다. 여덟을 그대로 늘어놓으면
+                  설정이 길어져 아무도 안 본다 — 무엇을 끄는지는 묶음 이름과
+                  아래 설명으로 알린다.
+                */
+                {
+                  col: 'notify_match' as const,
+                  label: '경기 알림',
+                  hint: '새 경기 · 참석 마감 · 우천 안내',
+                  on: me.notifyMatch,
+                },
+                {
+                  col: 'notify_announcement' as const,
+                  label: '공지 알림',
+                  hint: '총무가 올린 공지',
+                  on: me.notifyAnnouncement,
+                },
+                {
+                  col: 'notify_board' as const,
+                  label: '게시판 알림',
+                  hint: '나를 언급하거나 내 글에 댓글이 달릴 때',
+                  on: me.notifyBoard,
+                },
+                {
+                  col: 'notify_settlement' as const,
+                  label: '정산 알림',
+                  hint: '회비 독촉',
+                  on: me.notifySettlement,
+                },
               ]
             ).map((row) => (
               <Pressable
@@ -395,7 +421,10 @@ export function MySettingsScreen({ navigation }: any) {
                 accessibilityState={{ checked: row.on }}
                 style={({ pressed }) => [styles.toggleRow, pressed && { opacity: 0.85 }]}
               >
-                <Text style={styles.toggleLabel}>{row.label}</Text>
+                <View style={styles.toggleTextCol}>
+                  <Text style={styles.toggleLabel}>{row.label}</Text>
+                  <Text style={styles.toggleHint}>{row.hint}</Text>
+                </View>
                 <View style={[styles.toggle, row.on && styles.toggleOn]}>
                   <View style={[styles.toggleKnob, row.on && styles.toggleKnobOn]} />
                 </View>
@@ -480,6 +509,8 @@ const styles = StyleSheet.create({
   toggleOn: { backgroundColor: colors.green },
   toggleKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bgRoot },
   toggleKnobOn: { alignSelf: 'flex-end' },
+  toggleTextCol: { flex: 1 },
+  toggleHint: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   notifyHint: { color: colors.textMuted, fontSize: 11, fontWeight: '600', marginTop: 4 },
   dangerDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 10 },
   deleteText: { color: colors.danger },

@@ -127,7 +127,18 @@ export async function registerForPushNotifications(userId: string): Promise<Push
  * 알림 종류 — 팀원이 설정에서 끌 수 있는 단위다.
  * 넘기지 않으면 아무도 거르지 않는다(끌 수 없는 알림).
  */
-export type NotifyKind = 'new_match' | 'announcement' | 'deadline';
+export type NotifyKind =
+  /* 경기 토글(notify_match) */
+  | 'new_match'
+  | 'deadline'
+  | 'weather'
+  /* 공지 토글(notify_announcement) */
+  | 'announcement'
+  /* 게시판 토글(notify_board) */
+  | 'mention'
+  | 'comment'
+  /* 정산 토글(notify_settlement) */
+  | 'settlement';
 
 export async function notifyTeam(
   teamId: string,

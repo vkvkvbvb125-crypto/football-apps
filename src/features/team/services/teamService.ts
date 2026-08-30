@@ -56,9 +56,11 @@ export interface TeamMemberWithProfile {
   /** 가입 시각(ISO) — 참석률 분모를 「그 경기 시점의 멤버 수」로 잡는 데 쓴다 */
   joinedAt: string | null;
   /** 알림 설정 — 이 팀에서 받을 알림 종류 */
-  notifyNewMatch: boolean;
+  /* 알림 설정 넷 — 종류 여덟을 넷으로 묶는다. 20260830_notify_prefs_v2.sql 참조 */
+  notifyMatch: boolean;
   notifyAnnouncement: boolean;
-  notifyDeadline: boolean;
+  notifyBoard: boolean;
+  notifySettlement: boolean;
   displayName: string;
   avatarUrl: string | null;
   phone: string | null;
@@ -155,9 +157,10 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMemberWithPr
       position: m.position ?? null,
       jerseyNumber: m.jersey_number ?? null,
       joinedAt: m.joined_at ?? null,
-      notifyNewMatch: m.notify_new_match ?? true,
+      notifyMatch: m.notify_match ?? true,
       notifyAnnouncement: m.notify_announcement ?? true,
-      notifyDeadline: m.notify_deadline ?? true,
+      notifyBoard: m.notify_board ?? true,
+      notifySettlement: m.notify_settlement ?? true,
       displayName: profile?.display_name ?? '멤버',
       avatarUrl: profile?.avatar_url ?? null,
       phone: profile?.phone ?? null,
@@ -189,7 +192,11 @@ export async function updateMemberJersey(teamMemberId: string, jerseyNumber: num
  * 컬럼 이름을 string으로 받으면 오타가 그대로 나가 조용히 실패한다 —
  * 실제 컬럼 셋으로 좁혀 컴파일 때 걸리게 한다.
  */
-export type NotifyPrefColumn = 'notify_new_match' | 'notify_announcement' | 'notify_deadline';
+export type NotifyPrefColumn =
+  | 'notify_match'
+  | 'notify_announcement'
+  | 'notify_board'
+  | 'notify_settlement';
 
 export async function updateNotifyPref(teamMemberId: string, column: NotifyPrefColumn, value: boolean) {
   const { error } = await supabase

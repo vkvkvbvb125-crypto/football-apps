@@ -25,12 +25,31 @@ import {
 /**
  * 댓글 한 건으로 알림 받을 사람들.
  *
- * 지금은 글쓴이 하나뿐이라 합집합이 과해 보이지만, 멘션을 얹으면 "댓글에서 글쓴이를
- * 멘션"할 때 같은 사람에게 두 번 울린다. 그때 고치는 것보다 자리를 잡아 두는 편이 싸다.
- * 나 자신은 뺀다 — 내 글에 내가 단 댓글로 알림이 오면 안 된다.
+ * 글쓴이 + 그 글에 이미 댓글을 단 사람들. 나 자신은 뺀다 — 내 댓글로 나에게
+ * 알림이 오면 안 된다.
+ *
+ * 이전 댓글 작성자를 넣는 이유: 대화가 오가는데 첫 댓글 단 사람만 모르는 상태가
+ * 된다. 두 번째 댓글부터는 글쓴이보다 그 사람들이 더 당사자다.
+ *
+ * ⚠ 이 목록은 댓글이 쌓일수록 늘어난다. 10명이 댓글 단 글에 새 댓글이 달리면
+ *   10명에게 간다. 지금은 그게 의도다 — 게시판 토글(notify_board)로 끌 수 있고,
+ *   팀 규모가 십수 명이라 상한이 실질적인 의미가 없다.
+ *   「알림이 많다」가 나오면 여기가 그 자리다. 그때 고를 수 있는 것들:
+ *     · 최근 N명만 (오래된 참여자는 대화에서 빠졌다고 본다)
+ *     · 내가 마지막으로 댓글 단 뒤 새 댓글이 있으면 한 번만 (묶어 보내기)
+ *     · 글쓴이 + 나를 멘션한 사람만 (지금보다 좁힌다)
+ *   상한을 지금 넣지 않는 이유는, 어느 규칙이 맞는지는 실제로 시끄러워져 봐야
+ *   알 수 있고, 그전에 넣은 상한은 근거 없는 숫자로 남기 때문이다.
+ *
+ * 합집합 구조는 멘션을 얹을 자리이기도 하다 — 「댓글에서 글쓴이를 멘션」할 때
+ * 같은 사람에게 두 번 울리지 않게 한다.
  */
-function notifyTargets(postAuthorId: string, myUserId: string): string[] {
-  return [...new Set([postAuthorId])].filter((id) => id !== myUserId);
+function notifyTargets(
+  postAuthorId: string,
+  myUserId: string,
+  priorCommenterIds: string[]
+): string[] {
+  return [...new Set([postAuthorId, ...priorCommenterIds])].filter((id) => id !== myUserId);
 }
 
 interface PostCommentsProps {
@@ -58,13 +77,17 @@ export function PostComments({
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
 
-  const load = async () => {
+  /** 불러온 목록을 돌려준다 — setComments는 같은 틱에 못 읽어서, 알림 수신자를 여기서 받는다 */
+  const load = async (): Promise<PostComment[] | null> => {
     setLoading(true);
     setFailed(false);
     try {
-      setComments(await fetchComments(postId));
+      const rows = await fetchComments(postId);
+      setComments(rows);
+      return rows;
     } catch {
       setFailed(true);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -82,17 +105,25 @@ export function PostComments({
       await createComment(postId, myUserId, body);
       setDraft(''); // 성공했을 때만 비운다
       onCountChange(1);
-      await load();
+      const rows = await load();
 
-      const targets = notifyTargets(postAuthorId, myUserId);
+      // 방금 단 내 댓글도 rows에 있지만 notifyTargets가 나를 걸러낸다
+      const priorCommenterIds = (rows ?? []).map((c) => c.authorId);
+      const targets = notifyTargets(postAuthorId, myUserId, priorCommenterIds);
       if (targets.length > 0 && activeTeam) {
         /* 알림 문구에 넣을 내 이름 — 댓글 목록의 이름은 boardService가 만든다.
            대체 표시를 그쪽과 맞춘다(「멤버」). 두 곳이 갈리면 한 사람이 두 이름이 된다 */
         const myName = members.find((m) => m.userId === myUserId)?.displayName ?? '멤버';
         const preview = body.length > 40 ? `${body.slice(0, 40)}…` : body;
         // 알림 실패는 삼킨다 — 댓글은 이미 달렸고, 실패한 것처럼 보이면 안 된다.
-        // kind를 안 넘긴다: 나에게 직접 온 반응이라 끄고 켜는 종류로 두지 않는다.
-        notifyTeam(activeTeam.team.id, `${myName}님이 댓글을 남겼어요`, preview, undefined, targets).catch(
+          notifyTeam(
+          activeTeam.team.id,
+          `${myName}님이 댓글을 남겼어요`,
+          preview,
+          undefined,
+          targets,
+          'comment'
+        ).catch(
           () => {}
         );
       }

@@ -559,4 +559,80 @@ SQL
 echo "기존 조건  : 팀 밖 사람은 여전히 거절 (값 그대로)"
 
 echo
-echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok / matches-update ok"
+
+# ── 알림 설정 셋 → 넷 (20260830) ─────────────────────────────────
+#
+# 검사할 것은 접는 규칙이다. notify_match = new_match AND deadline인데, OR로
+# 잘못 적으면 「명시적으로 끈 알림이 되살아난다」가 되고 그건 조용히 일어난다.
+# 프로덕션에는 끈 사람이 없어서 실제로는 티가 안 난다 — 그래서 여기서 네 조합을
+# 다 만들어 본다.
+#
+# ⚠ 준비 단계가 마이그레이션을 전부 부으므로 지금은 「고친 뒤」다. 롤백을 먼저
+#   태워야 「고치기 전」이 된다 — 머리말의 그 규칙이다.
+
+# 롤백 — 새 컬럼 셋을 걷어낸다
+$PSQL <<'SQL' >/dev/null
+alter table team_members
+  drop column if exists notify_match,
+  drop column if exists notify_board,
+  drop column if exists notify_settlement;
+SQL
+$PSQL -tAc "select 1 from information_schema.columns where table_name='team_members' and column_name='notify_match'" \
+  | grep -q 1 && { echo "!! 롤백이 안 됐다"; exit 1; }
+echo "고치기 전  : notify_match 컬럼이 없다 (롤백 확인)"
+
+# 네 조합을 멤버 넷으로 만든다
+$PSQL <<'SQL' >/dev/null
+insert into auth.users (id) values
+  ('44444444-4444-4444-4444-444444444441'),
+  ('44444444-4444-4444-4444-444444444442'),
+  ('44444444-4444-4444-4444-444444444443'),
+  ('44444444-4444-4444-4444-444444444444')
+  on conflict (id) do nothing;
+insert into team_members (id,team_id,user_id,role,notify_new_match,notify_deadline) values
+  ('dddddddd-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001','44444444-4444-4444-4444-444444444441','member', true,  true),
+  ('dddddddd-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001','44444444-4444-4444-4444-444444444442','member', true,  false),
+  ('dddddddd-0000-0000-0000-000000000003','aaaaaaaa-0000-0000-0000-000000000001','44444444-4444-4444-4444-444444444443','member', false, true),
+  ('dddddddd-0000-0000-0000-000000000004','aaaaaaaa-0000-0000-0000-000000000001','44444444-4444-4444-4444-444444444444','member', false, false)
+  on conflict (id) do nothing;
+SQL
+
+pref() { $PSQL -tAc "select notify_match from team_members where id='dddddddd-0000-0000-0000-00000000000$1'" | tail -1 | tr -d ' '; }
+
+$PSQL < supabase/migrations/20260830_notify_prefs_v2.sql >/dev/null
+
+# ① 접는 규칙이 AND다 — 하나라도 끈 사람은 꺼진다
+[ "$(pref 1)" = "t" ] || { echo "!! 둘 다 켠 사람이 꺼졌다"; exit 1; }
+[ "$(pref 2)" = "f" ] || { echo "!! deadline만 끈 사람이 켜져 있다 — OR로 접었나"; exit 1; }
+[ "$(pref 3)" = "f" ] || { echo "!! new_match만 끈 사람이 켜져 있다 — OR로 접었나"; exit 1; }
+[ "$(pref 4)" = "f" ] || { echo "!! 둘 다 끈 사람이 켜져 있다"; exit 1; }
+echo "접는 규칙  : AND (끈 것이 되살아나지 않는다)"
+
+# ② 새 컬럼 둘은 기본 켜짐 — 지금까지 전원에게 가던 것이라 그게 현상 유지다
+for i in 1 2 3 4; do
+  [ "$($PSQL -tAc "select notify_board and notify_settlement from team_members where id='dddddddd-0000-0000-0000-00000000000$i'" | tail -1 | tr -d ' ')" = "t" ] \
+    || { echo "!! 새 컬럼이 기본 꺼짐이다 — 마이그레이션이 조용히 알림을 껐다"; exit 1; }
+done
+echo "새 컬럼    : board·settlement 기본 켜짐 (현상 유지)"
+
+# ③ 옛 컬럼을 안 지웠다 — 읽기만 멈추고 되돌릴 여지를 남긴다
+for c in notify_new_match notify_deadline; do
+  $PSQL -tAc "select 1 from information_schema.columns where table_name='team_members' and column_name='$c'" \
+    | grep -q 1 || { echo "!! 옛 컬럼 $c 가 사라졌다"; exit 1; }
+done
+echo "옛 컬럼    : 안 지웠다 (읽기만 멈춘다)"
+
+# ④ 두 번 돌려도 같다 — 대시보드에 올리다 끊기면 다시 올리게 된다
+$PSQL < supabase/migrations/20260830_notify_prefs_v2.sql >/dev/null
+[ "$(pref 1)" = "t" ] && [ "$(pref 2)" = "f" ] && [ "$(pref 3)" = "f" ] && [ "$(pref 4)" = "f" ] \
+  || { echo "!! 두 번째 적용에서 값이 바뀌었다"; exit 1; }
+echo "재실행     : 2회 적용 안전"
+
+# ⑤ 사람이 새 토글을 끈 뒤 다시 돌려도 그 선택이 안 뒤집힌다
+$PSQL -c "update team_members set notify_match=false where id='dddddddd-0000-0000-0000-000000000001'" >/dev/null
+$PSQL < supabase/migrations/20260830_notify_prefs_v2.sql >/dev/null
+[ "$(pref 1)" = "f" ] || { echo "!! 사용자가 끈 새 토글이 재실행에 되살아났다"; exit 1; }
+echo "사용자 선택: 끈 것을 재실행이 안 되살린다"
+
+echo
+echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok / matches-update ok / notify-prefs-v2 ok"

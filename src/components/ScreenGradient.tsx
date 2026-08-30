@@ -4,6 +4,7 @@
 // 따로 더하지 않아도 된다 (하단은 화면별로 다르게 써야 해서 여기서 다루지 않는다).
 import type { ReactNode } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, tabBar } from '../theme';
@@ -28,15 +29,10 @@ export function useTabBarPadding() {
  * 대신 밝기만 아주 옅게 흘린다 — 위는 배경색 그대로, 아래로 갈수록 미세하게 밝아진다.
  * bgRoot(#080B09)가 이미 옅은 초록기를 품고 있어서 밝히기만 해도 죽은 회색이 되지 않는다.
  * 값이 이전보다 작은 건 배경이 더 어두워졌기 때문이다 — 같은 알파도 검정 위에서 더 세다.
- *
- * ⚠ 이 밝기 그라데이션은 2026-08-31에 걷어냈다. 판단이 틀려서가 아니라 8비트로는
- *   그릴 수 없어서다. 값은 흰색 알파 0 → 0.012 → 0.032, locations [0.12, 0.5, 1],
- *   방향 (0.15,0) → (0.85,1)이었다. 되살릴 일이 있으면 이 값들이다.
- *
- *   0.032를 거의 검은 배경에 곱하면 표현할 중간색이 8단계뿐인데 그걸 화면 대각선
- *   전체(약 2500px)에 펴면 계단 하나가 200px을 넘는다. 실기기 화면에서 그 띠가
- *   뚜렷하게 보였다. 자세한 것은 아래 GreenAmbient 주석의 시도 표에 있다.
  */
+const GRADIENT_TOP = 'rgba(255,255,255,0)';
+const GRADIENT_MID = 'rgba(255,255,255,0.012)';
+const GRADIENT_BOTTOM = 'rgba(255,255,255,0.032)';
 
 /*
  * 초록 앰비언트 — 앱 전체 배경.
@@ -58,20 +54,6 @@ export function useTabBarPadding() {
  */
 const AMBIENT = colors.greenBright;
 
-/*
-  앰비언트가 덮는 세로 범위. 화면 전체가 아니라 위쪽 일부다.
-
-  ⚠ 이건 판단을 뒤집은 값이다. 아래 주석의 「화면 전체에 은은하게」가 원래
-  의도였는데, 실기기(에뮬레이터 창) 화면에서 동심원 띠가 뚜렷하게 보였다.
-  거의 검은 배경 위에서 알파를 곱하면 8비트로 표현할 중간색이 열 몇 개뿐이고,
-  그걸 화면 전체(2400px)에 펴면 계단 하나가 100~200px이 된다 — 원리적으로 띠가 진다.
-
-  세기를 만지는 것으로는 못 고친다(알파를 올리면 배경이 초록이 된다).
-  거리를 줄이는 것만 남는데, 그러려면 덮는 범위를 줄여야 한다.
-  아래쪽은 단색 bgRoot다 — 램프가 없으니 띠도 없다.
-*/
-const AMBIENT_SPAN = 0.38;
-
 export function GreenAmbient() {
   /*
    * Svg에 크기를 숫자로 넘긴다. style={absoluteFill}만 주면 웹에서 상자가 0으로 접혀
@@ -83,7 +65,7 @@ export function GreenAmbient() {
    */
   const { width, height } = useWindowDimensions();
   return (
-    <Svg width={width} height={height * AMBIENT_SPAN} style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Svg width={width} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
       <Defs>
         {/*
          * rx/ry가 아니라 r이다. rx/ry는 react-native-svg의 확장이라 네이티브에서만 먹고,
@@ -91,7 +73,7 @@ export function GreenAmbient() {
          * 기본 좌표계(objectBoundingBox)라 원이 상자 비율만큼 늘어난다 —
          * 세로로 긴 화면에서는 알아서 세로로 긴 타원이 된다.
          */}
-        <RadialGradient id="screenAmbient" cx="50%" cy="34%" r="78%">
+        <RadialGradient id="screenAmbient" cx="50%" cy="42%" r="70%">
           {/*
            * 처음엔 0.04였는데 그 값은 원리적으로 안 보인다. 배경(#080B09)의 L*가 2.81인데
            * 0.04를 얹으면 2.3 오른다 — 색 패치를 맞대고 비교해야 겨우 구분되는 크기고,
@@ -102,18 +84,11 @@ export function GreenAmbient() {
            */}
           <Stop offset="0" stopColor={AMBIENT} stopOpacity={0.15} />
           {/* 중간 정거장이 없으면 선형으로 떨어져서 가장자리까지 초록기가 남는다 */}
-          <Stop offset="0.45" stopColor={AMBIENT} stopOpacity={0.052} />
-          {/*
-            상자 끝(offset 1)이 아니라 0.72에서 0이 된다.
-            ⚠ 상자 모서리에서 알파가 남아 있으면 거기가 그대로 잘려 가로 이음매가
-              생긴다 — 실제로 났다(y=912에서 8단계가 한 번에 뛰었다).
-              앰비언트는 자기 상자 안에서 다 사라져야 한다.
-          */}
-          <Stop offset="0.72" stopColor={AMBIENT} stopOpacity={0} />
+          <Stop offset="0.55" stopColor={AMBIENT} stopOpacity={0.052} />
           <Stop offset="1" stopColor={AMBIENT} stopOpacity={0} />
         </RadialGradient>
       </Defs>
-      <Rect x="0" y="0" width={width} height={height * AMBIENT_SPAN} fill="url(#screenAmbient)" />
+      <Rect x="0" y="0" width={width} height={height} fill="url(#screenAmbient)" />
     </Svg>
   );
 }
@@ -161,28 +136,14 @@ export function ScreenGradient({ children }: Props) {
         대비를 20배 올려야 띠가 드러난다. 그래서 노이즈 오버레이도 안 넣었다.
         (실기기 OLED는 어두운 장면에서 더 잘 보인다 — 거기서 보이면 다시 판단할 것.)
       */}
-      {/*
-        ⚠ 화면 전체 밝기 그라데이션은 걷어냈다. 아래 GRADIENT_* 상수와 그 위
-          주석은 왜 있었는지를 남기려고 둔다 — 지우지 마라.
-
-        원래 의도는 「위는 배경색 그대로, 아래로 갈수록 미세하게 밝아진다」였고
-        그 판단 자체는 지금도 맞다. 문제는 8비트다. 알파 0.032를 거의 검은 배경에
-        곱하면 표현할 중간색이 8단계뿐인데, 그걸 화면 대각선 전체(약 2500px)에
-        펴면 계단 하나가 200px이 넘는다 — 원리적으로 띠가 진다.
-
-        실기기 화면에서 그 띠가 뚜렷하게 보였다. 프레임버퍼(adb screencap)로는
-        매끄럽게 나오는데 에뮬레이터 창에서는 보인다 — 안드로이드가 프레임버퍼에
-        디더링을 하고 호스트 합성은 그 경로를 안 거치기 때문이다.
-        **프레임버퍼 수치로 「안 보인다」고 판정하면 안 된다.**
-
-        고치는 방법을 넷 시도했고 전부 실패했다(구간 압축·r 축소·노이즈 오버레이·
-        SVG 스톱 9개). 자세한 결과는 아래 GreenAmbient 주석에 있다.
-        세기를 올리면 배경이 초록이 되어 「배경은 초록이 아니라 밝기다」와 부딪힌다.
-
-        남은 길은 램프를 없애는 것뿐이었다. 이 레이어를 빼면 앰비언트가 닿지 않는
-        아래쪽이 단색 bgRoot가 된다 — 실측으로 고유색 1개다. 램프가 없으니 띠도 없다.
-        잃는 것은 8단계의 밝기 기울기고, 화면에서 그 차이는 안 보였다.
-      */}
+      <LinearGradient
+        colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+        locations={[0.12, 0.5, 1]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.85, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
 
       {/* 밝기 그라데이션 위에 얹는다 — 둘 다 배경이라 순서로 카드를 가릴 일은 없다 */}
       {/*
@@ -225,6 +186,55 @@ export function ScreenGradient({ children }: Props) {
           합성해 그린다 — 둘이 다르다. 같은 화면을 창에서 보면 띠가 뚜렷한데
           screencap을 같은 크기로 줄이면 매끄럽다. 실기기는 프레임버퍼가 곧
           화면이라 창 쪽 문제는 안 생긴다. 실기기 확인 전까지는 손대지 마라.
+      */}
+      {/*
+        ══ 배경 밴딩 조사 (2026-08-31) — 여섯을 시도했고 전부 되돌렸다 ══
+
+        ⚠ 이 조사 전체의 전제부터 적는다. **에뮬레이터 창과 프레임버퍼는 다른
+          경로다.** adb screencap은 안드로이드가 시스템 디더링을 끝낸 프레임버퍼를
+          가져오고(29/30 교대하는 체커보드를 확인했다), 에뮬레이터 창은 호스트
+          GPU가 따로 합성해 그린다 — 거기엔 그 디더가 안 걸린다.
+          같은 화면을 같은 크기로 줄여 비교하니 캡처는 매끄럽고 창은 띠가 뚜렷했다.
+
+          실기기는 프레임버퍼가 곧 패널이라 디더가 살아 있고, 요즘 폰은 10비트
+          패널도 흔하다. **그래서 여기 적힌 「띠가 보인다」는 실기기에서 확인된
+          것이 아니다.** 실기기에서 안 보이면 이 조사는 통째로 해당 없음이다.
+
+        시도와 결과 (경기운영 화면, 방사형 프로파일 · 3x3 평활 후):
+
+          ① ScreenGradient 구간 압축      177px → 296px   나빠짐
+             locations [0.12,0.5,1] → [0.55,0.8,1]
+             두 레이어의 겹침이 깨져 ScreenGradient가 혼자 남는다.
+
+          ② GreenAmbient r 축소            중앙 31→24px / 가장자리 37→184px
+             70% → 55% → 45%              단차는 그대로 (0.505 → 0.502)
+             중앙만 좋아지고 가장자리가 훨씬 나빠진다. r은 계단을 촘촘하게 할 뿐
+             얕게 못 만든다.
+
+          ③ 노이즈 오버레이(디더)          변화 없음
+             안드로이드가 이미 화소 단위로 한다. 그리고 디더링은 1단계 경계를
+             흩뜨리는 기법이라 폭 200px 띠에는 원리적으로 안 듣는다.
+
+          ④ SVG 스톱 3개 → 9개             31px → 29px   거의 없음
+             최종 색 범위가 12단계면 중간색은 12개뿐이다. 스톱은 위치만 바꾼다.
+
+          ⑤ 영역을 상단 38%로 제한         띠가 위쪽에 몰려 더 뚜렷해졌다
+             + 중심 cy 42→34%, r 70→78%   상자 끝에 가로 이음매까지 생겼다
+             거리를 줄여도 단계가 12개면 같은 수의 띠가 좁은 곳에 모일 뿐이다.
+             **원인은 거리가 아니라 단계 수다.**
+
+          ⑥ 알파를 0.15 → 0.34로           띠 95% 87px → 17px   확실히 좁아짐
+             (전체 화면 유지)              배경 초록기 3.0 → 22.5   7.5배
+             ⚠ 이게 유일하게 효과가 있었지만 못 쓴다. 위 주석의 「모든 배경에
+               Green 금지」와 정면으로 부딪힌다 — 배경이 초록이 되면 CTA·활성 탭·
+               핵심 숫자의 초록이 바탕에 섞여 안 보인다. 그리고 띠가 없어진 것도
+               아니다(17px 간격으로 여전히 있고 촘촘해서 덜 보일 뿐이다).
+
+        전부 되돌렸다. 웹에서 만족했던 원본을 **실기기에 있는지 없는지 모르는
+        문제** 때문에 버릴 수 없다는 판단이다.
+
+        실기기(EAS 프로덕션 빌드)에서 띠가 보이면 ⑥이 유일한 후보다. 그때는
+        「초록 금지」 규칙을 명시적으로 뒤집는 결정이 먼저 있어야 한다.
       */}
       <GreenAmbient />
 

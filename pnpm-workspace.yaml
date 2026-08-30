@@ -1,3 +1,77 @@
+# ── nodeLinker: hoisted ─────────────────────────────────────────────────────
+#
+# pnpm 기본값(isolated)으로는 윈도우에서 안드로이드 네이티브 빌드가 안 된다.
+# 되돌리기 전에 아래 실측을 읽어라.
+#
+# pnpm은 패키지를 이렇게 놓는다:
+#   node_modules/.pnpm/react-native-screens@4.26.1_13bbd148df9579581acae6dedfa75644/node_modules/react-native-screens/
+# 평탄한 node_modules/react-native-screens/ 보다 79자 길다. 32자 해시가 붙는다.
+#
+# 그 79자가 C++ 도구의 두 한계를 넘긴다:
+#
+#   ⑴ ninja — MAX_PATH 260
+#      ninja: error: Stat(.../codegen/jni/react/renderer/components/
+#                        AsyncStorageSpec/ComponentDescriptors.cpp):
+#                    Filename longer than 260 characters
+#      실측 265자. 평탄화하면 185자.
+#
+#   ⑵ CMake — CMAKE_OBJECT_PATH_MAX 250
+#      CMake는 프로젝트 밖 소스의 절대경로를 C: → C_ 로 뭉개 오브젝트 경로에
+#      통째로 덧붙인다. 그래서 .pnpm 조각이 한 경로에 두 번 들어간다.
+#        오브젝트 디렉터리 199 + 뭉갠 소스경로 168 = 367  ≫ 250
+#      (디스크에서 실제로 잰 최장 경로는 350자였다.)
+#
+# ── 평탄화 뒤 실측 — 예측이 틀렸다 ────────────────────────────────────────
+#
+# 고치기 전 예측은 205자였다. react-native-screens 「자기 모듈」의 .cxx만 재서
+# 117 + 88 = 205 로 계산했다. 실제 최악은 거기가 아니라 앱 모듈 안의 codegen
+# 빌드였다:
+#   android/app/.cxx/Debug/<해시>/<ABI>/<이름>_autolinked_build/CMakeFiles/
+#     react_codegen_<이름>.dir/ + 뭉갠 소스경로
+#
+# 빌드가 끝난 뒤 오브젝트 536개를 다 재봤다:
+#   armeabi-v7a  248자   여유 2
+#   x86          248자   여유 2
+#   x86_64       248자   여유 2
+#   arm64-v8a    247자   여유 3
+#
+# ⚠ 통과했지만 여유가 2자다. 이걸 넘기면 CMake가 다시 「still dirty after
+#   100 tries」 고리에 빠진다. 넘길 수 있는 것들:
+#     · 이름이 더 긴 네이티브 패키지 추가
+#     · codegen이 만드는 파일 이름이 길어지는 RN 판올림
+#     · 프로젝트를 한 단계 더 깊은 경로로 옮기는 것
+#   그때는 프로젝트 루트를 줄여라. C:\dev\football\app → C:\kd 로 15자가
+#   빠져 여유가 17자가 된다. 평탄화를 되돌리는 것은 답이 아니다 — 그러면
+#   79자가 도로 붙는다.
+#
+# 세 태스크가 여기서 죽었다 — :app, :react-native-screens, :expo-modules-core
+# 의 buildCMakeDebug[arm64-v8a]. 자바·코틀린은 전부 통과했다. C++만 걸린다.
+#
+# ── 레지스트리 긴 경로 지원으로는 안 된다 ──────────────────────────────────
+#
+# HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled 를 1로
+# 켜도 소용없다. 그 설정은 실행 파일이 매니페스트에 longPathAware를 선언해야
+# 적용되는데, 세 도구 다 선언이 없다:
+#     ninja.exe     longPathAware 없음
+#     cmake.exe     longPathAware 없음
+#     clang++.exe   longPathAware 없음
+# 경로를 짧게 만드는 것 말고는 길이 없다.
+#
+# ── 프로젝트를 짧은 경로로 옮기는 것으로도 안 된다 ─────────────────────────
+#
+# C:\dev\football\app → C:\f\app 는 11자밖에 못 줄인다.
+#   ⑴ 265 → 250 (통과하지만 여유 10자)
+#   ⑵ 367 → 335 (여전히 초과)
+# ⑵는 117자를 줄여야 하는데, 평탄화는 79자를 「경로에 나타나는 횟수만큼」 줄인다.
+#
+# ── 대가 ───────────────────────────────────────────────────────────────────
+#
+# pnpm의 엄격한 격리를 잃는다. package.json에 선언하지 않은 패키지를 import해도
+# 통과한다. 이 프로젝트에서는 tsc와 scripts/checks.mjs가 대부분 잡는다.
+# 디스크 사용량도 늘고, 바꾸면 전체 재설치가 필요하다.
+#
+nodeLinker: hoisted
+
 minimumReleaseAgeExclude:
   - expo-application@57.0.2
   - expo-constants@57.0.6

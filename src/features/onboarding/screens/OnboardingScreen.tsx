@@ -24,7 +24,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { colors, font, radius } from '../../../theme';
+import { font, radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { GreenFill } from '../../../components/Surface';
 
 interface Slide {
@@ -77,6 +78,7 @@ interface Props {
 }
 
 export function OnboardingScreen({ onDone }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scroller = useRef<ScrollView>(null);
@@ -165,7 +167,8 @@ export function OnboardingScreen({ onDone }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, height: '100%', paddingTop: 8 },
 
   // 건너뛰기만 있는 줄. 페이저가 화면 폭을 그대로 써야 해서 좌우 여백은 페이지가 각자 갖는다
@@ -198,4 +201,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaText: { ...font.section, color: colors.bgRoot },
-});
+  });

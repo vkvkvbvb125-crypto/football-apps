@@ -7,7 +7,8 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import type { Settlement } from '../stores/settlementStore';
 
 /** 납부 기한 프리셋 — 달력을 띄울 만큼 정밀할 필요가 없는 값이라 칩으로 고른다 */
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export function SettlementDetailSettings({ settlement, nameFor, onUpdate, onExempt }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [open, setOpen] = useState(false);
   const [memo, setMemo] = useState(settlement.memo ?? '');
 
@@ -124,7 +126,8 @@ export function SettlementDetailSettings({ settlement, nameFor, onUpdate, onExem
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { borderTopWidth: 1, borderTopColor: colors.divider },
   pressed: { opacity: 0.85 },
 
@@ -176,4 +179,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-});
+  });

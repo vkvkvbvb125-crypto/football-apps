@@ -11,7 +11,7 @@ import type { TextStyle } from 'react-native';
  * 것(활성 탭·주요 버튼·핵심 숫자)이 묻혔고, 화면 전체가 탁하게 읽혔다.
  * 면에서 색을 빼면 남은 초록 몇 개가 저절로 눈에 꽂힌다.
  */
-export const colors = {
+const darkColors = {
   /*
    * 면 사다리 — 앱 아이콘의 Deep Black으로 내렸다.
    *
@@ -186,6 +186,116 @@ export const colors = {
   kakao: '#FEE500',
   kakaoText: '#000000',
 } as const;
+
+/**
+ * 라이트 팔레트.
+ *
+ * ⚠ 눈대중으로 만들지 않았다. **다크가 주석에 적어 둔 대비비를 목표로 역산했다.**
+ *   다크의 값들은 「textMuted 5.65 : 1」처럼 재서 정한 것이라, 그 숫자를 버리고
+ *   밝은 회색을 감으로 고르면 같은 화면이 아니라 다른 앱이 된다.
+ *
+ * ── 무엇이 뒤집히고 무엇이 안 뒤집히는가 ────────────────────────────
+ * 면의 방향은 **안 뒤집힌다.** 다크도 라이트도 「카드가 배경보다 밝다」 —
+ * 다크는 bgRoot(L*3)에서 card(L*9)로 오르고, 라이트는 bgRoot(L*95)에서
+ * card(L*100)로 오른다. 올라가는 폭만 좁다(흰색이 천장이라서).
+ * 뒤집히는 것은 **글자**다. 흰 계열이 검정 계열이 된다.
+ *
+ * ── 기준면이 다르다 ─────────────────────────────────────────────────
+ * 다크는 `card` 위에서 쟀다. 거기가 글자가 가장 많이 앉는 면이고, 더 어두운
+ * bgRoot 위에서는 대비가 **올라가서** 저절로 안전하기 때문이다.
+ * 라이트는 반대다 — 가장 어두운 면이 `bgRoot`라 거기서 대비가 가장 **낮다.**
+ * 그래서 전부 bgRoot 기준으로 잡았다. card 위에서는 저절로 더 높아진다.
+ * (card 기준으로 잡았다가 textDim 4.09 · textFaint 3.97로 미달난 것을 잡았다.)
+ *
+ * ── 초록은 값이 아니라 역할로 옮겼다 ────────────────────────────────
+ * greenBright는 다크에서 「더 밝은 것」이지만 역할은 **「더 튀는 것」**이다
+ * (활성 탭 라벨·빛나는 선). 밝은 배경에서 튀는 것은 더 어두운 쪽이라
+ * 라이트에서는 green보다 **어둡다.** 이름만 보고 밝게 두면 흰 위에서
+ * 3.30 : 1로 읽히지 않는다 — 실제로 처음에 그렇게 잡았다가 잡혔다.
+ *
+ * ⚠ greenDeep·greenTrack은 AA를 안 넘는다. 넘을 필요가 없다 —
+ *   「비활성 테두리·트랙」이라 글자가 얹히지 않는 면이다. 다크에서도 같다.
+ *
+ * ── 확인 방법 ───────────────────────────────────────────────────────
+ * scripts/palette.check.ts가 이 표의 모든 쌍을 계산해서 센다. 값을 고치면
+ * 그 검사가 판정한다 — 화면을 열어보고 「괜찮아 보인다」로 정하지 마라.
+ */
+const lightColors = {
+  /* 면 — 카드가 흰색이고 배경이 한 단 내려간다 */
+  bgRoot: '#EDF1EF',
+  bgScreen: '#F4F7F6',
+  cardAlt: '#F7FAF9',
+  card: '#FFFFFF',
+  inputBg: '#EEF2F0',
+  /* 다크에서는 「사다리에서 가장 밝은 면」이었다. 라이트에서 card가 이미 흰색이라
+     더 올라갈 데가 없다 — 같은 값을 주고, 뜨는 느낌은 그림자가 낸다(theme.shadow) */
+  cardRaised: '#FFFFFF',
+
+  /* 테두리 — card 위 1.59:1. 다크와 같은 숫자다 */
+  border: '#CBCECC',
+  borderRaised: '#BFC3C1',
+  borderSoft: '#DDE1DF',
+  divider: '#DCE0DE',
+
+  /* 초록 — 위 「역할로 옮겼다」 참고 */
+  green: '#147536',
+  greenBright: '#0F5132',
+  greenGlow: 'rgba(20,117,54,0.14)',
+  greenTimer: '#147536',
+  navIdle: '#696C6A',
+  greenCore: '#14532D',
+  greenDeep: '#86EFAC',
+  greenTint: 'rgba(20,117,54,0.10)',
+  greenTrack: '#DCFCE7',
+  greenLine: 'rgba(15,81,50,0.28)',
+
+  /* 글자 — 전부 bgRoot 기준 */
+  text: '#161917',
+  textStrong: '#262927',
+  textBody: '#373A38',
+  textMuted: '#5C5F5D',
+  textDim: '#696C6A',
+  textFaint: '#6B6E6C',
+  placeholder: '#666967',
+
+  /* 상태 */
+  danger: '#B91C1C',
+  gold: '#8A5A07',
+  blue: '#1D4ED8',
+  neutralFill: '#D4D8D6',
+  dangerTint: 'rgba(185,28,28,0.10)',
+  goldTint: 'rgba(138,90,7,0.12)',
+  goldLine: 'rgba(138,90,7,0.32)',
+  neutralTint: 'rgba(212,216,214,0.55)',
+
+  /* 예외 — 브랜드 고정색. 테마와 무관하다 */
+  kakao: '#FEE500',
+  kakaoText: '#000000',
+} as const;
+
+export type ThemeName = 'dark' | 'light';
+/*
+  키는 다크에서 가져오고 값은 string으로 넓힌다.
+  ⚠ `typeof darkColors`를 그대로 쓰면 as const 때문에 값까지 리터럴 타입이 되어
+    (bgRoot: '#080B09') 라이트가 대입되지 않는다. 넓히되 **키는 좁게** 둔다 —
+    한쪽에만 있는 키는 그대로 오류가 나야 한다. 실제로 그게 이 타입의 일이다.
+*/
+export type Palette = { readonly [K in keyof typeof darkColors]: string };
+
+export const palettes: Record<ThemeName, Palette> = {
+  dark: darkColors,
+  light: lightColors,
+};
+
+/**
+ * 기본 팔레트.
+ *
+ * ⚠ 이것을 직접 import하지 마라 — 테마를 안 따라간다. 화면은 useThemed()를 쓴다.
+ *   여기 남겨 둔 이유는 둘뿐이다:
+ *     · 아직 안 옮긴 자리 (검사가 세고 있다)
+ *     · 리액트 밖 (알림 채널의 LED 색처럼 훅을 부를 수 없는 자리)
+ */
+export const colors = darkColors;
 
 export const radius = {
   tile: 16,

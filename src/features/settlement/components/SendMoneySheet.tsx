@@ -7,7 +7,8 @@ import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 // 앱 목록과 딥링크 조립은 react-native를 타지 않는 ../sendApps.ts에 있다 — 그래야 검증할 수 있다
 import { SEND_APPS } from '../sendApps';
 
@@ -39,6 +40,7 @@ export function SendMoneySheet({
   onRemember,
   onOpened,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [pick, setPick] = useState<string>(SEND_APPS[0].id);
   const [remember, setRemember] = useState(true);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
@@ -198,7 +200,8 @@ export async function getRememberedSendApp() {
   return AsyncStorage.getItem(REMEMBER_KEY);
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   sheet: {
     backgroundColor: colors.card,
@@ -271,4 +274,4 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
   note: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
-});
+  });

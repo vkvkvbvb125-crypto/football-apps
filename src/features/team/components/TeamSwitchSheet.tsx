@@ -10,7 +10,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import type { TeamMembership } from '../services/teamService';
 
 interface Props {
@@ -37,6 +38,7 @@ export function TeamSwitchSheet({
   onSelect,
   onCreateOrJoin,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -117,7 +119,8 @@ export function TeamSwitchSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   overlayTap: { flex: 1 },
   sheet: {
@@ -184,4 +187,4 @@ const styles = StyleSheet.create({
   },
   addIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
   addText: { flex: 1, color: colors.textBody, fontSize: 14, fontWeight: '600' },
-});
+  });

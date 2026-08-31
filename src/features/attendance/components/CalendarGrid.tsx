@@ -7,7 +7,8 @@
 // 날짜 원이 잘렸다. 카드 껍데기는 부모가 갖고, 이 컴포넌트는 내용만 그린다.
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -24,6 +25,7 @@ function dateKey(d: Date) {
 }
 
 export function CalendarGrid({ year, month, selectedDate, markedDates, onSelectDate }: CalendarGridProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const firstDayOfMonth = new Date(year, month, 1);
   const startWeekday = firstDayOfMonth.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -98,7 +100,8 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, onSelectD
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   // 카드(배경/테두리/좌우 마진)는 AttendanceScreen의 calendarCard가 갖는다
   container: {
     paddingHorizontal: 8,
@@ -170,4 +173,4 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green },
   legendText: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
-});
+  });

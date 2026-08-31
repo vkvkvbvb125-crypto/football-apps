@@ -27,7 +27,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { TabHeader } from '../../../components/TabHeader';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useSettlementStore, type Settlement } from '../stores/settlementStore';
@@ -95,6 +96,7 @@ function showError(message: string) {
 }
 
 export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any>) {
+  const { colors, styles } = useThemed(makeStyles);
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
@@ -713,6 +715,7 @@ function AccountManageTab({
   account: AccountDraft | null;
   onSave: (draft: AccountDraft) => Promise<void>;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   const bottomPad = useTabBarPadding();
   const [editing, setEditing] = useState(!account);
   const [draft, setDraft] = useState<AccountDraft>(account ?? EMPTY_ACCOUNT);
@@ -867,6 +870,7 @@ function SettlementDetailModal({
   onUpdateDetails,
   onExemptShare,
 }: SettlementDetailModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   if (!settlement) return null;
 
   const paidCount = settlement.shares.filter((s) => s.paid).length;
@@ -1093,7 +1097,8 @@ function SettlementDetailModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   /*
     gap 12는 근거 없이 흘러온 값이다. 이력을 남긴다.
 
@@ -1411,4 +1416,4 @@ const styles = StyleSheet.create({
   accountSaveText: { ...font.cardTitle, color: colors.bgRoot, fontWeight: '800' },
   accountNotice: { marginTop: 16, gap: 4, paddingHorizontal: 4 },
   accountNoticeText: { ...font.meta, color: colors.textFaint },
-});
+  });

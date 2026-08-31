@@ -9,7 +9,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { TextInput as RNTextInput } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { usePendingInviteStore } from '../stores/pendingInviteStore';
@@ -17,6 +18,7 @@ import { usePendingInviteStore } from '../stores/pendingInviteStore';
 const CODE_LENGTH = 8;
 
 export function TeamStartScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const [pick, setPick] = useState<'create' | 'join' | null>(null);
   const [teamName, setTeamName] = useState('');
   const [code, setCode] = useState('');
@@ -193,7 +195,8 @@ export function TeamStartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 34, gap: 18 },
   signOutRow: { position: 'absolute', top: 8, right: 24 },
   signOutText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
@@ -252,4 +255,4 @@ const styles = StyleSheet.create({
   note: { color: colors.textFaint, fontSize: 11, textAlign: 'center', lineHeight: 18 },
   cta: { height: 52, borderRadius: 16, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
-});
+  });

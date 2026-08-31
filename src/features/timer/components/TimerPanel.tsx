@@ -14,7 +14,8 @@ import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { elapsedRatioOf, secondsLeft as secondsLeftOf, totalSecondsOf } from '../utils/timer';
 
 const STROKE_WIDTH = 6;
@@ -38,6 +39,7 @@ function formatTime(totalSeconds: number) {
 
 /** 경기 정보 카드의 한 칸 — 라벨 위, 값 아래 */
 function InfoCell({ label, value }: { label: string; value: string }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.infoCell}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -71,6 +73,7 @@ export function TimerPanel({
   isAdmin,
   matchInfo,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const ringSize = Math.min(240, SCREEN_WIDTH * 0.64);
   const radius = (ringSize - STROKE_WIDTH) / 2;
@@ -444,7 +447,8 @@ export function TimerPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   content: { alignItems: 'center' },
   pressed: { opacity: 0.85 },
 
@@ -563,4 +567,4 @@ const styles = StyleSheet.create({
   },
   scoreText: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   scoreLink: { color: colors.green, fontSize: 11, fontWeight: '700' },
-});
+  });

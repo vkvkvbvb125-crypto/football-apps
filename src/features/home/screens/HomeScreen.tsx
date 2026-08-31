@@ -35,7 +35,8 @@ import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGrad
 import { SoftTint, toneBorder, type BentoTone } from '../../../components/BentoCard';
 import { NotificationBell, SettingsButton, type NotificationBellHandle } from '../../../components/TabHeader';
 import { Card, GreenFill, RowCard, StatRow, StatTile } from '../../../components/Surface';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
@@ -187,6 +188,7 @@ function SectionCard({
   style,
   tone = 'plain',
 }: SectionCardProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const body = empty ? (
     <>
       <SoftTint tone={tone === 'plain' ? 'green' : tone} radius={radius.card} />
@@ -230,6 +232,7 @@ function SectionCard({
 }
 
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
+  const { colors, styles } = useThemed(makeStyles);
   const hero = heroLayout(useWindowDimensions().width);
   /* 배너 자동 전환이 세로 스크롤 중에 끼어들지 않게 하는 신호.
      상태로 올리면 스크롤할 때마다 이 화면 전체가 다시 그려진다 — 배너 타이머만 보면 되는 값이라 ref다. */
@@ -955,7 +958,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   /*
     좌우 여백은 여기 한 곳에서만 준다.
 
@@ -1281,4 +1285,4 @@ const styles = StyleSheet.create({
   noticeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
   noticeTime: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 
-});
+  });

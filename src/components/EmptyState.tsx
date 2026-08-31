@@ -1,7 +1,8 @@
 // src/components/EmptyState.tsx — 리디자인 적용판
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './nativeText';
-import { colors } from '../theme';
+import { type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 
 interface Props {
   emoji?: string;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function EmptyState({ emoji, title, subtitle, actionLabel, onAction, compact }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]}>
       {!!emoji && (
@@ -32,7 +34,8 @@ export function EmptyState({ emoji, title, subtitle, actionLabel, onAction, comp
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 56, paddingHorizontal: 32, gap: 10 },
   wrapCompact: { paddingVertical: 28 },
   emojiBox: {
@@ -59,4 +62,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
-});
+  });

@@ -9,7 +9,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { weatherEmoji, weatherLabel, type MatchWeather as ServiceWeather } from '../services/weatherService';
 
 export type WeatherLevel = 'clear' | 'cloud' | 'rain' | 'snow';
@@ -72,6 +73,7 @@ export function toMatchWeatherBlockData(raw: ServiceWeather | null): MatchWeathe
 }
 
 export function weatherAccent(level: WeatherLevel) {
+  const { colors, styles } = useThemed(makeStyles);
   if (level === 'rain' || level === 'snow') return '#60A5FA';
   if (level === 'clear') return '#FACC15';
   return colors.textMuted;
@@ -106,6 +108,7 @@ export function MatchWeatherBlock({
   onKeep,
   onFindIndoor,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   if (!weather?.available) {
     return (
       <View style={styles.none}>
@@ -179,7 +182,8 @@ export function MatchWeatherBlock({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   none: {
     padding: 13,
     borderRadius: 14,
@@ -265,4 +269,4 @@ const styles = StyleSheet.create({
   },
   indoorText: { color: colors.green, fontSize: 12, fontWeight: '800' },
   decided: { color: '#9FC2E8', fontSize: 11, fontWeight: '800' },
-});
+  });

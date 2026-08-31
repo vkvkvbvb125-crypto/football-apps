@@ -16,7 +16,8 @@
 import type { ReactNode } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radius, shadow } from '../theme';
+import { radius, shadow, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 
 /**
  * 그라디언트 세기. 0.10을 넘기면 카드가 배경에서 뜨는 게 아니라 색칠한 것처럼 보인다.
@@ -89,6 +90,7 @@ export function toneBorder(tone: BentoTone) {
 }
 
 export function BentoCard({ children, tone = 'plain', half, onPress, style }: BentoCardProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const rgb = tone === 'plain' ? null : TONE_RGB[tone];
 
   const body = (
@@ -116,10 +118,12 @@ export function BentoCard({ children, tone = 'plain', half, onPress, style }: Be
 
 /** 반 칸짜리 카드 두 장을 나란히 놓는 줄 */
 export function BentoRow({ children }: { children: ReactNode }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.row}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   card: {
     ...shadow.card,
     borderRadius: radius.card,
@@ -132,4 +136,4 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   row: { flexDirection: 'row', gap: 12 },
   pressed: { opacity: 0.85 },
-});
+  });

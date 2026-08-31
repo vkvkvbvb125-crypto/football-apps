@@ -9,7 +9,8 @@ import { useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { TimeWheelPicker } from './TimeWheelPicker';
 import { PlaceSearchModal } from './PlaceSearchModal';
 import type { PlaceResult } from '../services/placeService';
@@ -61,6 +62,7 @@ const DEADLINE_PRESETS = [
 ];
 
 export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, venues, onSubmit }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [useDefaults, setUseDefaults] = useState(!!defaults);
   const [time, setTime] = useState(defaults?.time ?? '20:00');
   const [pendingPlace, setPendingPlace] = useState(false);
@@ -361,7 +363,8 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   sheet: {
     maxHeight: '90%',
@@ -498,4 +501,4 @@ const styles = StyleSheet.create({
   cta: { height: 52, borderRadius: 16, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
   note: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center' },
-});
+  });

@@ -3,7 +3,8 @@ import { Text } from '../../../components/nativeText';
 import { toPlainText } from '../../../lib/mentions';
 import { Ionicons } from '@expo/vector-icons';
 import type { AnnouncementRow } from '../services/announcementsService';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface AnnouncementListModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export function AnnouncementListModal({
   onSelect,
   onCreate,
 }: AnnouncementListModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
@@ -62,7 +64,8 @@ export function AnnouncementListModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.card,
@@ -126,4 +129,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     boxShadow: '0px 8px 16px rgba(34,197,94,0.4)',
   },
-});
+  });

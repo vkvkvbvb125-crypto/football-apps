@@ -14,22 +14,46 @@
 // 것보다 낫다: 어두운 배경에서 서로 구별되면서 초록 계열(앱의 강조색)과 안 부딪히는
 // 색이 그리 많지 않다. 색은 사람을 특정하는 수단이 아니라 「서로 다르다」만 말한다 —
 // 특정은 이름이 있는 멤버 목록이 한다.
-import { colors } from '../../theme';
+import type { ThemeName } from '../../theme';
 
-const TINTS = [
-  { bg: 'rgba(56,132,255,0.20)', fg: '#7FB2FF' }, // 파랑
-  { bg: 'rgba(210,163,76,0.20)', fg: colors.gold }, // 금
-  { bg: 'rgba(168,85,247,0.20)', fg: '#C7A2F7' }, // 보라
-  { bg: 'rgba(236,72,120,0.18)', fg: '#F2A0B8' }, // 분홍
-  { bg: 'rgba(45,212,191,0.18)', fg: '#7FE3D6' }, // 청록
-  { bg: 'rgba(251,146,60,0.18)', fg: '#F7BC8A' }, // 주황
-] as const;
+/*
+  ⚠ 위 머리말이 「어두운 배경에서 서로 구별되면서」로 고른 값이라고 적어 뒀다.
+    그 전제가 라이트에서 무너진다 — 20% 알파 배경 위의 옅은 글자는 흰 카드에서
+    안 읽힌다. 색조(파랑·금·보라·분홍·청록·주황)는 그대로 두고, 라이트에서는
+    배경을 더 옅게 글자를 더 진하게 바꾼다. 「서로 다르다」만 말하면 되므로
+    색조가 유지되면 역할은 그대로다.
+*/
+const TINTS: Record<ThemeName, readonly { bg: string; fg: string }[]> = {
+  dark: [
+    { bg: 'rgba(56,132,255,0.20)', fg: '#7FB2FF' }, // 파랑
+    { bg: 'rgba(210,163,76,0.20)', fg: '#D2A34C' }, // 금
+    { bg: 'rgba(168,85,247,0.20)', fg: '#C7A2F7' }, // 보라
+    { bg: 'rgba(236,72,120,0.18)', fg: '#F2A0B8' }, // 분홍
+    { bg: 'rgba(45,212,191,0.18)', fg: '#7FE3D6' }, // 청록
+    { bg: 'rgba(251,146,60,0.18)', fg: '#F7BC8A' }, // 주황
+  ],
+  light: [
+    { bg: 'rgba(56,132,255,0.12)', fg: '#1D4ED8' }, // 파랑
+    { bg: 'rgba(210,163,76,0.16)', fg: '#8A5A07' }, // 금
+    { bg: 'rgba(168,85,247,0.12)', fg: '#7E22CE' }, // 보라
+    { bg: 'rgba(236,72,120,0.12)', fg: '#BE185D' }, // 분홍
+    { bg: 'rgba(45,212,191,0.14)', fg: '#0F766E' }, // 청록
+    { bg: 'rgba(251,146,60,0.14)', fg: '#B45309' }, // 주황
+  ],
+};
 
-/** id → 항상 같은 색 한 쌍. 순서가 아니라 값에서 나오므로 목록이 바뀌어도 안 흔들린다 */
-export function avatarTint(id: string) {
+/**
+ * id → 항상 같은 색 한 쌍. 순서가 아니라 값에서 나오므로 목록이 바뀌어도 안 흔들린다.
+ *
+ * ⚠ theme를 받지만 **고르는 칸은 테마와 무관하다.** 해시는 id에서만 나온다 —
+ *   테마를 바꿨다고 같은 사람이 다른 색이 되면 「색이 그 사람을 가리킨다」가 깨진다.
+ *   바뀌는 것은 그 칸의 값(밝기)뿐이다.
+ */
+export function avatarTint(id: string, theme: ThemeName) {
   let h = 0;
   for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return TINTS[h % TINTS.length];
+  const list = TINTS[theme];
+  return list[h % list.length];
 }
 
-export const AVATAR_TINT_COUNT = TINTS.length;
+export const AVATAR_TINT_COUNT = TINTS.dark.length;

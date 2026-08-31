@@ -10,7 +10,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { SoftTint } from '../../../components/BentoCard';
 
 export type SettlementCardVariant = 'active' | 'pending';
@@ -20,6 +21,7 @@ export type SettlementCardVariant = 'active' | 'pending';
  * label을 주면 퍼센트 대신 그 글자를 넣는다 (미등록처럼 아직 비율이 없는 상태용).
  */
 export function ProgressRing({ pct, label, size = 56 }: { pct: number; label?: string; size?: number }) {
+  const { colors, styles } = useThemed(makeStyles);
   // 큰 링에서 테두리가 실처럼 가늘어지지 않게 지름에 맞춰 두께를 키운다
   const stroke = Math.max(6, Math.round(size * 0.09));
   const r = (size - stroke) / 2;
@@ -111,6 +113,7 @@ export function SettlementCard({
   onOpenTargets,
   targetCount = 0,
 }: SettlementCardProps) {
+  const { colors, styles } = useThemed(makeStyles);
   // 아이콘 버튼은 카드 Pressable 안에 중첩된다 — 웹(RNW)에서는 DOM 이벤트가 그대로
   // 버블링돼서 stopPropagation 없이는 아이콘을 눌러도 카드의 onPress(상세 열기)까지 같이 탄다.
   const stop = (fn: () => void) => (e: { stopPropagation?: () => void }) => {
@@ -302,7 +305,8 @@ export function SettlementCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   pressed: { opacity: 0.85 },
 
   /*
@@ -409,4 +413,4 @@ const styles = StyleSheet.create({
   sIconBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
   sIconBtnOff: { opacity: 0.35 },
   sIconLabel: { color: colors.textBody, fontSize: 11, fontWeight: '700' },
-});
+  });

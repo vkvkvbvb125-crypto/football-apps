@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../features/auth/stores/authStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
@@ -17,6 +17,7 @@ import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen'
 import { ProfileDetailScreen } from '../features/settings/screens/ProfileDetailScreen';
 import { NotificationSettingsScreen } from '../features/settings/screens/NotificationSettingsScreen';
 import { TermsScreen } from '../features/settings/screens/TermsScreen';
+import { ThemeSettingsScreen } from '../features/settings/screens/ThemeSettingsScreen';
 import { registerForPushNotifications } from '../features/notifications/services/pushService';
 import * as Notifications from 'expo-notifications';
 import { useNotificationsStore } from '../features/notifications/stores/notificationsStore';
@@ -27,16 +28,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Text } from '../components/nativeText';
-import { colors } from '../theme';
+import { palettes, type Palette } from '../theme';
+import { useColors, useThemeName, useThemed } from '../lib/useThemed';
 
 const Stack = createNativeStackNavigator();
 
-const navTheme = {
-  ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: colors.bgRoot, card: colors.bgRoot },
+/*
+  React Navigation의 테마. 화면 전환 중 잠깐 보이는 바탕색을 정한다 —
+  이게 안 맞으면 화면을 밀 때 반대 테마의 색이 한 번 스친다.
+
+  ⚠ DarkTheme/DefaultTheme을 갈아야 한다. colors만 덮으면 나머지 값(text·border)이
+    반대 테마로 남는다.
+*/
+const navThemeOf = (name: 'dark' | 'light') => {
+  const base = name === 'light' ? DefaultTheme : DarkTheme;
+  const c: Palette = palettes[name];
+  return { ...base, colors: { ...base.colors, background: c.bgRoot, card: c.bgRoot, text: c.text, border: c.border } };
 };
 
 function LoadingScreen() {
+  const colors = useColors();
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgScreen }}>
       <ActivityIndicator size="large" color={colors.green} />
@@ -58,6 +69,8 @@ function LoadingScreen() {
 const GLOW = 420;
 
 function SplashScreen() {
+  const splashStyles = useThemed(makeSplash).styles;
+  const colors = useColors();
   const glow = useRef(new Animated.Value(0)).current;
   const logo = useRef(new Animated.Value(0)).current;
   const sweep = useRef(new Animated.Value(0)).current;
@@ -80,7 +93,7 @@ function SplashScreen() {
   }, []);
 
   return (
-    <View style={splash.root}>
+    <View style={splashStyles.root}>
       {/*
         공 뒤에서 번지는 빛.
 
@@ -89,7 +102,7 @@ function SplashScreen() {
         빛은 중심에서 바깥으로 서서히 사라져야 하므로 방사형 그라디언트가 필요하다.
         react-native-svg의 RadialGradient를 쓴다(이미 설치돼 있다).
       */}
-      <Animated.View style={[splash.glow, { opacity: glow }]} pointerEvents="none">
+      <Animated.View style={[splashStyles.glow, { opacity: glow }]} pointerEvents="none">
         <Svg width={GLOW} height={GLOW}>
           <Defs>
             <RadialGradient id="splashGlow" cx="50%" cy="50%" r="50%">
@@ -118,8 +131,8 @@ function SplashScreen() {
           ],
         }}
       >
-        <View style={splash.logoRow}>
-          <Text style={splash.logo}>
+        <View style={splashStyles.logoRow}>
+          <Text style={splashStyles.logo}>
             <Text style={{ color: colors.green }}>Kick</Text>
             <Text style={{ color: colors.text }}>Day</Text>
           </Text>
@@ -129,7 +142,7 @@ function SplashScreen() {
 
       {/* 하단 가로 빛 — 가운데가 밝고 양끝으로 사라진다.
           단색 막대로 두면 양끝이 칼로 자른 것처럼 끊긴다. 가로 그라디언트로 흘려보낸다. */}
-      <Animated.View style={[splash.sweep, { opacity: sweep }]} pointerEvents="none">
+      <Animated.View style={[splashStyles.sweep, { opacity: sweep }]} pointerEvents="none">
         <LinearGradient
           colors={['rgba(34,197,94,0)', colors.green, 'rgba(34,197,94,0)']}
           start={{ x: 0, y: 0.5 }}
@@ -141,7 +154,8 @@ function SplashScreen() {
   );
 }
 
-const splash = StyleSheet.create({
+const makeSplash = (colors: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgRoot },
   // 이제 화면 한가운데에 로고 하나뿐이라 빛도 그냥 가운데다 — 보정할 게 없다
   glow: { position: 'absolute', width: GLOW, height: GLOW },
@@ -149,7 +163,7 @@ const splash = StyleSheet.create({
   // 화면의 유일한 요소가 됐으니 그만큼 키운다 (34 → 42)
   logo: { fontFamily: 'Pretendard-ExtraBold', fontSize: 42, letterSpacing: -1.4 },
   sweep: { position: 'absolute', bottom: 96, width: 240, height: 2, overflow: 'hidden' },
-});
+  });
 
 /** 애니메이션을 다 볼 수 있게 최소한 이만큼은 스플래시를 띄운다 */
 const SPLASH_MIN_MS = 1700;
@@ -157,6 +171,8 @@ const SPLASH_MIN_MS = 1700;
 const SPLASH_EXIT_MS = 420;
 
 export function RootNavigator() {
+  const themeName = useThemeName();
+  const colors = useColors();
   const session = useAuthStore((s) => s.session);
   const authInitialized = useAuthStore((s) => s.initialized);
   const recoveryMode = useAuthStore((s) => s.recoveryMode);
@@ -267,7 +283,7 @@ export function RootNavigator() {
         먼저 그리면 로그인 화면이 한 번 스쳤다가 홈으로 바뀐다.
       */}
       {ready && (
-        <NavigationContainer theme={navTheme}>
+        <NavigationContainer theme={navThemeOf(themeName)}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {/* 재설정 링크로 들어오면 세션이 이미 서 있다 — 그대로 두면 홈으로 지나쳐서
             정작 비밀번호를 바꿀 기회가 없다. 아래 모든 분기보다 먼저 잡는다. */}
@@ -313,6 +329,7 @@ export function RootNavigator() {
             <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             <Stack.Screen name="Terms" component={TermsScreen} />
+            <Stack.Screen name="ThemeSettings" component={ThemeSettingsScreen} />
           </>
         )}
           </Stack.Navigator>

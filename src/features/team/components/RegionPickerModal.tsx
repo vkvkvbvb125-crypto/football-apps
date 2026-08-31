@@ -10,7 +10,8 @@ import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { SIDO_LIST, isSingleEntry, regionLabelOf, regionsOf } from '../regions';
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function RegionPickerModal({ value, onSelect }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [open, setOpen] = useState(false);
   const [sido, setSido] = useState<string | null>(null);
 
@@ -99,7 +101,8 @@ export function RegionPickerModal({ value, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -140,4 +143,4 @@ const styles = StyleSheet.create({
   },
   rowText: { color: colors.text, fontSize: 14, fontWeight: '600' },
   rowTextOn: { color: colors.green, fontWeight: '800' },
-});
+  });

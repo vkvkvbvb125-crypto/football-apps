@@ -12,6 +12,8 @@ import { settlementIdFromParsed } from './src/features/settlement/links';
 import { routeFor } from './src/features/notifications/notificationRoute';
 import { usePendingNotificationStore } from './src/features/notifications/stores/pendingNotificationStore';
 import { useAppFonts } from './src/lib/fonts';
+import { useThemeStore } from './src/lib/themeStore';
+import { useColors, useThemeName } from './src/lib/useThemed';
 import { applyWebViewportFix } from './src/lib/webViewport';
 import { colors } from './src/theme';
 import { DialogHost } from './src/components/Dialog';
@@ -59,6 +61,22 @@ function handleIncomingUrl(url: string | null) {
 }
 
 export default function App() {
+  /*
+    저장된 화면 모드를 읽는다.
+
+    ⚠ 읽기 **전에** 그리면 잘못된 테마가 한 번 번쩍인다 — 기본값이 'system'이라
+      기기가 라이트인데 사용자가 「어둡게」를 골라 뒀으면, 밝은 화면이 한 프레임
+      떴다가 어두워진다. 스플래시가 그 순간을 덮어 주지만 스플래시 색 자체도
+      테마를 타므로 안심할 수 없다.
+      그래서 loaded가 false인 동안은 배경만 칠하고 아무것도 안 그린다.
+      onboardingStore가 같은 이유로 같은 모양을 쓴다.
+  */
+  const themeLoaded = useThemeStore((s) => s.loaded);
+  const loadTheme = useThemeStore((s) => s.load);
+  useEffect(() => {
+    loadTheme();
+  }, []);
+
   // 폰트 로딩 상태와 무관하게 항상 렌더링한다 - 폰트 로딩이 늦거나 실패해도
   // 화면 자체가 안 뜨는 일이 없어야 한다. 로딩 전에는 시스템 폰트로 보이다가
   // 로딩이 끝나면 적용되는 게 맞는 동작이다.
@@ -111,13 +129,36 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: colors.bgRoot }}>
-        <RootNavigator />
+      <AppFrame ready={themeLoaded} />
+    </SafeAreaProvider>
+  );
+}
+
+/*
+  배경색과 상태바가 테마를 타므로 훅을 부를 수 있는 컴포넌트가 하나 더 필요하다.
+  App 자체에서 useColors()를 부르면 되지 않느냐 싶지만, 그러면 테마가 바뀔 때
+  App이 통째로 다시 그려지면서 위 useEffect들(딥링크·알림 리스너)이 다시 돈다.
+*/
+function AppFrame({ ready }: { ready: boolean }) {
+  const colors = useColors();
+  const themeName = useThemeName();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bgRoot }}>
+      {ready && (
+        <>
+          <RootNavigator />
         {/* 확인·알림 대화상자가 그려지는 자리 (웹 전용, 네이티브에선 아무것도 안 그린다).
             네비게이터 위에 둬야 모달 위에서 물어도 가려지지 않는다 */}
-        <DialogHost />
-        <StatusBar style="light" />
-      </View>
-    </SafeAreaProvider>
+          <DialogHost />
+        </>
+      )}
+      {/*
+        상태바 글자색 — 밝은 배경에 흰 글자면 시계가 안 보인다.
+        ⚠ 색 값으로 비교하지 않는다(`colors.bgRoot === '#EDF1EF'`). 팔레트를
+          한 칸 바꾸는 순간 조용히 반대가 되고, 그건 화면을 열어봐야만 보인다.
+          테마 이름은 그 자체가 답이라 안 갈린다.
+      */}
+      <StatusBar style={themeName === 'light' ? 'dark' : 'light'} />
+    </View>
   );
 }

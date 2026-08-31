@@ -10,10 +10,12 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { useAuthStore } from '../stores/authStore';
 import { isValidPassword, MIN_PASSWORD } from '../password';
 import { PasswordChecklist } from '../components/PasswordChecklist';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { GreenAmbient } from '../../../components/ScreenGradient';
 
 export function ResetPasswordScreen() {
+  const { colors, styles } = useThemed(makeStyles);
   const updatePassword = useAuthStore((s) => s.updatePassword);
   const signingIn = useAuthStore((s) => s.signingIn);
   const error = useAuthStore((s) => s.error);
@@ -78,7 +80,8 @@ export function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgRoot },
   pressed: { opacity: 0.85 },
 
@@ -109,4 +112,4 @@ const styles = StyleSheet.create({
   },
   ctaOff: { opacity: 0.4 },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
-});
+  });

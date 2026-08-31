@@ -4,7 +4,8 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { MentionInput } from '../../../components/Mention';
 import { useTeamStore } from '../../team/stores/teamStore';
 import type { AnnouncementRow } from '../services/announcementsService';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface AnnouncementFormModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ interface AnnouncementFormModalProps {
 }
 
 export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: AnnouncementFormModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   // selector 안에서 map을 하면 매번 새 배열이 스냅샷으로 나와 무한 렌더가 된다.
   // 스토어에서는 그대로 꺼내고, 모양 바꾸기는 밖에서 한다.
   const members = useTeamStore((s) => s.members);
@@ -79,7 +81,8 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -149,4 +152,4 @@ const styles = StyleSheet.create({
     color: colors.bgRoot,
     fontWeight: '700',
   },
-});
+  });

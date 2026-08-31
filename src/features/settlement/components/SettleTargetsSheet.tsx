@@ -10,7 +10,8 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../../components/nativeText';
-import { colors, font, radius } from '../../../theme';
+import { font, radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import type { Attendee } from './CreateSettlementSheet';
 
 function initialOf(name: string) {
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, fromAllMembers, onCreate }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -92,7 +94,8 @@ export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, from
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   overlayTap: { flex: 1 },
   sheet: {
@@ -156,4 +159,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenTint,
   },
   ctaText: { color: colors.green, fontSize: 14, fontWeight: '800' },
-});
+  });

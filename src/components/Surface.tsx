@@ -15,7 +15,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Text } from './nativeText';
-import { colors, font, radius, shadow } from '../theme';
+import { font, radius, shadow, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 
 export type CardTier = 'hero' | 'primary' | 'bento' | 'list';
 
@@ -29,6 +30,7 @@ interface CardProps {
 }
 
 export function Card({ tier = 'primary', children, onPress, style, accessibilityLabel }: CardProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const base = [styles.base, styles[tier], style];
   if (!onPress) return <View style={base}>{children}</View>;
   return (
@@ -55,6 +57,7 @@ export function Card({ tier = 'primary', children, onPress, style, accessibility
  * backgroundColor는 남겨 둔다 — 폴백이자, 그라디언트가 못 그려져도 버튼은 보여야 한다.
  */
 export function GreenFill() {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <LinearGradient
       colors={[colors.green, colors.greenCore]}
@@ -77,6 +80,7 @@ export function GreenFill() {
  * 월까지 흰색이면 세 줄이 한 덩어리로 뭉쳐 어디가 날짜인지 안 잡힌다.
  */
 export function DateBlock({ month, day, dow }: { month: string; day: string; dow: string }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.dateBlock}>
       <Text style={styles.dateMonth}>{month}</Text>
@@ -132,6 +136,7 @@ export function RowCard({
   flat?: boolean;
   accessibilityLabel?: string;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   const body = (
     <>
       {left}
@@ -166,6 +171,7 @@ export function RowCard({
  * 배지마다 초록을 칠하면 초록이 상태를 뜻하지 않게 된다.
  */
 export function Badge({ label, tone = 'muted' }: { label: string; tone?: 'green' | 'muted' | 'warn' }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={[styles.badge, styles[`badge_${tone}`]]}>
       <Text style={[styles.badgeText, styles[`badgeText_${tone}`]]}>{label}</Text>
@@ -217,6 +223,7 @@ export function StatTile({
   hint?: boolean;
   onPressHint?: () => void;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.stat}>
       <View style={styles.statLabelRow}>
@@ -242,10 +249,12 @@ export function StatTile({
 
 /** 통계 타일을 가로로 나누는 줄. 칸 사이는 선이 아니라 여백이 가른다 */
 export function StatRow({ children }: { children: ReactNode }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.statRow}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   /*
    * 모든 단계에 얇고 낮은 대비의 테두리를 둔다 (스펙 04절).
    *
@@ -345,4 +354,4 @@ const styles = StyleSheet.create({
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel: { ...font.micro, color: colors.textMuted, fontWeight: '700' },
   statValue: { ...font.title, ...font.num, color: colors.text },
-});
+  });

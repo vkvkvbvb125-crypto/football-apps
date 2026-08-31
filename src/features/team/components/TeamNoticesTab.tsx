@@ -17,7 +17,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { SoftTint } from '../../../components/BentoCard';
 import { Text } from '../../../components/nativeText';
 import { PollCard } from '../../polls/components/PollCard';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import type { PollWithResponses } from '../../polls/services/pollsService';
 
@@ -52,6 +53,7 @@ export function TeamNoticesTab({
   onDeletePoll,
   confirm,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <>
       {/* 공지사항 — 팀 홈에서는 "최근 공지" 미리보기, 공지 탭에서는 전체 */}
@@ -185,7 +187,8 @@ export function TeamNoticesTab({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   noticeBody: { color: colors.textDim, fontSize: 11, fontWeight: '500' },
   noticeRow: {
     flexDirection: 'row',
@@ -230,4 +233,4 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: colors.text, ...font.section },
-});
+  });

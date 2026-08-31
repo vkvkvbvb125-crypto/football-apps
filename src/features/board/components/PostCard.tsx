@@ -7,7 +7,8 @@ import { useRef, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { relativeTime } from '../../../lib/relativeTime';
 import { parse } from '../../../lib/mentions';
 import { CATEGORY_LABEL, resolveAuthor, type Post } from '../services/boardService';
@@ -38,6 +39,7 @@ export function PostCard({
   onEdit,
   onTogglePin,
 }: PostCardProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const author = resolveAuthor(post, members);
   const [expanded, setExpanded] = useState(false);
   /** 실제로 잘렸을 때만 "더보기"를 띄운다 — 안 넘치는 글에 붙는 게 이 기능에서 제일 흔한 실수다 */
@@ -262,7 +264,8 @@ export function PostCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   post: {
     gap: 10,
     padding: 14,
@@ -341,4 +344,4 @@ const styles = StyleSheet.create({
   postFoot: { flexDirection: 'row', gap: 16, paddingTop: 2 },
   footItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   footText: { color: colors.textDim, fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
-});
+  });

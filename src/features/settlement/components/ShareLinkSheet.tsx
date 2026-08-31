@@ -11,7 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { Linking, Modal, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface Props {
   visible: boolean;
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function ShareLinkSheet({ visible, onClose, link, message }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [copied, setCopied] = useState(false);
 
   const openShareSheet = () => {
@@ -106,7 +108,8 @@ export function ShareLinkSheet({ visible, onClose, link, message }: Props) {
 function ShareAction({
   label,
   icon,
-  iconColor = colors.textStrong,
+  /* 기본값을 모듈에서 못 잡는다 — 팔레트가 렌더 때 정해진다. undefined면 아래에서 채운다 */
+  iconColor,
   circleStyle,
   onPress,
 }: {
@@ -116,6 +119,7 @@ function ShareAction({
   circleStyle?: object;
   onPress: () => void;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
       <View style={[styles.actionCircle, circleStyle]}>
@@ -128,7 +132,8 @@ function ShareAction({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   overlayTap: { flex: 1 },
   sheet: {
@@ -203,4 +208,4 @@ const styles = StyleSheet.create({
   },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
   note: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 10 },
-});
+  });

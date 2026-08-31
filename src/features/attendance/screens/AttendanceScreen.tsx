@@ -34,7 +34,8 @@ import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGrad
 import { confirmAction } from '../../../components/Dialog';
 import { EmptyState } from '../../../components/EmptyState';
 import { TabHeader } from '../../../components/TabHeader';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useAttendanceStore } from '../stores/attendanceStore';
@@ -126,6 +127,7 @@ function monthOffsetFor(date: Date): number {
 }
 
 export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any>) {
+  const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
   const myUserId = useAuthStore((s) => s.session?.user.id);
@@ -798,7 +800,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   pressed: { opacity: 0.85 },
   errorText: { color: colors.danger, textAlign: 'center', marginTop: 8 },
   /** 반복 생성 결과 — 오류가 아니라 알림이라 초록 */
@@ -978,4 +981,4 @@ const styles = StyleSheet.create({
   popoverItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 13 },
   popoverText: { color: colors.textStrong, fontSize: 14, fontWeight: '700' },
   popoverDivider: { height: 1, backgroundColor: colors.border },
-});
+  });

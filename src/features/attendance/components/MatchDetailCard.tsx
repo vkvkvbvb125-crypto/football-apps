@@ -8,7 +8,8 @@ import { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { MatchWeatherBlock, type MatchWeather } from './MatchWeatherBlock';
 import { attendButtonLabel, type CapacityResult } from '../utils/capacity';
 import type { AttendanceStatus } from '../../../types/database';
@@ -58,15 +59,18 @@ interface Props {
   onOpenRoster?: () => void;
 }
 
-const VENUE_TAG = {
-  indoor: { label: '실내', bg: 'rgba(96,165,250,0.14)', fg: '#60A5FA' },
-  outdoor: { label: '실외', bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
-  pending: { label: '미정', bg: 'rgba(210,163,76,0.14)', fg: colors.gold },
-} as const;
+/* 테마마다 값이 다르므로 표를 함수로 바꿨다 — 모듈 최상단에서 만들면 굳는다 */
+const venueTagOf = (colors: Palette) =>
+  ({
+    indoor: { label: '실내', bg: 'rgba(96,165,250,0.14)', fg: colors.blue },
+    outdoor: { label: '실외', bg: colors.neutralTint, fg: colors.textMuted },
+    pending: { label: '미정', bg: colors.goldTint, fg: colors.gold },
+  }) as const;
 
 export function MatchDetailCard(p: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const menuRef = useRef<View>(null);
-  const tag = VENUE_TAG[p.venueKind];
+  const tag = venueTagOf(colors)[p.venueKind];
   const { attendCount, absentCount, pendingCount, isFull, myWaitPosition } = p.capacityResult;
   /*
    * 진행바 분모는 정원이다.
@@ -280,7 +284,8 @@ export function MatchDetailCard(p: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.card,
@@ -392,4 +397,4 @@ const styles = StyleSheet.create({
   waitPosText: { color: colors.gold, fontSize: 10, fontWeight: '800' },
   waitName: { flex: 1, color: '#C9D3CF', fontSize: 12, fontWeight: '600' },
   waitNote: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
-});
+  });

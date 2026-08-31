@@ -9,7 +9,8 @@
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './nativeText';
-import { colors, radius } from '../theme';
+import { radius, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 
 interface DialogRequest {
   title: string;
@@ -83,6 +84,7 @@ export function confirmAction(opts: {
  * 네이티브에서는 Alert가 알아서 하므로 아무것도 그리지 않는다.
  */
 export function DialogHost() {
+  const { colors, styles } = useThemed(makeStyles);
   const [queue, setQueue] = useState<DialogRequest[]>([]);
 
   useEffect(() => {
@@ -140,7 +142,8 @@ export function DialogHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -170,4 +173,4 @@ const styles = StyleSheet.create({
   confirmText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
   dangerBtn: { backgroundColor: colors.dangerTint, borderWidth: 1, borderColor: colors.danger },
   dangerText: { color: colors.danger, fontSize: 14, fontWeight: '800' },
-});
+  });

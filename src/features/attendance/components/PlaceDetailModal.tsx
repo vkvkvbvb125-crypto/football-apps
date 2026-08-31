@@ -3,7 +3,8 @@ import { Linking, Modal, Platform, Pressable, StyleSheet, View } from 'react-nat
 import { Text } from '../../../components/nativeText';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 const KAKAO_MAPS_JS_KEY = process.env.EXPO_PUBLIC_KAKAO_MAPS_JS_KEY;
 
@@ -98,6 +99,7 @@ interface KakaoMapPreviewProps {
 }
 
 function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
+  const { colors, styles } = useThemed(makeStyles);
   /*
     지도가 안 그려진 경우로 떨어졌는지.
 
@@ -169,6 +171,7 @@ interface PlaceDetailModalProps {
 }
 
 export function PlaceDetailModal({ visible, onClose, name, category, address, latitude, longitude }: PlaceDetailModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const showMap = latitude != null && longitude != null;
 
   return (
@@ -197,7 +200,8 @@ export function PlaceDetailModal({ visible, onClose, name, category, address, la
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.65)',
@@ -271,4 +275,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
-});
+  });

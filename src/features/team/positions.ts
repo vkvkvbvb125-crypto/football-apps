@@ -1,4 +1,4 @@
-import { colors } from '../../theme';
+import type { ThemeName } from '../../theme';
 // src/features/team/positions.ts — 풋살 포지션 정의
 //
 // 팀원의 선호 포지션(team_members.position)과 팀 분배 화면의 포메이션이 같은 값을 쓴다.
@@ -27,11 +27,24 @@ export const POSITION_INFO: Record<Position, { ko: string; role: string; short: 
  * 포지션 색 — 목록에서 자리를 색으로 먼저 읽게 한다.
  * 팀 분배 카드의 팀 색(GROUP_COLOR)과 겹치지 않게 골랐다.
  */
-export const POSITION_COLOR: Record<Position, string> = {
-  PIVO: '#60A5FA',
-  ALA: colors.green,
-  FIXO: '#F59E0B',
-  GOLEIRO: '#C084FC',
+/*
+  ⚠ 테마마다 다르다. 라이트에서 같은 값을 쓰면 흰 배경에 옅은 파랑·주황이라
+    글자로 안 읽힌다 — 이 색들은 「어두운 배경에서 서로 구별되게」 고른 것이다.
+    어느 것이 무엇인지(색조)는 유지하고 밝기만 내린다.
+*/
+export const POSITION_COLOR: Record<ThemeName, Record<Position, string>> = {
+  dark: {
+    PIVO: '#60A5FA',
+    ALA: '#22C55E',
+    FIXO: '#F59E0B',
+    GOLEIRO: '#C084FC',
+  },
+  light: {
+    PIVO: '#1D4ED8',
+    ALA: '#147536',
+    FIXO: '#B45309',
+    GOLEIRO: '#7E22CE',
+  },
 };
 
 /** 칩을 탭하면 이 순서로 돈다. 마지막은 '미지정'(null) */

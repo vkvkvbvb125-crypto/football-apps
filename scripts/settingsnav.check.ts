@@ -88,7 +88,13 @@ ok(callers.join(' | ') === EXPECTED.join(' | '),
 const SETTINGS = strip(readFileSync('src/features/settings/screens/MySettingsScreen.tsx', 'utf8'));
 
 const rows = [...SETTINGS.matchAll(/label="([^"]+)"/g)].map((m) => m[1]);
-const EXPECTED_ROWS = ['알림 설정', '팀 설정', '약관 및 정책', '고객의 소리'];
+/*
+  ⚠ 「화면 모드」가 2026-09-01에 들어와 넷이 다섯이 됐다. 알림 바로 아래인 이유는
+    둘 다 「앱이 어떻게 굴지」라 이웃이 맞아서다.
+    이 배열을 늘릴 때는 「진입로를 늘리지 마라」를 다시 확인해라 — 다섯째를 넣는 게
+    아니라 이미 있는 화면으로 가는 줄인지부터 본다.
+*/
+const EXPECTED_ROWS = ['알림 설정', '화면 모드', '팀 설정', '약관 및 정책', '고객의 소리'];
 ok(rows.join(' > ') === EXPECTED_ROWS.join(' > '),
    '설정 목록이 달라졌다. 기대: ' + EXPECTED_ROWS.join(' > ') + ' / 실제: ' + (rows.join(' > ') || '(없음)'));
 

@@ -10,7 +10,8 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
 import { alertMessage } from '../../../components/Dialog';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { relativeTime } from '../../../lib/relativeTime';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { notifyTeam } from '../../notifications/services/pushService';
@@ -42,6 +43,7 @@ export function PostComments({
   isAdmin,
   onCountChange,
 }: PostCommentsProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,7 +182,8 @@ export function PostComments({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { gap: 10, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   rowHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -211,4 +214,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.inputBg,
   },
   input: { flex: 1, color: colors.text, fontSize: 12, maxHeight: 80 },
-});
+  });

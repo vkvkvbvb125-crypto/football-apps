@@ -23,7 +23,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './nativeText';
 import { alertMessage } from './Dialog';
-import { colors, radius } from '../theme';
+import { radius, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 import { relativeTime } from '../lib/relativeTime';
 import { toPlainText } from '../lib/mentions';
 import { SwipeToDelete } from './SwipeToDelete';
@@ -68,6 +69,7 @@ export interface NotificationBellHandle {
  * 다른 화면의 벨까지 반응해서 패널이 두 개 열린다.
  */
 export const NotificationBell = forwardRef<NotificationBellHandle>(function NotificationBell(_props, ref) {
+  const { colors, styles } = useThemed(makeStyles);
   const notifications = useNotificationsStore((s) => s.notifications);
   const loading = useNotificationsStore((s) => s.loading);
   const load = useNotificationsStore((s) => s.load);
@@ -269,6 +271,7 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
  * 같은 파괴적 동작이 두 곳에 있으면 어느 쪽이 진짜인지 아무도 모른다.
  */
 export function SettingsButton() {
+  const { colors, styles } = useThemed(makeStyles);
   const navigation = useNavigation<any>();
 
   return (
@@ -285,6 +288,7 @@ export function SettingsButton() {
   );
 }
 export function TabHeader({ title, onPressTitle }: TabHeaderProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const teamName = useTeamStore((s) => s.activeTeam?.team.name);
   // 팀이 하나뿐이면 화면마다 같은 이름을 되풀이할 뿐이다 — 여러 팀에 속했을 때만
   // "지금 어느 팀을 보고 있나"가 정보가 된다
@@ -325,7 +329,8 @@ export function TabHeader({ title, onPressTitle }: TabHeaderProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,4 +424,4 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
-});
+  });

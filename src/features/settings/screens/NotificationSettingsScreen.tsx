@@ -12,10 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { useTeamStore } from '../../team/stores/teamStore';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { getPushStatus } from '../../notifications/services/pushService';
 
 export function NotificationSettingsScreen({ navigation }: any) {
+  const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
   const updateNotifyPref = useTeamStore((s) => s.updateNotifyPref);
@@ -111,7 +113,8 @@ export function NotificationSettingsScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
   toggleLabel: { color: colors.textBody, fontSize: 14, fontWeight: '600' },
   toggle: {
@@ -144,4 +147,4 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
-});
+  });

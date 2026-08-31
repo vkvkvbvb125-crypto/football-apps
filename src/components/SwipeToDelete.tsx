@@ -7,7 +7,8 @@ import { useRef } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './nativeText';
-import { colors, radius } from '../theme';
+import { radius, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 
 /** 카드가 밀려나는 거리 */
 const ACTION_W = 78;
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export function SwipeToDelete({ onDelete, children }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const translateX = useRef(new Animated.Value(0)).current;
   /** 지금 열려 있는지 — 드래그 시작점을 잡는 데 쓴다 (Animated.Value는 동기로 못 읽는다) */
   const openRef = useRef(false);
@@ -133,7 +135,8 @@ export function SwipeToDelete({ onDelete, children }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { position: 'relative' },
   actionLayer: {
     position: 'absolute',
@@ -158,4 +161,4 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   actionText: { color: colors.danger, fontSize: 11, fontWeight: '800' },
-});
+  });

@@ -10,7 +10,8 @@ import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGrad
 import { EmptyState } from '../../../components/EmptyState';
 import { useScoreStore } from '../../timer/stores/scoreStore';
 import { TabHeader } from '../../../components/TabHeader';
-import { colors, radius, shadow } from '../../../theme';
+import { radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { FormationView } from '../components/FormationView';
 import { formationFor } from '../../team/positions';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -32,7 +33,9 @@ const TABS: { key: View3; label: string }[] = [
 // 팀 구분용 색 — 서로 구별되기만 하면 되는 범주색이다.
 // 5번째로 colors.danger(#F87171)를 쓰고 있었는데, 앱의 다른 곳에서 그 색은 삭제·오류를 뜻한다.
 // 5팀으로 나눈 순간 멀쩡한 한 팀이 경고색을 뒤집어썼다 — 상태색과 겹치지 않는 색으로 바꾼다.
-const GROUP_COLOR = [colors.green, colors.blue, colors.gold, '#C084FC', '#F472B6'];
+/* 팀 구분색. 테마마다 앞의 셋이 달라진다 — 뒤의 둘은 팔레트에 없는 고정색이다
+   (palette-audit.md 「판단 보류」: 5칸이 한 화면에 나란히 있어 색이 실제로 구분에 쓰인다) */
+const groupColorOf = (colors: Palette) => [colors.green, colors.blue, colors.gold, '#C084FC', '#F472B6'];
 
 /** 쿼터 수 — 경기마다 다르게 정하는 기능이 아직 없어 앱 전체가 4쿼터를 쓴다 */
 const TOTAL_QUARTERS = 4;
@@ -45,6 +48,7 @@ function initialOf(name: string) {
 }
 
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
+  const { colors, styles } = useThemed(makeStyles);
   const [view, setView] = useState<View3>('assign');
 
   const activeTeam = useTeamStore((s) => s.activeTeam);
@@ -328,7 +332,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
                     <View style={styles.groups}>
                       {labels.map((group, gi) => {
-                        const tint = GROUP_COLOR[gi % GROUP_COLOR.length];
+                        const tint = groupColorOf(colors)[gi % groupColorOf(colors).length];
                         const list = mine.filter((a) => a.group_label === group);
                         const isLast = gi === labels.length - 1;
                         return (
@@ -450,7 +454,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   pressed: { opacity: 0.8 },
 
   segment: {
@@ -612,4 +617,4 @@ const styles = StyleSheet.create({
     borderColor: colors.greenDeep,
   },
   addGroupText: { color: colors.green, fontSize: 12, fontWeight: '800' },
-});
+  });

@@ -32,6 +32,12 @@ async function ensureAndroidChannel() {
     name: '킥데이 알림',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
+    /*
+      ⚠ 여기만 굳은 팔레트(다크)를 쓴다. 리액트 밖이라 훅을 부를 수 없다 —
+        알림 채널은 앱 시작 때 한 번 만들어지고, 이 값은 화면 색이 아니라
+        **기기 LED 색**이다. 테마를 따라 바뀔 이유가 없고, 바꿀 수도 없다
+        (채널은 만든 뒤 색을 못 고친다 — 안드로이드가 사용자 설정으로 본다).
+    */
     lightColor: colors.green,
   });
 }

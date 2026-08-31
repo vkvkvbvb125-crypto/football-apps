@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface PollFormModalProps {
   visible: boolean;
@@ -11,6 +12,7 @@ interface PollFormModalProps {
 }
 
 export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [deadlineText, setDeadlineText] = useState('');
@@ -107,7 +109,8 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -182,4 +185,4 @@ const styles = StyleSheet.create({
     color: colors.bgRoot,
     fontWeight: '700',
   },
-});
+  });

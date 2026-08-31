@@ -6,9 +6,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 export function SettlementEmpty({ isAdmin }: { isAdmin: boolean }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.wrap}>
       <View style={styles.icon}>
@@ -22,7 +24,8 @@ export function SettlementEmpty({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { alignItems: 'center', gap: 10, paddingVertical: 56 },
   icon: {
     width: 56,
@@ -38,4 +41,4 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontSize: 15, fontWeight: '800' },
   sub: { color: colors.textDim, fontSize: 12, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
-});
+  });

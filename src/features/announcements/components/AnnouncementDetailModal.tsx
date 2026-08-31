@@ -4,7 +4,8 @@ import { Text } from '../../../components/nativeText';
 import { MentionText } from '../../../components/Mention';
 import { Ionicons } from '@expo/vector-icons';
 import type { AnnouncementRow } from '../services/announcementsService';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface AnnouncementDetailModalProps {
   announcement: AnnouncementRow | null;
@@ -21,6 +22,7 @@ export function AnnouncementDetailModal({
   onEdit,
   onDelete,
 }: AnnouncementDetailModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuAnchorY, setMenuAnchorY] = useState(0);
 
@@ -111,7 +113,8 @@ export function AnnouncementDetailModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -188,4 +191,4 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
   },
-});
+  });

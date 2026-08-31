@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import type { SkillTag } from '../../../types/database';
 import type { TeamMemberWithProfile } from '../services/teamService';
 import { nextPosition, positionLabel, toPosition, type Position } from '../positions';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 const SKILL_CYCLE: (SkillTag | null)[] = ['상', '중', '하', null];
 
@@ -41,6 +42,7 @@ export function MemberListModal({
   onPromote,
   onRemove,
 }: MemberListModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const adminCount = members.filter((m) => m.role === 'admin').length;
 
   const handleRemove = async (member: TeamMemberWithProfile) => {
@@ -141,7 +143,8 @@ export function MemberListModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.card,
@@ -266,4 +269,4 @@ const styles = StyleSheet.create({
   actionButtonTextDanger: {
     color: '#F87171',
   },
-});
+  });

@@ -22,7 +22,8 @@ import { useTeamStore } from '../../team/stores/teamStore';
 import { updateDisplayName } from '../../team/services/memberProfileService';
 import { POSITIONS, POSITION_INFO, toPosition } from '../../team/positions';
 import { pickSquareImage, setAvatarUrl, updateProfileFields, uploadAvatar } from '../services/avatarService';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import type { SkillTag } from '../../../types/database';
 
 const SKILLS: SkillTag[] = ['상', '중', '하'];
@@ -35,6 +36,7 @@ const FEET = [
 ];
 
 export function ProfileDetailScreen({ navigation }: any) {
+  const { colors, styles } = useThemed(makeStyles);
   const session = useAuthStore((s) => s.session);
 
   const activeTeam = useTeamStore((s) => s.activeTeam);
@@ -315,7 +317,8 @@ export function ProfileDetailScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -375,4 +378,4 @@ const styles = StyleSheet.create({
   chipLocked: { opacity: 0.5 },
   chipText: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
   chipTextOn: { color: colors.green, fontWeight: '800' },
-});
+  });

@@ -6,7 +6,8 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
 import { alertMessage, confirmAction } from '../../../components/Dialog';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { MentionInput } from '../../../components/Mention';
 import { EVERYONE, mentionedIds, toPlainText } from '../../../lib/mentions';
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   // PostCard가 작성자 이름·사진을 여기서 찾는다 (글에 박힌 값은 불러온 시점의 복사본)
   const members = useTeamStore((s) => s.members);
   /** @자동완성 후보 — 나 자신도 남겨둔다(내 이름을 부를 일은 없지만 목록에서 빼면 더 헷갈린다) */
@@ -251,7 +253,8 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   chip: {
     paddingHorizontal: 11,
@@ -318,4 +321,4 @@ const styles = StyleSheet.create({
 
 
 
-});
+  });

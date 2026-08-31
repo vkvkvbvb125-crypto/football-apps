@@ -6,10 +6,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { passwordChecks } from '../password';
 
 export function PasswordChecklist({ value }: { value: string }) {
+  const { colors, styles } = useThemed(makeStyles);
   const checks = passwordChecks(value);
   const allOk = checks.every((c) => c.ok);
 
@@ -36,7 +38,8 @@ export function PasswordChecklist({ value }: { value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   head: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
   row: {
     flexDirection: 'row',
@@ -52,4 +55,4 @@ const styles = StyleSheet.create({
   text: { flex: 1, color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   textOk: { color: colors.green, fontWeight: '700' },
   example: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
-});
+  });

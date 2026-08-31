@@ -16,7 +16,8 @@ import { useSettlementStore } from '../features/settlement/stores/settlementStor
 import { useTeamStore } from '../features/team/stores/teamStore';
 import { myUnpaidAmount } from '../features/settlement/utils/unpaid';
 import { Text } from '../components/nativeText';
-import { colors, shadow, tabBar, zIndex } from '../theme';
+import { shadow, tabBar, zIndex, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
@@ -25,9 +26,13 @@ import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
 
 const Tab = createBottomTabNavigator();
 
-/** 활성 탭 — 아이콘·라벨·가운데 링이 모두 이 하나를 쓴다 */
-const ACTIVE = colors.greenBright;
-const IDLE = colors.navIdle;
+/*
+  활성 탭 — 아이콘·라벨·가운데 링이 모두 이 하나를 쓴다.
+  ⚠ 테마마다 다르다. greenBright는 다크에서 「더 밝은 것」이지만 역할은
+    「더 튀는 것」이라, 라이트에서는 green보다 어둡다(theme.ts 라이트 팔레트 주석).
+*/
+const activeOf = (colors: Palette) => colors.greenBright;
+const idleOf = (colors: Palette) => colors.navIdle;
 /** 탭바를 화면 하단에서 띄우는 간격 — 홈 인디케이터가 있으면 그만큼 더 올린다.
  *  높이/간격은 theme의 tabBar가 원본이다 (화면 스크롤 여백이 같은 값을 본다) */
 const BAR_GAP = tabBar.gap;
@@ -57,6 +62,7 @@ const RING = 60;
 const RING_LIFT = 27;
 
 function tabLabel(title: string) {
+  const { colors, styles } = useThemed(makeStyles);
   return ({ color }: { color: string }) => <Text style={[styles.label, { color }]}>{title}</Text>;
 }
 
@@ -70,6 +76,7 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
  * 공 이미지는 tintColor가 안 먹으니 밝기로 활성/비활성을 구분한다.
  */
 function BallIcon({ focused }: { focused: boolean }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={[styles.ring, focused && styles.ringOn]}>
       <Image
@@ -82,6 +89,7 @@ function BallIcon({ focused }: { focused: boolean }) {
 }
 
 export function MainTabNavigator() {
+  const { colors, styles } = useThemed(makeStyles);
   // bottom을 10으로 못박아 두면 홈 인디케이터가 있는 기기에서 탭바가 그 위에 겹친다
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -135,8 +143,8 @@ export function MainTabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarActiveTintColor: ACTIVE,
-        tabBarInactiveTintColor: IDLE,
+        tabBarActiveTintColor: activeOf(colors),
+        tabBarInactiveTintColor: idleOf(colors),
         tabBarStyle: [styles.bar, { bottom: insets.bottom + BAR_GAP }],
         tabBarItemStyle: styles.item,
         // 화면이 탭바 뒤로 스크롤되도록 — 각 화면은 contentContainer에 useTabBarPadding()을 준다
@@ -200,7 +208,8 @@ export function MainTabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   /*
    * 떠 있는 탭바 — 카드 시스템의 값을 그대로 쓴다.
    *
@@ -305,8 +314,8 @@ const styles = StyleSheet.create({
    * glow를 절제한다(스펙 08절). 예전 0.45/12px는 탭바 위에 초록 안개가 끼어
    * 옆 탭 라벨까지 물들였다. 아이콘의 halo도 심 바로 옆에서만 밝고 금방 사라진다.
    */
-  ringOn: { borderColor: ACTIVE, boxShadow: `0 0 7px ${colors.greenGlow}` },
+  ringOn: { borderColor: colors.greenBright, boxShadow: `0 0 7px ${colors.greenGlow}` },
   ball: { width: 41, height: 41 },
   // 시안에서 공은 어느 탭에 있든 늘 선명하다 — 활성 표시는 두른 링이 맡는다
   ballIdle: { opacity: 0.9 },
-});
+  });

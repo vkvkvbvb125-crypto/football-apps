@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
-import { HOURS, MINUTES, Wheel, pad, reelStyles } from './TimeWheelPicker';
-import { colors } from '../../../theme';
+import { HOURS, MINUTES, Wheel, pad, useReelStyles } from './TimeWheelPicker';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 function parseTime(value: string, fallback: { hour: number; minute: number }) {
   const timePart = value.trim().split(' ')[1];
@@ -25,6 +26,8 @@ interface DeadlinePickerProps {
 }
 
 export function DeadlinePicker({ value, onChange, matchDate, matchTime }: DeadlinePickerProps) {
+  const reelStyles = useReelStyles();
+  const { colors, styles } = useThemed(makeStyles);
   const [modalVisible, setModalVisible] = useState(false);
   const [draftHour, setDraftHour] = useState(0);
   const [draftMinute, setDraftMinute] = useState(0);
@@ -111,7 +114,8 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -201,4 +205,4 @@ const styles = StyleSheet.create({
     color: colors.bgRoot,
     fontWeight: '700',
   },
-});
+  });

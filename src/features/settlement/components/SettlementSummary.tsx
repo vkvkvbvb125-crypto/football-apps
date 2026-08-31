@@ -6,10 +6,12 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 /** 라벨 — 값 한 줄. 값은 자릿수가 흔들리지 않게 tabular */
 export function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.row}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -19,6 +21,7 @@ export function SummaryRow({ label, value, strong }: { label: string; value: str
 }
 
 export function SummaryBox({ children }: { children: React.ReactNode }) {
+  const { colors, styles } = useThemed(makeStyles);
   return <View style={styles.box}>{children}</View>;
 }
 
@@ -41,6 +44,7 @@ export function SettlementDonePanel({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.donePanel}>
       <View style={styles.doneCircle}>
@@ -64,7 +68,8 @@ export function SettlementDonePanel({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   myDueBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -144,7 +149,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   doneCtaText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
-});
+  });
 
 /**
  * 「내 정산 금액」 — 위 요약 줄들의 결론.
@@ -154,6 +159,7 @@ const styles = StyleSheet.create({
  * 화면에서 초록은 「지금 중요한 것」에만 쓴다는 규칙 그대로다.
  */
 export function MyDueRow({ amount, paid }: { amount: number; paid?: boolean }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.myDueBox}>
       <Text style={styles.myDueLabel}>{paid ? '입금 완료' : '내 정산 금액'}</Text>
@@ -171,6 +177,7 @@ export function MyDueRow({ amount, paid }: { amount: number; paid?: boolean }) {
  * 늘 펼쳐져 있으면 그 한 줄을 찾으러 스크롤해야 한다. 필요할 때만 편다.
  */
 export function DetailBreakdown({ rows }: { rows: { id: string; name: string; amount: number; paid: boolean; exempt: boolean; isMe?: boolean }[] }) {
+  const { colors, styles } = useThemed(makeStyles);
   const [open, setOpen] = useState(false);
   return (
     <View style={styles.breakBox}>

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { fetchMatchWeather, weatherEmoji, weatherLabel, type MatchWeather } from '../services/weatherService';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface WeatherBadgeProps {
   latitude: number | null;
@@ -13,6 +14,7 @@ interface WeatherBadgeProps {
 type UnavailableReason = 'no-location' | 'date-range' | 'fetch-failed';
 
 export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadgeProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const [weather, setWeather] = useState<MatchWeather | null>(null);
   const [unavailable, setUnavailable] = useState<UnavailableReason | null>(null);
 
@@ -106,7 +108,8 @@ export function WeatherBadge({ latitude, longitude, matchDateIso }: WeatherBadge
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   card: {
     marginTop: 8,
     flexDirection: 'row',
@@ -157,4 +160,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-});
+  });

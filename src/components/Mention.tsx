@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { NativeSyntheticEvent, TextInputSelectionChangeEventData } from 'react-native';
 import { Text, TextInput } from './nativeText';
-import { colors, radius } from '../theme';
+import { radius, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 import { EVERYONE, activeQuery, insertMention, parse } from '../lib/mentions';
 
 export interface MentionTarget {
@@ -50,6 +51,7 @@ export function MentionInput({
   style,
   autoFocus,
 }: MentionInputProps) {
+  const { colors, styles } = useThemed(makeStyles);
   // 커서를 따라가야 글 중간에 끼워 넣어도 안 깨진다
   const [cursor, setCursor] = useState(0);
 
@@ -103,6 +105,7 @@ export function MentionInput({
 
 /** 마커를 초록 이름으로 그린다. 마커가 없는 옛 글은 그대로 평문으로 나온다 */
 export function MentionText({ body, style }: { body: string; style?: any }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Text style={style}>
       {parse(body).map((piece, i) =>
@@ -118,7 +121,8 @@ export function MentionText({ body, style }: { body: string; style?: any }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   list: {
     marginTop: 6,
     borderRadius: radius.button,
@@ -139,4 +143,4 @@ const styles = StyleSheet.create({
   everyoneName: { color: colors.green, fontWeight: '800' },
   itemHint: { color: colors.textFaint, fontSize: 10, fontWeight: '600' },
   mention: { color: colors.green, fontWeight: '800' },
-});
+  });

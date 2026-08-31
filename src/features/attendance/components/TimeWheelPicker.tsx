@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 export const ITEM_HEIGHT = 44;
 const VISIBLE_COUNT = 3;
@@ -30,6 +31,7 @@ interface WheelProps {
 }
 
 export function Wheel({ data, selected, onSelect, resetKey }: WheelProps) {
+  const reelStyles = useReelStyles();
   const scrollRef = useRef<ScrollView>(null);
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialIndex = Math.max(0, data.indexOf(selected));
@@ -96,6 +98,7 @@ interface TimeReelProps {
 }
 
 export function TimeReel({ hour, minute, onHourChange, onMinuteChange, resetKey }: TimeReelProps) {
+  const reelStyles = useReelStyles();
   return (
     <View>
       <View style={reelStyles.labelRow}>
@@ -112,7 +115,10 @@ export function TimeReel({ hour, minute, onHourChange, onMinuteChange, resetKey 
   );
 }
 
-export const reelStyles = StyleSheet.create({
+/* 다른 파일(DeadlinePicker)도 쓰는 스타일이라 훅으로 내보낸다 —
+   상수로 두면 그쪽에서도 굳은 값을 쓰게 된다 */
+const makeReelStyles = (colors: Palette) =>
+  StyleSheet.create({
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -169,12 +175,15 @@ export const reelStyles = StyleSheet.create({
   },
 });
 
+export const useReelStyles = () => useThemed(makeReelStyles).styles;
+
 interface TimeWheelPickerProps {
   value: string;
   onChange: (time: string) => void;
 }
 
 export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const [modalVisible, setModalVisible] = useState(false);
   const [hour, minute] = value.split(':').map(Number);
   const [draftHour, setDraftHour] = useState(hour);
@@ -226,7 +235,8 @@ export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -290,4 +300,4 @@ const styles = StyleSheet.create({
     color: colors.bgRoot,
     fontWeight: '700',
   },
-});
+  });

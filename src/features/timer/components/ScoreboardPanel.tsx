@@ -11,7 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { confirmAction } from '../../../components/Dialog';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { SoftTint } from '../../../components/BentoCard';
 
 interface Props {
@@ -75,6 +76,7 @@ export function ScoreboardPanel({
   loadingScores = false,
   onRetryLoad,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const winner = scoreA === scoreB ? null : scoreA > scoreB ? 'A' : 'B';
   const hasScore = scoreA > 0 || scoreB > 0;
 
@@ -238,7 +240,8 @@ export function ScoreboardPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { gap: 16, paddingBottom: 20 },
   /** 초기화·종료 묶음 — 카드와의 간격(16)보다 안쪽이 좁아야 한 묶음으로 읽힌다 */
   actions: { gap: 8 },
@@ -356,4 +359,4 @@ const styles = StyleSheet.create({
     borderColor: colors.greenDeep,
   },
   finishText: { color: colors.green, fontSize: 14, fontWeight: '800' },
-});
+  });

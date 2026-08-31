@@ -6,7 +6,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { ProgressRing } from './SettlementCard';
 import type { ShareRow } from '../stores/settlementStore';
 
@@ -34,6 +35,7 @@ export function SettlementProgressPanel({
   onRefresh,
   refreshing,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const done = shares.filter((s) => s.paid);
   const waiting = shares.filter((s) => !s.paid);
   const pct = shares.length ? done.length / shares.length : 0;
@@ -91,6 +93,7 @@ export function SettlementProgressPanel({
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={{ gap: 6 }}>
       <Text style={styles.groupTitle}>{title}</Text>
@@ -99,11 +102,13 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-const TONE = {
-  green: { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
-  gold: { bg: colors.goldTint, fg: colors.gold },
-  muted: { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
-} as const;
+/* 테마마다 값이 다르므로 표를 함수로 바꿨다 — 모듈 최상단에서 만들면 굳는다 */
+const toneOf = (colors: Palette) =>
+  ({
+    green: { bg: colors.greenTint, fg: colors.green },
+    gold: { bg: colors.goldTint, fg: colors.gold },
+    muted: { bg: colors.neutralTint, fg: colors.textMuted },
+  }) as const;
 
 function Row({
   name,
@@ -116,11 +121,12 @@ function Row({
   name: string;
   isMe?: boolean;
   status: string;
-  tone: keyof typeof TONE;
+  tone: keyof ReturnType<typeof toneOf>;
   selected?: boolean;
   onPress?: () => void;
 }) {
-  const t = TONE[tone];
+  const { colors, styles } = useThemed(makeStyles);
+  const t = toneOf(colors)[tone];
   return (
     <Pressable
       disabled={!onPress}
@@ -138,7 +144,8 @@ function Row({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: { gap: 14 },
 
   amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 7 },
@@ -180,4 +187,4 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   refreshText: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
-});
+  });

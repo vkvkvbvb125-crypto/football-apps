@@ -48,7 +48,8 @@ import {
 } from '../../attendance/utils/attendanceRate';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import type { PlaceResult } from '../../attendance/services/placeService';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { clearTeamLogo, pickSquareImage, uploadTeamLogo } from '../../settings/services/avatarService';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -58,6 +59,7 @@ const TEAM_SKILL_LABEL = { beginner: '입문', intermediate: '중급', advanced:
 
 
 export function TeamHomeScreen({ navigation, route }: any) {
+  const { colors, styles } = useThemed(makeStyles);
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const myUserId = useAuthStore((s) => s.session?.user.id);
@@ -683,7 +685,8 @@ export function TeamHomeScreen({ navigation, route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
 
   /** 하위 화면 헤더 — 뒤로가기 + 제목 + (있으면) 새로 만들기 */
   subHeader: {
@@ -761,4 +764,4 @@ const styles = StyleSheet.create({
   // 다른 탭의 섹션 제목은 15/-0.2였다 — 팀 탭만 14.5라 나란히 놓으면 어긋나 보인다
 
 
-});
+  });

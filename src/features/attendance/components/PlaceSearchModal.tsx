@@ -4,7 +4,8 @@ import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { searchPlaces, type PlaceResult } from '../services/placeService';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 const CATEGORIES = ['풋살장', '축구장', '운동장', '체육관'];
 
@@ -41,6 +42,7 @@ interface PlaceSearchModalProps {
 }
 
 export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const [modalVisible, setModalVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlaceResult[]>([]);
@@ -262,7 +264,8 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -409,4 +412,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
   },
-});
+  });

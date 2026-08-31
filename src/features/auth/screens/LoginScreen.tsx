@@ -10,7 +10,8 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { Text, TextInput } from '../../../components/nativeText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, CREDENTIAL_MISMATCH, type SocialProvider } from '../stores/authStore';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { GreenFill } from '../../../components/Surface';
 import { GreenAmbient } from '../../../components/ScreenGradient';
 
@@ -39,7 +40,8 @@ const SOCIALS: {
 }[] = [
   // 공식 에셋(assets/kakao.png)은 34px에 말풍선이 68%로 꽉 찬 크롭이라 이 자리에 안 맞는다 —
   // 키우면 답답하고 줄이면 나머지 마크보다 작아 보인다. @3x 여유 있는 버전이 오면 image로 바꾼다.
-  { key: 'kakao', label: '카카오', icon: 'chatbubble', bg: colors.kakao, fg: colors.kakaoText },
+  /* 브랜드 고정색 — 테마와 무관하다. 팔레트에도 예외로 적혀 있다 */
+  { key: 'kakao', label: '카카오', icon: 'chatbubble', bg: '#FEE500', fg: '#000000' },
   { key: 'naver', label: '네이버', text: 'N', bg: '#03C75A', fg: '#FFFFFF' },
   // 공식 4색 G(360px, 흰 배경 + 여백 포함). 배경까지 들어 있어 원형 컨테이너가 잘라내면 된다.
   { key: 'google', label: '구글', image: require('../../../../assets/google.png'), bg: '#FFFFFF' },
@@ -62,6 +64,7 @@ function AuthField({
   icon: keyof typeof Ionicons.glyphMap;
   right?: React.ReactNode;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.field}>
       <Ionicons name={icon} size={18} color={colors.textMuted} />
@@ -76,6 +79,7 @@ function AuthField({
 }
 
 export function LoginScreen({ navigation }: { navigation: any }) {
+  const { colors, styles } = useThemed(makeStyles);
   const signInWithSocial = useAuthStore((s) => s.signInWithSocial);
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
   const clearError = useAuthStore((s) => s.clearError);
@@ -234,7 +238,8 @@ export function LoginScreen({ navigation }: { navigation: any }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgRoot },
   // flexGrow + center — 화면이 크면 세로 가운데에 놓이고, 모자라거나 키보드가 올라오면 스크롤된다.
   // (콘텐츠가 600px쯤이라 큰 폰에서는 위로 쏠려 보였다)
@@ -325,4 +330,4 @@ const styles = StyleSheet.create({
   socialLabel: { color: colors.textBody, fontSize: 11, fontWeight: '700' },
 
   footNote: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center' },
-});
+  });

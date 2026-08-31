@@ -20,7 +20,8 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useReduceMotion } from '../../../lib/useReduceMotion';
 
 /** 자동 전환 간격 */
@@ -63,6 +64,7 @@ interface Props {
 }
 
 export function HomeBanner({ slides, layout, image, scrollingRef, onPress }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
   /** 손으로 민 직후 — RESUME_MS 동안 자동 전환을 멈춘다 */
@@ -187,6 +189,7 @@ export function HomeBanner({ slides, layout, image, scrollingRef, onPress }: Pro
 }
 
 function Slide({ slide, height }: { slide: BannerSlide; height: number }) {
+  const { colors, styles } = useThemed(makeStyles);
   if (slide.kind === 'ad') return <AdSlot unitId={slide.unitId} height={height} />;
 
   if (slide.kind === 'stat') {
@@ -209,7 +212,8 @@ function Slide({ slide, height }: { slide: BannerSlide; height: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   card: {
     /* 좌우 여백은 HomeScreen의 content가 준다 — 여기서 또 주면 두 배가 된다 */
     borderRadius: radius.hero,
@@ -242,4 +246,4 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5, paddingTop: 10 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.border },
   dotOn: { width: 16, borderRadius: 2, backgroundColor: colors.green },
-});
+  });

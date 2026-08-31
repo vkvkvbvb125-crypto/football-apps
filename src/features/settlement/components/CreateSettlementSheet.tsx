@@ -13,7 +13,8 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
-import { colors, font, radius } from '../../../theme';
+import { font, radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { splitAmount } from '../stores/settlementStore';
 import { canCreateSettlement, createCtaLabel } from '../account';
 
@@ -56,6 +57,7 @@ export function CreateSettlementSheet({
   onSkip,
   onEditAccount,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [totalText, setTotalText] = useState(String(suggestedTotal ?? ''));
 
   const total = Number(totalText.replace(/[^0-9]/g, '')) || 0;
@@ -180,7 +182,8 @@ export function CreateSettlementSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   overlayTap: { flex: 1 },
   sheet: {
@@ -264,4 +267,4 @@ const styles = StyleSheet.create({
   note: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 10 },
   skip: { alignSelf: 'center', paddingVertical: 10, marginTop: 2 },
   skipText: { color: colors.textDim, fontSize: 12, fontWeight: '700', textDecorationLine: 'underline' },
-});
+  });

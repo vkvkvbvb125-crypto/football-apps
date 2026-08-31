@@ -12,7 +12,8 @@
 // 설정 화면은 이미 동의한 것을 다시 읽을 뿐이라 닫기만 있다.
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import type { TermDoc } from '../terms';
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function TermsDocModal({ doc, onClose, onAgree }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <Modal visible={!!doc} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.docOverlay}>
@@ -60,7 +62,8 @@ export function TermsDocModal({ doc, onClose, onAgree }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   docOverlay: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.72)' },
   docBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   docCard: {
@@ -121,4 +124,4 @@ const styles = StyleSheet.create({
   docAgreeText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
 
   pressed: { opacity: 0.75 },
-});
+  });

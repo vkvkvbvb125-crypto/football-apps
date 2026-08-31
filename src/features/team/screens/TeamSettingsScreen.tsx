@@ -9,7 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
-import { colors, font, radius } from '../../../theme';
+import { font, radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../stores/teamStore';
 import { PlaceSearchModal } from '../../attendance/components/PlaceSearchModal';
 import { RegionPickerModal } from '../components/RegionPickerModal';
@@ -36,6 +37,7 @@ const SKILL_OPTIONS = [
 ] as const;
 
 export function TeamSettingsScreen({ navigation }: any) {
+  const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const leaveTeam = useTeamStore((s) => s.leaveTeam);
   const settlementCurrent = useSettlementStore((st) => st.current);
@@ -669,7 +671,8 @@ export function TeamSettingsScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingVertical: 12 },
   headerTitle: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
   scroll: { padding: 20, paddingBottom: 60, gap: 14 },
@@ -819,4 +822,4 @@ const styles = StyleSheet.create({
   leaveRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
   leavePressed: { opacity: 0.6 },
   leaveText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
-});
+  });

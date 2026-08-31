@@ -17,9 +17,11 @@ import { Text } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
 import { TERMS, type TermDoc } from '../../auth/terms';
 import { TermsDocModal } from '../../auth/components/TermsDocModal';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 export function TermsScreen({ navigation }: any) {
+  const { colors, styles } = useThemed(makeStyles);
   const [openDoc, setOpenDoc] = useState<TermDoc | null>(null);
 
   return (
@@ -64,7 +66,8 @@ export function TermsScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -92,4 +95,4 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
-});
+  });

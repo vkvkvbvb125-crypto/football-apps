@@ -5,7 +5,8 @@
 // 잔디·라인까지 그리면 이름이 묻히고, 여기서 알고 싶은 건 "누가 어디 서나" 하나다.
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { POSITION_INFO, formationFor, toPosition, type Position } from '../../team/positions';
 
 export interface FormationPlayer {
@@ -32,6 +33,7 @@ export function assignToFormation(players: FormationPlayer[], slots: Position[])
 }
 
 export function FormationView({ players }: { players: FormationPlayer[] }) {
+  const { colors, styles } = useThemed(makeStyles);
   const formation = formationFor(players.length);
   if (!formation) return null;
 
@@ -82,7 +84,8 @@ export function FormationView({ players }: { players: FormationPlayer[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   wrap: {
     borderRadius: radius.card,
     borderWidth: 1,
@@ -107,4 +110,4 @@ const styles = StyleSheet.create({
   slotName: { color: colors.text, fontSize: 12, fontWeight: '700' },
   slotPos: { color: colors.textDim, fontSize: 10, fontWeight: '600' },
   slotRole: { color: colors.textFaint, fontSize: 10, fontWeight: '600' },
-});
+  });

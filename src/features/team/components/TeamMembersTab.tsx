@@ -10,7 +10,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemeName, useThemed } from '../../../lib/useThemed';
 import { POSITION_COLOR, positionLabel, toPosition } from '../positions';
 import { initialOf } from '../initials';
 import { formatRecentAttendance, memberAttendanceRate, type MemberRateMatch } from '../../attendance/utils/attendanceRate';
@@ -42,6 +43,8 @@ export function TeamMembersTab({
   onOpenMemberList,
   onOpenInvite,
 }: Props) {
+  const themeName = useThemeName();
+  const { colors, styles } = useThemed(makeStyles);
   return (
           <View style={[styles.card, { gap: 12 }]}>
             <View style={styles.sectionHead}>
@@ -134,7 +137,7 @@ export function TeamMembersTab({
                           <View style={styles.memberMetaRow}>
                             {!!pos && (
                               /* 포지션마다 색이 달라 목록에서 자리를 색으로 먼저 읽는다 */
-                              <Text style={[styles.memberMeta, { color: POSITION_COLOR[pos], fontWeight: '700' }]}>
+                              <Text style={[styles.memberMeta, { color: POSITION_COLOR[themeName][pos], fontWeight: '700' }]}>
                                 {positionLabel(pos)}
                               </Text>
                             )}
@@ -204,7 +207,8 @@ export function TeamMembersTab({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   card: {
     ...shadow.card,
     backgroundColor: colors.card,
@@ -275,4 +279,4 @@ const styles = StyleSheet.create({
   inviteRowName: { color: colors.green, fontSize: 14, fontWeight: '700' },
   empty: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
   pressed: { opacity: 0.85 },
-});
+  });

@@ -12,7 +12,8 @@ import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { useAuthStore } from '../../auth/stores/authStore';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { deleteAccount, describeBlockers, fetchDeletionStatus } from '../services/accountService';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 import { accountLabel } from '../utils/accountLabel';
 
 /*
@@ -47,6 +48,7 @@ function SettingsRow({
   /** 묶음의 마지막 줄 — 구분선을 안 그린다 */
   last?: boolean;
 }) {
+  const { colors, styles } = useThemed(makeStyles);
   const tint = danger ? colors.danger : colors.textMuted;
   return (
     <Pressable
@@ -69,6 +71,7 @@ function SettingsRow({
 }
 
 export function MySettingsScreen({ navigation }: any) {
+  const { colors, styles } = useThemed(makeStyles);
   const session = useAuthStore((s) => s.session);
   const signOut = useAuthStore((s) => s.signOut);
 
@@ -234,6 +237,16 @@ export function MySettingsScreen({ navigation }: any) {
             onPress={() => navigation.navigate('NotificationSettings')}
           />
           {/*
+            화면 모드 — 알림 바로 아래. 둘 다 「앱이 어떻게 굴지」라 이웃이 맞다.
+            우측에 지금 값을 적지 않는다. 「기기 설정 따르기」는 길어서 줄이 밀리고,
+            무엇보다 **지금 화면이 이미 그 값을 보여주고 있다** — 밝으면 밝은 것이다.
+          */}
+          <SettingsRow
+            icon="contrast-outline"
+            label="화면 모드"
+            onPress={() => navigation.navigate('ThemeSettings')}
+          />
+          {/*
             팀 설정으로 가는 줄. 여기서 팀 값을 고치게 하지 않는다 —
             팀 설정 화면이 이미 있고 진입로가 둘이다(팀 히어로의 「팀 설정 ›」,
             팀 화면 타일). 셋째를 만들면 같은 값을 세 곳에서 고치게 되고,
@@ -300,7 +313,8 @@ export function MySettingsScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   /*
     목록 묶음 — 카드 하나 안에 줄들이 이어진다.
     줄마다 카드를 주면 사이 여백이 생겨서 「따로따로인 버튼 넷」으로 읽힌다.
@@ -371,4 +385,4 @@ const styles = StyleSheet.create({
 
 
 
-});
+  });

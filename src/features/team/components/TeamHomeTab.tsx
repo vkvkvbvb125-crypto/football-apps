@@ -13,7 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SoftTint } from '../../../components/BentoCard';
 import { StatRow, StatTile } from '../../../components/Surface';
 import { Text, TextInput } from '../../../components/nativeText';
-import { colors, font, radius, shadow } from '../../../theme';
+import { font, radius, shadow, type Palette } from '../../../theme';
+import { useThemeName, useThemed } from '../../../lib/useThemed';
 import { POSITION_INFO, positionLabel, toPosition } from '../positions';
 import { avatarTint } from '../avatarTint';
 /* 「14일 전」 — 게시판 카드와 목록이 같은 함수를 쓴다. 한쪽만 「어제」면 같은 글이
@@ -198,6 +199,8 @@ export function TeamHomeTab({
   onGoTile,
   hasUnreadNotice,
 }: Props) {
+  const themeName = useThemeName();
+  const { colors, styles } = useThemed(makeStyles);
   /* 기준 안내는 ⓘ를 눌러 편다 — 레퍼런스가 값 옆에 아이콘만 두기 때문이다 */
   const [rateNoteOpen, setRateNoteOpen] = useState(false);
 
@@ -649,7 +652,7 @@ export function TeamHomeTab({
                 >
                   {orderedMembers.map((m) => {
                     const isMe = m.id === selfMemberId;
-                    const tint = avatarTint(m.id);
+                    const tint = avatarTint(m.id, themeName);
                     const pos = toPosition(m.position);
                     return (
                       <Pressable
@@ -1070,7 +1073,8 @@ export function TeamHomeTab({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   /*
     카드 사이 10, 카드 안 20. 레퍼런스가 그 비율이다 — 카드가 붙어 있고 안이 넓다.
 
@@ -1533,4 +1537,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pressed: { opacity: 0.85 },
-});
+  });

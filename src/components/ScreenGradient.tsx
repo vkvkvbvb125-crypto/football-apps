@@ -7,7 +7,8 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, tabBar } from '../theme';
+import { tabBar, type Palette } from '../theme';
+import { useThemed } from '../lib/useThemed';
 
 /**
  * 스크롤 콘텐츠가 떠 있는 탭바에 가리지 않도록 두는 아래 여백.
@@ -52,9 +53,11 @@ const GRADIENT_BOTTOM = 'rgba(255,255,255,0.032)';
  * export하는 이유: 인증 화면 넷은 ScreenGradient를 안 쓰고 KeyboardAvoidingView를
  * 자기 루트로 쓴다. 거기서도 같은 배경이어야 해서 이 조각만 따로 가져다 쓴다.
  */
-const AMBIENT = colors.greenBright;
+/* 테마마다 값이 다르므로 표를 함수로 바꿨다 — 모듈 최상단에서 만들면 굳는다 */
+const ambientOf = (colors: Palette) => colors.greenBright;
 
 export function GreenAmbient() {
+  const { colors, styles } = useThemed(makeStyles);
   /*
    * Svg에 크기를 숫자로 넘긴다. style={absoluteFill}만 주면 웹에서 상자가 0으로 접혀
    * 아무것도 안 그려진다 — 이 파일이 처음에 그래서 안 보였다. 앱의 다른 두 Svg
@@ -82,10 +85,10 @@ export function GreenAmbient() {
            * 0.10이면 ΔL* 7.7 — "저기 뭔가 있다"까지는 오고 "초록 그라데이션이네"
            * (0.2 근처)까지는 안 간다. 세기를 만지려면 이 숫자 하나만 보면 된다.
            */}
-          <Stop offset="0" stopColor={AMBIENT} stopOpacity={0.15} />
+          <Stop offset="0" stopColor={ambientOf(colors)} stopOpacity={0.15} />
           {/* 중간 정거장이 없으면 선형으로 떨어져서 가장자리까지 초록기가 남는다 */}
-          <Stop offset="0.55" stopColor={AMBIENT} stopOpacity={0.052} />
-          <Stop offset="1" stopColor={AMBIENT} stopOpacity={0} />
+          <Stop offset="0.55" stopColor={ambientOf(colors)} stopOpacity={0.052} />
+          <Stop offset="1" stopColor={ambientOf(colors)} stopOpacity={0} />
         </RadialGradient>
       </Defs>
       <Rect x="0" y="0" width={width} height={height} fill="url(#screenAmbient)" />
@@ -98,6 +101,7 @@ interface Props {
 }
 
 export function ScreenGradient({ children }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.root}>
       {/*
@@ -245,7 +249,8 @@ export function ScreenGradient({ children }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgRoot },
 
-});
+  });

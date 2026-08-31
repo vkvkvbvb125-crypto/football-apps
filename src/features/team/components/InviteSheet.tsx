@@ -34,7 +34,8 @@ import * as Clipboard from 'expo-clipboard';
 import { Modal, Pressable, Share, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../../../components/nativeText';
-import { colors, radius } from '../../../theme';
+import { radius, type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface Props {
   visible: boolean;
@@ -50,6 +51,7 @@ interface Props {
 const QR_SIZE = 188;
 
 export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
 
   // 표시는 4자리씩 끊고, 복사·QR은 원문을 쓴다 — 하이픈이 섞여 들어가면 코드가 안 맞는다
@@ -135,7 +137,8 @@ export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   overlayTap: { flex: 1 },
   sheet: {
@@ -193,4 +196,4 @@ const styles = StyleSheet.create({
   secondaryText: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
 
   pressed: { opacity: 0.75 },
-});
+  });

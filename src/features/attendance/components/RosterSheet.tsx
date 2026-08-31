@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../../components/nativeText';
 import { useReduceMotion } from '../../../lib/useReduceMotion';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -85,12 +86,13 @@ const LABEL: Record<VoteStatus, string> = {
   pending: '미투표',
 };
 
-const TONE: Record<VoteStatus, { bg: string; fg: string }> = {
+/* 테마마다 값이 다르므로 표를 함수로 바꿨다 — 모듈 최상단에서 만들면 굳는다 */
+const toneOf = (colors: Palette): Record<VoteStatus, { bg: string; fg: string }> => ({
   attend: { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
   absent: { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
   undecided: { bg: 'rgba(210,163,76,0.16)', fg: colors.gold },
   pending: { bg: 'rgba(210,163,76,0.10)', fg: colors.gold },
-};
+});
 
 type TabKey = 'all' | 'attend' | 'absent' | 'pending';
 
@@ -128,6 +130,7 @@ export function RosterSheet({
   lockNote,
   onVote,
 }: Props) {
+  const { colors, styles } = useThemed(makeStyles);
   const [tab, setTab] = useState<TabKey>('all');
   const [poked, setPoked] = useState<Record<string, boolean>>({});
   const [pokedAll, setPokedAll] = useState(false);
@@ -397,7 +400,7 @@ export function RosterSheet({
                 const waiting = m.status === 'pending' || m.status === 'undecided';
                 const showPoke = isAdmin && waiting && !m.isMe;
                 const done = poked[m.id] || pokedAll;
-                const tone = TONE[m.status];
+                const tone = toneOf(colors)[m.status];
                 return (
                   <View key={m.id} style={styles.row}>
                     <View
@@ -553,7 +556,8 @@ export function RosterSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
   sheet: {
     backgroundColor: colors.card,
@@ -708,4 +712,4 @@ const styles = StyleSheet.create({
 
   doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46 },
   doneText: { color: colors.green, fontSize: 13, fontWeight: '800' },
-});
+  });

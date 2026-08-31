@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 const PARTICLE_COUNT = 70;
 const DEFAULT_SPHERE_RADIUS = 130;
@@ -60,6 +61,7 @@ function buildParticles(radius: number, dotBaseSize: number): ParticleFrames[] {
 }
 
 export function ParticleSphere({ size }: ParticleSphereProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const radius = size ? size * 0.42 : DEFAULT_SPHERE_RADIUS;
   const dotBaseSize = size ? (DOT_BASE_SIZE * size) / 300 : DOT_BASE_SIZE;
   const particles = useMemo(() => buildParticles(radius, dotBaseSize), [radius, dotBaseSize]);
@@ -118,7 +120,8 @@ export function ParticleSphere({ size }: ParticleSphereProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0,
@@ -137,4 +140,4 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: '#22D96F',
   },
-});
+  });

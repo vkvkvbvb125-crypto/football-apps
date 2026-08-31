@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
 import type { PollWithResponses } from '../services/pollsService';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface PollCardProps {
   poll: PollWithResponses;
@@ -13,6 +14,7 @@ interface PollCardProps {
 }
 
 export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: PollCardProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const myResponse = poll.responses.find((r) => r.team_member_id === selfMemberId);
   const totalVotes = poll.responses.length;
   const deadlinePassed = poll.deadline ? new Date(poll.deadline) < new Date() : false;
@@ -64,7 +66,8 @@ export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: Poll
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   card: {
     backgroundColor: colors.card,
     borderRadius: 14,
@@ -130,4 +133,4 @@ const styles = StyleSheet.create({
     color: colors.placeholder,
     fontSize: 11,
   },
-});
+  });

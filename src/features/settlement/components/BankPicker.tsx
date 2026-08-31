@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme';
+import { type Palette } from '../../../theme';
+import { useThemed } from '../../../lib/useThemed';
 
 interface Bank {
   name: string;
@@ -39,6 +40,7 @@ interface BankPickerProps {
 }
 
 export function BankPicker({ value, onChange }: BankPickerProps) {
+  const { colors, styles } = useThemed(makeStyles);
   const [modalVisible, setModalVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [manualMode, setManualMode] = useState(false);
@@ -152,7 +154,8 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) =>
+  StyleSheet.create({
   field: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -288,4 +291,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
   },
-});
+  });

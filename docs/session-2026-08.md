@@ -1070,6 +1070,71 @@ logcat에는 우리 앱의 `FATAL`도 JS 오류도 **0건**이었다. 한 줄만
 관찰이 대상을 바꾸지는 않지만 가릴 수는 있다. 스크린샷 한 장을 근거로 삼기 전에
 그 화면에 우리가 만들지 않은 것이 얹혀 있는지 본다.
 
+### 경고로 나왔지 실패로 나오지 않았다 — 그리고 WarningAggregator 전수 훑기
+
+**이 세션에서 가장 오래 숨은 결함이 이 모양이었다.** `userInterfaceStyle: "dark"`가
+안드로이드에서 안 걸려 있었는데, prebuild는 **성공**했고 gradle 빌드도 **성공**했고
+EAS 빌드도 **성공**했다. 어디에도 빨간 줄이 없었다.
+
+```
+if (userInterfaceStyle) {
+  WarningAggregator.addWarningAndroid('userInterfaceStyle',
+    'Install expo-system-ui in your project to enable this feature.');
+}
+return config;   // ← 읽고, 경고를 쌓고, 아무것도 안 쓰고 정상 종료
+```
+
+「설정을 적었다」와 「그 설정이 동작한다」가 갈리는데 **출력이 둘 다 초록**이었다.
+[[실패와 성공의 출력이 같다]]의 도구 판이다. 앞선 사례들(CRLF로 늘 실패하던 검사,
+죽은 단언, 조용한 return)은 **우리가 짠 것**이 그랬는데, 이번엔 **도구가** 그랬다.
+
+⚠ 경고는 사람이 읽어야만 존재한다. prebuild를 마지막으로 언제 돌렸는지,
+  그 출력을 끝까지 읽었는지에 결과가 달렸다. **검사로 붙들지 않으면 안 읽힌다.**
+  그래서 `storeready.check`에 세 축을 넣었다 — 설정값·패키지·strings.xml.
+
+#### 훑기 결과 — 지금은 0건
+
+「같은 이유로 숨은 게 더 있는가」를 재려고 `WarningAggregator`를 부르는 자리를
+전수로 셌다. `@expo/prebuild-config` + `@expo/config-plugins`에 **31곳**
+(그중 2곳은 export 선언이라 실질 29곳).
+
+**⚠ 실행이 아니라 조건을 읽어서 판정했다.** 안드로이드 prebuild는 돌려서
+경고 0건을 확인했지만, **iOS는 Windows에서 prebuild가 안 된다**
+(「Run npx expo prebuild again from macOS or Linux」). 그래서 iOS 쪽은 각 경고의
+발화 조건을 소스에서 읽고 `app.json`에 대입했다. **한 번도 실제로 본 적이 없다** —
+맥을 잡으면 제일 먼저 할 일이다.
+
+가장 위험한 묶음은 **「Install X to enable this feature」**다. `userInterfaceStyle`과
+같은 모양이기 때문이다 — 설정은 있고, 그걸 거는 패키지가 없고, 경고만 난다.
+**정확히 넷이고 넷 다 지금은 안전하다:**
+
+| 설정 | 필요한 패키지 | 지금 |
+|---|---|---|
+| `userInterfaceStyle` (Android) | expo-system-ui | ✅ 고쳤다 |
+| `ios.backgroundColor` | expo-system-ui | 안 쓴다. 쓰더라도 이제 설치돼 있다 |
+| `ios.usesAppleSignIn` | expo-apple-authentication | 안 쓴다 — 애플 로그인은 Supabase 웹 OAuth(`signInWithOAuth` + WebBrowser)라 네이티브 entitlement가 필요 없다 |
+| `ios.usesIcloudStorage` | expo-document-picker | 안 쓴다 |
+
+나머지 25곳은 성격이 다르다. 우리 설정으로는 안 걸린다:
+
+| 묶음 | 왜 안 걸리나 |
+|---|---|
+| **더 이상 동작 안 함** — `androidStatusBar` · `androidNavigationBar` · `edgeToEdgeEnabled` | `'X' in config`일 때만 경고한다. **셋 다 app.json에 없다** |
+| **파일을 못 읽었다** — `googleServicesFile` · `name` · `android.package` · `scheme` · `versionCode` · `withBuildScriptExtVersion` | 「Cannot automatically configure…」 계열. 안드로이드 prebuild가 경고 0건으로 끝났으므로 전부 적용됐다 |
+| **값이 모순이다** — `ios.supportsTablet` | `isTabletOnly: true` **와** `supportsTablet: false`가 같이 있어야 한다. `isTabletOnly`를 안 쓴다 |
+| **덮어쓴다** — `ios.requireFullScreen` · `ios.infoPlist.*` | `ios.infoPlist`에 그 키를 직접 적었을 때만. 우리가 적은 건 `LSApplicationQueriesSchemes` 하나고 대응하는 추상 속성이 없다 |
+| **iOS 아이콘(.icon)** 3곳 | 전부 확장자가 `.icon`(Liquid Glass)일 때만. 우리는 `icon.png` |
+| **빌드 중 상황** — `ios.bitcode` · `paths-*` · `ios-xcode-project` · `mods.ios.infoPlist` | 중복 파일·못 찾은 Info.plist 같은 실행 중 조건. 맥에서 prebuild를 돌려야 판정된다 |
+| `updates.useEmbeddedUpdate` | `updates`를 안 쓴다 (expo-updates 미설치) |
+
+#### 남는 규칙
+
+- **「Install X」 묶음은 설정을 추가할 때마다 다시 본다.** 넷뿐이라 외울 수 있다.
+- **경고 채널만 보면 부족하다.** 경고조차 없이 안 걸리는 것도 있다 —
+  아무도 안 읽는 설정(`predictiveBackGestureEnabled` 같은)은 경고 대상이 아니다.
+  「적었으니 되겠지」를 확인하는 유일한 방법은 **기기에서 재는 것**이다.
+  이번에도 `dumpsys activity top`으로 재서야 판정이 났다.
+
 ### 도구도 「실패와 성공의 출력이 같다」에 걸린다
 
 `adb emu geo fix 127.0276 37.4979`가 **`OK`를 반환하고 안 먹었다.**

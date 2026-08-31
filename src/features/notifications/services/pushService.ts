@@ -147,10 +147,24 @@ export async function notifyTeam(
   excludeUserId?: string,
   /** 지정하면 팀 전체가 아니라 이 user_id들에게만 보낸다 (예: 미투표자 독촉) */
   userIds?: string[],
-  kind?: NotifyKind
+  kind?: NotifyKind,
+  /*
+    알림을 눌렀을 때 어디로 갈지 정하는 값. Edge Function이 그대로
+    messages[].data에 실어 보내고, 앱은 notificationRoute.routeFor가 읽는다.
+
+    ⚠ **id가 아니라 목적지가 요구하는 값을 담는다.** 일정 화면은 matchId가
+      아니라 focusDate를 받으므로(AttendanceScreen:275) 경기 알림은 날짜를
+      싣는다. 마침 경기를 만드는 자리 둘은 insert 결과를 버려서 matchId가 손에
+      없는데, matchDate는 입력값이라 항상 있다.
+
+    ⚠ 위치로 붙였다. 여기까지 인자가 여섯이고 여덟 호출이 전부 여섯을 넘긴다 —
+      세어서 확인했다. 개수가 자리마다 다르면 일곱째를 붙일 때 여섯째 자리에
+      undefined를 채워야 하고, 그걸 놓치면 kind가 target 자리로 조용히 들어간다.
+  */
+  target?: { matchDate?: string; settlementId?: string }
 ) {
   const { error } = await supabase.functions.invoke('notify-team', {
-    body: { teamId, title, body, excludeUserId, userIds, kind },
+    body: { teamId, title, body, excludeUserId, userIds, kind, target },
   });
   if (error) throw error;
 }

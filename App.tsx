@@ -3,11 +3,14 @@ import { Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { usePendingInviteStore } from './src/features/team/stores/pendingInviteStore';
 import { usePendingSettlementStore } from './src/features/settlement/stores/pendingSettlementStore';
 import { useAuthStore } from './src/features/auth/stores/authStore';
 import { settlementIdFromParsed } from './src/features/settlement/links';
+import { routeFor } from './src/features/notifications/notificationRoute';
+import { usePendingNotificationStore } from './src/features/notifications/stores/pendingNotificationStore';
 import { useAppFonts } from './src/lib/fonts';
 import { applyWebViewportFix } from './src/lib/webViewport';
 import { colors } from './src/theme';
@@ -65,6 +68,45 @@ export default function App() {
     Linking.getInitialURL().then(handleIncomingUrl);
     const subscription = Linking.addEventListener('url', ({ url }) => handleIncomingUrl(url));
     return () => subscription.remove();
+  }, []);
+
+  /*
+    알림을 눌러서 들어온 경우. 바로 위 딥링크 처리와 **같은 자리에 둔 것이 요점**이다.
+
+    ⚠ RootNavigator에도 알림 리스너가 있는데 그건 `if (!session) return`으로 막혀 있다.
+      앱 안의 알림 목록을 갱신하는 일이라 세션이 필요해서 맞는 조건이다. 하지만
+      **어디로 갈지를 정하는 일에는 세션이 필요 없다.** 거기에 얹었으면 앱이 죽어
+      있을 때 누른 알림은 — 응답이 세션 복원보다 먼저 오므로 — 리스너가 붙기도
+      전에 지나가서 놓친다. 그래서 여기다. Linking.getInitialURL()과 같은 이유다.
+
+    getLastNotificationResponse()  앱이 죽어 있을 때 눌러서 열린 경우
+    addNotificationResponseReceivedListener  앱이 살아 있을 때 누른 경우
+    둘 다 갈 곳만 담아두고, 꺼내는 것은 준비가 끝난 MainTabNavigator다.
+  */
+  useEffect(() => {
+    const take = (response: Notifications.NotificationResponse | null) => {
+      if (!response) return;
+      const intent = routeFor(response.notification.request.content.data);
+      /*
+        갈 곳이 없으면 아무것도 안 한다 — 홈으로 보내지 않는다. kind가 없는 옛
+        알림이 여기로 들어온다. 자세한 근거는 notificationRoute.ts의 routeFor.
+      */
+      if (!intent) return;
+      usePendingNotificationStore.getState().setIntent(intent);
+      /*
+        소비했으면 지운다. 안 지우면 다음에 런처로 앱을 열 때도 같은 응답이
+        그대로 돌아와서, 누르지도 않은 알림의 화면이 다시 열린다.
+        (docs: "May be used when an app selects a route based on the notification
+         response, and it is undesirable to continue selecting the route after
+         the response has already been handled.")
+      */
+      Notifications.clearLastNotificationResponse();
+    };
+
+    // 동기 버전을 쓴다 — …Async 쌍은 이 SDK에서 deprecated다
+    take(Notifications.getLastNotificationResponse());
+    const sub = Notifications.addNotificationResponseReceivedListener(take);
+    return () => sub.remove();
   }, []);
 
   return (

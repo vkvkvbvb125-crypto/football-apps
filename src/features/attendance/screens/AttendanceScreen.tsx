@@ -380,7 +380,9 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       decision === 'indoor'
         ? `${dateLabel} 경기 장소가 실내구장으로 변경될 예정이에요`
         : `${dateLabel} 경기는 예정대로 진행돼요`;
-    notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 우천 안내`, body, myUserId, undefined, 'weather').catch(() => {
+    notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 우천 안내`, body, myUserId, undefined, 'weather', {
+      matchDate: match.match_date,
+    }).catch(() => {
       // 알림 전송 실패는 조용히 무시 (화면에는 이미 결정이 반영됨)
     });
   };

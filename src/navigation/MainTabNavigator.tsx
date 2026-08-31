@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePendingSettlementStore } from '../features/settlement/stores/pendingSettlementStore';
+import { usePendingNotificationStore } from '../features/notifications/stores/pendingNotificationStore';
 import { useSettlementStore } from '../features/settlement/stores/settlementStore';
 import { useTeamStore } from '../features/team/stores/teamStore';
 import { myUnpaidAmount } from '../features/settlement/utils/unpaid';
@@ -111,6 +112,23 @@ export function MainTabNavigator() {
     navigation.navigate('Settlement', { openSettlementId: pendingSettlementId });
     clearPendingSettlement();
   }, [pendingSettlementId]);
+
+  const pendingNotification = usePendingNotificationStore((s) => s.intent);
+  const clearPendingNotification = usePendingNotificationStore((s) => s.clear);
+
+  /*
+    알림을 눌러서 들어왔다 — 위 정산 링크와 **같은 이유로 같은 자리**다.
+    여기까지 왔다는 건 로그인·팀 로드가 끝났다는 뜻이다.
+
+    ⚠ 로그아웃 상태에서 알림을 눌렀어도 버리지 않는다. App.tsx가 담아두고
+      이 컴포넌트는 로그인이 끝나야 마운트되므로, 사용자가 로그인하는 순간
+      원래 가려던 화면이 열린다. 알림을 놓치는 것보다 낫고, 홈으로 보내는 것보다도 낫다.
+  */
+  useEffect(() => {
+    if (!pendingNotification) return;
+    navigation.navigate(pendingNotification.screen, pendingNotification.params);
+    clearPendingNotification();
+  }, [pendingNotification]);
 
   return (
     <Tab.Navigator

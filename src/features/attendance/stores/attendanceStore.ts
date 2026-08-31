@@ -98,7 +98,10 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         `${dateLabel}${input.location ? ` · ${input.location}` : ''}에 경기가 등록됐어요`,
         myUserId,
         undefined,
-        'new_match'
+        'new_match',
+        // 만든 경기의 id는 안 돌아온다(insert에 .select()가 없다). 날짜면 충분하다 —
+        // 일정 화면이 받는 것이 focusDate라서다.
+        { matchDate: input.matchDate }
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
       });
@@ -153,7 +156,13 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         `${dateLabel}부터 매주 경기가 등록됐어요`,
         myUserId,
         undefined,
-        'new_match'
+        'new_match',
+        /*
+          N건을 한 번에 만들었는데 데려갈 곳은 하나다. 첫 경기로 보낸다 —
+          문구가 「{첫 날짜}부터 매주 경기가 등록됐어요」라 첫 경기가 그 문장이
+          가리키는 것이고, 거기서 달력을 넘기면 나머지도 보인다.
+        */
+        { matchDate: first.matchDate }
       ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (경기 생성 자체는 이미 성공)
       });

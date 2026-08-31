@@ -418,7 +418,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
       `${dateLabel} 경기 참석 투표를 아직 안 하셨어요 — 지금 투표해주세요`,
       myUserId,
       notVotedUserIds,
-      'deadline'
+      'deadline',
+      { matchDate: next.match_date }
     ).catch(() => {
       // 알림 전송 실패는 조용히 무시
     });

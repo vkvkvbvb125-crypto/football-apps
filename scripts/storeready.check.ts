@@ -12,9 +12,21 @@ const app = JSON.parse(read('app.json')).expo;
 // Apple/Google 둘 다 앱 안에서 약관·개인정보처리방침에 닿을 것을 본다.
 // 가입 화면에만 있으면 이미 가입한 사람에게는 없는 것과 같다.
 {
-  const s = read('src/features/settings/screens/MySettingsScreen.tsx');
-  assert.ok(s.includes('TERMS.map'), '설정에서 약관 목록이 사라졌다 — 가입 화면 말고는 볼 곳이 없어진다');
-  assert.ok(s.includes('<TermsDocModal'), '설정에 약관 모달이 없다 — 줄만 있고 눌러도 안 열린다');
+  /*
+    ⚠ 예전엔 설정 화면 안에 목록이 펼쳐져 있었다. 문서가 다섯이라 화면을 반쯤
+      먹어서 TermsScreen으로 뺐다. 옮기면 새 실패 갈래가 생긴다 —
+      「화면은 있는데 거기로 갈 수 없다」. 그래서 둘을 같이 센다:
+        ① 약관 화면에 목록과 모달이 있다
+        ② 설정 화면에 그 화면으로 가는 줄이 있다
+      하나만 세면 「줄은 있는데 안 열린다」거나 「화면은 있는데 못 간다」가 통과한다.
+  */
+  const s = read('src/features/settings/screens/TermsScreen.tsx');
+  assert.ok(s.includes('TERMS.map'), '약관 화면에서 목록이 사라졌다 — 가입 화면 말고는 볼 곳이 없어진다');
+  assert.ok(s.includes('<TermsDocModal'), '약관 화면에 모달이 없다 — 줄만 있고 눌러도 안 열린다');
+
+  const settings = read('src/features/settings/screens/MySettingsScreen.tsx');
+  assert.ok(/navigate\('Terms'\)/.test(settings),
+    '설정 화면에 약관으로 가는 줄이 없다 — 화면은 있는데 갈 수 없다');
 
   // label은 가입 체크박스의 문장("…에 동의"), title은 문서 이름이다.
   // 설정에서 label을 쓰면 이미 동의한 사람에게 다시 동의하라는 말로 읽히고,

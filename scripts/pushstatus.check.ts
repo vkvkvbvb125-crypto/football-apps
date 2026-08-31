@@ -15,7 +15,13 @@ import { readFileSync } from 'node:fs';
 
 const SVC = 'src/features/notifications/services/pushService.ts';
 const NAV = 'src/navigation/RootNavigator.tsx';
-const SET = 'src/features/settings/screens/MySettingsScreen.tsx';
+/*
+  ⚠ 이 값이 MySettingsScreen이었다. 알림 토글을 별도 화면으로 빼면서 옮겼다.
+    옮기면 새 실패 갈래가 생긴다 — 「화면은 있는데 거기로 갈 수 없다」.
+    그래서 아래 ④에서 설정 화면이 이 화면으로 가는 줄을 갖고 있는지도 함께 센다.
+*/
+const SET = 'src/features/settings/screens/NotificationSettingsScreen.tsx';
+const MYSET = 'src/features/settings/screens/MySettingsScreen.tsx';
 
 const strip = (s: string) =>
   s.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -23,6 +29,7 @@ const strip = (s: string) =>
 const svc = strip(readFileSync(SVC, 'utf8'));
 const nav = strip(readFileSync(NAV, 'utf8'));
 const set = strip(readFileSync(SET, 'utf8'));
+const myset = strip(readFileSync(MYSET, 'utf8'));
 
 const fails: string[] = [];
 const ok = (cond: boolean, msg: string) => { if (!cond) fails.push(msg); };
@@ -71,8 +78,11 @@ ok(warns.every((w) => w.includes('[push]')),
 
 // ── ④ 화면이 그 값을 실제로 읽는다 ──
 //    이게 없으면 catch는 은폐다. 검사의 핵심이 여기다.
-ok(/import \{ getPushStatus \}/.test(set), '내 설정이 getPushStatus를 안 가져온다');
-ok(/useState\(getPushStatus\)/.test(set), '내 설정이 상태를 안 읽는다');
+ok(/import \{ getPushStatus \}/.test(set), '알림 설정 화면이 getPushStatus를 안 가져온다');
+//    그 화면에 갈 수 있어야 읽는 의미가 있다.
+ok(/navigate\('NotificationSettings'\)/.test(myset),
+   '설정 화면에 알림 설정으로 가는 줄이 없다 — 화면은 있는데 갈 수 없다');
+ok(/useState\(getPushStatus\)/.test(set), '알림 설정 화면이 상태를 안 읽는다');
 ok(/pushStatus !== 'ok' && pushStatus !== 'unknown'/.test(set),
    '푸시를 못 받는 상태일 때의 안내 조건이 없다');
 ok(/pushStatus === 'denied'/.test(set), '권한 거부와 그 밖을 화면이 안 가른다');

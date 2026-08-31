@@ -88,7 +88,9 @@ function BallIcon({ focused }: { focused: boolean }) {
       원본의 발광 음영이 그대로 살아 있고 그게 이 자산의 값어치다.
       「안 보인다」를 고치려고 「멀쩡한 쪽」까지 같이 바꾸지 않는다.
   */
-  const ballTint = themeName === 'light' ? colors.green : undefined;
+  /* greenBright는 라이트에서 가장 진한 초록이다 — 옅은 초록 링 위에서 8.52:1
+     (다크의 같은 자리가 11.35:1이니 결이 비슷하다) */
+  const ballTint = themeName === 'light' ? colors.greenBright : undefined;
   return (
     <View style={[styles.ring, focused && styles.ringOn]}>
       <Image

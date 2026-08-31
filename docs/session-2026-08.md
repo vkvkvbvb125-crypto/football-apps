@@ -228,10 +228,43 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
 
 | | 무엇 | 크기 |
 |---|---|---|
-| **1** | **알림 딥링크.** 알림을 눌러도 마지막 화면에 떨어진다. `RootNavigator`의 두 리스너가 **둘 다** `loadNotifications()`만 한다 — 응답의 `data`를 읽는 코드가 없다.<br>ⓘ **선행이 끝났다.** `kind`를 안 실은 호출이 0개다(`notifyTeam` 8곳 전부). 이제 `notify-team`의 messages에 `data: { kind, 대상id }`를 싣고 라우팅만 하면 된다 | 중 |
+| **1** | ~~**알림 딥링크**~~ → **1단계 끝(2026-08-31). 2단계가 남았다** — 아래 별도 항목 | — |
 | **2** | **접근성.** `<Pressable>` **299개** 중 `accessibilityRole`이 붙은 것이 **89개**. 서랍에 「`components/` 계층에 다수」로 적혀 있었는데 **앱 전체 문제**다 | 중~대 |
 | **3** | **오류 원문 노출 7곳.** `alertMessage('…', err.message)` 꼴. 사용자가 Postgres 메시지를 본다.<br>⚠ 서랍의 「services/\*.ts는 안 봤다」는 **틀린 진단이었다.** 거기 `error.message`는 2건뿐이고 둘 다 `console.warn`이라 안 보인다. 진짜 자리는 **화면**이다 | 소 |
 | **4** | **이니셜 규칙이 넷으로 늘었다** (서랍엔 셋). `initials.ts`·`AssignmentScreen`·`RosterSheet`(인라인)·`SettleTargetsSheet`. 「김범준」이 「범준」·「범준」·「범준」·「김범」<br>⚠ 통일 전에 자리마다 목적이 다르다는 것부터 정리해야 한다 — 이름을 알아보는 자리와 훑기만 하는 자리는 답이 다르고, 겹침 값이 글자 수에 묶여 있다 | 소 |
+
+#### 알림 딥링크 2단계 — 공지·글 **상세**까지
+
+1단계에서 셋(`announcement`·`mention`·`comment`)은 **팀 탭까지만** 간다.
+⚠ **이건 임시다.** 「공지가 올라왔어요」를 누르면 팀 탭이 열리지만 그 공지가
+저절로 펴지지는 않는다. 지금보다는 낫고(전에는 마지막에 보던 화면에 떨어졌다),
+제대로는 아니다.
+
+막고 있는 것은 둘이고 성격이 다르다:
+
+**⑴ id가 손에 없다.** 둘 다 `insert()`에 `.select()`가 없어 만든 행의 id가
+안 돌아온다.
+
+  announcementsService.createAnnouncement   `insert({…})` → `.select('id').single()`
+  boardService.createPost                   같음
+
+  ⓘ 경기 둘도 같은 모양인데 거긴 문제가 안 됐다 — 일정 화면이 id가 아니라
+    날짜를 받아서다. 여긴 그런 우회로가 없다.
+
+**⑵ 상세를 밖에서 열 수 없다.** 지역 상태로만 열린다:
+
+  공지 상세  `AnnouncementDetailModal` — HomeScreen·TeamHomeScreen이 각자
+             `useState`로 연다. route 파라미터가 없다
+  글 상세    `PostComments` — `PostCard` 안에 인라인으로 펴진다.
+             글 하나를 지목해 열 방법이 없다
+
+  ⚠ ⑵가 ⑴보다 크다. `.select()`는 한 줄이지만, 상세를 밖에서 열려면
+    `TeamHomeScreen`에 `openAnnouncementId`/`openPostId` 파라미터를 만들고
+    그 값을 자식(탭·리스트·카드)까지 내려보내야 한다. 공지는 **두 화면**이
+    같은 모달을 각자 열고 있어서 어느 쪽을 정본으로 삼을지도 정해야 한다.
+
+붙일 때 검사도 같이 늘린다 — `deeplink.check`의 ③(파라미터 이름을 양쪽에서
+맞추는 단언)에 두 쌍이 더 붙는다.
 
 ### 확인 필요
 

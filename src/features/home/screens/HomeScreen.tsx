@@ -19,6 +19,7 @@ import {
   Image,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -276,6 +277,37 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
     loadSettlements(activeTeam.team.id, activeTeam.membershipId);
   }, [activeTeam?.team.id]);
 
+  /*
+    당겨서 새로고침.
+
+    홈은 네 곳에서 온 값을 한 화면에 모은다(경기·멤버·공지·정산). 각자 다른
+    시점에 갱신되므로 「지금 이 화면이 최신인가」를 사용자가 알 방법이 없었다 —
+    정산만 useFocusEffect로 따라오고 나머지 셋은 팀을 바꿀 때만 불렀다.
+
+    ⚠ 마운트 때의 useEffect와 **같은 넷을 부른다.** 하나라도 빠지면 「당겼는데
+      저건 안 바뀌네」가 되고, 그때 사용자는 무엇이 갱신되고 무엇이 아닌지를
+      추측하게 된다. 둘이 갈리지 않도록 같은 함수를 쓴다.
+
+    ⚠ 실패해도 스피너는 멈춘다. 로더 넷이 각자 스토어의 error에 담고 화면이
+      그걸 그리므로, 여기서 또 잡아 알릴 필요가 없다 — 다만 **멈추기는 해야 한다.**
+      finally가 없으면 실패한 순간 스피너가 영원히 돈다.
+  */
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = useCallback(async () => {
+    if (!activeTeam) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadMatches(),
+        loadMembers(),
+        loadAnnouncements(),
+        loadSettlements(activeTeam.team.id, activeTeam.membershipId),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [activeTeam?.team.id, activeTeam?.membershipId]);
+
   /** 정산만 다시 불러온다 — 남이 입금 상태를 바꾸면 이 카드의 숫자가 달라진다 */
   const reloadSettlements = useCallback(() => {
     if (!activeTeam) return;
@@ -453,6 +485,16 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         onScrollBeginDrag={() => { verticalScrolling.current = true; }}
         onScrollEndDrag={() => { verticalScrolling.current = false; }}
         onMomentumScrollEnd={() => { verticalScrolling.current = false; }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            /* 스피너가 배경에 묻히지 않게 테마 색을 준다 — 기본값은 안드로이드 회색이다 */
+            colors={[colors.green]}
+            tintColor={colors.green}
+            progressBackgroundColor={colors.card}
+          />
+        }
       >
         {/* 상단 바 — 다른 탭(TabHeader)과 같은 자리에 화면 이름 + 팀명, 오른쪽엔 설정 메뉴 + 알림 벨 */}
         <View style={styles.topBar}>

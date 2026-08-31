@@ -3,7 +3,7 @@
 // 여기 있는 건 전부 "빠져도 앱은 멀쩡히 돌지만 심사에서 막히거나 첫인상이 깨지는" 것들이다.
 // 화면을 열어봐도 안 보이니까 사람이 알아채는 시점이 제출 거절 메일이다 — 그래서 묶어 둔다.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const app = JSON.parse(read('app.json')).expo;
@@ -46,9 +46,58 @@ const app = JSON.parse(read('app.json')).expo;
   assert.ok(app.ios?.buildNumber, 'ios.buildNumber가 없다 — App Store가 받지 않는다');
   assert.ok(app.android?.versionCode, 'android.versionCode가 없다 — Play가 받지 않는다');
 
-  // 앱에 라이트 테마가 없다. light로 두면 시스템 다크에서 키보드·다이얼로그 같은
-  // 네이티브 요소만 밝게 뜬다.
+  /*
+    앱에 라이트 테마가 없다. 그래서 다크로 고정하는데 — **설정만으로는 안 걸린다.**
+
+    ⚠ 이 검사가 한 번 틀렸다. 예전엔 아래 한 줄뿐이었다:
+        assert.equal(app.userInterfaceStyle, 'dark')
+      그리고 그게 「다크 전용이 걸렸다」를 보증한다고 읽었다. **iOS에서만 맞았다.**
+
+      iOS   withIosUserInterfaceStyle이 Info.plist에 UIUserInterfaceStyle을 쓴다.
+            expo-system-ui 없이도 걸린다.
+      안드로이드
+            expo-system-ui가 없으면 @expo/prebuild-config의 스텁이
+            WarningAggregator.addWarningAndroid로 경고만 내고 아무것도 안 쓴다.
+            네이티브 테마는 Theme.AppCompat.DayNight 그대로라 시스템을 따른다.
+
+      화면으로 확인한 것(2026-08-31, Pixel 7 / API 35): 시스템 테마가 라이트
+      (`adb shell cmd uimode night` → no)인데 앱 화면은 다크로 뜨고, 텍스트 선택
+      툴바·툴팁·커서 핸들만 밝게 떴다. 앱이 다크였던 건 설정 때문이 아니라
+      색이 전부 박혀 있어서였다.
+
+    **「플랫폼에 따라 같은 설정이 다르게 동작한다」가 이 검사가 놓친 축이다.**
+    app.json 한 곳을 보고 두 플랫폼을 다 판정했다. 값이 있는 것과 그 값이
+    동작하는 것은 다르고, 그 차이가 플랫폼마다 갈린다.
+
+    그래서 둘을 같이 센다 — 설정값과, 그 값을 안드로이드에서 실제로 거는 패키지.
+  */
   assert.equal(app.userInterfaceStyle, 'dark', '앱이 다크 전용인데 userInterfaceStyle이 다르다');
+
+  const pkg = JSON.parse(read('package.json'));
+  assert.ok(pkg.dependencies?.['expo-system-ui'],
+    'expo-system-ui가 없다 — 안드로이드에서 userInterfaceStyle이 무시되고 경고만 난다. ' +
+    '키보드·다이얼로그·텍스트 선택 도구가 사용자 기기 설정을 따라 밝게 뜬다');
+
+  /*
+    설치만으로는 부족하다. 플러그인이 strings.xml에 값을 써야 네이티브가 읽는다.
+      strings.xml  expo_system_ui_user_interface_style
+      → SystemUIReactActivityLifecycleListener 가 읽어서
+      → AppCompatDelegate.setDefaultNightMode()
+
+    ⚠ android/ 는 prebuild 산출물이라 .gitignore에 있다. CI에는 없을 수 있으므로
+      있을 때만 본다 — 없다고 실패시키면 「검사가 환경을 탄다」가 된다.
+      대신 없을 때 조용히 넘어가지 않고, 무엇을 못 봤는지 남긴다.
+  */
+  const stringsPath = 'android/app/src/main/res/values/strings.xml';
+  if (existsSync(new URL(`../${stringsPath}`, import.meta.url))) {
+    const strings = read(stringsPath);
+    const m = strings.match(/name="expo_system_ui_user_interface_style"[^>]*>([^<]+)</);
+    assert.ok(m, `${stringsPath}에 expo_system_ui_user_interface_style이 없다 — prebuild를 다시 돌려야 한다`);
+    assert.equal(m![1], app.userInterfaceStyle,
+      `strings.xml(${m![1]})과 app.json(${app.userInterfaceStyle})이 갈렸다 — prebuild가 낡았다`);
+  } else {
+    console.log('  · android/ 없음 — strings.xml 확인은 건너뛴다 (prebuild 산출물)');
+  }
 }
 
 // ── 3. 스플래시가 앱 배경과 같은 색인가 ──────────────────────────────

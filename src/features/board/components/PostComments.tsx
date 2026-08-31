@@ -197,7 +197,7 @@ const makeStyles = (colors: Palette) =>
     overflow: 'hidden',
   },
   avatarPhoto: { width: '100%', height: '100%', borderRadius: 12 },
-  avatarText: { color: '#8FA69C', fontSize: 10, fontWeight: '800' },
+  avatarText: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
   name: { color: colors.textStrong, fontSize: 12, fontWeight: '700' },
   time: { color: colors.textFaint, fontSize: 10, fontWeight: '600' },
   body: { color: colors.textBody, fontSize: 12, lineHeight: 18 },

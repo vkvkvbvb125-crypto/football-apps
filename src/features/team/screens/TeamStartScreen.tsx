@@ -112,7 +112,7 @@ export function TeamStartScreen() {
 
         <Pressable onPress={() => setPick('join')} style={[styles.card, pick === 'join' && styles.cardOn]}>
           <View style={styles.cardRow}>
-            <View style={[styles.icon, { backgroundColor: 'rgba(255,255,255,0.06)' }]}>
+            <View style={[styles.icon, { backgroundColor: colors.overlay }]}>
               <Ionicons name="arrow-forward" size={20} color={colors.textStrong} />
             </View>
             <View style={{ flex: 1, gap: 3 }}>

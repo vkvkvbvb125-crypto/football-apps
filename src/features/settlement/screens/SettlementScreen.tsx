@@ -1127,7 +1127,7 @@ const makeStyles = (colors: Palette) =>
     padding: 4,
     borderRadius: radius.button,
     borderCurve: 'continuous',
-    backgroundColor: '#0E1512',
+    backgroundColor: colors.cardAlt,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1163,7 +1163,7 @@ const makeStyles = (colors: Palette) =>
   // 진행중/완료 카드 자체 스타일은 components/SettlementCard.tsx로 옮겼다 (홈 화면과 공용).
 
   // ── 시트 공통 ─────────────────────────────────────────────
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
+  overlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     ...shadow.overlay,
     maxHeight: '86%',
@@ -1182,7 +1182,7 @@ const makeStyles = (colors: Palette) =>
   close: { ...font.body, color: colors.textMuted, fontWeight: '700' },
 
   // ── 딥링크 진입 상태 (불러오는 중 / 못 찾음) ───────────────
-  linkStatusOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'center', padding: 32 },
+  linkStatusOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', padding: 32 },
   linkStatus: {
     ...shadow.overlay,
     gap: 10,
@@ -1320,7 +1320,7 @@ const makeStyles = (colors: Palette) =>
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1399,7 +1399,7 @@ const makeStyles = (colors: Palette) =>
     borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },

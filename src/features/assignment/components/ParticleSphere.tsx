@@ -138,6 +138,6 @@ const makeStyles = (colors: Palette) =>
   },
   dot: {
     position: 'absolute',
-    backgroundColor: '#22D96F',
+    backgroundColor: colors.greenBright,
   },
   });

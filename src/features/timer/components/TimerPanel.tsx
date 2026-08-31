@@ -475,7 +475,7 @@ const makeStyles = (colors: Palette) =>
   stateLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
   timeDisplay: {
     marginTop: 4,
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 44,
     lineHeight: 50,
     fontWeight: '800',
@@ -520,7 +520,7 @@ const makeStyles = (colors: Palette) =>
     justifyContent: 'center',
     gap: 5,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -536,7 +536,7 @@ const makeStyles = (colors: Palette) =>
   primaryButtonPause: {
     backgroundColor: 'rgba(210,163,76,0.16)',
     borderWidth: 1,
-    borderColor: '#6B5426',
+    borderColor: colors.goldLine,
   },
   primaryButtonText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },
   primaryButtonTextPause: { color: colors.gold },

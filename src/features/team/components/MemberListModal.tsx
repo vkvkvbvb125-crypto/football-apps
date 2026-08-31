@@ -66,7 +66,7 @@ export function MemberListModal({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>멤버 ({members.length})</Text>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Ionicons name="close" size={24} color={colors.text} />
           </Pressable>
         </View>
 
@@ -158,7 +158,7 @@ const makeStyles = (colors: Palette) =>
     paddingBottom: 16,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 21,
     fontWeight: '800',
   },
@@ -201,7 +201,7 @@ const makeStyles = (colors: Palette) =>
     gap: 4,
   },
   itemName: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -218,7 +218,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.cardRaised,
   },
   roleBadgeText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -231,7 +231,7 @@ const makeStyles = (colors: Palette) =>
     borderColor: colors.border,
   },
   skillChipText: {
-    color: '#E7ECE9',
+    color: colors.textStrong,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -262,11 +262,11 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.cardRaised,
   },
   actionButtonText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   actionButtonTextDanger: {
-    color: '#F87171',
+    color: colors.danger,
   },
   });

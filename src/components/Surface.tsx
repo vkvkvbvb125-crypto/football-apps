@@ -339,7 +339,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: radius.pill,
   },
   badge_green: { backgroundColor: colors.greenTint },
-  badge_muted: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  badge_muted: { backgroundColor: colors.overlay },
   badge_warn: { backgroundColor: colors.goldTint },
   badgeText: { ...font.micro },
   badgeText_green: { color: colors.green },

@@ -53,7 +53,7 @@ export function AnnouncementDetailModal({
                   }}
                   hitSlop={8}
                 >
-                  <Ionicons name="ellipsis-vertical" size={18} color="#8A9490" />
+                  <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
                 </Pressable>
               )}
               {/*
@@ -71,7 +71,7 @@ export function AnnouncementDetailModal({
                 accessibilityLabel="닫기"
                 style={styles.closeBtn}
               >
-                <Ionicons name="close" size={20} color="#8A9490" />
+                <Ionicons name="close" size={20} color={colors.textMuted} />
               </Pressable>
             </View>
             <ScrollView style={styles.bodyScroll}>
@@ -92,7 +92,7 @@ export function AnnouncementDetailModal({
                 onEdit(announcement);
               }}
             >
-              <Ionicons name="pencil-outline" size={16} color="#E7ECE9" />
+              <Ionicons name="pencil-outline" size={16} color={colors.textStrong} />
               <Text style={styles.menuOptionText}>수정</Text>
             </Pressable>
             <View style={styles.menuDivider} />
@@ -103,7 +103,7 @@ export function AnnouncementDetailModal({
                 onDelete(announcement);
               }}
             >
-              <Ionicons name="trash-outline" size={16} color="#F87171" />
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
               <Text style={[styles.menuOptionText, styles.menuOptionTextDanger]}>삭제</Text>
             </Pressable>
           </View>
@@ -117,7 +117,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   card: {
@@ -148,13 +148,13 @@ const makeStyles = (colors: Palette) =>
     marginTop: 16,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
   },
   body: {
     marginTop: 12,
-    color: '#E7ECE9',
+    color: colors.textStrong,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -180,12 +180,12 @@ const makeStyles = (colors: Palette) =>
     paddingVertical: 12,
   },
   menuOptionText: {
-    color: '#E7ECE9',
+    color: colors.textStrong,
     fontSize: 14,
     fontWeight: '600',
   },
   menuOptionTextDanger: {
-    color: '#F87171',
+    color: colors.danger,
   },
   menuDivider: {
     height: 1,

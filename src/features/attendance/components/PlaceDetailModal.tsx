@@ -181,7 +181,7 @@ export function PlaceDetailModal({ visible, onClose, name, category, address, la
           <View style={styles.titleRow}>
             <Text style={styles.title}>경기 장소</Text>
             <Pressable onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={20} color="#8A9490" />
+              <Ionicons name="close" size={20} color={colors.textMuted} />
             </Pressable>
           </View>
 
@@ -204,7 +204,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -223,12 +223,12 @@ const makeStyles = (colors: Palette) =>
     justifyContent: 'space-between',
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
   },
   placeName: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '700',
     marginTop: 8,
@@ -246,7 +246,7 @@ const makeStyles = (colors: Palette) =>
     fontWeight: '700',
   },
   address: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 13,
   },
   mapContainer: {
@@ -270,7 +270,7 @@ const makeStyles = (colors: Palette) =>
     gap: 6,
   },
   webFallbackText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 16,

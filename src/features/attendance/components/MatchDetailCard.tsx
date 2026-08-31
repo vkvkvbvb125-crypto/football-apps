@@ -369,7 +369,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -377,8 +377,8 @@ const makeStyles = (colors: Palette) =>
   pillDim: { opacity: 0.55 },
   pillTextDim: { color: colors.textMuted },
   pillAttend: { backgroundColor: colors.green, borderColor: colors.green },
-  pillAbsent: { backgroundColor: colors.neutralFill, borderColor: '#48584F' },
-  pillUndecided: { backgroundColor: 'rgba(210,163,76,0.16)', borderColor: '#6B5426' },
+  pillAbsent: { backgroundColor: colors.neutralFill, borderColor: colors.neutralFill },
+  pillUndecided: { backgroundColor: 'rgba(210,163,76,0.16)', borderColor: colors.goldLine },
   pillText: { color: colors.textMuted, fontSize: 13, fontWeight: '800' },
 
   waitBox: { paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.divider, gap: 2 },
@@ -395,6 +395,6 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: 'rgba(210,163,76,0.16)',
   },
   waitPosText: { color: colors.gold, fontSize: 10, fontWeight: '800' },
-  waitName: { flex: 1, color: '#C9D3CF', fontSize: 12, fontWeight: '600' },
+  waitName: { flex: 1, color: colors.textBody, fontSize: 12, fontWeight: '600' },
   waitNote: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
   });

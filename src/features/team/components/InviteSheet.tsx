@@ -87,7 +87,7 @@ export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl 
             {/* 흰 판 위에 그린다. QR은 명암 대비로 읽히는데 다크 표면 위에서는
                 카메라가 모듈 경계를 못 잡는다 — 여백(quiet zone)도 흰색이어야 한다 */}
             <View style={styles.qrPlate}>
-              <QRCode value={inviteUrl} size={QR_SIZE} backgroundColor="#FFFFFF" color="#000000" />
+              <QRCode value={inviteUrl} size={QR_SIZE} backgroundColor={colors.text} color={colors.bgRoot} />
             </View>
             <Text style={styles.qrHint}>카메라로 찍으면 바로 참여할 수 있어요</Text>
 
@@ -139,7 +139,7 @@ export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl 
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
+  overlay: { flex: 1, backgroundColor: colors.scrim },
   overlayTap: { flex: 1 },
   sheet: {
     backgroundColor: colors.bgScreen,
@@ -156,7 +156,7 @@ const makeStyles = (colors: Palette) =>
 
   body: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 18, gap: 12 },
   qrPlate: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.text,
     padding: 14,
     borderRadius: radius.card,
     borderCurve: 'continuous',

@@ -184,7 +184,7 @@ export function CreateSettlementSheet({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
+  overlay: { flex: 1, backgroundColor: colors.scrim },
   overlayTap: { flex: 1 },
   sheet: {
     maxHeight: '92%',

@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tabBar, type Palette } from '../theme';
-import { useThemed } from '../lib/useThemed';
+import { useThemeName, useThemed } from '../lib/useThemed';
 
 /**
  * 스크롤 콘텐츠가 떠 있는 탭바에 가리지 않도록 두는 아래 여백.
@@ -31,9 +31,17 @@ export function useTabBarPadding() {
  * bgRoot(#080B09)가 이미 옅은 초록기를 품고 있어서 밝히기만 해도 죽은 회색이 되지 않는다.
  * 값이 이전보다 작은 건 배경이 더 어두워졌기 때문이다 — 같은 알파도 검정 위에서 더 세다.
  */
-const GRADIENT_TOP = 'rgba(255,255,255,0)';
-const GRADIENT_MID = 'rgba(255,255,255,0.012)';
-const GRADIENT_BOTTOM = 'rgba(255,255,255,0.032)';
+/*
+  ⚠ 방향이 테마마다 뒤집힌다. 다크에서는 아래로 갈수록 **밝아지고**, 라이트에서는
+    **어두워진다.** 같은 값을 쓰면 라이트에서 흰 위에 흰색이라 아무것도 안 보인다.
+    「배경이 밑에서 살짝 뜬다」는 뜻을 지키려면 얹는 색이 바뀌어야 한다.
+    (다크 값이 0.012/0.032로 작은 이유는 배경이 거의 검정이라 같은 알파도 세게
+     먹기 때문이다 — 라이트는 흰색이라 더 작아야 한다.)
+*/
+const GRADIENT = {
+  dark: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.012)', 'rgba(255,255,255,0.032)'] as const,
+  light: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.008)', 'rgba(0,0,0,0.022)'] as const,
+};
 
 /*
  * 초록 앰비언트 — 앱 전체 배경.
@@ -101,6 +109,7 @@ interface Props {
 }
 
 export function ScreenGradient({ children }: Props) {
+  const themeName = useThemeName();
   const { colors, styles } = useThemed(makeStyles);
   return (
     <View style={styles.root}>
@@ -141,7 +150,7 @@ export function ScreenGradient({ children }: Props) {
         (실기기 OLED는 어두운 장면에서 더 잘 보인다 — 거기서 보이면 다시 판단할 것.)
       */}
       <LinearGradient
-        colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+        colors={GRADIENT[themeName]}
         locations={[0.12, 0.5, 1]}
         start={{ x: 0.15, y: 0 }}
         end={{ x: 0.85, y: 1 }}

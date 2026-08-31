@@ -130,18 +130,18 @@ const makeStyles = (colors: Palette) =>
     gap: 1,
   },
   condition: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 13,
     fontWeight: '700',
   },
   temp: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   hint: {
     marginTop: 4,
-    color: '#D2A34C',
+    color: colors.gold,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -156,7 +156,7 @@ const makeStyles = (colors: Palette) =>
     borderColor: colors.border,
   },
   unavailableText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },

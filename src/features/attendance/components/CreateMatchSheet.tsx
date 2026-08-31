@@ -209,7 +209,7 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
 
               {pendingPlace ? (
                 <View style={styles.warn}>
-                  <Ionicons name="alert-circle-outline" size={15} color="#E3C489" />
+                  <Ionicons name="alert-circle-outline" size={15} color={colors.warnText} />
                   <Text style={styles.warnText}>
                     인기 시간대 구장은 이미 선점됐을 수 있어요. 투표 마감 후 바로 예약하는 걸 권해요.
                   </Text>
@@ -250,10 +250,10 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                                     <View
                                       style={[
                                         styles.venueTag,
-                                        { backgroundColor: v.isIndoor ? 'rgba(96,165,250,0.14)' : 'rgba(255,255,255,0.06)' },
+                                        { backgroundColor: v.isIndoor ? 'rgba(96,165,250,0.14)' : colors.overlay },
                                       ]}
                                     >
-                                      <Text style={[styles.venueTagText, { color: v.isIndoor ? '#60A5FA' : colors.textMuted }]}>
+                                      <Text style={[styles.venueTagText, { color: v.isIndoor ? colors.blue : colors.textMuted }]}>
                                         {v.isIndoor ? '실내' : '실외'}
                                       </Text>
                                     </View>
@@ -365,7 +365,7 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
+  overlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     maxHeight: '90%',
     backgroundColor: colors.card,
@@ -417,11 +417,11 @@ const makeStyles = (colors: Palette) =>
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  pendingToggleOn: { backgroundColor: 'rgba(210,163,76,0.16)', borderColor: '#6B5426' },
+  pendingToggleOn: { backgroundColor: 'rgba(210,163,76,0.16)', borderColor: colors.goldLine },
   pendingToggleText: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
 
   warn: {
@@ -434,7 +434,7 @@ const makeStyles = (colors: Palette) =>
     borderWidth: 1,
     borderColor: 'rgba(210,163,76,0.22)',
   },
-  warnText: { flex: 1, color: '#E3C489', fontSize: 11, fontWeight: '600', lineHeight: 17 },
+  warnText: { flex: 1, color: colors.warnText, fontSize: 11, fontWeight: '600', lineHeight: 17 },
 
   tabs: {
     flexDirection: 'row',
@@ -447,7 +447,7 @@ const makeStyles = (colors: Palette) =>
   },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 11, borderWidth: 1, borderColor: 'transparent' },
   tabOn: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
-  tabText: { color: '#7C8A85', fontSize: 12, fontWeight: '800' },
+  tabText: { color: colors.navIdle, fontSize: 12, fontWeight: '800' },
 
   venueCard: { padding: 13, borderRadius: 14, backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.divider },
   venueCardOn: { backgroundColor: 'rgba(34,197,94,0.07)', borderColor: colors.greenDeep },
@@ -464,7 +464,7 @@ const makeStyles = (colors: Palette) =>
   slotClosed: { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: colors.divider },
   slotPicked: { backgroundColor: colors.green, borderColor: colors.green },
   slotText: { fontSize: 10, fontWeight: '800' },
-  slotTextClosed: { color: '#4A544F', textDecorationLine: 'line-through' },
+  slotTextClosed: { color: colors.neutralFill, textDecorationLine: 'line-through' },
 
   preset: {
     flex: 1,

@@ -17,7 +17,7 @@ import { useTeamStore } from '../features/team/stores/teamStore';
 import { myUnpaidAmount } from '../features/settlement/utils/unpaid';
 import { Text } from '../components/nativeText';
 import { shadow, tabBar, zIndex, type Palette } from '../theme';
-import { useThemed } from '../lib/useThemed';
+import { useThemeName, useThemed } from '../lib/useThemed';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
 import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
@@ -77,11 +77,23 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap) {
  */
 function BallIcon({ focused }: { focused: boolean }) {
   const { colors, styles } = useThemed(makeStyles);
+  const themeName = useThemeName();
+  /*
+    라이트에서만 공의 색을 갈아끼운다.
+
+    원본은 밝은 초록 점 패턴이라 흰 링 위에서 대비가 죽는다(합성해서 봤다 —
+    거의 안 보인다). 자산이 단색이라(색조 130°가 97.5%) tintColor가 먹는다.
+
+    ⚠ 다크에서는 쓰지 않는다. tintColor는 음영을 평평하게 만드는데, 다크에서는
+      원본의 발광 음영이 그대로 살아 있고 그게 이 자산의 값어치다.
+      「안 보인다」를 고치려고 「멀쩡한 쪽」까지 같이 바꾸지 않는다.
+  */
+  const ballTint = themeName === 'light' ? colors.green : undefined;
   return (
     <View style={[styles.ring, focused && styles.ringOn]}>
       <Image
         source={require('../../assets/nav-ball.png')}
-        style={[styles.ball, !focused && styles.ballIdle]}
+        style={[styles.ball, !focused && styles.ballIdle, !!ballTint && { tintColor: ballTint }]}
         resizeMode="contain"
       />
     </View>
@@ -303,7 +315,13 @@ const makeStyles = (colors: Palette) =>
     borderRadius: RING / 2,
     borderWidth: 1.5,
     borderColor: 'rgba(34,197,94,0.22)',
-    backgroundColor: colors.bgRoot,
+    /*
+     * ⚠ 라이트에서도 어둡다. nav-ball.png가 투명 86% 위의 초록 점 패턴이라
+     *   밝은 면에 얹으면 대비가 죽는다(합성해서 봤다 — 흰 바탕에서 거의 안 보인다).
+     *   가운데 탭이 화면의 주 동작이라 가장 튀는 게 오히려 맞다.
+     *   자세한 근거는 theme.ts의 navBallBg 주석.
+     */
+    backgroundColor: colors.navBallBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: RING_LIFT,

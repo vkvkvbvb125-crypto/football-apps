@@ -116,8 +116,8 @@ const makeStyles = (colors: Palette) =>
     fontWeight: '700',
     marginBottom: 8,
   },
-  weekdayTextSunday: { color: '#C86D6D' },
-  weekdayTextSaturday: { color: '#7093C8' },
+  weekdayTextSunday: { color: colors.weekSun },
+  weekdayTextSaturday: { color: colors.weekSat },
 
   weekRow: { flexDirection: 'row' },
   /*
@@ -139,7 +139,7 @@ const makeStyles = (colors: Palette) =>
     justifyContent: 'center',
   },
   dayCircleToday: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -148,8 +148,8 @@ const makeStyles = (colors: Palette) =>
     borderWidth: 1,
     borderColor: colors.green,
   },
-  dayText: { color: '#C9D3CF', fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  dayTextToday: { color: '#FFFFFF', fontWeight: '800' },
+  dayText: { color: colors.textBody, fontSize: 13, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  dayTextToday: { color: colors.text, fontWeight: '800' },
   dayTextSelected: { color: colors.green, fontWeight: '800' },
 
   dot: {
@@ -168,7 +168,7 @@ const makeStyles = (colors: Palette) =>
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#1B2521',
+    borderTopColor: colors.cardRaised,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green },

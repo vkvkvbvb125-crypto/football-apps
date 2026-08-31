@@ -96,7 +96,7 @@ export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, from
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   overlayTap: { flex: 1 },
   sheet: {
     maxHeight: '86%',

@@ -74,8 +74,8 @@ export function toMatchWeatherBlockData(raw: ServiceWeather | null): MatchWeathe
 
 export function weatherAccent(level: WeatherLevel) {
   const { colors, styles } = useThemed(makeStyles);
-  if (level === 'rain' || level === 'snow') return '#60A5FA';
-  if (level === 'clear') return '#FACC15';
+  if (level === 'rain' || level === 'snow') return colors.blue;
+  if (level === 'clear') return colors.weatherClear;
   return colors.textMuted;
 }
 
@@ -142,7 +142,7 @@ export function MatchWeatherBlock({
           </Text>
         </View>
         <View style={[styles.note, highlight ? styles.noteAlert : styles.noteMuted]}>
-          <Text style={[styles.noteText, highlight && { color: '#60A5FA' }]}>
+          <Text style={[styles.noteText, highlight && { color: colors.blue }]}>
             {short ? (bad ? '우천 주의' : '정확도 높음') : '참고용'}
           </Text>
         </View>
@@ -151,7 +151,7 @@ export function MatchWeatherBlock({
       {advise && (
         <View style={styles.advice}>
           <View style={styles.adviceRow}>
-            <Ionicons name="bulb-outline" size={14} color="#9FC2E8" />
+            <Ionicons name="bulb-outline" size={14} color={colors.weatherInfo} />
             <Text style={styles.adviceText}>
               경기 시각({timeLabel})에 {weather.level === 'snow' ? '눈' : '비'} 확률이 {weather.rain}예요. 실내
               구장으로 옮기거나, 늦어도 하루 전까지 취소 여부를 알려주세요.
@@ -203,14 +203,14 @@ const makeStyles = (colors: Palette) =>
     borderWidth: 1,
     borderColor: colors.divider,
   },
-  boxAlert: { backgroundColor: 'rgba(96,165,250,0.07)', borderColor: '#2A3F58' },
+  boxAlert: { backgroundColor: 'rgba(96,165,250,0.07)', borderColor: colors.borderRaised },
   icon: {
     width: 36,
     height: 36,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
   },
   iconAlert: { backgroundColor: 'rgba(96,165,250,0.12)' },
   emoji: { fontSize: 21 },
@@ -226,7 +226,7 @@ const makeStyles = (colors: Palette) =>
   meta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   note: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
   noteAlert: { backgroundColor: 'rgba(96,165,250,0.14)' },
-  noteMuted: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  noteMuted: { backgroundColor: colors.overlaySoft },
   noteText: { color: colors.textDim, fontSize: 10, fontWeight: '800' },
 
   advice: {
@@ -238,7 +238,7 @@ const makeStyles = (colors: Palette) =>
     borderColor: 'rgba(96,165,250,0.18)',
   },
   adviceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  adviceText: { flex: 1, color: '#9FC2E8', fontSize: 11, fontWeight: '600', lineHeight: 17 },
+  adviceText: { flex: 1, color: colors.weatherInfo, fontSize: 11, fontWeight: '600', lineHeight: 17 },
   adviceCta: { flexDirection: 'row', gap: 8 },
   keep: {
     flex: 1,
@@ -246,7 +246,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -268,5 +268,5 @@ const makeStyles = (colors: Palette) =>
     borderColor: colors.greenDeep,
   },
   indoorText: { color: colors.green, fontSize: 12, fontWeight: '800' },
-  decided: { color: '#9FC2E8', fontSize: 11, fontWeight: '800' },
+  decided: { color: colors.weatherInfo, fontSize: 11, fontWeight: '800' },
   });

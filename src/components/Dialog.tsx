@@ -146,7 +146,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 28,
@@ -167,7 +167,7 @@ const makeStyles = (colors: Palette) =>
   actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
   btn: { flex: 1, height: 46, borderRadius: radius.button, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.85 },
-  cancelBtn: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: colors.border },
+  cancelBtn: { backgroundColor: colors.overlaySoft, borderWidth: 1, borderColor: colors.border },
   cancelText: { color: colors.textMuted, fontSize: 14, fontWeight: '800' },
   confirmBtn: { backgroundColor: colors.green },
   confirmText: { color: colors.bgRoot, fontSize: 14, fontWeight: '800' },

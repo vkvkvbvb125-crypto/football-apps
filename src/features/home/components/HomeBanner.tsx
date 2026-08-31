@@ -21,7 +21,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '../../../components/nativeText';
 import { radius, type Palette } from '../../../theme';
-import { useThemed } from '../../../lib/useThemed';
+import { useThemeName, useThemed } from '../../../lib/useThemed';
 import { useReduceMotion } from '../../../lib/useReduceMotion';
 
 /** 자동 전환 간격 */
@@ -122,11 +122,28 @@ export function HomeBanner({ slides, layout, image, scrollingRef, onPress }: Pro
     [width],
   );
 
+  const themeName = useThemeName();
+
+  /* 위 LinearGradient 주석 참고 — 다크는 빛을 더하고 라이트는 색을 뺀다 */
+  const glow =
+    themeName === 'light'
+      ? (['rgba(20,117,54,0.14)', 'rgba(20,117,54,0.04)', 'rgba(20,117,54,0)'] as const)
+      : (['rgba(34,197,94,0.45)', 'rgba(34,197,94,0.1)', 'rgba(34,197,94,0)'] as const);
+
   const card = (
     <View style={[styles.card, { height: layout.height }]}>
-      {/* RN엔 원형 그라디언트가 없어 대각선 LinearGradient로 근사한다 — 로그인 히어로와 같은 기법 */}
+      {/*
+        RN엔 원형 그라디언트가 없어 대각선 LinearGradient로 근사한다 — 로그인 히어로와 같은 기법.
+
+        ⚠ 알파가 테마마다 다르다. 다크에서 이건 **빛을 더하는** 것이라 0.45가
+          「모서리가 빛난다」로 읽히는데, 라이트에서 같은 알파는 흰 카드에 초록을
+          **빼는** 것이라 얼룩으로 읽힌다. 대비로는 문제가 없다(0.45에서도 글자가
+          7.31:1) — 문제는 읽히는 방식이다.
+          라이트는 0.14로 내린다. 다른 곳의 greenTint와 같은 세기라 「브랜드 기가
+          살짝 도는 흰 카드」가 된다.
+      */}
       <LinearGradient
-        colors={['rgba(34,197,94,0.45)', 'rgba(34,197,94,0.1)', 'rgba(34,197,94,0)']}
+        colors={glow}
         locations={[0, 0.3, 0.6]}
         start={{ x: 0.9, y: 0.05 }}
         end={{ x: 0.05, y: 1 }}
@@ -219,7 +236,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: radius.hero,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: '#0A100D',
+    backgroundColor: colors.heroBg,
     overflow: 'hidden',
     justifyContent: 'center',
   },

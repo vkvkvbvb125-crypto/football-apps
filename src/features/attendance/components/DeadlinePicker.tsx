@@ -95,7 +95,7 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
             </Text>
 
             <Pressable style={styles.clearRow} onPress={handleClear}>
-              <Ionicons name="close-circle-outline" size={14} color="#8A9490" />
+              <Ionicons name="close-circle-outline" size={14} color={colors.textMuted} />
               <Text style={styles.clearText}>마감 없음으로 설정</Text>
             </Pressable>
 
@@ -128,7 +128,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.card,
   },
   fieldText: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -138,7 +138,7 @@ const makeStyles = (colors: Palette) =>
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -158,12 +158,12 @@ const makeStyles = (colors: Palette) =>
     gap: 6,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '700',
   },
   hint: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
     textAlign: 'center',
     marginTop: -6,
@@ -175,7 +175,7 @@ const makeStyles = (colors: Palette) =>
     gap: 6,
   },
   clearText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -191,7 +191,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.cardRaised,
   },
   cancelText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   confirmButton: {

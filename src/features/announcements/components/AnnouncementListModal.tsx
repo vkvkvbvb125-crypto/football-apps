@@ -30,7 +30,7 @@ export function AnnouncementListModal({
         <View style={styles.header}>
           <Text style={styles.headerTitle}>공지사항</Text>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Ionicons name="close" size={24} color={colors.text} />
           </Pressable>
         </View>
 
@@ -56,7 +56,7 @@ export function AnnouncementListModal({
 
         {isAdmin && (
           <Pressable style={styles.fab} onPress={onCreate}>
-            <Ionicons name="add" size={28} color="#0B0F0D" />
+            <Ionicons name="add" size={28} color={colors.bgScreen} />
           </Pressable>
         )}
       </View>
@@ -79,7 +79,7 @@ const makeStyles = (colors: Palette) =>
     paddingBottom: 16,
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 21,
     fontWeight: '800',
   },
@@ -108,13 +108,13 @@ const makeStyles = (colors: Palette) =>
   },
   itemTitle: {
     flex: 1,
-    color: '#FFFFFF',
+    color: colors.text,
     fontWeight: '700',
     fontSize: 15,
   },
   itemBody: {
     marginTop: 6,
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 13,
   },
   fab: {

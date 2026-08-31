@@ -466,7 +466,7 @@ const makeStyles = (colors: Palette) =>
     marginBottom: 14,
     padding: 4,
     borderRadius: radius.button,
-    backgroundColor: '#0E1512',
+    backgroundColor: colors.cardAlt,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -535,7 +535,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: radius.pill,
     backgroundColor: colors.greenTint,
     borderWidth: 1,
-    borderColor: '#2A3A32',
+    borderColor: colors.border,
   },
   shuffleText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 

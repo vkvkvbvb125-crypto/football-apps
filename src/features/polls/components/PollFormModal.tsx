@@ -74,7 +74,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
               />
               {options.length > 2 && (
                 <Pressable onPress={() => handleRemoveOption(i)} hitSlop={8}>
-                  <Ionicons name="close-circle-outline" size={20} color="#8A9490" />
+                  <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
                 </Pressable>
               )}
             </View>
@@ -113,7 +113,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   card: {
@@ -125,7 +125,7 @@ const makeStyles = (colors: Palette) =>
     gap: 12,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 4,
@@ -136,7 +136,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#FFFFFF',
+    color: colors.text,
     backgroundColor: colors.card,
   },
   optionRow: {
@@ -171,7 +171,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.cardRaised,
   },
   cancelText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   confirmButton: {

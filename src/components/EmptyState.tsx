@@ -42,7 +42,7 @@ const makeStyles = (colors: Palette) =>
     width: 58,
     height: 58,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',

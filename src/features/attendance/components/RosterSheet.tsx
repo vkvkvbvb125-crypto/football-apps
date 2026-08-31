@@ -89,7 +89,7 @@ const LABEL: Record<VoteStatus, string> = {
 /* 테마마다 값이 다르므로 표를 함수로 바꿨다 — 모듈 최상단에서 만들면 굳는다 */
 const toneOf = (colors: Palette): Record<VoteStatus, { bg: string; fg: string }> => ({
   attend: { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
-  absent: { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
+  absent: { bg: colors.overlay, fg: colors.textMuted },
   undecided: { bg: 'rgba(210,163,76,0.16)', fg: colors.gold },
   pending: { bg: 'rgba(210,163,76,0.10)', fg: colors.gold },
 });
@@ -406,7 +406,7 @@ export function RosterSheet({
                     <View
                       style={[styles.avatar, m.status === 'attend' ? styles.avatarAttend : styles.avatarDefault]}
                     >
-                      <Text style={[styles.avatarText, { color: m.status === 'attend' ? colors.green : '#8FA69C' }]}>
+                      <Text style={[styles.avatarText, { color: m.status === 'attend' ? colors.green : colors.textMuted }]}>
                         {m.name.slice(1)}
                       </Text>
                     </View>
@@ -558,7 +558,7 @@ export function RosterSheet({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)' },
+  overlay: { flex: 1, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.card,
     borderTopWidth: 1,
@@ -590,7 +590,7 @@ const makeStyles = (colors: Palette) =>
   },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, borderWidth: 1, borderColor: 'transparent' },
   tabOn: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
-  tabText: { color: '#7C8A85', fontSize: 11, fontWeight: '800' },
+  tabText: { color: colors.navIdle, fontSize: 11, fontWeight: '800' },
   tabTextOn: { color: colors.green },
 
   list: { paddingHorizontal: 20 },
@@ -600,11 +600,11 @@ const makeStyles = (colors: Palette) =>
     gap: 10,
     paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#161F1B',
+    borderBottomColor: colors.cardRaised,
   },
   avatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   avatarAttend: { backgroundColor: 'rgba(34,197,94,0.14)' },
-  avatarDefault: { backgroundColor: '#1E2A25' },
+  avatarDefault: { backgroundColor: colors.borderSoft },
   avatarText: { fontSize: 11, fontWeight: '800' },
 
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -620,12 +620,12 @@ const makeStyles = (colors: Palette) =>
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.overlay,
     borderWidth: 1,
     borderColor: colors.border,
   },
   pokeDone: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: 'transparent' },
-  pokeText: { color: '#C9D3CF', fontSize: 10, fontWeight: '800' },
+  pokeText: { color: colors.textBody, fontSize: 10, fontWeight: '800' },
 
   empty: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },

@@ -63,7 +63,7 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
               value={isPinned}
               onValueChange={setIsPinned}
               trackColor={{ false: colors.border, true: colors.green }}
-              thumbColor="#FFFFFF"
+              thumbColor={colors.text}
             />
           </View>
 
@@ -85,7 +85,7 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   card: {
@@ -96,7 +96,7 @@ const makeStyles = (colors: Palette) =>
     gap: 12,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 4,
@@ -107,7 +107,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#FFFFFF',
+    color: colors.text,
     backgroundColor: colors.card,
   },
   bodyInput: {
@@ -121,7 +121,7 @@ const makeStyles = (colors: Palette) =>
     paddingVertical: 4,
   },
   pinLabel: {
-    color: '#E7ECE9',
+    color: colors.textStrong,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -138,7 +138,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.cardRaised,
   },
   cancelText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   confirmButton: {

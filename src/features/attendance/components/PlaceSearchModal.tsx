@@ -278,7 +278,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.card,
   },
   fieldText: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -288,7 +288,7 @@ const makeStyles = (colors: Palette) =>
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -307,7 +307,7 @@ const makeStyles = (colors: Palette) =>
     marginBottom: 14,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
@@ -333,7 +333,7 @@ const makeStyles = (colors: Palette) =>
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 14,
     padding: 0,
   },
@@ -356,7 +356,7 @@ const makeStyles = (colors: Palette) =>
     borderColor: colors.green,
   },
   chipText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -365,7 +365,7 @@ const makeStyles = (colors: Palette) =>
   },
   hintText: {
     marginTop: 10,
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 11,
     textAlign: 'center',
   },
@@ -386,7 +386,7 @@ const makeStyles = (colors: Palette) =>
     gap: 8,
   },
   placeName: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -403,7 +403,7 @@ const makeStyles = (colors: Palette) =>
   },
   placeAddress: {
     marginTop: 3,
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
   },
   emptyText: {

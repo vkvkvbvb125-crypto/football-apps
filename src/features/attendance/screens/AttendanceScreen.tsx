@@ -907,7 +907,7 @@ const makeStyles = (colors: Palette) =>
   scheduleTitle: { ...font.title, color: colors.text },
   scheduleCount: { color: colors.textMuted, fontSize: 12, fontWeight: '700' }, // textDim은 화면 배경 위 3.9:1
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   modalCard: {
     ...shadow.overlay,
     backgroundColor: colors.card,
@@ -947,7 +947,7 @@ const makeStyles = (colors: Palette) =>
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.overlaySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },

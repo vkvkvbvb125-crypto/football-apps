@@ -42,6 +42,11 @@ const SOCIALS: {
   // 키우면 답답하고 줄이면 나머지 마크보다 작아 보인다. @3x 여유 있는 버전이 오면 image로 바꾼다.
   /* 브랜드 고정색 — 테마와 무관하다. 팔레트에도 예외로 적혀 있다 */
   { key: 'kakao', label: '카카오', icon: 'chatbubble', bg: '#FEE500', fg: '#000000' },
+  /*
+    ⚠ 여기 흰색은 **브랜드 고정색이지 colors.text가 아니다.** 자동 치환이 한 번
+      colors.text로 바꿨는데, 그러면 라이트에서 네이버 N과 애플 로고가 검게 변해
+      초록·검정 바탕에 묻힌다. 마크의 색은 테마를 안 따른다.
+  */
   { key: 'naver', label: '네이버', text: 'N', bg: '#03C75A', fg: '#FFFFFF' },
   // 공식 4색 G(360px, 흰 배경 + 여백 포함). 배경까지 들어 있어 원형 컨테이너가 잘라내면 된다.
   { key: 'google', label: '구글', image: require('../../../../assets/google.png'), bg: '#FFFFFF' },

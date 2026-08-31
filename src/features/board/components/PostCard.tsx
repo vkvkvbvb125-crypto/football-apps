@@ -321,7 +321,7 @@ const makeStyles = (colors: Palette) =>
   },
   editActions: { flexDirection: 'row', gap: 8 },
   editBtn: { flex: 1, height: 40, borderRadius: radius.button, alignItems: 'center', justifyContent: 'center' },
-  editCancel: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: colors.border },
+  editCancel: { backgroundColor: colors.overlaySoft, borderWidth: 1, borderColor: colors.border },
   editCancelText: { color: colors.textMuted, fontSize: 13, fontWeight: '800' },
   editSave: { backgroundColor: colors.green },
   editSaveText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },

@@ -42,8 +42,8 @@ export function resolveBadge(p: {
 const badgeToneOf = (colors: Palette): Record<MatchBadge, { bg: string; fg: string }> => ({
   '정원 마감': { bg: 'rgba(34,197,94,0.14)', fg: colors.green },
   '마감 임박': { bg: 'rgba(210,163,76,0.16)', fg: colors.gold },
-  '투표 마감': { bg: 'rgba(255,255,255,0.05)', fg: colors.textDim },
-  '모집중': { bg: 'rgba(255,255,255,0.06)', fg: colors.textMuted },
+  '투표 마감': { bg: colors.overlaySoft, fg: colors.textDim },
+  '모집중': { bg: colors.overlay, fg: colors.textMuted },
 });
 
 interface Props {

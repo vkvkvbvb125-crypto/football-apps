@@ -126,7 +126,7 @@ const makeReelStyles = (colors: Palette) =>
     marginBottom: 8,
   },
   label: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -161,7 +161,7 @@ const makeReelStyles = (colors: Palette) =>
     color: colors.bgRoot,
   },
   colon: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 21,
     fontWeight: '800',
     marginHorizontal: 8,
@@ -249,13 +249,13 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.card,
   },
   fieldText: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '600',
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -269,7 +269,7 @@ const makeStyles = (colors: Palette) =>
     gap: 16,
   },
   title: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 17,
     fontWeight: '700',
     textAlign: 'center',
@@ -286,7 +286,7 @@ const makeStyles = (colors: Palette) =>
     backgroundColor: colors.cardRaised,
   },
   cancelText: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   confirmButton: {

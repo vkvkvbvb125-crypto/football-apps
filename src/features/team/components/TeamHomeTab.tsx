@@ -1114,7 +1114,7 @@ const makeStyles = (colors: Palette) =>
   },
   bannerBg: { width: '100%', height: '100%' },
   /* 검정 60% — 밝은 로고 위에서도 흰 글자가 읽히는 최소선이다 */
-  bannerScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)' },
+  bannerScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.scrim },
   /* 팀명 · 역할 뱃지 · 팀 설정 링크. 링크만 오른쪽 끝으로 민다 (marginLeft: 'auto') */
   teamNameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   roleTag: {
@@ -1124,7 +1124,7 @@ const makeStyles = (colors: Palette) =>
     borderWidth: 1,
     borderColor: colors.border,
   },
-  roleTagAdmin: { borderColor: '#6B5426' },
+  roleTagAdmin: { borderColor: colors.goldLine },
   roleTagText: { color: colors.textFaint, fontSize: 10, fontWeight: '800' },
   roleTagTextAdmin: { color: colors.gold },
   /*
@@ -1167,8 +1167,8 @@ const makeStyles = (colors: Palette) =>
     justifyContent: 'center',
   },
   emblemImage: { width: '100%', height: '100%' },
-  emblemInitials: { color: '#FFFFFF', fontSize: 17, fontWeight: '800', letterSpacing: -0.5 },
-  emblemHint: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800' },
+  emblemInitials: { color: colors.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.5 },
+  emblemHint: { color: colors.textMuted, fontSize: 10, fontWeight: '800' },
   emblemEdit: {
     position: 'absolute',
     right: -5,
@@ -1178,11 +1178,11 @@ const makeStyles = (colors: Palette) =>
     borderRadius: 12,
     backgroundColor: colors.green,
     borderWidth: 2,
-    borderColor: '#12211A',
+    borderColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  teamName: { color: '#FFFFFF', fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
+  teamName: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
   teamMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   slogan: { color: colors.textBody, fontSize: 12, fontWeight: '600' },
   sloganRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -1212,7 +1212,7 @@ const makeStyles = (colors: Palette) =>
     paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.35)',
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 12,
   },
   profileLine: {

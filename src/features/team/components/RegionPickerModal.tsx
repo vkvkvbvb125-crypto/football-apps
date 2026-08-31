@@ -118,7 +118,7 @@ const makeStyles = (colors: Palette) =>
   fieldText: { flex: 1, color: colors.textStrong, fontSize: 15, fontWeight: '600' },
   fieldTextPlaceholder: { color: colors.placeholder, fontWeight: '400' },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center' },
+  overlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center' },
   card: {
     width: 320,
     maxHeight: '75%',

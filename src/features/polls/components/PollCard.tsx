@@ -29,7 +29,7 @@ export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: Poll
         <Text style={styles.question}>{poll.question}</Text>
         {isAdmin && (
           <Pressable onPress={onDelete} hitSlop={8}>
-            <Ionicons name="trash-outline" size={16} color="#8A9490" />
+            <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -87,7 +87,7 @@ const makeStyles = (colors: Palette) =>
   },
   question: {
     flex: 1,
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -118,7 +118,7 @@ const makeStyles = (colors: Palette) =>
   },
   optionText: {
     flex: 1,
-    color: '#E7ECE9',
+    color: colors.textStrong,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -126,7 +126,7 @@ const makeStyles = (colors: Palette) =>
     color: colors.green,
   },
   optionCount: {
-    color: '#8A9490',
+    color: colors.textMuted,
     fontSize: 12,
   },
   footer: {

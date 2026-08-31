@@ -22,13 +22,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './nativeText';
-import { alertMessage, confirmAction } from './Dialog';
+import { alertMessage } from './Dialog';
 import { colors, radius } from '../theme';
 import { relativeTime } from '../lib/relativeTime';
 import { toPlainText } from '../lib/mentions';
 import { SwipeToDelete } from './SwipeToDelete';
 import { useTeamStore } from '../features/team/stores/teamStore';
-import { useAuthStore } from '../features/auth/stores/authStore';
 import { useNotificationsStore } from '../features/notifications/stores/notificationsStore';
 import { useAnnouncementsStore } from '../features/announcements/stores/announcementsStore';
 
@@ -259,97 +258,32 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
 });
 
 /**
- * 상단 메뉴(≡) 아이콘 + 설정 화면. 알림 벨과 같은 "오른쪽에서 화면이 밀고 들어오는" 방식 —
- * 애니메이션 로직을 그대로 복붙하지 않으려 했지만, Modal 하나당 자기 translateX를 들고
- * 있어야 해서(둘이 동시에 열릴 수 있음) 공용 훅으로 뺄 정도로 크지 않아 각자 갖게 뒀다.
+ * 톱니 아이콘. 누르면 설정 화면으로 바로 간다.
+ *
+ * 예전엔 여기서 오른쪽에서 밀고 들어오는 패널이 열리고, 그 안에 「내 설정」과
+ * 「로그아웃」 두 줄이 있었다. 「내 설정」을 누르면 다시 설정 화면이 열렸다 —
+ * 제목이 「설정」인 화면이 둘 겹쳐서, 설정을 눌렀는데 설정이 나오고 거기 또
+ * 설정이 있었다. 패널이 하는 일은 한 번 더 누르게 하는 것뿐이었다.
+ *
+ * 로그아웃도 그 패널과 설정 화면 양쪽에 있었다. 패널을 걷으면 자리가 하나로 준다 —
+ * 같은 파괴적 동작이 두 곳에 있으면 어느 쪽이 진짜인지 아무도 모른다.
  */
-export function SettingsMenu() {
+export function SettingsButton() {
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
-  const { width: screenW } = useWindowDimensions();
-  const activeTeam = useTeamStore((s) => s.activeTeam);
-  const signOut = useAuthStore((s) => s.signOut);
-  const isAdmin = activeTeam?.role === 'admin';
-
-  const [visible, setVisible] = useState(false);
-  const translateX = useRef(new Animated.Value(screenW)).current;
-
-  const open = () => {
-    translateX.setValue(screenW);
-    setVisible(true);
-    Animated.timing(translateX, { toValue: 0, duration: 260, useNativeDriver: true }).start();
-  };
-
-  const close = () => {
-    Animated.timing(translateX, { toValue: screenW, duration: 220, useNativeDriver: true }).start(() => {
-      setVisible(false);
-    });
-  };
-
-  const handleSignOut = async () => {
-    const ok = await confirmAction({
-      title: '로그아웃',
-      message: '정말 로그아웃할까요?',
-      confirmLabel: '로그아웃',
-      destructive: true,
-    });
-    if (!ok) return;
-    close();
-    signOut();
-  };
 
   return (
-    <>
-      <Pressable onPress={open} hitSlop={10} style={styles.bell}>
-        {/* 햄버거(≡)는 "목록이 열린다"로 읽힌다 — 여기서 열리는 건 설정이라 톱니바퀴가 맞다 */}
-        <Ionicons name="settings-outline" size={21} color={colors.textStrong} />
-      </Pressable>
-
-      <Modal visible={visible} transparent animationType="none" onRequestClose={close}>
-        <Animated.View style={[styles.screen, { paddingTop: insets.top, transform: [{ translateX }] }]}>
-          <View style={styles.screenHead}>
-            <Pressable onPress={close} hitSlop={10} style={styles.backBtn}>
-              <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
-            </Pressable>
-            <Text style={styles.screenTitle}>설정</Text>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.panelList}>
-            {/* 톱니바퀴는 어느 탭에서나 같은 자리에 있다 — 계정에 딸린 「내 설정」이 여기 온다.
-                팀에 딸린 설정은 팀 탭에서 연다. 여기 두면 "어느 팀 설정이지"가 된다. */}
-            <Pressable
-              onPress={() => {
-                close();
-                navigation.navigate('MySettings');
-              }}
-              style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
-            >
-              <View style={styles.menuRowIcon}>
-                <Ionicons name="person-outline" size={18} color={colors.green} />
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={styles.menuRowTitle}>내 설정</Text>
-                <Text style={styles.menuRowSub}>이름 · 주 포지션 · 실력</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-            </Pressable>
-
-            <Pressable
-              onPress={handleSignOut}
-              style={({ pressed }) => [styles.menuRow, pressed && styles.menuRowPressed]}
-            >
-              <View style={styles.menuRowIcon}>
-                <Ionicons name="log-out-outline" size={18} color={colors.textMuted} />
-              </View>
-              <Text style={styles.menuRowTitle}>로그아웃</Text>
-            </Pressable>
-          </ScrollView>
-        </Animated.View>
-      </Modal>
-    </>
+    <Pressable
+      onPress={() => navigation.navigate('MySettings')}
+      hitSlop={10}
+      style={styles.bell}
+      accessibilityRole="button"
+      accessibilityLabel="설정"
+    >
+      {/* 햄버거(≡)는 "목록이 열린다"로 읽힌다 — 여기서 열리는 건 설정이라 톱니바퀴가 맞다 */}
+      <Ionicons name="settings-outline" size={21} color={colors.textStrong} />
+    </Pressable>
   );
 }
-
 export function TabHeader({ title, onPressTitle }: TabHeaderProps) {
   const teamName = useTeamStore((s) => s.activeTeam?.team.name);
   // 팀이 하나뿐이면 화면마다 같은 이름을 되풀이할 뿐이다 — 여러 팀에 속했을 때만
@@ -385,7 +319,7 @@ export function TabHeader({ title, onPressTitle }: TabHeaderProps) {
       {/* 알림이 왼쪽, 설정이 오른쪽 — 자주 누르는 쪽(알림)을 먼저 둔다 */}
       <View style={styles.headerIcons}>
         <NotificationBell />
-        <SettingsMenu />
+        <SettingsButton />
       </View>
     </View>
   );
@@ -438,28 +372,6 @@ const styles = StyleSheet.create({
   panelList: { gap: 12, paddingHorizontal: 20, paddingBottom: 24 },
   emptyText: { color: colors.textMuted, fontSize: 13, paddingVertical: 12, textAlign: 'center' },
   loadingIndicator: { paddingVertical: 20 },
-
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  menuRowPressed: { opacity: 0.85 },
-  menuRowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.greenTint,
-  },
-  menuRowTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  menuRowSub: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
 
   /** 항목마다 카드 — 구분선만 있으면 어디까지가 한 알림인지 흐릿하다 */
   item: {

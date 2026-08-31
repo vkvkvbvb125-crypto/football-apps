@@ -4,6 +4,8 @@
   이 검사가 생긴 이유. authService.signOut이 `if (error) throw error`였다.
   부르는 자리 넷(TabHeader · MySettings 둘 · TeamStartScreen)이 전부 await도
   .catch()도 없어서, 그 throw는 그대로 unhandled rejection이 됐다.
+  (지금은 셋이다 — TabHeader의 설정 패널을 걷으면서 거기 있던 로그아웃이
+   빠졌다. 아래 「부르는 자리가 넷」 문구도 그때 남은 것이니 같이 읽을 것.)
 
   ⚠ 그런데 재보니 앞서 적었던 진단이 틀렸다. supabase-js는 서버 무효화에
   실패해도 로컬 세션을 먼저 지우고(GoTrueClient._signOut → removeCurrentSession)
@@ -58,7 +60,7 @@ const signOutBody = (() => {
 // ── ① 던지지 않는다 ──
 ok(signOutBody !== '', 'signOut 본문을 못 찾았다');
 ok(!/\bthrow\b/.test(signOutBody),
-   'signOut이 던진다 — 부르는 자리 넷이 아무도 안 잡아서 그대로 unhandled rejection이 된다');
+   'signOut이 던진다 — 부르는 자리 셋이 아무도 안 잡아서 그대로 unhandled rejection이 된다');
 ok(/serverRevoked/.test(signOutBody), '결과를 값으로 안 돌려준다');
 
 // ── ② 서버가 실패해도 로컬은 지운다 ──

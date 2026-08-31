@@ -33,7 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradient, useTabBarPadding } from '../../../components/ScreenGradient';
 import { SoftTint, toneBorder, type BentoTone } from '../../../components/BentoCard';
-import { NotificationBell, SettingsMenu, type NotificationBellHandle } from '../../../components/TabHeader';
+import { NotificationBell, SettingsButton, type NotificationBellHandle } from '../../../components/TabHeader';
 import { Card, GreenFill, RowCard, StatRow, StatTile } from '../../../components/Surface';
 import { colors, font, radius, shadow } from '../../../theme';
 import { useTeamStore } from '../../team/stores/teamStore';
@@ -464,7 +464,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           {/* 다른 탭 헤더와 같은 순서 — 알림이 왼쪽, 설정이 오른쪽 */}
           <View style={styles.topBarIcons}>
             <NotificationBell ref={bellRef} />
-            <SettingsMenu />
+            <SettingsButton />
           </View>
         </View>
 

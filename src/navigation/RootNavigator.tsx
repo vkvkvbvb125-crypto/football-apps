@@ -14,6 +14,7 @@ import { OnboardingScreen } from '../features/onboarding/screens/OnboardingScree
 import { MainTabNavigator } from './MainTabNavigator';
 import { TeamSettingsScreen } from '../features/team/screens/TeamSettingsScreen';
 import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen';
+import { ProfileDetailScreen } from '../features/settings/screens/ProfileDetailScreen';
 import { registerForPushNotifications } from '../features/notifications/services/pushService';
 import * as Notifications from 'expo-notifications';
 import { useNotificationsStore } from '../features/notifications/stores/notificationsStore';
@@ -307,6 +308,7 @@ export function RootNavigator() {
             <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
             <Stack.Screen name="TeamSettings" component={TeamSettingsScreen} />
             <Stack.Screen name="MySettings" component={MySettingsScreen} />
+            <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
           </>
         )}
           </Stack.Navigator>

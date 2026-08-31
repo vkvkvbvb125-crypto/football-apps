@@ -10,6 +10,7 @@
 //   ① adb emu geo fix가 OK를 반환하고 안 먹었다 → 「코드가 위치를 안 쓴다」로 읽음
 //   ② LogBox 전체화면이 입력을 가로챘다        → 「모달을 닫을 수 없다」로 적음
 //   ③ adb reverse 소실 + Metro 교착            → 「흰 화면」
+//   ④ 앱이 localhost가 아니라 공인 IP로 붙는다   → 「흰 화면」(넷 다 OK인데)
 //   ④ 같은 둘이 또                              → 「스플래시 되돌린 뒤부터 흰 화면」
 //
 // ④가 특히 나쁘다. 두 겹이 동시에 났는데 보이는 증상은 하나였고, 그 하나가
@@ -79,7 +80,28 @@ const ps = adb('shell', 'ps', '-A') ?? '';
 say('앱 프로세스', ps.includes(PKG), ps.includes(PKG) ? '떠 있음' : '없음',
     `adb shell monkey -p ${PKG} -c android.intent.category.LAUNCHER 1`);
 
-// ⑤ 개발 빌드 전용 오버레이 — 입력을 가로챈다. 「눌렀는데 안 된다」의 원인이 된다
+/*
+  ⑤ 앱이 **어느 호스트에서** 번들을 받는가.
+
+  reverse가 걸려 있어도 앱이 localhost가 아니라 **공인 IP**로 붙을 수 있다.
+  화면에 「Loading from 175.208.191.121:8081…」이 뜨고 그대로 몇 분씩 멈춘다 —
+  포트도 열려 있고 Metro도 응답하고 reverse도 있는데 앱만 안 뜬다.
+  위 넷이 전부 OK인데 흰 화면이라 「앱 코드가 문제」로 읽히는 자리다.
+
+  개발 클라이언트는 마지막에 쓴 URL을 기억한다. 한 번 공인 IP로 붙으면 계속
+  거기로 간다 — Wi-Fi가 바뀌거나 느려지면 그대로 막힌다.
+
+  고치는 법은 딥링크로 localhost를 강제하는 것이다(아래 fix).
+*/
+const url = (adb('shell', 'dumpsys', 'activity', 'activities') ?? '')
+  .split(String.fromCharCode(10))
+  .find((l) => l.includes('expo-development-client') && l.includes('url='));
+const onLocalhost = !url || /localhost|127\.0\.0\.1|10\.0\.2\.2/.test(url);
+say('번들 호스트', onLocalhost,
+    url ? (onLocalhost ? 'localhost' : url.trim().slice(0, 60)) : '(개발 클라이언트 URL 없음)',
+    `adb shell am start -a android.intent.action.VIEW -d "${PKG}://expo-development-client/?url=http%3A%2F%2Flocalhost%3A${PORT}"`);
+
+// ⑥ 개발 빌드 전용 오버레이 — 입력을 가로챈다. 「눌렀는데 안 된다」의 원인이 된다
 const dump = adb('shell', 'dumpsys', 'notification', '--noredact') ?? '';
 say('참고: 알림 채널', dump.includes("mId='default'"), "default 채널", '앱을 한 번 열면 만들어진다');
 

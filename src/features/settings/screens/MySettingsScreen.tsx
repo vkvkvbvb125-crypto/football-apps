@@ -15,6 +15,7 @@ import { deleteAccount, describeBlockers, fetchDeletionStatus } from '../service
 import { radius, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import { accountLabel } from '../utils/accountLabel';
+import { toUserMessage } from '../../../lib/dbError';
 
 /*
   문의 주소. terms.ts의 PRIVACY_OFFICER.email과 같은 곳이다 —
@@ -148,7 +149,12 @@ export function MySettingsScreen({ navigation }: any) {
       // 계정이 없어졌으니 세션도 버린다. 안 하면 죽은 토큰으로 화면이 계속 돈다.
       signOut();
     } catch (e: any) {
-      alertMessage('탈퇴하지 못했어요', e?.message ?? '잠시 후 다시 시도해 주세요');
+      /*
+        여기 오는 것은 위 fetchDeletionStatus 판정을 **통과한 뒤**의 실패다 —
+        막힌 이유는 이미 describeBlockers가 말했고 갈 곳까지 데려갔다.
+        그래서 여기서는 덮는 게 맞다. 원문은 toUserMessage가 콘솔에 남긴다.
+      */
+      alertMessage('탈퇴하지 못했어요', toUserMessage(e, {}, 'deleteAccount'));
     } finally {
       setDeleting(false);
     }

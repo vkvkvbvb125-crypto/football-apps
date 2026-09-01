@@ -67,7 +67,8 @@ export function TeamSettingsScreen({ navigation }: any) {
     }).then((ok) => {
       if (!ok) return;
       leaveTeam().catch((err) => {
-        alertMessage('나갈 수 없어요', err instanceof Error ? err.message : '팀을 나가지 못했어요');
+        /* 「마지막 총무는…」은 UserFacingError라 그대로, RLS·FK 원문은 덮인다 */
+        alertMessage('나갈 수 없어요', toUserMessage(err, {}, 'leaveTeam'));
       });
     });
   };

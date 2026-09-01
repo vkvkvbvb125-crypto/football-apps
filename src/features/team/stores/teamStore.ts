@@ -21,7 +21,7 @@ import {
   type TeamProfileInput,
 } from '../services/teamService';
 import type { SkillTag } from '../../../types/database';
-import { toUserMessage } from '../../../lib/dbError';
+import { UserFacingError, toUserMessage } from '../../../lib/dbError';
 
 /**
  * 마지막으로 보던 팀. 앱을 다시 켰을 때 그 팀으로 돌아온다.
@@ -262,7 +262,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
     const alone = members.length <= 1;
     if (!alone && activeTeam.role === 'admin' && adminCount <= 1) {
       set({ error: '마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.' });
-      throw new Error('마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.');
+      throw new UserFacingError('마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.');
     }
     await removeMemberRequest(activeTeam.membershipId);
     /*

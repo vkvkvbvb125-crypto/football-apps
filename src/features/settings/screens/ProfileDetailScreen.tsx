@@ -25,6 +25,7 @@ import { pickSquareImage, setAvatarUrl, updateProfileFields, uploadAvatar } from
 import { radius, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import type { SkillTag } from '../../../types/database';
+import { toUserMessage } from '../../../lib/dbError';
 
 const SKILLS: SkillTag[] = ['상', '중', '하'];
 
@@ -107,7 +108,8 @@ export function ProfileDetailScreen({ navigation }: any) {
       await setAvatarUrl(session.user.id, url);
       await loadMembers();
     } catch (err) {
-      alertFail(err instanceof Error ? err.message : '사진을 올리지 못했어요');
+      /* 권한 거부는 UserFacingError라 그대로 통과하고, Storage 원문은 덮인다 */
+      alertFail(toUserMessage(err, {}, 'uploadAvatar'));
     } finally {
       setUploading(false);
     }

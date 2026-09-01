@@ -50,6 +50,7 @@ import { SettlementEmpty } from '../components/SettlementEmpty';
 import { SettlementProgressPanel } from '../components/SettlementProgressPanel';
 import { DetailBreakdown, MyDueRow, SettlementDonePanel, SummaryBox, SummaryRow } from '../components/SettlementSummary';
 import { GreenFill } from '../../../components/Surface';
+import { toUserMessage } from '../../../lib/dbError';
 
 /** "보낸 시간" — 날짜까지 적어야 어제 보낸 건지 오늘인지 구분된다 */
 function sentAtLabel(iso: string | null) {
@@ -521,12 +522,12 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         refreshing={loading}
         onUpdateDetails={(patch) => {
           if (!current) return;
-          updateDetails(current.id, patch).catch((e) => showError(e?.message ?? '저장하지 못했어요'));
+          updateDetails(current.id, patch).catch((e) => showError(toUserMessage(e, {}, 'updateDetails')));
         }}
         onExemptShare={(shareId) => {
           if (!current) return;
           // "이미 입금 확인된 사람" 같은 거절 사유는 사용자에게 보여야 한다 — 조용히 삼키면 안 눌린 걸로 보인다
-          exemptShare(current.id, shareId).catch((e) => showError(e?.message ?? '제외하지 못했어요'));
+          exemptShare(current.id, shareId).catch((e) => showError(toUserMessage(e, {}, 'exemptShare')));
         }}
       />
 
@@ -661,7 +662,8 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
             // 만들자마자 링크 공유 화면으로 — Reference 총무②→④ 순서.
             // create()가 끝나면 store의 load()도 끝나 current가 방금 만든 정산이다.
             .then(() => setShareLinkOpen(true))
-            .catch((e) => showError(e?.message ?? '정산을 만들지 못했어요'));
+            /* 같은 경기로 정산을 두 번 만들면 23505다 — 그 자리에서만 뜻이 있는 말이라 known으로 준다 */
+            .catch((e) => showError(toUserMessage(e, { '23505': '이 경기는 이미 정산이 있어요' }, 'createSettlement')));
         }}
       />
 

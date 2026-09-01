@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { supabase } from '../../../lib/supabase';
 import { whereLabel } from '../utils';
 import { liveSince } from '../../attendance/utils/matchWindow';
-import { toUserMessage } from '../../../lib/dbError';
+import { UserFacingError, toUserMessage } from '../../../lib/dbError';
 
 export interface ShareRow {
   id: string;
@@ -274,14 +274,17 @@ export const useSettlementStore = create<State>((set, get) => ({
     if (Object.keys(row).length === 0) return;
 
     const { error } = await supabase.from('settlements').update(row).eq('id', settlementId);
-    if (error) {
-      // due_date는 20260806 마이그레이션에서 추가된다 — 안 돌린 프로젝트에서는 여기서만 걸린다.
-      // Postgres 원문 대신 무엇을 해야 하는지 알려준다.
-      if ('due_date' in row && /due_date/.test(error.message)) {
-        throw new Error('납부 기한을 쓰려면 20260806 마이그레이션을 먼저 적용해주세요');
-      }
-      throw error;
-    }
+    /*
+      여기 「due_date가 없으면 20260806 마이그레이션을 적용하라」는 갈래가 있었다.
+      **걷어냈다.** 두 가지 이유다:
+        · 프로덕션에 due_date가 이미 있다(2026-09-02에 읽기 전용 GET으로 확인했다 —
+          settlements?select=due_date가 200, 없는 컬럼은 400).
+        · 그 문장은 사용자가 아니라 **개발자에게 하는 말**이다. 총무 화면에 뜨면
+          무슨 말인지 모른다. UserFacingError의 기준(막힌 이유 + 할 수 있는 일)에
+          맞지 않는다 — 사용자가 마이그레이션을 적용할 수는 없다.
+      스키마가 없는 환경은 toUserMessage의 42703/일반 갈래가 덮는다.
+    */
+    if (error) throw error;
 
     const apply = (s: Settlement): Settlement => ({
       ...s,
@@ -301,10 +304,10 @@ export const useSettlementStore = create<State>((set, get) => ({
     const share = target.shares.find((r) => r.id === shareId);
     if (!share) return;
     // 이미 확인된 입금을 되돌리면 걷은 금액과 장부가 어긋난다
-    if (share.paid) throw new Error('이미 입금 확인된 사람은 제외할 수 없어요');
+    if (share.paid) throw new UserFacingError('이미 입금 확인된 사람은 제외할 수 없어요');
 
     const remaining = target.shares.filter((r) => r.id !== shareId);
-    if (remaining.length === 0) throw new Error('마지막 한 명은 제외할 수 없어요');
+    if (remaining.length === 0) throw new UserFacingError('마지막 한 명은 제외할 수 없어요');
 
     const { perPerson, surplus } = splitAmount(target.totalAmount, remaining.length);
 

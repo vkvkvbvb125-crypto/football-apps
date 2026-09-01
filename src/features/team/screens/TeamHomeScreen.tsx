@@ -51,6 +51,7 @@ import type { PlaceResult } from '../../attendance/services/placeService';
 import { font, radius, shadow, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import { clearTeamLogo, pickSquareImage, uploadTeamLogo } from '../../settings/services/avatarService';
+import { toUserMessage } from '../../../lib/dbError';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
@@ -274,7 +275,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
       await uploadTeamLogo(activeTeam.team.id, asset.uri);
       await loadMemberships(); // teams 행이 바뀌었으니 활성 팀 정보를 다시 읽는다
     } catch (err) {
-      alertMessage('저장 실패', err instanceof Error ? err.message : '로고를 올리지 못했어요');
+      alertMessage('저장 실패', toUserMessage(err, {}, 'uploadTeamLogo'));
     } finally {
       setLogoUploading(false);
     }

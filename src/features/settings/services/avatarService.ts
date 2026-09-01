@@ -4,11 +4,12 @@
 // 남의 사진을 덮어쓰지 못하게 막고 있어서, 이 규칙을 어기면 업로드 자체가 거부된다.
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../../lib/supabase';
+import { UserFacingError } from '../../../lib/dbError';
 
 /** 갤러리에서 정사각으로 잘라 고른다. 취소하면 null */
 export async function pickSquareImage() {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) throw new Error('사진 접근을 허용해야 바꿀 수 있어요');
+  if (!permission.granted) throw new UserFacingError('사진 접근을 허용해야 바꿀 수 있어요');
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],

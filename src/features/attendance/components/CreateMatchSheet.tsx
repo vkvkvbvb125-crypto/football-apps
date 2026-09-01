@@ -149,12 +149,13 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        {/* 시트 밖을 눌러 닫는 자리 */}
+        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기" />
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <View style={styles.head}>
             <Text style={styles.title}>경기 만들기</Text>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
               <Text style={styles.close}>닫기</Text>
             </Pressable>
           </View>
@@ -163,6 +164,8 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
             {!!defaults && (
               <Pressable
                 onPress={() => setUseDefaults((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: useDefaults }}
                 style={[styles.defaultBox, !useDefaults && styles.defaultBoxOff]}
               >
                 <Ionicons name="repeat" size={15} color={useDefaults ? colors.green : colors.textDim} />
@@ -199,6 +202,11 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                 <Text style={styles.label}>장소</Text>
                 <Pressable
                   onPress={() => setPendingPlace((v) => !v)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: pendingPlace }}
+                  /* 안의 글자에 ✓가 붙어 있어 그대로 읽으면 「…투표 시작 ✓」가 된다.
+                     체크는 state가 말하게 하고 이름만 읽힌다 */
+                  accessibilityLabel="장소 미정으로 투표 시작"
                   style={[styles.pendingToggle, pendingPlace && styles.pendingToggleOn]}
                 >
                   <Text style={[styles.pendingToggleText, pendingPlace && { color: colors.gold }]}>
@@ -218,10 +226,20 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                 <View style={{ gap: 10 }}>
                   {venues.length > 0 && (
                     <View style={styles.tabs}>
-                      <Pressable onPress={() => setMode('partner')} style={[styles.tab, mode === 'partner' && styles.tabOn]}>
+                      <Pressable
+                        onPress={() => setMode('partner')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: mode === 'partner' }}
+                        style={[styles.tab, mode === 'partner' && styles.tabOn]}
+                      >
                         <Text style={[styles.tabText, mode === 'partner' && { color: colors.green }]}>제휴 구장</Text>
                       </Pressable>
-                      <Pressable onPress={() => setMode('search')} style={[styles.tab, mode === 'search' && styles.tabOn]}>
+                      <Pressable
+                        onPress={() => setMode('search')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: mode === 'search' }}
+                        style={[styles.tab, mode === 'search' && styles.tabOn]}
+                      >
                         <Text style={[styles.tabText, mode === 'search' && { color: colors.green }]}>지도 검색</Text>
                       </Pressable>
                     </View>
@@ -241,6 +259,8 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                                 setVenueId(v.id);
                                 setSlotIndex(null);
                               }}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected: on }}
                               style={[styles.venueCard, on && styles.venueCardOn]}
                             >
                               <View style={styles.venueHead}>
@@ -272,6 +292,8 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                                     <Pressable
                                       key={s.timeRange}
                                       disabled={!s.available}
+                                      accessibilityRole="radio"
+                                      accessibilityState={{ selected: picked, disabled: !s.available }}
                                       onPress={() => {
                                         setVenueId(v.id);
                                         setSlotIndex(i);
@@ -322,6 +344,8 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                   <Pressable
                     key={d.label}
                     onPress={() => setDeadlineIdx(i)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: deadlineIdx === i }}
                     style={[styles.preset, deadlineIdx === i && styles.presetOn]}
                   >
                     <Text style={[styles.presetText, deadlineIdx === i && { color: colors.green }]}>{d.label}</Text>
@@ -330,7 +354,14 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
               </View>
             </View>
 
-            <Pressable onPress={() => setRepeat((v) => !v)} style={[styles.repeatRow, repeat && styles.repeatRowOn]}>
+            <Pressable
+              onPress={() => setRepeat((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: repeat }}
+              /* 안에 ✓ 글자와 설명 두 줄이 있다. 이름만 읽히게 한다 */
+              accessibilityLabel="다음 3개월치 한 번에 생성"
+              style={[styles.repeatRow, repeat && styles.repeatRowOn]}
+            >
               <View style={[styles.repeatCheck, repeat ? styles.checkOn : styles.checkOff]}>
                 <Text style={[styles.checkMark, { fontSize: 11 }, !repeat && { color: 'transparent' }]}>✓</Text>
               </View>
@@ -344,7 +375,13 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
             </Pressable>
           </ScrollView>
 
-          <Pressable disabled={!canSubmit} onPress={submit} style={[styles.cta, !canSubmit && { opacity: 0.4 }]}>
+          <Pressable
+            disabled={!canSubmit}
+            onPress={submit}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canSubmit }}
+            style={[styles.cta, !canSubmit && { opacity: 0.4 }]}
+          >
             {/* 못 누르는 이유를 버튼이 직접 말한다 */}
             <Text style={styles.ctaText}>
               {submitting

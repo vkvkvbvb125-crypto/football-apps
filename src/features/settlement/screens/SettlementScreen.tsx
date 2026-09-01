@@ -391,6 +391,8 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
             <Pressable
               key={t.key}
               onPress={() => setOuterTab(t.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
               style={({ pressed }) => [styles.segmentItem, on && styles.segmentItemOn, pressed && styles.pressed]}
             >
               <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{t.label}</Text>
@@ -419,6 +421,8 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
                 <Pressable
                   key={t.key}
                   onPress={() => setTab(t.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
                   style={({ pressed }) => [styles.tabChip, on && styles.tabChipOn, pressed && styles.pressed]}
                 >
                   <Text style={[styles.tabChipText, on && styles.tabChipTextOn]}>
@@ -697,7 +701,13 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
               value={accountDraft.accountHolder}
               onChangeText={(t) => setAccountDraft((p) => ({ ...p, accountHolder: t }))}
             />
-            <Pressable onPress={() => setCreateSheetMatchId(null)} style={styles.accountModalClose}>
+            <Pressable
+              onPress={() => setCreateSheetMatchId(null)}
+              accessibilityRole="button"
+              /* 안의 글자가 안내문이라 그대로 읽으면 「무엇을 누르는지」가 안 나온다 */
+              accessibilityLabel="닫기"
+              style={styles.accountModalClose}
+            >
               <Text style={styles.accountModalCloseText}>입력 완료 후 다시 "정산 만들기"를 눌러주세요</Text>
             </Pressable>
           </View>
@@ -756,7 +766,7 @@ function AccountManageTab({
             <Text style={styles.accountManageHolder}>{account.accountHolder}</Text>
           </View>
           {isAdmin && (
-            <Pressable onPress={() => setEditing(true)} hitSlop={8}>
+            <Pressable onPress={() => setEditing(true)} hitSlop={8} accessibilityRole="button" accessibilityLabel="계좌 변경">
               <Text style={styles.accountEditLink}>변경</Text>
             </Pressable>
           )}
@@ -783,6 +793,7 @@ function AccountManageTab({
             {!!account && (
               <Pressable
                 onPress={() => setEditing(false)}
+                accessibilityRole="button"
                 style={({ pressed }) => [styles.accountCancelBtn, pressed && styles.pressed]}
               >
                 <Text style={styles.accountCancelText}>취소</Text>
@@ -791,6 +802,8 @@ function AccountManageTab({
             <Pressable
               onPress={handleSave}
               disabled={!isComplete || saving}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !isComplete || saving }}
               style={({ pressed }) => [
                 styles.accountSaveBtn,
                 (!isComplete || saving) && { opacity: 0.5 },
@@ -884,7 +897,8 @@ function SettlementDetailModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        {/* 시트 밖을 눌러 닫는 자리 */}
+        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기" />
         <View style={[styles.sheet, styles.detailSheet]}>
           <View style={styles.handle} />
           <View style={styles.detailHead}>
@@ -1066,7 +1080,7 @@ function SettlementDetailModal({
             )}
 
             {isCurrent && isAdmin && selectedIds.length > 0 && (
-              <Pressable onPress={onConfirmSelected} style={({ pressed }) => [styles.bulkBtn, pressed && styles.pressed]}>
+              <Pressable onPress={onConfirmSelected} accessibilityRole="button" style={({ pressed }) => [styles.bulkBtn, pressed && styles.pressed]}>
                 <Text style={styles.bulkText}>{selectedIds.length}명 입금 확인</Text>
               </Pressable>
             )}
@@ -1085,6 +1099,8 @@ function SettlementDetailModal({
             {isCurrent && isAdmin && !allPaid && unpaidShares.length > 0 && (
               <Pressable
                 onPress={onRemindUnpaid}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: reminded }}
                 style={({ pressed }) => [styles.remindBtn, reminded && styles.remindBtnDone, pressed && styles.pressed]}
               >
                 <Text style={[styles.remindText, reminded && { color: colors.green }]}>

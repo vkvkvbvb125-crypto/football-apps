@@ -334,7 +334,8 @@ export function RosterSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        {/* 시트 밖을 눌러 닫는 자리. 눈에 안 보여도 누르면 닫히므로 버튼으로 알린다 */}
+        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기" />
         <Animated.View
           style={[
             styles.sheet,
@@ -355,6 +356,7 @@ export function RosterSheet({
             <Pressable
               onPress={() => collapsedH != null && snapTo(currentH.current < (collapsedH + expandedH) / 2)}
               hitSlop={12}
+              accessibilityRole="button"
               accessibilityLabel="명단 시트 크기 바꾸기"
             >
               <View style={styles.handle} />
@@ -373,7 +375,7 @@ export function RosterSheet({
                 */}
                 <Text style={styles.subtitle}>{matchLabel}</Text>
               </View>
-              <Pressable onPress={onClose} hitSlop={8}>
+              <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
                 <Text style={styles.close}>닫기</Text>
               </Pressable>
             </View>
@@ -383,7 +385,13 @@ export function RosterSheet({
             {tabs.map((t) => {
               const on = tab === t.key;
               return (
-                <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, on && styles.tabOn]}>
+                <Pressable
+                  key={t.key}
+                  onPress={() => setTab(t.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  style={[styles.tab, on && styles.tabOn]}
+                >
                   <Text style={[styles.tabText, on && styles.tabTextOn]}>{t.label}</Text>
                 </Pressable>
               );
@@ -434,6 +442,9 @@ export function RosterSheet({
                     {showPoke && (
                       <Pressable
                         onPress={() => handlePoke(m)}
+                        accessibilityRole="button"
+                        /* 이미 보냈으면 state로 알린다 — 문구에 박으면 TalkBack이 또 붙여 두 번 읽힌다 */
+                        accessibilityState={{ disabled: done }}
                         style={[styles.poke, done && styles.pokeDone]}
                         hitSlop={4}
                       >
@@ -460,7 +471,12 @@ export function RosterSheet({
               </Text>
             </View>
             {isAdmin && counts.pending > 0 && (
-              <Pressable onPress={handlePokeAll} style={[styles.pokeAll, pokedAll && styles.pokeAllDone]}>
+              <Pressable
+                onPress={handlePokeAll}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: pokedAll }}
+                style={[styles.pokeAll, pokedAll && styles.pokeAllDone]}
+              >
                 <Text style={[styles.pokeAllText, pokedAll && { color: colors.green }]}>
                   {pokedAll ? '알림을 보냈어요' : `미투표 ${counts.pending}명 독촉`}
                 </Text>
@@ -506,6 +522,10 @@ export function RosterSheet({
                           key={k}
                           onPress={() => setChoice(k)}
                           disabled={saving}
+                          /* 셋 중 하나를 고르는 자리라 button이 아니라 radio다 —
+                             스크린리더가 「1/3」처럼 몇 개 중 몇 번째인지 읽어준다 */
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: on, disabled: saving }}
                           style={[styles.choice, on && styles.choiceOn]}
                         >
                           <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{LABEL[k]}</Text>
@@ -517,12 +537,20 @@ export function RosterSheet({
                   {!!voteError && <Text style={styles.voteError}>{voteError}</Text>}
 
                   <View style={styles.confirmRow}>
-                    <Pressable onPress={() => setPicking(false)} disabled={saving} style={styles.cancel}>
+                    <Pressable
+                      onPress={() => setPicking(false)}
+                      disabled={saving}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: saving }}
+                      style={styles.cancel}
+                    >
                       <Text style={styles.cancelText}>취소</Text>
                     </Pressable>
                     <Pressable
                       onPress={submit}
                       disabled={!choice || saving}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: !choice || saving }}
                       style={[styles.confirm, (!choice || saving) && styles.confirmOff]}
                     >
                       <Text style={[styles.confirmText, (!choice || saving) && styles.confirmTextOff]}>
@@ -539,6 +567,8 @@ export function RosterSheet({
                       setPicking(true);
                     }}
                     disabled={isLocked}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: isLocked }}
                     style={[styles.change, isLocked && styles.changeOff]}
                   >
                     <Text style={[styles.changeText, isLocked && styles.changeTextOff]}>

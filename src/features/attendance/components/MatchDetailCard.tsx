@@ -167,7 +167,14 @@ export function MatchDetailCard(p: Props) {
             부모가 넘길지 말지로 정한다 — 좌표가 있는지는 부모가 안다.
           */}
           {p.onOpenPlace ? (
-            <Pressable onPress={p.onOpenPlace} hitSlop={4} style={styles.placeRow}>
+            <Pressable
+              onPress={p.onOpenPlace}
+              hitSlop={4}
+              accessibilityRole="button"
+              /* 안의 글자가 구장 이름뿐이라 그것만 읽으면 「눌러서 뭘 하는지」를 모른다 */
+              accessibilityLabel={`${p.placeLabel} 지도 보기`}
+              style={styles.placeRow}
+            >
               <Ionicons name="location-outline" size={12} color={colors.green} />
               <Text style={[styles.place, styles.placeLink]} numberOfLines={1}>
                 {p.placeLabel}
@@ -195,6 +202,8 @@ export function MatchDetailCard(p: Props) {
             ref={menuRef}
             onPress={() => menuRef.current?.measureInWindow((_x, y, _w, h) => p.onOpenMenu?.(y + h))}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="더보기"
           >
             <Ionicons name="ellipsis-vertical" size={18} color={colors.textDim} />
           </Pressable>
@@ -207,7 +216,7 @@ export function MatchDetailCard(p: Props) {
             장소 미정으로 투표 중이에요. 마감 후 예상 인원 기준으로 구장을 추천해드려요.
           </Text>
           {p.isAdmin && (
-            <Pressable onPress={p.onPickVenue} hitSlop={6}>
+            <Pressable onPress={p.onPickVenue} hitSlop={6} accessibilityRole="button">
               <Text style={styles.pendingCta}>구장 정하기 ›</Text>
             </Pressable>
           )}

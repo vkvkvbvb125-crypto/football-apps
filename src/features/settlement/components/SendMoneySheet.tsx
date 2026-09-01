@@ -114,7 +114,8 @@ export function SendMoneySheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        {/* 시트 밖을 눌러 닫는 자리 */}
+        <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기" />
         <View style={styles.sheet}>
           <View style={styles.handle} />
 
@@ -125,7 +126,7 @@ export function SendMoneySheet({
               <Text style={styles.title}>어떻게 보낼까요?</Text>
               <Text style={styles.subtitle}>계좌·금액이 미리 입력된 송금 화면이 열려요</Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
               <Text style={styles.close}>닫기</Text>
             </Pressable>
           </View>
@@ -149,6 +150,11 @@ export function SendMoneySheet({
                 <Pressable
                   key={a.id}
                   onPress={() => setPick(a.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  /* 미설치는 흐리게만 보인다 — 눌리기는 하므로(계좌 복사로 떨어진다)
+                     disabled로 알리면 안 된다. 그건 「누를 수 없다」는 거짓말이 된다 */
+                  accessibilityLabel={has ? a.name : `${a.name} (설치 안 됨)`}
                   style={[styles.appRow, on && styles.appRowOn, !has && styles.appRowOff]}
                 >
                   <View style={[styles.appIcon, { backgroundColor: a.bg }, !has && { opacity: 0.45 }]}>
@@ -173,14 +179,22 @@ export function SendMoneySheet({
             })}
           </View>
 
-          <Pressable onPress={() => setRemember((v) => !v)} style={styles.rememberRow} hitSlop={6}>
+          <Pressable
+            onPress={() => setRemember((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: remember }}
+            /* 안에 ✓ 글자가 있어 그대로 읽으면 「✓ 다음부터…」가 된다 */
+            accessibilityLabel="다음부터 이 앱으로 바로 열기"
+            style={styles.rememberRow}
+            hitSlop={6}
+          >
             <View style={[styles.rememberBox, remember ? styles.checkOn : styles.checkOff]}>
               <Text style={[styles.checkMark, { fontSize: 10 }, !remember && { color: 'transparent' }]}>✓</Text>
             </View>
             <Text style={styles.rememberText}>다음부터 이 앱으로 바로 열기</Text>
           </Pressable>
 
-          <Pressable onPress={confirm} style={styles.cta}>
+          <Pressable onPress={confirm} accessibilityRole="button" style={styles.cta}>
             {/* Reference의 "10,000원 정산하기" — 금액을 버튼에 박아야 얼마를 보내는지 마지막까지 보인다 */}
             <Text style={styles.ctaText}>
               {pickedInstalled ? `${amount.toLocaleString()}원 보내기 · ${picked.name}` : '계좌 복사하기'}

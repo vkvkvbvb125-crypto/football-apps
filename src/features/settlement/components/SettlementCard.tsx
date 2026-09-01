@@ -126,6 +126,7 @@ export function SettlementCard({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
       style={({ pressed }) => [styles.sCard, pending && styles.sCardGhost, pressed && styles.pressed]}
     >
       {/*
@@ -292,13 +293,15 @@ export function SettlementCard({
         <Pressable
           disabled={!onShare}
           onPress={onShare ? stop(onShare) : undefined}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !onShare }}
           style={[styles.sIconBtn, !onShare && styles.sIconBtnOff]}
         >
           <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.textStrong} />
           <Text style={styles.sIconLabel}>카톡 공유</Text>
         </Pressable>
 
-        <Pressable onPress={stop(onPress)} style={styles.sIconBtn}>
+        <Pressable onPress={stop(onPress)} accessibilityRole="button" style={styles.sIconBtn}>
           <Ionicons name="list-outline" size={22} color={colors.textStrong} />
           <Text style={styles.sIconLabel}>상세</Text>
         </Pressable>

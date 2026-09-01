@@ -91,6 +91,7 @@ export function MentionInput({
             <Pressable
               key={s.id}
               onPress={() => pick(s)}
+              accessibilityRole="button"
               style={({ pressed }) => [styles.item, pressed && { opacity: 0.85 }]}
             >
               <Text style={[styles.itemName, s.id === EVERYONE && styles.everyoneName]}>@{s.name}</Text>

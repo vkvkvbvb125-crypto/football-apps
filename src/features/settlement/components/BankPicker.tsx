@@ -136,7 +136,11 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
                   style={styles.list}
                   keyboardShouldPersistTaps="handled"
                   renderItem={({ item }) => (
-                    <Pressable style={styles.bankRow} onPress={() => handleSelect(item.name)}>
+                    <Pressable
+                      style={styles.bankRow}
+                      accessibilityRole="button"
+                      onPress={() => handleSelect(item.name)}
+                    >
                       <View style={[styles.badge, { backgroundColor: item.color }]}>
                         <Text style={styles.badgeText}>{item.name.slice(0, 1)}</Text>
                       </View>

@@ -226,7 +226,11 @@ function SectionCard({
   if (!onPress || empty) return <View style={cardStyle}>{body}</View>;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [cardStyle, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [cardStyle, pressed && styles.pressed]}
+    >
       {body}
     </Pressable>
   );

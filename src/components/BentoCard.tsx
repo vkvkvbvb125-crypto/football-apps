@@ -110,7 +110,11 @@ export function BentoCard({ children, tone = 'plain', half, onPress, style }: Be
   if (!onPress) return <View style={cardStyle}>{body}</View>;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [cardStyle, pressed && styles.pressed]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [cardStyle, pressed && styles.pressed]}
+    >
       {body}
     </Pressable>
   );

@@ -252,7 +252,11 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
               style={styles.list}
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
-                <Pressable style={styles.placeRow} onPress={() => handleSelect(item)}>
+                <Pressable
+                  style={styles.placeRow}
+                  accessibilityRole="button"
+                  onPress={() => handleSelect(item)}
+                >
                   <View style={styles.placeRowTop}>
                     <Text style={styles.placeName}>{item.name}</Text>
                     {!!item.category && (

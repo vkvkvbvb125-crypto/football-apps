@@ -100,6 +100,7 @@ export function AnnouncementDetailModal({
           <View style={[styles.menuPopover, { top: menuAnchorY + 12 }]}>
             <Pressable
               style={styles.menuOption}
+              accessibilityRole="menuitem"
               onPress={() => {
                 setMenuVisible(false);
                 onEdit(announcement);
@@ -111,6 +112,7 @@ export function AnnouncementDetailModal({
             <View style={styles.menuDivider} />
             <Pressable
               style={styles.menuOption}
+              accessibilityRole="menuitem"
               onPress={() => {
                 setMenuVisible(false);
                 onDelete(announcement);

@@ -193,7 +193,14 @@ export function PostCard({
       {!!post.imageUrl && <Image source={{ uri: post.imageUrl }} style={styles.postImage} />}
 
       <View style={styles.postFoot}>
-        <Pressable onPress={() => onToggleLike(post)} style={styles.footItem} hitSlop={6}>
+        <Pressable
+          onPress={() => onToggleLike(post)}
+          accessibilityRole="button"
+          accessibilityLabel={`좋아요 ${post.likeCount}개`}
+          accessibilityState={{ selected: post.likedByMe }}
+          style={styles.footItem}
+          hitSlop={6}
+        >
           <Ionicons
             name={post.likedByMe ? 'heart' : 'heart-outline'}
             size={15}
@@ -201,7 +208,14 @@ export function PostCard({
           />
           <Text style={styles.footText}>{post.likeCount}</Text>
         </Pressable>
-        <Pressable onPress={() => setShowComments((v) => !v)} style={styles.footItem} hitSlop={6}>
+        <Pressable
+          onPress={() => setShowComments((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={`댓글 ${post.commentCount + commentDelta}개`}
+          accessibilityState={{ expanded: showComments }}
+          style={styles.footItem}
+          hitSlop={6}
+        >
           <Ionicons
             name={showComments ? 'chatbubble' : 'chatbubble-outline'}
             size={14}
@@ -233,6 +247,7 @@ export function PostCard({
             {canEdit && (
               <Pressable
                 style={styles.menuItem}
+                accessibilityRole="menuitem"
                 onPress={() => {
                   setMenuOpen(false);
                   setEditDraft(post.body);
@@ -246,6 +261,7 @@ export function PostCard({
             {canPin && (
               <Pressable
                 style={styles.menuItem}
+                accessibilityRole="menuitem"
                 onPress={() => {
                   setMenuOpen(false);
                   onTogglePin(post);
@@ -258,6 +274,7 @@ export function PostCard({
             {canDelete && (
               <Pressable
                 style={styles.menuItem}
+                accessibilityRole="menuitem"
                 onPress={() => {
                   setMenuOpen(false);
                   onDelete(post);

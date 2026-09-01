@@ -39,7 +39,12 @@ export function AnnouncementListModal({
         ) : (
           <ScrollView contentContainerStyle={styles.list}>
             {announcements.map((a) => (
-              <Pressable key={a.id} style={styles.item} onPress={() => onSelect(a)}>
+              <Pressable
+                key={a.id}
+                style={styles.item}
+                accessibilityRole="button"
+                onPress={() => onSelect(a)}
+              >
                 <View style={styles.itemHeader}>
                   {a.is_pinned && <Ionicons name="pin" size={12} color={colors.green} />}
                   <Text style={styles.itemTitle} numberOfLines={1}>

@@ -102,6 +102,7 @@ export function TeamNoticesTab({
               <Pressable
                 key={`pinned-${a.id}`}
                 onPress={() => onSelectAnnouncement(a)}
+                accessibilityRole="button"
                 style={({ pressed }) => [styles.pinnedCard, pressed && styles.pressed]}
               >
                 <View style={styles.pinnedHead}>
@@ -124,6 +125,7 @@ export function TeamNoticesTab({
               <Pressable
                 key={a.id}
                 onPress={() => onSelectAnnouncement(a)}
+                accessibilityRole="button"
                 style={({ pressed }) => [styles.noticeRow, pressed && styles.pressed]}
               >
                 {a.is_pinned && (

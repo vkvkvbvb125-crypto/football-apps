@@ -63,7 +63,14 @@ export function CalendarGrid({ year, month, selectedDate, markedDates, onSelectD
             const hasMatch = markedDates.has(dateKey(date));
 
             return (
-              <Pressable key={di} style={styles.cell} onPress={() => onSelectDate(date)}>
+              <Pressable
+                key={di}
+                style={styles.cell}
+                accessibilityRole="button"
+                accessibilityLabel={`${date.getMonth() + 1}월 ${date.getDate()}일${hasMatch ? ', 경기 있음' : ''}`}
+                accessibilityState={{ selected: !!isSelected }}
+                onPress={() => onSelectDate(date)}
+              >
                 <View
                   style={[
                     styles.dayCircle,

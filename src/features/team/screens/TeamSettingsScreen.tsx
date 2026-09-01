@@ -399,7 +399,13 @@ export function TeamSettingsScreen({ navigation }: any) {
             {WEEKDAYS.map((w, i) => {
               const on = !!weekdays[i];
               return (
-                <Pressable key={w} onPress={() => setWeekdays((p) => ({ ...p, [i]: !p[i] }))} style={[styles.chip, on && styles.chipOn]}>
+                <Pressable
+                  key={w}
+                  onPress={() => setWeekdays((p) => ({ ...p, [i]: !p[i] }))}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  style={[styles.chip, on && styles.chipOn]}
+                >
                   <Text
                     style={[
                       styles.chipText,
@@ -418,7 +424,13 @@ export function TeamSettingsScreen({ navigation }: any) {
           <Text style={styles.label}>시간</Text>
           <View style={styles.row}>
             {TIMES.map((t) => (
-              <Pressable key={t} onPress={() => setTime(t)} style={[styles.chip, time === t && styles.chipSoft]}>
+              <Pressable
+                key={t}
+                onPress={() => setTime(t)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: time === t }}
+                style={[styles.chip, time === t && styles.chipSoft]}
+              >
                 <Text style={[styles.chipText, time === t && { color: colors.green }]}>{t}</Text>
               </Pressable>
             ))}
@@ -438,7 +450,13 @@ export function TeamSettingsScreen({ navigation }: any) {
 
           <View style={styles.segment}>
             {(['per_match', 'monthly'] as const).map((m) => (
-              <Pressable key={m} onPress={() => setFeeMode(m)} style={[styles.segItem, feeMode === m && styles.segItemOn]}>
+              <Pressable
+                key={m}
+                onPress={() => setFeeMode(m)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: feeMode === m }}
+                style={[styles.segItem, feeMode === m && styles.segItemOn]}
+              >
                 <Text style={[styles.segText, feeMode === m && { color: colors.green }]}>{m === 'per_match' ? '경기별' : '월 회비'}</Text>
               </Pressable>
             ))}
@@ -481,7 +499,14 @@ export function TeamSettingsScreen({ navigation }: any) {
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 5 }}>
                   {([3, 2, 1] as const).map((v) => (
-                    <Pressable key={v} onPress={() => setLevel(m, v)} style={[styles.lvBtn, m.skillLevel === v && styles.lvBtnOn]}>
+                    <Pressable
+                      key={v}
+                      onPress={() => setLevel(m, v)}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`${m.name} 실력 ${SKILL_LABEL[v]}`}
+                      accessibilityState={{ selected: m.skillLevel === v }}
+                      style={[styles.lvBtn, m.skillLevel === v && styles.lvBtnOn]}
+                    >
                       <Text style={[styles.lvBtnText, m.skillLevel === v && { color: colors.bgRoot }]}>{SKILL_LABEL[v]}</Text>
                     </Pressable>
                   ))}
@@ -496,7 +521,12 @@ export function TeamSettingsScreen({ navigation }: any) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>게스트</Text>
 
-          <Pressable onPress={() => setGuestAllowed((v) => !v)} style={styles.toggleRow}>
+          <Pressable
+            onPress={() => setGuestAllowed((v) => !v)}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: guestAllowed }}
+            style={styles.toggleRow}
+          >
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.toggleTitle}>게스트 초대 허용</Text>
               <Text style={styles.toggleSub}>멤버가 외부 인원을 데려올 수 있어요</Text>

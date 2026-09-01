@@ -23,9 +23,14 @@ const BS = String.fromCharCode(92), NL = String.fromCharCode(10);
                 SettlementScreen 9 · SettlementCard 3 · SendMoneySheet 5
   135  묶음 2(아이콘만 32곳) 뒤. 이 커밋의 결과다.
        상한이 33이었는데 실측이 32였다 — 묶음 0에서 RegionPickerModal을 고친 만큼이다.
-  ...  묶음 3(진입·설정 줄) 뒤에 다시 낮춘다
+  116  묶음 3(고르는 것 19곳) 뒤. 이 커밋의 결과다.
+       ProfileDetail 2 · BoardPanel 3 · TeamSettings 5 · TeamStart 2 · SignUp 2 ·
+       PollCard 1 · PlaceSearch 1 · SettlementDetailSettings 2 · SettlementProgress 1
+       ⚠ 붙이기 전에 트리로 쟀다 — RN은 selected를 스스로 넘기지 않는다.
+         화면에서 초록으로 켜진 칩이 트리에는 sel=false로 나온다. ⑵의 disabled와 다르다.
+  ...  묶음 4(나머지) 뒤에 다시 낮춘다
 */
-const MAX_NO_ROLE = 135;
+const MAX_NO_ROLE = 116;
 /*
   아이콘만 있고 label도 없는 것 — role만 붙이면 「버튼」으로만 읽혀 헛되다.
   ⚠ 묶음 2에서 다 없앴다. **이제 상한이 아니라 0이다** — 새로 하나 생기면 그날 잡는다.

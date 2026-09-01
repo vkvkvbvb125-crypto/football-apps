@@ -136,7 +136,12 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
 
         {/* 약관 — 전체 동의가 위, 개별 항목이 아래 */}
         <View style={styles.terms}>
-          <Pressable onPress={toggleAll} style={styles.termAllRow}>
+          <Pressable
+            onPress={toggleAll}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: allAgreed }}
+            style={styles.termAllRow}
+          >
             <CheckBox on={allAgreed} big />
             <Text style={styles.termAllText}>모두 동의합니다</Text>
           </Pressable>
@@ -145,7 +150,13 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
 
           {TERMS.map((t) => (
             <View key={t.key} style={styles.termRow}>
-              <Pressable onPress={() => toggle(t.key)} hitSlop={6} style={styles.termTapArea}>
+              <Pressable
+                onPress={() => toggle(t.key)}
+                hitSlop={6}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: !!agreed[t.key] }}
+                style={styles.termTapArea}
+              >
                 <CheckBox on={!!agreed[t.key]} />
                 <Text style={styles.termText}>
                   <Text style={t.required ? styles.termRequired : styles.termOptional}>

@@ -131,6 +131,8 @@ function Row({
     <Pressable
       disabled={!onPress}
       onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: !!selected }}
       style={({ pressed }) => [styles.row, selected && styles.rowSelected, pressed && !!onPress && { opacity: 0.85 }]}
     >
       <Text style={styles.rowName} numberOfLines={1}>

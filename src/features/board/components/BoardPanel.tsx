@@ -172,11 +172,22 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     <View style={{ gap: 12 }}>
       {/* 분류 칩 — 전체가 기본이다. 글이 몇 개 없을 때 분류부터 고르게 하면 빈 화면만 본다 */}
       <View style={styles.chipRow}>
-        <Pressable onPress={() => setFilter(null)} style={[styles.chip, filter === null && styles.chipOn]}>
+        <Pressable
+          onPress={() => setFilter(null)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: filter === null }}
+          style={[styles.chip, filter === null && styles.chipOn]}
+        >
           <Text style={[styles.chipText, filter === null && styles.chipTextOn]}>전체</Text>
         </Pressable>
         {CATEGORIES.map((c) => (
-          <Pressable key={c} onPress={() => setFilter(c)} style={[styles.chip, filter === c && styles.chipOn]}>
+          <Pressable
+            key={c}
+            onPress={() => setFilter(c)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: filter === c }}
+            style={[styles.chip, filter === c && styles.chipOn]}
+          >
             <Text style={[styles.chipText, filter === c && styles.chipTextOn]}>{CATEGORY_LABEL[c]}</Text>
           </Pressable>
         ))}
@@ -189,6 +200,8 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
               <Pressable
                 key={c}
                 onPress={() => setDraftCategory(c)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: draftCategory === c }}
                 style={[styles.chip, draftCategory === c && styles.chipOn]}
               >
                 <Text style={[styles.chipText, draftCategory === c && styles.chipTextOn]}>{CATEGORY_LABEL[c]}</Text>

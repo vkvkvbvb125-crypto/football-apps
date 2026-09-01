@@ -48,7 +48,12 @@ export function SettlementDetailSettings({ settlement, nameFor, onUpdate, onExem
 
   return (
     <View style={styles.wrap}>
-      <Pressable onPress={() => setOpen((v) => !v)} style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={({ pressed }) => [styles.toggle, pressed && styles.pressed]}
+      >
         <Text style={styles.toggleText}>상세 설정</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
       </Pressable>
@@ -73,6 +78,8 @@ export function SettlementDetailSettings({ settlement, nameFor, onUpdate, onExem
                   <Pressable
                     key={p.label}
                     onPress={() => onUpdate({ dueDate: target })}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
                     style={[styles.presetChip, on && styles.presetChipOn]}
                   >
                     <Text style={[styles.presetChipText, on && styles.presetChipTextOn]}>{p.label}</Text>

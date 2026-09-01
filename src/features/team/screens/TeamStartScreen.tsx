@@ -86,7 +86,12 @@ export function TeamStartScreen() {
           </Text>
         </View>
 
-        <Pressable onPress={() => setPick('create')} style={[styles.card, pick === 'create' && styles.cardOn]}>
+        <Pressable
+          onPress={() => setPick('create')}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: pick === 'create' }}
+          style={[styles.card, pick === 'create' && styles.cardOn]}
+        >
           <View style={styles.cardRow}>
             <View style={[styles.icon, { backgroundColor: 'rgba(34,197,94,0.14)' }]}>
               <Ionicons name="add" size={20} color={colors.green} />
@@ -110,7 +115,12 @@ export function TeamStartScreen() {
           )}
         </Pressable>
 
-        <Pressable onPress={() => setPick('join')} style={[styles.card, pick === 'join' && styles.cardOn]}>
+        <Pressable
+          onPress={() => setPick('join')}
+          accessibilityRole="radio"
+          accessibilityState={{ selected: pick === 'join' }}
+          style={[styles.card, pick === 'join' && styles.cardOn]}
+        >
           <View style={styles.cardRow}>
             <View style={[styles.icon, { backgroundColor: colors.overlay }]}>
               <Ionicons name="arrow-forward" size={20} color={colors.textStrong} />

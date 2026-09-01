@@ -247,6 +247,8 @@ export function ProfileDetailScreen({ navigation }: any) {
                   <Pressable
                     key={f.value}
                     onPress={() => saveProfile({ dominantFoot: on ? null : f.value })}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
                     style={({ pressed }) => [styles.chip, on && styles.chipOn, pressed && styles.pressed]}
                   >
                     <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
@@ -288,6 +290,8 @@ export function ProfileDetailScreen({ navigation }: any) {
                   <Pressable
                     key={p}
                     onPress={() => updateMemberPosition(me.id, on ? null : p)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
                     style={({ pressed }) => [styles.chip, on && styles.chipOn, pressed && styles.pressed]}
                   >
                     <Text style={[styles.chipText, on && styles.chipTextOn]}>

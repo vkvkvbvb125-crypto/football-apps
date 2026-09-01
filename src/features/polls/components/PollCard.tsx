@@ -44,6 +44,8 @@ export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: Poll
             <Pressable
               key={index}
               disabled={deadlinePassed}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isMine }}
               style={({ pressed }) => [styles.option, isMine && styles.optionSelected, pressed && styles.pressedOpacity]}
               onPress={() => onVote(index)}
             >

@@ -210,6 +210,8 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
               {CATEGORIES.map((cat) => (
                 <Pressable
                   key={cat}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: query === cat }}
                   style={[styles.chip, query === cat && styles.chipActive]}
                   onPress={() => setQuery(cat)}
                 >

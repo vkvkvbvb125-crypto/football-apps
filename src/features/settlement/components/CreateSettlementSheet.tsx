@@ -78,7 +78,12 @@ export function CreateSettlementSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={styles.overlayTap} onPress={onClose} />
+        <Pressable
+          style={styles.overlayTap}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        />
         <View style={styles.sheet}>
           {/* Reference 헤더 — 뒤로가기 + 가운데 제목 */}
           <View style={styles.head}>

@@ -74,8 +74,14 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
       </Pressable>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={close}>
-        <Pressable style={styles.overlay} onPress={close}>
-          <Pressable style={styles.card} onPress={() => {}}>
+        <Pressable
+          style={styles.overlay}
+          onPress={close}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        >
+          {/* 스크림의 탭이 카드 안까지 번지는 것만 막는다 — 누르는 것이 아니라 초점도 주지 않는다 */}
+          <Pressable style={styles.card} onPress={() => {}} accessible={false}>
             {manualMode ? (
               <>
                 <View style={styles.titleRow}>

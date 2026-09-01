@@ -720,7 +720,12 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
 
       {/* 수정/삭제 팝오버 */}
       <Modal visible={!!actionMatch} transparent animationType="fade" onRequestClose={() => setActionMatch(null)}>
-        <Pressable style={{ flex: 1 }} onPress={() => setActionMatch(null)}>
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() => setActionMatch(null)}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        >
           <View style={[styles.popover, { top: popoverTop(actionAnchorY) }]}>
             <Pressable
               style={({ pressed }) => [styles.popoverItem, pressed && styles.pressed]}

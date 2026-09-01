@@ -223,7 +223,12 @@ export function PostCard({
       )}
 
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={() => setMenuOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel="메뉴 닫기"
+        >
           <View style={styles.menu}>
             {canEdit && (
               <Pressable

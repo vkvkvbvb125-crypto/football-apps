@@ -28,7 +28,12 @@ export function TermsDocModal({ doc, onClose, onAgree }: Props) {
   return (
     <Modal visible={!!doc} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.docOverlay}>
-        <Pressable style={styles.docBackdrop} onPress={onClose} />
+        <Pressable
+          style={styles.docBackdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        />
         <View style={styles.docCard}>
           <View style={styles.docHead}>
             <Text style={styles.docTitle}>{doc?.title}</Text>

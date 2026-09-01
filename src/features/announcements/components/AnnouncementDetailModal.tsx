@@ -38,8 +38,14 @@ export function AnnouncementDetailModal({
   return (
     <>
       <Modal visible={!!announcement} transparent animationType="slide" onRequestClose={onClose}>
-        <Pressable style={styles.overlay} onPress={onClose}>
-          <Pressable style={styles.card} onPress={() => {}}>
+        <Pressable
+          style={styles.overlay}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        >
+          {/* 스크림의 탭이 카드 안까지 번지는 것만 막는다 — 누르는 것이 아니라 초점도 주지 않는다 */}
+          <Pressable style={styles.card} onPress={() => {}} accessible={false}>
             <View style={styles.headerRow}>
               <View style={styles.headerLeft}>
                 {announcement.is_pinned && <Ionicons name="pin" size={13} color={colors.green} />}
@@ -85,7 +91,12 @@ export function AnnouncementDetailModal({
       </Modal>
 
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
-        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+        <Pressable
+          style={styles.menuOverlay}
+          onPress={() => setMenuVisible(false)}
+          accessibilityRole="button"
+          accessibilityLabel="메뉴 닫기"
+        >
           <View style={[styles.menuPopover, { top: menuAnchorY + 12 }]}>
             <Pressable
               style={styles.menuOption}

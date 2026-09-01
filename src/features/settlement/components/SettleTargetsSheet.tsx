@@ -35,7 +35,12 @@ export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, from
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={styles.overlayTap} onPress={onClose} />
+        <Pressable
+          style={styles.overlayTap}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        />
         <View style={styles.sheet}>
           <View style={styles.head}>
             <Pressable

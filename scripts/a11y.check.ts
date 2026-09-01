@@ -28,9 +28,11 @@ const BS = String.fromCharCode(92), NL = String.fromCharCode(10);
        PollCard 1 · PlaceSearch 1 · SettlementDetailSettings 2 · SettlementProgress 1
        ⚠ 붙이기 전에 트리로 쟀다 — RN은 selected를 스스로 넘기지 않는다.
          화면에서 초록으로 켜진 칩이 트리에는 sel=false로 나온다. ⑵의 disabled와 다르다.
-  ...  묶음 4(나머지) 뒤에 다시 낮춘다
+   97  묶음 4-a(스크림 14곳 + 탭 삼키개 5곳) 뒤. 이 커밋의 결과다.
+       14는 role이 붙어 줄었고, 5는 **셀 대상이 아니라서** 빠졌다 — 성격이 다르다.
+  ...  묶음 4-b(메뉴 항목 5 · 목록 행 11) · 4-c(나머지 버튼) 뒤에 다시 낮춘다
 */
-const MAX_NO_ROLE = 116;
+const MAX_NO_ROLE = 97;
 /*
   아이콘만 있고 label도 없는 것 — role만 붙이면 「버튼」으로만 읽혀 헛되다.
   ⚠ 묶음 2에서 다 없앴다. **이제 상한이 아니라 0이다** — 새로 하나 생기면 그날 잡는다.
@@ -75,8 +77,24 @@ for (const f of files) {
     }
     const role = tag.match(/accessibilityRole="(\w+)"/)?.[1];
     const hasLabel = /accessibilityLabel[=\s]/.test(tag);
-    const hasText = /<Text[\s>]/.test(body);
+    /*
+      ⚠ `<Text`만 보면 **JSX를 변수로 넘긴 자리가 거짓 양성이 된다.**
+      HomeBanner가 카드를 `const card = (…)`로 만들어 `{card}`로 넣는다 —
+      안에 Text가 잔뜩 있는데 여는 태그 안쪽 글자로는 안 보인다.
+      규칙을 넓히자마자 그 하나가 걸렸다. 식 자식도 읽을 것으로 센다.
+    */
+    const hasText = /<Text[\s>]/.test(body) || /\{\s*[A-Za-z_$][\w$.]*\s*\}/.test(body);
     const hasIcon = /<Ionicons[\s>]/.test(body) || /<Image[\s>]/.test(body);
+
+    /*
+      ⚠ **세기 전에 「이것이 셀 대상인가」를 묻는다.**
+      모달의 카드를 Pressable로 감싼 자리가 다섯 있다 — 스크림의 onPress가 안까지
+      번지는 것을 막는 것뿐이고 `onPress={() => {}}`다. 누르는 것이 아니라
+      role을 붙이면 그 자리가 거짓말을 시작한다(「눌러서 여는 무언가」로 읽히는데
+      눌러도 아무 일도 안 난다). accessible={false}로 초점에서 빼고, 여기서도 뺀다.
+      상한에 남겨 두면 「아직 안 붙인 것」과 「붙이면 안 되는 것」이 같은 숫자에 섞인다.
+    */
+    if (/accessible=\{false\}/.test(tag)) { i = src.indexOf('<Pressable', te); continue; }
 
     if (!role) noRole++;
     if (!hasText && hasIcon && !hasLabel) iconNoLabel++;
@@ -118,8 +136,24 @@ for (const f of files) {
         badState.push(`${f.split('/').pop()}:${ln} role=${role}에 state.checked가 없다`);
       if (['radio', 'tab'].includes(role) && !/selected|checked/.test(st))
         badState.push(`${f.split('/').pop()}:${ln} role=${role}에 state.selected가 없다`);
-      if (!hasText && hasIcon && !hasLabel)
-        badState.push(`${f.split('/').pop()}:${ln} 아이콘만인데 label이 없다 — 「버튼」으로만 읽힌다`);
+      /*
+        ⚠ 원래 `!hasText && hasIcon && !hasLabel`이었다 — **아이콘이 있을 때만** 봤다.
+        변이로 스크림의 label을 떼었더니 통과했다. 스크림은 안이 비어 있어서
+        hasIcon이 false라 조건에 아예 안 들어왔다. 읽을 것이 없는 것은 같은데
+        아이콘이 있느냐로 갈린 것이다 — 「아이콘만」이 아니라 **「읽을 것이 없다」**가
+        묻고 싶던 것이었다. 빈 Pressable이 오히려 더 나쁘다(초점은 잡히고 말은 없다).
+      */
+      if (!hasText && !hasLabel)
+        badState.push(`${f.split('/').pop()}:${ln} 읽을 것이 없다 — 「버튼」으로만 읽힌다`);
+      /*
+        ⚠ **여기까지가 이 검사가 닿는 경계다.** 안이 빈 Pressable(자기닫는 스크림 6곳)은
+        잡지만, 카드를 **감싸는** 스크림 8곳은 못 잡는다 — 자식의 Text가 hasText를
+        참으로 만든다. 그 자리는 label을 떼도 조용히 통과한다(변이로 확인했다).
+        감싸는 스크림은 label이 없으면 카드 내용을 다 읽고 「버튼」이라고 하는데,
+        누르면 닫힌다 — 읽은 것과 하는 일이 무관하다. 기계로 가릴 방법을 못 찾았다.
+        「감싼 것과 하는 일이 무관한가」는 사람이 봐야 한다. 못 잡는 것을 잡는다고
+        적어 두면 그게 또 항상 참인 단언이 된다.
+      */
     }
     i = src.indexOf('<Pressable', te);
   }

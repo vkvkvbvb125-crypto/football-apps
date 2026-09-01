@@ -73,7 +73,12 @@ export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable style={styles.overlayTap} onPress={onClose} />
+        <Pressable
+          style={styles.overlayTap}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        />
         <View style={styles.sheet}>
           <View style={styles.head}>
             <View style={styles.headBtn} />

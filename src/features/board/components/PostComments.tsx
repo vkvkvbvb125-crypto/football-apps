@@ -181,7 +181,6 @@ export function PostComments({
           style={(!draft.trim() || sending) && { opacity: 0.4 }}
           accessibilityRole="button"
           accessibilityLabel="댓글 보내기"
-          accessibilityState={{ disabled: !draft.trim() || sending }}
         >
           <Ionicons name="send" size={16} color={colors.green} />
         </Pressable>

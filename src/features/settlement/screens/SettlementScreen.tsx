@@ -803,7 +803,6 @@ function AccountManageTab({
               onPress={handleSave}
               disabled={!isComplete || saving}
               accessibilityRole="button"
-              accessibilityState={{ disabled: !isComplete || saving }}
               style={({ pressed }) => [
                 styles.accountSaveBtn,
                 (!isComplete || saving) && { opacity: 0.5 },
@@ -1100,7 +1099,6 @@ function SettlementDetailModal({
               <Pressable
                 onPress={onRemindUnpaid}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: reminded }}
                 style={({ pressed }) => [styles.remindBtn, reminded && styles.remindBtnDone, pressed && styles.pressed]}
               >
                 <Text style={[styles.remindText, reminded && { color: colors.green }]}>

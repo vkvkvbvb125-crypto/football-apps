@@ -165,7 +165,6 @@ export function ProfileDetailScreen({ navigation }: any) {
               disabled={uploading}
               accessibilityRole="button"
               accessibilityLabel="프로필 사진 변경"
-              accessibilityState={{ disabled: uploading }}
             >
               {me?.avatarUrl ? (
                 <Image source={{ uri: me.avatarUrl }} style={styles.photo} />

@@ -79,18 +79,40 @@ for (const f of files) {
     /*
       붙어 있는 것이 거짓말하지 않는가. **이건 상한이 아니라 0이다** —
       잘못 붙은 role은 없는 것보다 나쁘고, 지금 0이므로 늘어나면 그날 잡는다.
-      ⚠ disabled를 안 알리면 「눌리는 줄 알고 눌렀는데 아무 일도 안 나는」 자리가 된다.
-        화면에서는 흐릿해서 보이지만 스크린리더에는 그 흐림이 없다.
     */
+    const ln = src.slice(0, i).split(NL).length;
+
+    /*
+      ⚠ 여기 원래 「disabled 프롭이 있는데 state.disabled가 없다」가 있었다. **항상 참이라 지웠다.**
+      RN의 Pressable이 스스로 넘긴다 — Pressable.js:236
+
+          _accessibilityState = disabled != null ? {..._accessibilityState, disabled} : ...
+
+      프롭이 있으면 RN이 채우고, 심지어 손으로 적은 state.disabled를 **덮어쓴다**.
+      기기에서도 확인했다 — ProfileDetailScreen의 「저장」은 disabled= 하나뿐이고
+      role도 state도 없는데 트리에 enabled=false로 나온다. 통과가 아무 뜻이 없던 줄이다.
+
+      그래서 반대로 잡는다: **state에 disabled가 있으면 안 된다.**
+        · 프롭이 있으면  → 무의미하다 (RN이 덮는다)
+        · 프롭이 없으면  → 거짓말이다. 「사용 안 함」으로 읽히는데 눌리면 동작한다.
+      후자를 셋 잡았다 — 독촉 버튼들(RosterSheet 2 · SettlementScreen 1)이
+      보낸 뒤 state.disabled=true였는데 핸들러가 막지 않아 다시 보내졌다.
+      못 누르게 하는 건 찌르기 동작을 바꾸는 일이라 여기서 하지 않았다.
+      「전송됨」이라는 글자가 이미 안에 있어서 스크린리더는 그걸 읽는다.
+
+      role이 없는 것도 본다 — 거짓말은 role과 상관없이 state가 한다.
+    */
+    if (/accessibilityState=\{\{[^}]*disabled/.test(tag))
+      badState.push(
+        `${f.split('/').pop()}:${ln} state에 disabled가 있다 — 프롭이 있으면 무의미하고 없으면 거짓말이다`,
+      );
+
     if (role) {
       const st = tag.match(/accessibilityState=\{\{([^}]*)\}\}/)?.[1] ?? '';
-      const ln = src.slice(0, i).split(NL).length;
       if (['switch', 'checkbox'].includes(role) && !/checked/.test(st))
         badState.push(`${f.split('/').pop()}:${ln} role=${role}에 state.checked가 없다`);
       if (['radio', 'tab'].includes(role) && !/selected|checked/.test(st))
         badState.push(`${f.split('/').pop()}:${ln} role=${role}에 state.selected가 없다`);
-      if (/\bdisabled=/.test(tag) && !/disabled/.test(st))
-        badState.push(`${f.split('/').pop()}:${ln} disabled인데 state.disabled가 없다`);
       if (!hasText && hasIcon && !hasLabel)
         badState.push(`${f.split('/').pop()}:${ln} 아이콘만인데 label이 없다 — 「버튼」으로만 읽힌다`);
     }

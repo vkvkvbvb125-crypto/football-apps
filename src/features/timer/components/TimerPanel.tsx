@@ -357,7 +357,6 @@ export function TimerPanel({
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="쿼터 1분 줄이기"
-                accessibilityState={{ disabled: quarterMinutes <= MIN_QUARTER }}
               >
                 <Ionicons name="remove" size={14} color={colors.green} />
               </Pressable>
@@ -375,7 +374,6 @@ export function TimerPanel({
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel="쿼터 1분 늘리기"
-                accessibilityState={{ disabled: quarterMinutes >= MAX_QUARTER }}
               >
                 <Ionicons name="add" size={14} color={colors.green} />
               </Pressable>

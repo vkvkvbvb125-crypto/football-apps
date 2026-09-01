@@ -443,8 +443,6 @@ export function RosterSheet({
                       <Pressable
                         onPress={() => handlePoke(m)}
                         accessibilityRole="button"
-                        /* 이미 보냈으면 state로 알린다 — 문구에 박으면 TalkBack이 또 붙여 두 번 읽힌다 */
-                        accessibilityState={{ disabled: done }}
                         style={[styles.poke, done && styles.pokeDone]}
                         hitSlop={4}
                       >
@@ -474,7 +472,6 @@ export function RosterSheet({
               <Pressable
                 onPress={handlePokeAll}
                 accessibilityRole="button"
-                accessibilityState={{ disabled: pokedAll }}
                 style={[styles.pokeAll, pokedAll && styles.pokeAllDone]}
               >
                 <Text style={[styles.pokeAllText, pokedAll && { color: colors.green }]}>
@@ -525,7 +522,7 @@ export function RosterSheet({
                           /* 셋 중 하나를 고르는 자리라 button이 아니라 radio다 —
                              스크린리더가 「1/3」처럼 몇 개 중 몇 번째인지 읽어준다 */
                           accessibilityRole="radio"
-                          accessibilityState={{ selected: on, disabled: saving }}
+                          accessibilityState={{ selected: on }}
                           style={[styles.choice, on && styles.choiceOn]}
                         >
                           <Text style={[styles.choiceText, on && styles.choiceTextOn]}>{LABEL[k]}</Text>
@@ -541,7 +538,6 @@ export function RosterSheet({
                       onPress={() => setPicking(false)}
                       disabled={saving}
                       accessibilityRole="button"
-                      accessibilityState={{ disabled: saving }}
                       style={styles.cancel}
                     >
                       <Text style={styles.cancelText}>취소</Text>
@@ -550,7 +546,6 @@ export function RosterSheet({
                       onPress={submit}
                       disabled={!choice || saving}
                       accessibilityRole="button"
-                      accessibilityState={{ disabled: !choice || saving }}
                       style={[styles.confirm, (!choice || saving) && styles.confirmOff]}
                     >
                       <Text style={[styles.confirmText, (!choice || saving) && styles.confirmTextOff]}>
@@ -568,7 +563,6 @@ export function RosterSheet({
                     }}
                     disabled={isLocked}
                     accessibilityRole="button"
-                    accessibilityState={{ disabled: isLocked }}
                     style={[styles.change, isLocked && styles.changeOff]}
                   >
                     <Text style={[styles.changeText, isLocked && styles.changeTextOff]}>

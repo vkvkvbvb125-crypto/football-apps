@@ -107,7 +107,7 @@ export function MatchDetailCard(p: Props) {
         disabled={p.isLocked}
         onPress={() => p.onVote(status)}
         accessibilityRole="button"
-        accessibilityState={{ selected: on, disabled: p.isLocked }}
+        accessibilityState={{ selected: on }}
         style={[
           styles.pill,
           on && status === 'attend' && styles.pillAttend,

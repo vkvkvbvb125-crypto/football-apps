@@ -104,8 +104,28 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
   · 사용자가 **기기 설정으로 상태 읽기를 끌 수 있다.** 문구에 박으면 못 끈다.
   · 번역·문구 수정이 상태 로직과 얽힌다.
 
-쓸 키: `selected`(탭·칩·라디오) · `checked`(스위치·체크박스) ·
-`disabled`(눌리지 않음) · `expanded`(펼침).
+쓸 키: `selected`(탭·칩·라디오) · `checked`(스위치·체크박스) · `expanded`(펼침).
+
+#### ⚠ `disabled`는 여기 쓰지 마라 — 2026-09-02에 재고 안 것
+
+`accessibilityState={{ disabled }}`를 19곳에 붙였다가 **전부 걷어냈다.**
+RN의 Pressable이 `disabled` 프롭을 스스로 넘긴다 (`Pressable.js:236`) —
+심지어 손으로 적은 값을 **덮어쓴다.** 기기에서도 확인했다: 프로필 상세의
+「저장」은 `disabled=` 하나뿐이고 role도 state도 없는데 트리에 `enabled=false`다.
+
+    쓸 것    disabled={saving}                 ← 이것만으로 트리에 전달된다
+    쓰지마   accessibilityState={{ disabled }} ← RN이 덮어써서 아무 일도 안 한다
+
+**프롭 없이 state만 쓰면 거짓말이 된다.** 그렇게 된 곳이 셋 있었다 —
+독촉 버튼들이 보낸 뒤 「사용 안 함」으로 읽히는데 실제로는 눌리고 또 보내졌다.
+못 눌러야 한다면 `disabled` 프롭을 쓰고, 못 누르게 할 수 없으면
+**state를 붙이지 마라.** 「전송됨」처럼 안에 든 글자가 이미 상태를 말한다.
+
+같은 이유로 「눌러도 아무 일 없는」 자리는 role로 가른다:
+
+    accessibilityRole={isAdmin ? 'button' : 'image'}   ← 팀 엠블럼이 이렇게 한다
+
+검사(`a11y.check.ts`)가 `state`의 `disabled`를 0으로 잡는다.
 
 ⚠ **`disabled`는 특히 중요하다.** 안 알리면 「눌리는 줄 알고 눌렀는데 아무 일도
   안 나는」 자리가 된다. 화면에서는 흐릿해서 보이지만 스크린리더에는 안 보인다.

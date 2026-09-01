@@ -293,7 +293,7 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
                                       key={s.timeRange}
                                       disabled={!s.available}
                                       accessibilityRole="radio"
-                                      accessibilityState={{ selected: picked, disabled: !s.available }}
+                                      accessibilityState={{ selected: picked }}
                                       onPress={() => {
                                         setVenueId(v.id);
                                         setSlotIndex(i);
@@ -379,7 +379,6 @@ export function CreateMatchSheet({ visible, onClose, selectedDate, defaults, ven
             disabled={!canSubmit}
             onPress={submit}
             accessibilityRole="button"
-            accessibilityState={{ disabled: !canSubmit }}
             style={[styles.cta, !canSubmit && { opacity: 0.4 }]}
           >
             {/* 못 누르는 이유를 버튼이 직접 말한다 */}

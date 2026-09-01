@@ -246,6 +246,7 @@ export function SettlementCard({
               onPress={onPrimaryAction ? stop(onPrimaryAction) : undefined}
               accessibilityRole="button"
               accessibilityLabel="정산 등록하기"
+              accessibilityState={{ disabled: !onPrimaryAction }}
               style={({ pressed }) => [styles.sPendCta, !onPrimaryAction && styles.sIconBtnOff, pressed && styles.pressed]}
             >
               {/*
@@ -280,6 +281,8 @@ export function SettlementCard({
           disabled={!onPrimaryAction}
           onPress={onPrimaryAction ? stop(onPrimaryAction) : undefined}
           accessibilityRole="button"
+          /* label을 안 붙인다 — 안에 「계좌 송금」 글자가 있어서 붙이면 두 번 읽힌다 */
+          accessibilityState={{ disabled: !onPrimaryAction }}
           style={[styles.sIconBtn, !onPrimaryAction && styles.sIconBtnOff]}
         >
           <Ionicons name="card-outline" size={22} color={colors.textStrong} />

@@ -57,6 +57,9 @@ function SettingsRow({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
+      /* 흐릿해진 것은 눈에만 보인다 — 스크린리더에는 이 값이 없으면 「눌리는 줄 알고
+         눌렀는데 아무 일도 안 나는」 자리가 된다 */
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.row,
         !last && styles.rowDivided,

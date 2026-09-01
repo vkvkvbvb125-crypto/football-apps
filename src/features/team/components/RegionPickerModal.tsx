@@ -51,7 +51,7 @@ export function RegionPickerModal({ value, onSelect }: Props) {
           <Pressable style={styles.card} onPress={() => {}}>
             <View style={styles.head}>
               {sido ? (
-                <Pressable onPress={() => setSido(null)} hitSlop={10} accessibilityRole="button">
+                <Pressable onPress={() => setSido(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="뒤로">
                   <Ionicons name="chevron-back" size={19} color={colors.textStrong} />
                 </Pressable>
               ) : (

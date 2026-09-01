@@ -65,7 +65,7 @@ export function MemberListModal({
       <View style={styles.root}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>멤버 ({members.length})</Text>
-          <Pressable onPress={onClose} hitSlop={8}>
+          <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="닫기">
             <Ionicons name="close" size={24} color={colors.text} />
           </Pressable>
         </View>

@@ -29,7 +29,7 @@ export function AnnouncementListModal({
       <View style={styles.root}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>공지사항</Text>
-          <Pressable onPress={onClose} hitSlop={8}>
+          <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="닫기">
             <Ionicons name="close" size={24} color={colors.text} />
           </Pressable>
         </View>
@@ -55,7 +55,12 @@ export function AnnouncementListModal({
         )}
 
         {isAdmin && (
-          <Pressable style={styles.fab} onPress={onCreate}>
+          <Pressable
+            style={styles.fab}
+            onPress={onCreate}
+            accessibilityRole="button"
+            accessibilityLabel="공지 작성"
+          >
             <Ionicons name="add" size={28} color={colors.bgScreen} />
           </Pressable>
         )}

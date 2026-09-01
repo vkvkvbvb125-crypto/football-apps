@@ -180,7 +180,7 @@ export function PlaceDetailModal({ visible, onClose, name, category, address, la
         <Pressable style={styles.card} onPress={() => {}}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>경기 장소</Text>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button" accessibilityLabel="닫기">
               <Ionicons name="close" size={20} color={colors.textMuted} />
             </Pressable>
           </View>

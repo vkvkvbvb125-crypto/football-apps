@@ -27,7 +27,12 @@ export function TermsScreen({ navigation }: any) {
   return (
     <ScreenGradient>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
         </Pressable>
         <Text style={styles.headerTitle}>약관 및 정책</Text>

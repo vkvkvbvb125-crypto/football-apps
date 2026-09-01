@@ -169,7 +169,13 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
 
   return (
     <>
-      <Pressable onPress={handleOpenBell} hitSlop={10} style={styles.bell}>
+      <Pressable
+        onPress={handleOpenBell}
+        hitSlop={10}
+        style={styles.bell}
+        accessibilityRole="button"
+        accessibilityLabel={unreadCount > 0 ? `알림, 새 알림 ${unreadCount}건` : '알림'}
+      >
         <Ionicons name="notifications-outline" size={21} color={colors.textStrong} />
         {/* 숫자 대신 점 하나 — 몇 건인지는 패널을 열면 "새 알림 N건"으로 나온다.
             벨에서 알아야 하는 건 "볼 게 있다" 하나뿐이다. */}
@@ -179,7 +185,13 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
       <Modal visible={panelVisible} transparent animationType="none" onRequestClose={handleClosePanel}>
         <Animated.View style={[styles.screen, { paddingTop: insets.top, transform: [{ translateX }] }]}>
           <View style={styles.screenHead}>
-            <Pressable onPress={handleClosePanel} hitSlop={10} style={styles.backBtn}>
+            <Pressable
+              onPress={handleClosePanel}
+              hitSlop={10}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel="닫기"
+            >
               <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
             </Pressable>
             <Text style={styles.screenTitle}>알림</Text>

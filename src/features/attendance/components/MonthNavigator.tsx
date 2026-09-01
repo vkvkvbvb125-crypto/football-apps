@@ -18,11 +18,21 @@ export function MonthNavigator({ offset, onChange }: MonthNavigatorProps) {
 
   return (
     <View style={styles.row}>
-      <Pressable onPress={() => onChange(offset - 1)} hitSlop={8}>
+      <Pressable
+        onPress={() => onChange(offset - 1)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="이전 달"
+      >
         <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
       </Pressable>
       <Text style={styles.label}>{label}</Text>
-      <Pressable onPress={() => onChange(offset + 1)} hitSlop={8}>
+      <Pressable
+        onPress={() => onChange(offset + 1)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="다음 달"
+      >
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
     </View>

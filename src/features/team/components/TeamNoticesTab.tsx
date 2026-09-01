@@ -75,6 +75,8 @@ export function TeamNoticesTab({
                 onPress={() => {
                   onCreateAnnouncement();
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="공지 작성"
               >
                 <Ionicons name="add-circle-outline" size={20} color={colors.green} />
               </Pressable>

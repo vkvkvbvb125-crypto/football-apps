@@ -52,6 +52,8 @@ export function AnnouncementDetailModal({
                     setMenuVisible(true);
                   }}
                   hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="공지 더보기"
                 >
                   <Ionicons name="ellipsis-vertical" size={18} color={colors.textMuted} />
                 </Pressable>

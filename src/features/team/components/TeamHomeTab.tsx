@@ -328,6 +328,11 @@ export function TeamHomeTab({
                   onLongPress={activeTeam.team.logo_url ? onClearEmblem : undefined}
                   style={styles.emblemEdit}
                   hitSlop={14}
+                  accessibilityRole="button"
+                  accessibilityLabel="팀 엠블럼 변경"
+                  accessibilityHint={
+                    activeTeam.team.logo_url ? '길게 누르면 엠블럼을 내립니다' : undefined
+                  }
                 >
                   <Ionicons name="pencil" size={11} color={colors.bgRoot} />
                 </Pressable>

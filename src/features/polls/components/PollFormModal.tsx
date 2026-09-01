@@ -73,7 +73,12 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
                 }
               />
               {options.length > 2 && (
-                <Pressable onPress={() => handleRemoveOption(i)} hitSlop={8}>
+                <Pressable
+                  onPress={() => handleRemoveOption(i)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`선택지 ${i + 1} 지우기`}
+                >
                   <Ionicons name="close-circle-outline" size={20} color={colors.textMuted} />
                 </Pressable>
               )}

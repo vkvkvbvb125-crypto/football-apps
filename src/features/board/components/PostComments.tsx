@@ -151,7 +151,12 @@ export function PostComments({
               </View>
               {/* RLS와 같은 규칙 — 화면에서 보이는 것과 서버가 허용하는 것이 어긋나지 않는다 */}
               {canDelete && (
-                <Pressable onPress={() => handleDelete(c)} hitSlop={8}>
+                <Pressable
+                  onPress={() => handleDelete(c)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="댓글 삭제"
+                >
                   <Ionicons name="trash-outline" size={13} color={colors.textFaint} />
                 </Pressable>
               )}
@@ -174,6 +179,9 @@ export function PostComments({
           disabled={!draft.trim() || sending}
           hitSlop={8}
           style={(!draft.trim() || sending) && { opacity: 0.4 }}
+          accessibilityRole="button"
+          accessibilityLabel="댓글 보내기"
+          accessibilityState={{ disabled: !draft.trim() || sending }}
         >
           <Ionicons name="send" size={16} color={colors.green} />
         </Pressable>

@@ -48,7 +48,13 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
       {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
       <GreenAmbient />
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backBtn}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={10}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Ionicons name="chevron-back" size={22} color={colors.textStrong} />
         </Pressable>
         <Text style={styles.headTitle}>비밀번호 찾기</Text>

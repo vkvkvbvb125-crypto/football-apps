@@ -114,7 +114,12 @@ export function PostCard({
           <Text style={styles.categoryBadgeText}>{CATEGORY_LABEL[post.category]}</Text>
         </View>
         {hasMenu && (
-          <Pressable onPress={() => setMenuOpen(true)} hitSlop={8}>
+          <Pressable
+            onPress={() => setMenuOpen(true)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="글 더보기"
+          >
             <Ionicons name="ellipsis-vertical" size={15} color={colors.textFaint} />
           </Pressable>
         )}

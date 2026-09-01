@@ -28,7 +28,7 @@ export function PollCard({ poll, selfMemberId, isAdmin, onVote, onDelete }: Poll
       <View style={styles.header}>
         <Text style={styles.question}>{poll.question}</Text>
         {isAdmin && (
-          <Pressable onPress={onDelete} hitSlop={8}>
+          <Pressable onPress={onDelete} hitSlop={8} accessibilityRole="button" accessibilityLabel="투표 삭제">
             <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
           </Pressable>
         )}

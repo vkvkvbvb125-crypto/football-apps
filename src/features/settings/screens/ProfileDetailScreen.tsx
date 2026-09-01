@@ -141,7 +141,12 @@ export function ProfileDetailScreen({ navigation }: any) {
   return (
     <ScreenGradient>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={10}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
         </Pressable>
         <Text style={styles.headerTitle}>프로필</Text>
@@ -155,7 +160,13 @@ export function ProfileDetailScreen({ navigation }: any) {
           {/* 사진 — 누르면 갤러리에서 정사각으로 잘라 올린다.
               경로가 `{userId}/…`라 스토리지 정책이 남의 사진 덮어쓰기를 막는다. */}
           <View style={styles.photoRow}>
-            <Pressable onPress={handlePickPhoto} disabled={uploading}>
+            <Pressable
+              onPress={handlePickPhoto}
+              disabled={uploading}
+              accessibilityRole="button"
+              accessibilityLabel="프로필 사진 변경"
+              accessibilityState={{ disabled: uploading }}
+            >
               {me?.avatarUrl ? (
                 <Image source={{ uri: me.avatarUrl }} style={styles.photo} />
               ) : (

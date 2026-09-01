@@ -21,11 +21,16 @@ const BS = String.fromCharCode(92), NL = String.fromCharCode(10);
   167  묶음 0(기존 흠 4곳) + 묶음 1(주 동작 42곳) 뒤. 이 커밋의 결과다.
        묶음 1 = RosterSheet 10 · MatchDetailCard 3 · CreateMatchSheet 11 ·
                 SettlementScreen 9 · SettlementCard 3 · SendMoneySheet 5
-  ...  묶음 2(아이콘만 34곳, label과 함께) 뒤에 다시 낮춘다
+  135  묶음 2(아이콘만 32곳) 뒤. 이 커밋의 결과다.
+       상한이 33이었는데 실측이 32였다 — 묶음 0에서 RegionPickerModal을 고친 만큼이다.
+  ...  묶음 3(진입·설정 줄) 뒤에 다시 낮춘다
 */
-const MAX_NO_ROLE = 167;
-/* 아이콘만 있고 label도 없는 것 — 묶음 2의 대상. role만 붙이면 「버튼」으로만 읽혀 헛되다 */
-const MAX_ICON_NO_LABEL = 33;
+const MAX_NO_ROLE = 135;
+/*
+  아이콘만 있고 label도 없는 것 — role만 붙이면 「버튼」으로만 읽혀 헛되다.
+  ⚠ 묶음 2에서 다 없앴다. **이제 상한이 아니라 0이다** — 새로 하나 생기면 그날 잡는다.
+*/
+const MAX_ICON_NO_LABEL = 0;
 
 const files: string[] = [];
 (function w(d: string) {

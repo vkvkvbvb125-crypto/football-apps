@@ -38,7 +38,13 @@ export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, from
         <Pressable style={styles.overlayTap} onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.head}>
-            <Pressable onPress={onClose} hitSlop={10} style={styles.backBtn}>
+            <Pressable
+              onPress={onClose}
+              hitSlop={10}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel="닫기"
+            >
               <Ionicons name="chevron-back" size={22} color={colors.textStrong} />
             </Pressable>
             <Text style={styles.title}>정산 대상</Text>

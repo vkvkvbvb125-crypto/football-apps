@@ -79,7 +79,12 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
             {manualMode ? (
               <>
                 <View style={styles.titleRow}>
-                  <Pressable onPress={() => setManualMode(false)} hitSlop={8}>
+                  <Pressable
+                    onPress={() => setManualMode(false)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="은행 목록으로"
+                  >
                     <Ionicons name="chevron-back" size={18} color="#8A9490" />
                   </Pressable>
                   <Text style={styles.title}>은행명 직접 입력</Text>

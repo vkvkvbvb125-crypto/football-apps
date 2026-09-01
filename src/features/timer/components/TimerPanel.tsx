@@ -397,6 +397,7 @@ export function TimerPanel({
           </Pressable>
 
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.primaryButton,
               isRunning && styles.primaryButtonPause,

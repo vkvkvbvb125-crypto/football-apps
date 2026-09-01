@@ -95,6 +95,8 @@ export function MemberListModal({
                       실력과 달리 남이 매기는 값이 아니다. */}
                   <Pressable
                     disabled={!isAdmin && !isSelf}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${m.displayName} 포지션 ${positionLabel(toPosition(m.position))}`}
                     style={({ pressed }) => [
                       styles.posChip,
                       !m.position && styles.posChipEmpty,
@@ -109,6 +111,8 @@ export function MemberListModal({
 
                   <Pressable
                     disabled={!isAdmin}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${m.displayName} 실력 ${skillLabel(m.skillTag)}`}
                     style={({ pressed }) => [styles.skillChip, pressed && isAdmin && styles.pressedOpacity]}
                     onPress={() => onChangeSkillTag(m.id, nextSkillTag(m.skillTag))}
                   >

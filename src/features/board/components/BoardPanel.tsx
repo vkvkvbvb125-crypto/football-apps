@@ -221,6 +221,7 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
               <Text style={styles.composerCancelText}>취소</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               disabled={!draft.trim() || posting}
               onPress={handlePost}
               style={({ pressed }) => [

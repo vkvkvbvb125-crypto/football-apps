@@ -116,7 +116,7 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
   };
 
   const fallback = (note: string) => (
-    <Pressable style={styles.webFallback} onPress={openDirections}>
+    <Pressable accessibilityRole="button" style={styles.webFallback} onPress={openDirections}>
       <Ionicons name="map-outline" size={20} color={colors.green} />
       <Text style={styles.webFallbackText}>{note}</Text>
     </Pressable>
@@ -155,7 +155,13 @@ function KakaoMapPreview({ latitude, longitude, name }: KakaoMapPreviewProps) {
         onError={() => setMapFailed(true)}
         onHttpError={() => setMapFailed(true)}
       />
-      <Pressable style={StyleSheet.absoluteFill} onPress={openDirections} />
+      {/* 지도를 덮는 투명한 판 — 지도를 눌러도 길찾기로 간다 */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={openDirections}
+        accessibilityRole="button"
+        accessibilityLabel="길찾기"
+      />
     </View>
   );
 }

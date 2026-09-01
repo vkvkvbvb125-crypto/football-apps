@@ -81,6 +81,7 @@ export function SettlementProgressPanel({
       )}
 
       <Pressable
+        accessibilityRole="button"
         onPress={onRefresh}
         disabled={refreshing}
         style={({ pressed }) => [styles.refresh, pressed && { opacity: 0.85 }]}

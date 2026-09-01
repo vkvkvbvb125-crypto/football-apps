@@ -112,6 +112,7 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
+          accessibilityRole="button"
           disabled={!canSubmit}
           onPress={submit}
           style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}

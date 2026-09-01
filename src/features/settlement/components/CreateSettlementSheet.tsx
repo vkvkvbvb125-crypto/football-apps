@@ -168,6 +168,7 @@ export function CreateSettlementSheet({
           </ScrollView>
 
           <Pressable
+            accessibilityRole="button"
             disabled={!valid}
             onPress={() => {
               // 납부 기한·메모는 생성 시 비워두고 정산 상세의 「상세 설정」에서 정한다.

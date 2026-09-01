@@ -580,7 +580,7 @@ export function TeamSettingsScreen({ navigation }: any) {
         ) : (
           <>
             {saveError && <Text style={styles.saveErr} selectable>{saveError}</Text>}
-            <Pressable onPress={handleSave} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.6 }]}>
+            <Pressable accessibilityRole="button" onPress={handleSave} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.6 }]}>
               <Text style={styles.saveBtnText}>{saving ? '저장 중…' : saved ? '저장됐어요' : '저장'}</Text>
             </Pressable>
           </>

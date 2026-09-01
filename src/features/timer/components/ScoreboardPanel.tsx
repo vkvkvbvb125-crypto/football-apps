@@ -132,6 +132,8 @@ export function ScoreboardPanel({
                 <Pressable
                   onPress={() => onChangeA(Math.max(0, scoreA - 1))}
                   disabled={locked}
+                  accessibilityRole="button"
+                  accessibilityLabel="A팀 점수 빼기"
                   style={({ pressed }) => [styles.btn, locked && styles.btnOff, pressed && styles.pressed]}
                 >
                   <Text style={[styles.btnText, locked && styles.btnTextOff]}>−</Text>
@@ -139,6 +141,8 @@ export function ScoreboardPanel({
                 <Pressable
                   onPress={() => onChangeA(scoreA + 1)}
                   disabled={locked}
+                  accessibilityRole="button"
+                  accessibilityLabel="A팀 점수 더하기"
                   style={({ pressed }) => [styles.btn, styles.btnPlus, locked && styles.btnOff, pressed && styles.pressed]}
                 >
                   <Text style={[styles.btnTextOn, locked && styles.btnTextOff]}>+</Text>
@@ -157,6 +161,8 @@ export function ScoreboardPanel({
                 <Pressable
                   onPress={() => onChangeB(Math.max(0, scoreB - 1))}
                   disabled={locked}
+                  accessibilityRole="button"
+                  accessibilityLabel="B팀 점수 빼기"
                   style={({ pressed }) => [styles.btn, locked && styles.btnOff, pressed && styles.pressed]}
                 >
                   <Text style={[styles.btnText, locked && styles.btnTextOff]}>−</Text>
@@ -164,6 +170,8 @@ export function ScoreboardPanel({
                 <Pressable
                   onPress={() => onChangeB(scoreB + 1)}
                   disabled={locked}
+                  accessibilityRole="button"
+                  accessibilityLabel="B팀 점수 더하기"
                   style={({ pressed }) => [styles.btn, styles.btnPlus, locked && styles.btnOff, pressed && styles.pressed]}
                 >
                   <Text style={[styles.btnTextOn, locked && styles.btnTextOff]}>+</Text>

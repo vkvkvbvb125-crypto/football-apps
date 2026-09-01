@@ -60,7 +60,7 @@ export function SettlementDonePanel({
       </SummaryBox>
 
       {!!actionLabel && !!onAction && (
-        <Pressable onPress={onAction} style={({ pressed }) => [styles.doneCta, pressed && { opacity: 0.85 }]}>
+        <Pressable accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.doneCta, pressed && { opacity: 0.85 }]}>
           <Text style={styles.doneCtaText}>{actionLabel}</Text>
         </Pressable>
       )}

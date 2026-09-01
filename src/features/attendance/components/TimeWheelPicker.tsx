@@ -202,7 +202,12 @@ export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
 
   return (
     <>
-      <Pressable style={styles.field} onPress={handleOpen}>
+      <Pressable
+        style={styles.field}
+        onPress={handleOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`시간 ${value}`}
+      >
         <Ionicons name="time-outline" size={16} color={colors.green} />
         <Text style={styles.fieldText}>{value}</Text>
       </Pressable>

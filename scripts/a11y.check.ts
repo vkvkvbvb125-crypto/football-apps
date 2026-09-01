@@ -7,9 +7,10 @@
       Button     -> "설정"      role + label 붙은 것
       ViewGroup  -> ""          role 없는 것
 
-  ⚠ **상한을 0으로 두지 않는다.** 167곳이 한 커밋에 들어가면 잘못 붙은 것을 아무도
-    못 본다. 성격별로 묶어 커밋하고 그때마다 상한을 낮춘다.
-    상한이 왜 그 숫자인지는 아래 이력에 적는다 — 나중에 「이 숫자가 왜 167이지」가 나온다.
+  ⚠ **처음부터 0으로 두지 않았다.** 208곳이 한 커밋에 들어가면 잘못 붙은 것을 아무도
+    못 본다. 성격별로 묶어 커밋하고 그때마다 상한을 낮췄다 — 208 · 167 · 135 · 116 ·
+    97 · 81 · 38 · 0. 어느 커밋의 결과인지는 아래 이력에 적혀 있다.
+    **지금은 0이다.** 새로 만든 Pressable에 role이 없으면 그날 걸린다.
 */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -33,9 +34,13 @@ const BS = String.fromCharCode(92), NL = String.fromCharCode(10);
    81  묶음 4-b(메뉴 항목 5 · 목록 행 11) 뒤. 이 커밋의 결과다.
    38  묶음 4-c(글자가 있는 버튼 43곳) 뒤. 이 커밋의 결과다.
        글자가 있으니 role만 넣었다 — label을 붙이면 오히려 그 글자를 덮는다.
-  ...  묶음 4-d(글자가 없거나 값뿐인 38곳, 문구와 함께) 뒤에 다시 낮춘다
+    0  묶음 4-d(38곳) 뒤. 이 커밋의 결과다. **이제 상한이 아니다.**
+       18곳은 문구까지 붙였고(점수 ±4 · 고르는 칸 4 · 멤버 칩 3 · 소셜 3 …),
+       20곳은 글자가 식으로 들어와 런타임에 읽히므로 role만 넣었다.
+       ⚠ 이 중 둘은 원래부터 붙어 있었는데 **검사가 못 셌다** — role을 식으로 준
+         자리(`accessibilityRole={isAdmin ? 'button' : 'image'}`)를 리터럴로만 찾았다.
 */
-const MAX_NO_ROLE = 38;
+const MAX_NO_ROLE = 0;
 /*
   아이콘만 있고 label도 없는 것 — role만 붙이면 「버튼」으로만 읽혀 헛되다.
   ⚠ 묶음 2에서 다 없앴다. **이제 상한이 아니라 0이다** — 새로 하나 생기면 그날 잡는다.
@@ -78,6 +83,16 @@ for (const f of files) {
       }
       body = src.slice(te + 1, k);
     }
+    /*
+      ⚠ **「붙었는가」와 「무엇이 붙었는가」를 갈라야 한다.**
+      `accessibilityRole="(\w+)"` 하나로 둘을 다 보다가 **식으로 준 role 둘을 놓쳤다** —
+      TeamHomeTab의 엠블럼과 AssignmentScreen의 멤버 칸이
+      `accessibilityRole={isAdmin ? 'button' : 'image'}` 꼴이다.
+      둘 다 제대로 붙어 있는데 「아직 안 붙은 것」으로 세고 있었다.
+      이름(리터럴)으로 찾으면 식으로 쓴 자리가 빠진다 — anchor.ts의 「사본을 셀 때」와
+      같은 뿌리다. 세는 것은 넓게, 값을 보는 것은 좁게.
+    */
+    const hasRole = /accessibilityRole[=\s]/.test(tag);
     const role = tag.match(/accessibilityRole="(\w+)"/)?.[1];
     const hasLabel = /accessibilityLabel[=\s]/.test(tag);
     /*
@@ -99,7 +114,7 @@ for (const f of files) {
     */
     if (/accessible=\{false\}/.test(tag)) { i = src.indexOf('<Pressable', te); continue; }
 
-    if (!role) noRole++;
+    if (!hasRole) noRole++;
     if (!hasText && hasIcon && !hasLabel) iconNoLabel++;
 
     /*

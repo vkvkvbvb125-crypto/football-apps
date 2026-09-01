@@ -67,7 +67,12 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
 
   return (
     <>
-      <Pressable style={styles.field} onPress={handleOpen}>
+      <Pressable
+        style={styles.field}
+        onPress={handleOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`투표 마감 ${formatDisplay(value)}`}
+      >
         <Ionicons name="flag-outline" size={16} color={isSet ? colors.green : colors.placeholder} />
         <Text style={[styles.fieldText, !isSet && styles.fieldTextPlaceholder]}>{formatDisplay(value)}</Text>
       </Pressable>

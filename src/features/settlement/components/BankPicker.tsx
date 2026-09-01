@@ -68,7 +68,12 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
 
   return (
     <>
-      <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
+      <Pressable
+        style={styles.field}
+        onPress={() => setModalVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`은행 ${value || '선택 안 함'}`}
+      >
         <Ionicons name="business-outline" size={16} color={value ? colors.green : colors.placeholder} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value || '은행 선택'}</Text>
       </Pressable>

@@ -195,6 +195,7 @@ export function ProfileDetailScreen({ navigation }: any) {
               maxLength={20}
             />
             <Pressable
+              accessibilityRole="button"
               disabled={savingName || !name.trim() || name.trim() === me?.displayName}
               onPress={handleSaveName}
               style={({ pressed }) => [
@@ -315,6 +316,8 @@ export function ProfileDetailScreen({ navigation }: any) {
                     // 실력은 총무가 매기는 값이다 — 본인이 올리고 내리면 팀 분배 균형이 무너진다
                     disabled={activeTeam?.role !== 'admin'}
                     onPress={() => updateMemberSkillTag(me.id, on ? null : s)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
                     style={({ pressed }) => [
                       styles.chip,
                       on && styles.chipOn,

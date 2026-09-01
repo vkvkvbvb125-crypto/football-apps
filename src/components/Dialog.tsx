@@ -125,6 +125,7 @@ export function DialogHost() {
               </Pressable>
             )}
             <Pressable
+              accessibilityRole="button"
               onPress={() => close(true)}
               style={({ pressed }) => [
                 styles.btn,

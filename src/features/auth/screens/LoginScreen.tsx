@@ -184,6 +184,7 @@ export function LoginScreen({ navigation }: { navigation: any }) {
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
           <Pressable
+            accessibilityRole="button"
             disabled={!canSubmit}
             onPress={submit}
             style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}
@@ -220,6 +221,8 @@ export function LoginScreen({ navigation }: { navigation: any }) {
               key={s.key}
               disabled={signingIn}
               onPress={() => signInWithSocial(s.key)}
+              accessibilityRole="button"
+              accessibilityLabel={`${s.label}로 로그인`}
               style={({ pressed }) => [styles.social, pressed && styles.pressed]}
             >
               <View style={[styles.socialCircle, !!s.bg && { backgroundColor: s.bg }]}>

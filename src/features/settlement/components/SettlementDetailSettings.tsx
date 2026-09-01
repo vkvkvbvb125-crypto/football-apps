@@ -118,6 +118,8 @@ export function SettlementDetailSettings({ settlement, nameFor, onUpdate, onExem
                   <Pressable
                     key={s.id}
                     onPress={() => onExempt(s.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${s.guestName ?? nameFor(s.teamMemberId)} 정산 대상에서 제외`}
                     style={({ pressed }) => [styles.memberChip, pressed && styles.pressed]}
                   >
                     <Text style={styles.memberChipText}>{s.guestName ?? nameFor(s.teamMemberId)}</Text>

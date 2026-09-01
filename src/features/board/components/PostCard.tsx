@@ -147,6 +147,7 @@ export function PostCard({
               <Text style={styles.editCancelText}>취소</Text>
             </Pressable>
             <Pressable
+              accessibilityRole="button"
               disabled={!editDraft.trim() || saving}
               onPress={submitEdit}
               style={({ pressed }) => [
@@ -185,7 +186,7 @@ export function PostCard({
             )}
           </Text>
           {truncatable && (
-            <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6}>
+            <Pressable accessibilityRole="button" onPress={() => setExpanded((v) => !v)} hitSlop={6}>
               <Text style={styles.moreText}>{expanded ? '접기' : '더보기'}</Text>
             </Pressable>
           )}

@@ -68,6 +68,7 @@ export function ResetPasswordScreen() {
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
           <Pressable
+            accessibilityRole="button"
             disabled={!canSubmit}
             onPress={() => updatePassword(password)}
             style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}

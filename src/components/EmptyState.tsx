@@ -26,7 +26,7 @@ export function EmptyState({ emoji, title, subtitle, actionLabel, onAction, comp
       <Text style={styles.title}>{title}</Text>
       {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       {!!actionLabel && onAction && (
-        <Pressable onPress={onAction} style={({ pressed }) => [styles.action, pressed && { opacity: 0.85 }]}>
+        <Pressable accessibilityRole="button" onPress={onAction} style={({ pressed }) => [styles.action, pressed && { opacity: 0.85 }]}>
           <Text style={styles.actionText}>{actionLabel}</Text>
         </Pressable>
       )}

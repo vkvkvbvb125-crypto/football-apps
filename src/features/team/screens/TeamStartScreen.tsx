@@ -133,7 +133,12 @@ export function TeamStartScreen() {
 
           {pick === 'join' && (
             <>
-              <Pressable onPress={() => codeInputRef.current?.focus()} style={styles.codeRow}>
+              <Pressable
+                onPress={() => codeInputRef.current?.focus()}
+                accessibilityRole="button"
+                accessibilityLabel={`초대 코드 입력, ${code.length}자리 입력함`}
+                style={styles.codeRow}
+              >
                 {Array.from({ length: CODE_LENGTH }).map((_, i) => (
                   <View key={i} style={[styles.codeCell, i === code.length && styles.codeCellActive]}>
                     <Text style={styles.codeText}>{code[i] ?? ''}</Text>
@@ -162,6 +167,7 @@ export function TeamStartScreen() {
 
         {pick === 'join' ? (
           <Pressable
+            accessibilityRole="button"
             disabled={code.length < CODE_LENGTH || loading}
             onPress={handleJoin}
             style={[styles.cta, (code.length < CODE_LENGTH || loading) && { opacity: 0.4 }]}
@@ -170,6 +176,7 @@ export function TeamStartScreen() {
           </Pressable>
         ) : pick === 'create' ? (
           <Pressable
+            accessibilityRole="button"
             disabled={!teamName.trim() || loading}
             onPress={handleCreate}
             style={[styles.cta, (!teamName.trim() || loading) && { opacity: 0.4 }]}

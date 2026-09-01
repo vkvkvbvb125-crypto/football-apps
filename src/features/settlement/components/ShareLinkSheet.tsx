@@ -132,7 +132,7 @@ function ShareAction({
 }) {
   const { colors, styles } = useThemed(makeStyles);
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
       <View style={[styles.actionCircle, circleStyle]}>
         <Ionicons name={icon} size={22} color={iconColor} />
       </View>

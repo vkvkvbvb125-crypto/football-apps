@@ -164,7 +164,12 @@ export function PlaceSearchModal({ value, onSelect }: PlaceSearchModalProps) {
 
   return (
     <>
-      <Pressable style={styles.field} onPress={() => setModalVisible(true)}>
+      <Pressable
+        style={styles.field}
+        onPress={() => setModalVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`장소 ${value?.name ?? '선택 안 함'}`}
+      >
         <Ionicons name="location-outline" size={16} color={value ? colors.green : colors.placeholder} />
         <Text style={[styles.fieldText, !value && styles.fieldTextPlaceholder]}>{value?.name ?? '장소 검색'}</Text>
       </Pressable>

@@ -165,7 +165,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
                   {t.label}
                 </Text>
               </Pressable>
-              <Pressable onPress={() => setOpenDoc(t)} hitSlop={10} accessibilityLabel={`${t.label} 전문 보기`}>
+              <Pressable accessibilityRole="button" onPress={() => setOpenDoc(t)} hitSlop={10} accessibilityLabel={`${t.label} 전문 보기`}>
                 <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
               </Pressable>
             </View>
@@ -182,6 +182,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
+          accessibilityRole="button"
           disabled={!canSubmit}
           onPress={submit}
           style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}

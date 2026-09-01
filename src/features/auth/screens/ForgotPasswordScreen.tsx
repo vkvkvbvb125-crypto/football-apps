@@ -88,7 +88,7 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
 
         {/* "형식은 맞지만 도착하지 않을" 주소 — 눌러서 바로 고칠 수 있게 한다 */}
         {!formatError && !!suggestion && (
-          <Pressable onPress={() => setEmail(suggestion)} style={styles.suggestRow}>
+          <Pressable accessibilityRole="button" onPress={() => setEmail(suggestion)} style={styles.suggestRow}>
             <Text style={styles.suggestText}>
               혹시 <Text style={styles.suggestStrong}>{suggestion}</Text> 아닌가요? 눌러서 바꾸기
             </Text>
@@ -105,7 +105,7 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
         )}
 
         {/* 소셜로 가입했으면 비밀번호 자체가 없다 — 여기서 헤매지 않도록 알려준다 */}
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8} style={styles.linkRow}>
+        <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={8} style={styles.linkRow}>
           <Text style={styles.linkText}>간편 로그인으로 가입하셨나요? 로그인으로 돌아가기</Text>
         </Pressable>
       </ScrollView>

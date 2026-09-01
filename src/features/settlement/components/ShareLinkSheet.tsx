@@ -106,7 +106,7 @@ export function ShareLinkSheet({ visible, onClose, link, message }: Props) {
             </View>
           </View>
 
-          <Pressable onPress={onClose} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
             <Text style={styles.ctaText}>공유 완료</Text>
           </Pressable>
           <Text style={styles.note}>링크를 누르면 앱에서 각자 낼 금액과 계좌를 볼 수 있어요</Text>

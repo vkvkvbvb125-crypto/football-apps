@@ -156,7 +156,7 @@ export function MatchDetailCard(p: Props) {
           {/*
             구장 이름을 누르면 지도가 뜬다 — 58ff35f에서 빠졌던 진입로다.
 
-            옛 일정 목록에는 `{!!match.location && <Pressable onPress={() => setDetailMatch(match)}>`
+            옛 일정 목록에는 `{!!match.location && <Pressable accessibilityRole="button" onPress={() => setDetailMatch(match)}>`
             가 있었는데, 이 카드로 재설계하면서 안 옮겨졌다. 그 커밋 diff에
             「PlaceDetailModal … 은 기존 그대로 사용합니다」가 삭제로 찍혀 있다 —
             빼기로 한 게 아니라 이관 누락이다. 컴포넌트는 그대로 살아 있었다.

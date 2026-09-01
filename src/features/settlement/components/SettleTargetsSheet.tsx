@@ -95,7 +95,7 @@ export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, from
           </ScrollView>
 
           {!!onCreate && (
-            <Pressable onPress={onCreate} style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}>
+            <Pressable accessibilityRole="button" onPress={onCreate} style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}>
               <Text style={styles.ctaText}>이 명단으로 정산 만들기</Text>
             </Pressable>
           )}

@@ -117,6 +117,7 @@ export function DialogHost() {
           <View style={styles.actions}>
             {current.cancelable && (
               <Pressable
+                accessibilityRole="button"
                 onPress={() => close(false)}
                 style={({ pressed }) => [styles.btn, styles.cancelBtn, pressed && styles.pressed]}
               >

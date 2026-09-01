@@ -110,7 +110,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
           )}
           {/* 형식은 맞지만 도착하지 않을 주소 — 눌러서 바로 고칠 수 있게 한다 */}
           {!!suggestion && (
-            <Pressable onPress={() => setEmail(suggestion)} hitSlop={4}>
+            <Pressable accessibilityRole="button" onPress={() => setEmail(suggestion)} hitSlop={4}>
               <Text style={styles.fieldHint}>
                 혹시 <Text style={{ fontWeight: '800' }}>{suggestion}</Text> 아닌가요? 눌러서 바꾸기
               </Text>

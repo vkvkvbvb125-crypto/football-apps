@@ -160,10 +160,10 @@ export function MatchWeatherBlock({
 
           {isAdmin && !decision ? (
             <View style={styles.adviceCta}>
-              <Pressable onPress={onKeep} style={styles.keep}>
+              <Pressable accessibilityRole="button" onPress={onKeep} style={styles.keep}>
                 <Text style={styles.keepText}>그대로 진행</Text>
               </Pressable>
-              <Pressable onPress={onFindIndoor} style={styles.indoor}>
+              <Pressable accessibilityRole="button" onPress={onFindIndoor} style={styles.indoor}>
                 <Text style={styles.indoorText}>실내구장 찾기</Text>
               </Pressable>
             </View>

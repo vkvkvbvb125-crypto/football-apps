@@ -159,7 +159,7 @@ export function CreateSettlementSheet({
                     {account.holder ? ` (${account.holder})` : ''}
                   </Text>
                 </View>
-                <Pressable onPress={onEditAccount ?? onClose} hitSlop={8} style={styles.accountEditRow}>
+                <Pressable accessibilityRole="button" onPress={onEditAccount ?? onClose} hitSlop={8} style={styles.accountEditRow}>
                   <Text style={styles.accountEdit}>변경</Text>
                   <Ionicons name="chevron-forward" size={14} color={colors.green} />
                 </Pressable>
@@ -183,7 +183,7 @@ export function CreateSettlementSheet({
           <Text style={styles.note}>참석자에게 알림이 가고, 각자 송금 화면에서 바로 보낼 수 있어요</Text>
 
           {!!onSkip && (
-            <Pressable onPress={onSkip} hitSlop={8} style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="button" onPress={onSkip} hitSlop={8} style={({ pressed }) => [styles.skip, pressed && styles.pressed]}>
               <Text style={styles.skipText}>이 경기는 정산 없이 종료</Text>
             </Pressable>
           )}

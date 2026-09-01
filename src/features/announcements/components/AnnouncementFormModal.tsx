@@ -68,10 +68,10 @@ export function AnnouncementFormModal({ visible, editing, onClose, onSubmit }: A
           </View>
 
           <View style={styles.buttonRow}>
-            <Pressable style={styles.cancelButton} onPress={onClose}>
+            <Pressable accessibilityRole="button" style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelText}>취소</Text>
             </Pressable>
-            <Pressable style={styles.confirmButton} onPress={handleSubmit}>
+            <Pressable accessibilityRole="button" style={styles.confirmButton} onPress={handleSubmit}>
               <Text style={styles.confirmText}>저장</Text>
             </Pressable>
           </View>

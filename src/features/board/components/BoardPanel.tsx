@@ -217,7 +217,7 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
             autoFocus
           />
           <View style={styles.composerActions}>
-            <Pressable onPress={() => setComposing(false)} style={styles.composerCancel}>
+            <Pressable accessibilityRole="button" onPress={() => setComposing(false)} style={styles.composerCancel}>
               <Text style={styles.composerCancelText}>취소</Text>
             </Pressable>
             <Pressable
@@ -234,7 +234,7 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
           </View>
         </View>
       ) : (
-        <Pressable onPress={() => setComposing(true)} style={({ pressed }) => [styles.writeBtn, pressed && { opacity: 0.85 }]}>
+        <Pressable accessibilityRole="button" onPress={() => setComposing(true)} style={({ pressed }) => [styles.writeBtn, pressed && { opacity: 0.85 }]}>
           <Ionicons name="create-outline" size={16} color={colors.bgRoot} />
           <Text style={styles.writeBtnText}>글쓰기</Text>
         </Pressable>

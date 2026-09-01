@@ -124,7 +124,7 @@ export function PostComments({
       {loading ? (
         <ActivityIndicator color={colors.green} style={{ paddingVertical: 12 }} />
       ) : failed ? (
-        <Pressable onPress={load} style={styles.retryRow} hitSlop={6}>
+        <Pressable accessibilityRole="button" onPress={load} style={styles.retryRow} hitSlop={6}>
           <Text style={styles.retryText}>댓글을 불러오지 못했어요 · 다시</Text>
         </Pressable>
       ) : comments.length === 0 ? (

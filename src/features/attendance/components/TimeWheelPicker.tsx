@@ -221,10 +221,10 @@ export function TimeWheelPicker({ value, onChange }: TimeWheelPickerProps) {
             />
 
             <View style={styles.buttonRow}>
-              <Pressable style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+              <Pressable accessibilityRole="button" style={styles.cancelButton} onPress={() => setModalVisible(false)}>
                 <Text style={styles.cancelText}>취소</Text>
               </Pressable>
-              <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+              <Pressable accessibilityRole="button" style={styles.confirmButton} onPress={handleConfirm}>
                 <Text style={styles.confirmText}>확인</Text>
               </Pressable>
             </View>

@@ -177,7 +177,7 @@ export function ProfileDetailScreen({ navigation }: any) {
             <View style={{ flex: 1, gap: 6 }}>
               <Text style={styles.hint}>{uploading ? '올리는 중…' : '사진을 눌러서 변경'}</Text>
               {!!me?.avatarUrl && (
-                <Pressable onPress={handleRemovePhoto} hitSlop={6}>
+                <Pressable accessibilityRole="button" onPress={handleRemovePhoto} hitSlop={6}>
                   <Text style={styles.removePhoto}>사진 삭제</Text>
                 </Pressable>
               )}
@@ -220,6 +220,7 @@ export function ProfileDetailScreen({ navigation }: any) {
               maxLength={13}
             />
             <Pressable
+              accessibilityRole="button"
               disabled={phone === (me?.phone ?? '')}
               onPress={() => saveProfile({ phone: phone || null })}
               style={({ pressed }) => [
@@ -269,6 +270,7 @@ export function ProfileDetailScreen({ navigation }: any) {
                 placeholderTextColor={colors.textFaint}
               />
               <Pressable
+                accessibilityRole="button"
                 disabled={jersey === String(me.jerseyNumber ?? '')}
                 onPress={handleSaveJersey}
                 style={({ pressed }) => [

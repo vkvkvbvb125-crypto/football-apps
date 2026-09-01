@@ -86,7 +86,7 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
           ))}
 
           {options.length < 6 && (
-            <Pressable style={styles.addOptionButton} onPress={handleAddOption}>
+            <Pressable accessibilityRole="button" style={styles.addOptionButton} onPress={handleAddOption}>
               <Ionicons name="add" size={16} color={colors.green} />
               <Text style={styles.addOptionText}>선택지 추가</Text>
             </Pressable>
@@ -101,10 +101,10 @@ export function PollFormModal({ visible, onClose, onSubmit }: PollFormModalProps
           />
 
           <View style={styles.buttonRow}>
-            <Pressable style={styles.cancelButton} onPress={onClose}>
+            <Pressable accessibilityRole="button" style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelText}>취소</Text>
             </Pressable>
-            <Pressable style={styles.confirmButton} onPress={handleSubmit}>
+            <Pressable accessibilityRole="button" style={styles.confirmButton} onPress={handleSubmit}>
               <Text style={styles.confirmText}>만들기</Text>
             </Pressable>
           </View>

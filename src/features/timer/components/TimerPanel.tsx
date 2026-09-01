@@ -388,6 +388,7 @@ export function TimerPanel({
       {isAdmin && (
         <View style={styles.controlRow}>
           <Pressable
+            accessibilityRole="button"
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             onPress={handleReset}
           >
@@ -413,6 +414,7 @@ export function TimerPanel({
               둘이 같이 보이면 "분을 더하는 버튼"이 둘이라 뭘 눌러야 할지 알 수 없고,
               실제로 "쿼터 6분인데 7:00 남음" 같은 어긋난 상태가 만들어졌다. */}
           <Pressable
+            accessibilityRole="button"
             disabled={isFresh}
             style={({ pressed }) => [styles.secondaryButton, isFresh && styles.secondaryButtonOff, pressed && styles.pressed]}
             onPress={handleAddMinute}
@@ -441,7 +443,7 @@ export function TimerPanel({
             <Text style={styles.scoreText}>
               A팀 {scoreA} : {scoreB} B팀
             </Text>
-            <Pressable onPress={onPressScore} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={onPressScore} hitSlop={8}>
               <Text style={styles.scoreLink}>스코어 기록 ›</Text>
             </Pressable>
           </View>

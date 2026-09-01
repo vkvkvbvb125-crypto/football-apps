@@ -94,16 +94,16 @@ export function DeadlinePicker({ value, onChange, matchDate, matchTime }: Deadli
               경기 당일 {pad(draftHour)}:{pad(draftMinute)} 마감
             </Text>
 
-            <Pressable style={styles.clearRow} onPress={handleClear}>
+            <Pressable accessibilityRole="button" style={styles.clearRow} onPress={handleClear}>
               <Ionicons name="close-circle-outline" size={14} color={colors.textMuted} />
               <Text style={styles.clearText}>마감 없음으로 설정</Text>
             </Pressable>
 
             <View style={styles.buttonRow}>
-              <Pressable style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+              <Pressable accessibilityRole="button" style={styles.cancelButton} onPress={() => setModalVisible(false)}>
                 <Text style={styles.cancelText}>취소</Text>
               </Pressable>
-              <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+              <Pressable accessibilityRole="button" style={styles.confirmButton} onPress={handleConfirm}>
                 <Text style={styles.confirmText}>확인</Text>
               </Pressable>
             </View>

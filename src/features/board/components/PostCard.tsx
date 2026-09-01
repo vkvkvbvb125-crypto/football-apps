@@ -137,6 +137,7 @@ export function PostCard({
           />
           <View style={styles.editActions}>
             <Pressable
+              accessibilityRole="button"
               onPress={() => {
                 setEditDraft(post.body);
                 setEditing(false);

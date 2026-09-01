@@ -120,6 +120,7 @@ export function MemberListModal({
                   <View style={styles.actionRow}>
                     {m.role !== 'admin' && (
                       <Pressable
+                        accessibilityRole="button"
                         style={({ pressed }) => [styles.actionButton, pressed && styles.pressedOpacity]}
                         onPress={() => onPromote(m.id)}
                       >
@@ -127,6 +128,7 @@ export function MemberListModal({
                       </Pressable>
                     )}
                     <Pressable
+                      accessibilityRole="button"
                       style={({ pressed }) => [styles.actionButton, pressed && styles.pressedOpacity]}
                       onPress={() => handleRemove(m)}
                     >

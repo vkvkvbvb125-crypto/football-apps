@@ -194,11 +194,11 @@ export function LoginScreen({ navigation }: { navigation: any }) {
 
           {/* 보조 경로는 버튼이 아니라 텍스트 링크로 — 로그인 CTA와 경쟁하면 안 된다 */}
           <View style={styles.linkRow}>
-            <Pressable onPress={() => go('ForgotPassword')} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={() => go('ForgotPassword')} hitSlop={8}>
               <Text style={styles.linkText}>비밀번호 찾기</Text>
             </Pressable>
             <View style={styles.linkDivider} />
-            <Pressable onPress={() => go('SignUp')} hitSlop={8}>
+            <Pressable accessibilityRole="button" onPress={() => go('SignUp')} hitSlop={8}>
               <Text style={styles.linkText}>회원가입</Text>
             </Pressable>
           </View>

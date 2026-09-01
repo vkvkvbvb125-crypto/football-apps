@@ -49,11 +49,12 @@ export function TermsDocModal({ doc, onClose, onAgree }: Props) {
           </ScrollView>
 
           <View style={styles.docFooter}>
-            <Pressable onPress={onClose} style={({ pressed }) => [styles.docClose, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.docClose, pressed && styles.pressed]}>
               <Text style={styles.docCloseText}>닫기</Text>
             </Pressable>
             {!!onAgree && (
               <Pressable
+                accessibilityRole="button"
                 onPress={() => doc && onAgree(doc)}
                 style={({ pressed }) => [styles.docAgree, pressed && styles.pressed]}
               >

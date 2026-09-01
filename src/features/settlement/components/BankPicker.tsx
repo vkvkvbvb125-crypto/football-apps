@@ -107,6 +107,7 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
                 />
 
                 <Pressable
+                  accessibilityRole="button"
                   style={[styles.confirmButton, !manualText.trim() && styles.confirmButtonDisabled]}
                   disabled={!manualText.trim()}
                   onPress={handleManualConfirm}
@@ -151,6 +152,7 @@ export function BankPicker({ value, onChange }: BankPickerProps) {
                 />
 
                 <Pressable
+                  accessibilityRole="button"
                   style={styles.manualLink}
                   onPress={() => {
                     setManualText('');

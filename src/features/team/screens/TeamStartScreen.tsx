@@ -196,7 +196,7 @@ export function TeamStartScreen() {
             <Text style={styles.signOutText}>닫기</Text>
           </Pressable>
         ) : (
-          <Pressable onPress={signOut} hitSlop={10} style={styles.signOutRow}>
+          <Pressable accessibilityRole="button" onPress={signOut} hitSlop={10} style={styles.signOutRow}>
             <Text style={styles.signOutText}>로그아웃</Text>
           </Pressable>
         )}

@@ -214,6 +214,7 @@ export function ScoreboardPanel({
         <View style={styles.actions}>
           {hasScore && (
             <Pressable
+              accessibilityRole="button"
               onPress={handleReset}
               disabled={locked}
               style={({ pressed }) => [styles.reset, locked && styles.btnOff, pressed && styles.pressed]}
@@ -231,7 +232,7 @@ export function ScoreboardPanel({
             색은 「정상 흐름인가」, 확인은 「되돌릴 수 없는가」를 말한다. 경기 상태가
             completed로 넘어가면 되돌리기 어렵고 타이머·스코어가 같이 끝난다.
           */}
-          <Pressable onPress={handleFinish} style={({ pressed }) => [styles.finish, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" onPress={handleFinish} style={({ pressed }) => [styles.finish, pressed && styles.pressed]}>
             <Text style={styles.finishText}>경기 종료 → 정산으로</Text>
           </Pressable>
         </View>

@@ -117,6 +117,7 @@ export function SwipeToDelete({ onDelete, children }: Props) {
         pointerEvents="box-none"
       >
         <Pressable
+          accessibilityRole="button"
           onPress={() => {
             settle(false);
             onDelete();

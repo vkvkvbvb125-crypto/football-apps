@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { applyScreenshotFixtures } from './src/dev/screenshotFixtures';
 import { Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -75,6 +76,20 @@ export default function App() {
   const loadTheme = useThemeStore((s) => s.load);
   useEffect(() => {
     loadTheme();
+  }, []);
+
+  /*
+    스토어 스크린샷용 가짜 데이터.
+
+    ⚠ **여기가 유일한 부르는 자리다.** 조건을 여기서 한 번, 함수 안에서 또 한 번 본다 —
+      한 곳에만 두면 다른 데서 부르는 순간 새어 나간다.
+      릴리스에서는 __DEV__가 false라 이 블록이 통째로 접혀 없어지고, 모듈도 안 딸려간다.
+      screenshot.check.ts가 이 모양을 붙든다.
+  */
+  useEffect(() => {
+    if (__DEV__ && process.env.EXPO_PUBLIC_SCREENSHOT === '1') {
+      applyScreenshotFixtures();
+    }
   }, []);
 
   // 폰트 로딩 상태와 무관하게 항상 렌더링한다 - 폰트 로딩이 늦거나 실패해도

@@ -134,3 +134,28 @@ RN의 Pressable이 `disabled` 프롭을 스스로 넘긴다 (`Pressable.js:236`)
 
 - 글자가 있는 버튼: 글자가 곧 label이다. 붙이면 **두 번 읽힌다.**
 - 장식용 아이콘: `accessible={false}`가 맞다. label을 붙이면 안 읽어도 될 것을 읽는다.
+
+## 화면 모드 — `app.json`의 `userInterfaceStyle`을 답으로 읽지 마라
+
+**두 번 헷갈린 자리다.** `app.json`에 `"userInterfaceStyle": "dark"`가 있어서
+그 줄만 보면 「다크 고정」으로 읽힌다. **아니다.**
+
+| 무엇 | 누가 정하나 |
+|---|---|
+| 앱이 뜨기 **전** — 스플래시, OS가 칠하는 면 | `app.json`의 `userInterfaceStyle` (네이티브 기본값) |
+| 앱이 **뜬 뒤** — 모든 화면의 색 | `themeStore` (어둡게 · 밝게 · 시스템 따름) |
+
+밝은 모드는 **있다.** 설정 > 화면 모드에서 고른다.
+
+    src/lib/themeStore.ts        고른 값을 AsyncStorage에 둔다 (kickday:theme)
+    src/theme.ts                 palettes = { dark, light }
+    src/lib/useThemed.ts         컴포넌트는 여기서 색을 받는다
+    ThemeSettingsScreen          고르는 화면
+
+⚠ `src/theme.ts`의 `colors`를 **직접 import하지 마라.** 그건 dark 팔레트라
+  테마를 안 따라간다. `useThemed(makeStyles)`를 쓴다 — `colors`를 같은 이름으로
+  돌려주므로 컴포넌트 본문은 그대로 둔 채 바꿀 수 있다(64개 파일을 그렇게 옮겼다).
+
+⚠ **네이티브를 바꾸는 것은 `expo-system-ui`다.** 그게 없으면 안드로이드에서
+  `userInterfaceStyle`이 경고만 내고 아무것도 안 쓴다 — 앱이 어두웠던 것은
+  색이 하드코딩돼 있어서였지 설정이 먹어서가 아니었다.

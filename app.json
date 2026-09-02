@@ -1,4 +1,11 @@
 {
+  "//": [
+    "userInterfaceStyle: dark 는 **네이티브 기본값**이다 — 앱이 뜨기 전 스플래시와",
+    "OS가 칠하는 면의 색을 정한다. 실행 중의 테마는 이 값이 아니라 themeStore가 정한다",
+    "(어둡게/밝게/시스템 따름 — 설정 > 화면 모드). 밝은 모드는 있고, 이 줄만 보면",
+    "「다크 고정」으로 읽힌다. 두 번 그렇게 읽혔다.",
+    "관련: src/lib/themeStore.ts · src/theme.ts(palettes) · ThemeSettingsScreen"
+  ],
   "expo": {
     "name": "KickDay",
     "slug": "futsal-club",

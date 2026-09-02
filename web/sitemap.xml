@@ -7,4 +7,7 @@
   <url><loc>https://kickday.app/location</loc><priority>0.3</priority></url>
   <url><loc>https://kickday.app/marketing</loc><priority>0.3</priority></url>
   <url><loc>https://kickday.app/age</loc><priority>0.3</priority></url>
+  <url>
+    <loc>https://kickday.app/delete-account</loc>
+  </url>
 </urlset>

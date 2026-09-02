@@ -141,16 +141,41 @@ const votesFor = (matchId: string, statuses: (0 | 1 | 2 | 3)[]) =>
     )
     .filter((v): v is NonNullable<typeof v> => !!v);
 
+/*
+  ⚠ **지난 경기 둘은 이번 달 안이어야 한다.**
+  「이번 달 참석률」은 이번 달의 **이미 치른** 경기만 센다(attendanceRate.ts).
+  「며칠 전」으로만 잡으면 달 초에 전부 지난달로 넘어가 참석률이 「-」가 된다 —
+  처음 만들었을 때 실제로 그렇게 나왔다.
+*/
+const pastThisMonth = (back: number, hhmm: string) => {
+  const now = new Date();
+  const d = new Date(now);
+  d.setDate(now.getDate() - Math.min(back, Math.max(0, now.getDate() - 1)));
+  const [h, m] = hhmm.split(':').map(Number);
+  d.setHours(h, m, 0, 0);
+  /* 달 1일이라 오늘로 접혔으면 아침으로 — 「이미 치른」이 되어야 센다 */
+  if (d.getTime() > now.getTime()) d.setHours(7, 0, 0, 0);
+  return d.toISOString();
+};
+
 const matches = [
-  /* 이번 주 수요일 — 정원 6에 참석 8이라 둘이 대기다. 미투표 하나가 남아 독촉이 산다 */
+  /* 이번 주 — 정원 6에 참석 7이라 하나가 대기다. 미투표 하나가 남아 독촉이 산다 */
   { ...mkMatch('fx-1', at(2), '강남 풋살파크 A구장', 'scheduled', 6),
     votes: votesFor('fx-1', [1, 1, 1, 1, 1, 1, 1, 0]) },
   /* 다음 주 — 아직 갈리는 중 */
   { ...mkMatch('fx-2', at(9), '역삼 풋살스타디움', 'scheduled'),
     votes: votesFor('fx-2', [1, 1, 3, 2, 1, 0, 1, 3]) },
-  ...[7, 14, 21, 28].map((d, i) => ({
-    ...mkMatch(`fx-p${i}`, at(-d), i % 2 ? '역삼 풋살스타디움' : '강남 풋살파크 A구장', 'finished'),
-    votes: votesFor(`fx-p${i}`, [1, 1, 1, 2, 1, 1, i % 2 ? 1 : 2, 1]),
+  /* 이번 달에 치른 둘 — 참석률의 분자·분모가 여기서 나온다 */
+  { ...mkMatch('fx-p0', pastThisMonth(1, '20:00'), '강남 풋살파크 A구장', 'finished'),
+    votes: votesFor('fx-p0', [1, 1, 1, 2, 1, 1, 1, 1]) },
+  /* ⚠ 시간을 다르게 둔다. 달 초에는 위 클램프 때문에 둘이 같은 날로 접히는데,
+     그때 시간까지 같으면 카드 둘이 똑같아 보인다(9월 2일에 실제로 그랬다) */
+  { ...mkMatch('fx-p1', pastThisMonth(2, '17:00'), '역삼 풋살스타디움', 'finished'),
+    votes: votesFor('fx-p1', [1, 1, 1, 1, 2, 1, 2, 1]) },
+  /* 지난달 둘 — 「지난 정산」 목록이 비어 보이지 않게 */
+  ...[35, 42].map((d, i) => ({
+    ...mkMatch(`fx-p${i + 2}`, at(-d), i % 2 ? '역삼 풋살스타디움' : '강남 풋살파크 A구장', 'finished'),
+    votes: votesFor(`fx-p${i + 2}`, [1, 1, 1, 2, 1, 1, 2, 1]),
   })),
 ];
 
@@ -284,7 +309,19 @@ export function applyScreenshotFixtures(): boolean {
     current: current as never,
     past: past as never,
     pendingMatches: [
-      { matchId: 'fx-p3', matchDate: at(-28), title: '8월 6일 경기', where: '20:00 · 역삼 풋살스타디움', attendCount: 7, daysSince: 28 },
+      /* 정산 탭의 두 갈래(진행중·미등록)가 둘 다 보이게 하나 둔다.
+         ⚠ 제목을 손으로 적지 않는다 — 달이 바뀌면 날짜와 어긋난다 */
+      (() => {
+        const d = new Date(at(-42));
+        return {
+          matchId: 'fx-p3',
+          matchDate: d.toISOString(),
+          title: `${d.getMonth() + 1}월 ${d.getDate()}일 경기`,
+          where: '20:00 · 역삼 풋살스타디움',
+          attendCount: 7,
+          daysSince: 42,
+        };
+      })(),
     ],
     loaded: true,
     loading: false,

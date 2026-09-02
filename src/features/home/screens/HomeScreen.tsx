@@ -46,7 +46,6 @@ import { settlementTitle, settlementPlace } from '../../settlement/utils';
 import { shareSettlement } from '../../settlement/links';
 import { useSettlementRealtime } from '../../settlement/hooks/useSettlementRealtime';
 import { SettlementCard } from '../../settlement/components/SettlementCard';
-import { SendMoneySheet } from '../../settlement/components/SendMoneySheet';
 import { useAnnouncementsStore } from '../../announcements/stores/announcementsStore';
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
@@ -264,7 +263,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
 
   const [rosterOpen, setRosterOpen] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
   /** 공지를 누르면 이 벨의 알림 패널을 연다 — 공지와 알림을 한 곳에서 본다 */
   const bellRef = useRef<NotificationBellHandle>(null);
   const [noticeDetail, setNoticeDetail] = useState<AnnouncementRow | null>(null);
@@ -989,15 +987,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
         />
       )}
 
-      {/* 정산 카드의 "계좌 송금" — 정산 탭과 같은 시트를 그대로 쓴다 */}
-      <SendMoneySheet
-        visible={sendOpen}
-        onClose={() => setSendOpen(false)}
-        bankName={current?.bankName ?? ''}
-        accountNo={current?.accountNo ?? ''}
-        holder={current?.accountHolder ?? ''}
-        amount={myShare?.amount ?? 0}
-      />
     </ScreenGradient>
   );
 }

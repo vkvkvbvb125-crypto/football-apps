@@ -21,12 +21,19 @@ interface Props {
   accountNo: string;
   holder: string;
   amount: number;
+  /*
+    ⚠ **둘 다 필수다.** optional로 두었다가 홈이 안 넘기고 있었다 —
+      정산 탭에서 써 보면 잘 되므로 홈에서만 다른 것을 아무도 안 본다.
+      타입으로 막으면 「넘기는 것을 잊을 자리」가 애초에 없어진다.
+      (홈의 시트는 열 수도 없는 죽은 것이라 지웠다. 지금 그리는 곳은 정산 탭 하나다.)
+
+    ⚠ onRemember를 지웠다. 기억은 이 시트가 AsyncStorage에 직접 하고 있어서
+      아무도 안 넘겨도 동작이 온전했다 — 남아 있으면 「여기서 뭔가 한다」로 읽힌다.
+  */
   /** 계좌 복사 폴백이 실행됐을 때 (토스트 표시용) */
-  onCopied?: () => void;
-  /** 기억된 앱이 바뀌었을 때 */
-  onRemember?: (appId: string | null) => void;
+  onCopied: () => void;
   /** 실제로 송금 앱을 띄웠을 때 — 돌아왔을 때 입금 확인을 물어보려고 쓴다 */
-  onOpened?: (appName: string) => void;
+  onOpened: (appName: string) => void;
 }
 
 export function SendMoneySheet({
@@ -37,7 +44,6 @@ export function SendMoneySheet({
   holder,
   amount,
   onCopied,
-  onRemember,
   onOpened,
 }: Props) {
   const { colors, styles } = useThemed(makeStyles);
@@ -87,17 +93,12 @@ export function SendMoneySheet({
 
   const copyAccount = async () => {
     await Clipboard.setStringAsync(`${bankName} ${accountNo}`);
-    onCopied?.();
+    onCopied();
   };
 
   const confirm = async () => {
-    if (remember) {
-      await AsyncStorage.setItem(REMEMBER_KEY, picked.id);
-      onRemember?.(picked.id);
-    } else {
-      await AsyncStorage.removeItem(REMEMBER_KEY);
-      onRemember?.(null);
-    }
+    if (remember) await AsyncStorage.setItem(REMEMBER_KEY, picked.id);
+    else await AsyncStorage.removeItem(REMEMBER_KEY);
     onClose();
     if (!pickedInstalled) {
       await copyAccount();
@@ -105,7 +106,7 @@ export function SendMoneySheet({
     }
     try {
       await Linking.openURL(picked.buildUrl({ bankName, accountNo, amount }));
-      onOpened?.(picked.name);
+      onOpened(picked.name);
     } catch {
       await copyAccount();
     }

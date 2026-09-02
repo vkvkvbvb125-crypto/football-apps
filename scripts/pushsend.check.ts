@@ -59,9 +59,20 @@ ok(/vibrationPattern/.test(svc), '진동 패턴이 없다');
 ok(/priority:\s*'high'/.test(fn),
    "notify-team이 priority: 'high'를 안 싣는다 — 기본값은 Doze에 묶였다 나중에 몰려 도착한다");
 
-// ── ⑥ 보내는 자리가 전부 실패를 삼킨다 ──
-//    notifyTeam은 던진다(if (error) throw error). 발송이 실패했다고 「경기 생성」
-//    자체가 깨지면 안 되고, 잡지 않으면 unhandled rejection이 된다.
+// ── ⑥ 발송 실패를 어떻게 다루는가 ──
+//    notifyTeam은 던진다(if (error) throw error).
+//
+//    ⚠ **원래 「전부 .catch로 삼켜라」였다. 의도보다 넓었다.**
+//      그 규칙이 든 근거는 둘인데 둘 다 **곁다리 발송**에만 해당한다:
+//        · 발송이 실패했다고 「경기 생성」 자체가 깨지면 안 된다
+//        · 아무도 안 기다리므로 안 잡으면 unhandled rejection이 된다
+//      독촉은 다르다 — **발송이 곧 본 작업이고, 부르는 쪽이 기다린다.**
+//      거기서 삼키면 안 갔는데 「전송됨」이 뜬다. 이 저장소에서 실제로 난 일이다.
+//
+//    그래서 결과를 넘기는가로 가른다:
+//      곁다리 (statement 자리)        → .catch로 삼켜라
+//      await·return으로 넘기는 자리   → **삼키지 마라.** 부르는 쪽이 결과를 쓴다
+//
 //    ⚠ 줄 번호로 짚지 않는다 — 코드가 움직이면 엉뚱한 줄을 본다. 전체를 훑는다.
 const all: string[] = [];
 (function walk(d: string) {
@@ -86,14 +97,22 @@ for (const f of all) {
       if (src[i] === '(') depth += 1;
       else if (src[i] === ')') { depth -= 1; if (depth === 0) break; }
     }
-    if (!src.slice(i, i + 12).includes('.catch(')) {
-      const line = src.slice(0, m.index!).split(NL).length;
-      fails.push(`${f}:${line} — notifyTeam이 .catch 없이 불린다. 발송 실패가 본 작업을 깨뜨린다`);
-    }
+    const line = src.slice(0, m.index!).split(NL).length;
+    const swallowed = src.slice(i, i + 12).includes('.catch(');
+    /* 앞의 공백을 걷어낸 마지막 낱말 — await·return이면 결과를 넘기는 자리다 */
+    const before = src.slice(0, m.index!).trimEnd();
+    const handed = /\b(await|return)$/.test(before);
+
+    if (handed && swallowed)
+      fails.push(`${f}:${line} — await/return으로 넘기면서 .catch로 삼킨다. 부르는 쪽이 실패를 못 본다`);
+    if (!handed && !swallowed)
+      fails.push(`${f}:${line} — 곁다리 발송인데 .catch가 없다. 발송 실패가 본 작업을 깨뜨린다`);
   }
 }
 
 // 보내는 자리 개수가 줄면 알아야 한다 — 없어진 것은 아무도 안 센다.
+// 여전히 8곳이다 — HomeScreen의 죽은 독촉이 빠지고 remindVote.ts가 들어와 상쇄됐다.
+// ⚠ 숫자가 안 변한 것이 「아무것도 안 바뀌었다」는 뜻이 아니다. 8 = 8이지만 자리가 다르다.
 ok(calls === 8, `notifyTeam 호출이 ${calls}곳이다 — 8곳이어야 한다. 늘거나 줄었으면 확인하고 이 숫자를 고쳐라`);
 
 if (fails.length) {

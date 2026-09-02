@@ -53,6 +53,7 @@ import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../
 import { resolveCapacity } from '../utils/capacity';
 import { createResultLabel } from '../utils/createResult';
 import { isVotingOpen, votingLockNote } from '../utils/voting';
+import { notVotedUserIds, remindVote } from '../utils/remindVote';
 import { upcomingFrom } from '../utils/upcoming';
 import { matchDateTimeLabel, matchLabel } from '../utils/matchLabel';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
@@ -415,6 +416,25 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
       };
     });
   }, [rosterMatch, members, activeTeam]);
+
+  /**
+   * 독촉을 보낸다. 인자가 없으면 미투표자 전원.
+   *
+   * ⚠ 실패를 삼키지 않는다 — 시트가 결과를 보고 「전송됨」을 그린다.
+   */
+  const remindVoteTo = (memberId?: string) => {
+    if (!rosterMatch || !activeTeam) return Promise.resolve();
+    const toUserIds = memberId
+      ? members.filter((m) => m.id === memberId).map((m) => m.userId)
+      : notVotedUserIds(rosterMatch.votes, members);
+    return remindVote({
+      teamId: activeTeam.team.id,
+      teamName: activeTeam.team.name,
+      matchDate: rosterMatch.match_date,
+      toUserIds,
+      excludeUserId: myUserId,
+    });
+  };
 
   /* 홈 경기 카드도 같은 시트에 같은 라벨을 넘긴다 — 포맷은 matchLabel 유틸이 갖는다 */
   const rosterMatchLabel = useMemo(
@@ -790,6 +810,12 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         lockNote={(rosterMatch && votingLockNote(rosterMatch, isAdmin ?? false)) ?? undefined}
         /* 던지는 것을 시트가 받아서 자기 자리에 그린다 — 위(:428)는 시트에 가려 안 보인다 */
         onVote={rosterMatch ? (status) => vote(rosterMatch.id, status) : undefined}
+        /*
+          독촉 — 홈과 같은 유틸을 쓴다. 한쪽만 이으면 같은 시트가 화면마다 다르게 동작한다.
+          rosterMatch가 없으면 안 넘긴다 → 시트가 버튼을 안 그린다.
+        */
+        onPoke={rosterMatch ? (memberId) => remindVoteTo(memberId) : undefined}
+        onPokeAll={rosterMatch ? () => remindVoteTo() : undefined}
       />
 
       <CreateMatchSheet

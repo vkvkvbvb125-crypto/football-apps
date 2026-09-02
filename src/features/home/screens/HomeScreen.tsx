@@ -51,13 +51,13 @@ import { useAnnouncementsStore } from '../../announcements/stores/announcementsS
 import { AnnouncementDetailModal } from '../../announcements/components/AnnouncementDetailModal';
 import { AnnouncementFormModal } from '../../announcements/components/AnnouncementFormModal';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
-import { notifyTeam } from '../../notifications/services/pushService';
 import { fetchMatchWeather, weatherEmoji, weatherLabel } from '../../attendance/services/weatherService';
 import { RosterSheet, type RosterMember } from '../../attendance/components/RosterSheet';
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
 import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { resolveCapacity } from '../../attendance/utils/capacity';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
+import { notVotedUserIds, remindVote } from '../../attendance/utils/remindVote';
 import { DEFAULT_CAPACITY } from '../../attendance/components/ScheduleRow';
 import { relativeTime } from '../../../lib/relativeTime';
 import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
@@ -265,7 +265,6 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const [rosterOpen, setRosterOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
-  const [reminded, setReminded] = useState(false);
   /** 공지를 누르면 이 벨의 알림 패널을 연다 — 공지와 알림을 한 곳에서 본다 */
   const bellRef = useRef<NotificationBellHandle>(null);
   const [noticeDetail, setNoticeDetail] = useState<AnnouncementRow | null>(null);
@@ -444,27 +443,24 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
     shareSettlement(current, settlementTitle(current, matches));
   };
 
-  const remindNotVoted = () => {
-    if (!next) return;
-    const notVotedUserIds = members
-      .filter((m) => !next.votes.some((v) => v.team_member_id === m.id))
-      .map((m) => m.userId);
-    if (notVotedUserIds.length === 0) return;
-    const dateLabel = new Date(next.match_date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-    notifyTeam(
-      activeTeam.team.id,
-      `${activeTeam.team.name} 참석 투표 독촉`,
-      `${dateLabel} 경기 참석 투표를 아직 안 하셨어요 — 지금 투표해주세요`,
-      myUserId,
-      notVotedUserIds,
-      'deadline',
-      { matchDate: next.match_date }
-    ).catch(() => {
-      // 알림 전송 실패는 조용히 무시
-    });
-    setReminded(true);
-    setTimeout(() => setReminded(false), 2000);
-  };
+  /*
+    독촉 — 명단 시트의 버튼이 부른다.
+
+    ⚠ 예전에는 이 함수가 **정의만 되어 있고 아무도 안 불렀다.** 시트에는 버튼이
+      있었지만 onPokeAll을 안 넘겨서 `undefined?.()`로 조용히 넘어갔다.
+      화면은 「알림을 보냈어요」로 바뀌었고 아무것도 안 갔다.
+      실패를 삼키던 .catch(() => {})도 걷어냈다 — 시트가 결과를 보고 표시를 바꾼다.
+  */
+  const remindVoteTo = (toUserIds: string[]) =>
+    next
+      ? remindVote({
+          teamId: activeTeam.team.id,
+          teamName: activeTeam.team.name,
+          matchDate: next.match_date,
+          toUserIds,
+          excludeUserId: myUserId,
+        })
+      : Promise.resolve();
 
   const matchDate = next ? new Date(next.match_date) : null;
 
@@ -988,6 +984,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           lockNote={lockNote ?? undefined}
           /* 홈은 스토어 error를 구독하지 않는다 — 실패 문구는 시트가 자기 자리에 그린다 */
           onVote={(status) => vote(next.id, status)}
+          onPoke={(memberId) => remindVoteTo(members.filter((m) => m.id === memberId).map((m) => m.userId))}
+          onPokeAll={() => remindVoteTo(notVotedUserIds(next.votes, members))}
         />
       )}
 

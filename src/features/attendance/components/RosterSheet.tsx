@@ -58,8 +58,16 @@ interface Props {
   deadlineLabel?: string; // "D-1"
   members: RosterMember[];
   isAdmin: boolean;
-  onPoke?: (memberId: string) => void;
-  onPokeAll?: () => void;
+  /**
+   * 독촉. **실패하면 던진다** — onVote와 같은 규약이다.
+   *
+   * ⚠ 안 넘기면 버튼이 아예 안 그려진다. 예전에는 `onPoke?.(m.id)`로 불러서
+   *   안 넘어와도 조용히 넘어갔고, 그래도 버튼은 그려지고 「전송됨」으로 바뀌었다 —
+   *   총무는 보냈다고 믿는데 아무것도 안 갔다. **없는 기능이 성공처럼 보이는 자리였다.**
+   *   두 화면 다 안 넘기고 있었으므로 아무에게도 한 번도 안 갔다.
+   */
+  onPoke?: (memberId: string) => Promise<void>;
+  onPokeAll?: () => Promise<void>;
   /**
    * 마감돼서 못 바꾸는 상태.
    *
@@ -134,6 +142,8 @@ export function RosterSheet({
   const [tab, setTab] = useState<TabKey>('all');
   const [poked, setPoked] = useState<Record<string, boolean>>({});
   const [pokedAll, setPokedAll] = useState(false);
+  const [poking, setPoking] = useState(false);
+  const [pokeError, setPokeError] = useState<string | null>(null);
 
   // ── 내 응답 바꾸기 ──────────────────────────────────────────
   /** 알약이 펼쳐져 있는가. 접혀 있을 때는 버튼 하나만 보인다 */
@@ -266,14 +276,34 @@ export function RosterSheet({
     { key: 'pending', label: `미투표 ${counts.pending}` },
   ];
 
-  const handlePoke = (m: RosterMember) => {
-    setPoked((p) => ({ ...p, [m.id]: true }));
-    onPoke?.(m.id);
+  /*
+    보낸 뒤에 표시를 바꾼다 — 먼저 바꾸고 보내면 실패해도 「전송됨」이 남는다.
+    submit()이 저장 뒤에 setDone(true)를 하는 것과 같은 순서다.
+  */
+  const handlePoke = async (m: RosterMember) => {
+    if (!onPoke || poking) return;
+    setPoking(true);
+    setPokeError(null);
+    try {
+      await onPoke(m.id);
+      setPoked((p) => ({ ...p, [m.id]: true }));
+    } catch (e) {
+      setPokeError(e instanceof Error ? e.message : '독촉을 보내지 못했어요');
+    }
+    setPoking(false);
   };
 
-  const handlePokeAll = () => {
-    setPokedAll(true);
-    onPokeAll?.();
+  const handlePokeAll = async () => {
+    if (!onPokeAll || poking) return;
+    setPoking(true);
+    setPokeError(null);
+    try {
+      await onPokeAll();
+      setPokedAll(true);
+    } catch (e) {
+      setPokeError(e instanceof Error ? e.message : '독촉을 보내지 못했어요');
+    }
+    setPoking(false);
   };
 
   /** 지금 내 응답. 두 화면 다 members에 isMe를 채워서 넘긴다 */
@@ -406,7 +436,8 @@ export function RosterSheet({
             ) : (
               shown.map((m) => {
                 const waiting = m.status === 'pending' || m.status === 'undecided';
-                const showPoke = isAdmin && waiting && !m.isMe;
+                /* onPoke가 없으면 안 그린다 — 눌러도 아무 일 없는 버튼을 두지 않는다 */
+                const showPoke = isAdmin && waiting && !m.isMe && !!onPoke;
                 const done = poked[m.id] || pokedAll;
                 const tone = toneOf(colors)[m.status];
                 return (
@@ -468,17 +499,20 @@ export function RosterSheet({
                   : '전원 투표 완료'}
               </Text>
             </View>
-            {isAdmin && counts.pending > 0 && (
+            {isAdmin && counts.pending > 0 && !!onPokeAll && (
               <Pressable
                 onPress={handlePokeAll}
+                disabled={poking}
                 accessibilityRole="button"
                 style={[styles.pokeAll, pokedAll && styles.pokeAllDone]}
               >
                 <Text style={[styles.pokeAllText, pokedAll && { color: colors.green }]}>
-                  {pokedAll ? '알림을 보냈어요' : `미투표 ${counts.pending}명 독촉`}
+                  {poking ? '보내는 중…' : pokedAll ? '알림을 보냈어요' : `미투표 ${counts.pending}명 독촉`}
                 </Text>
               </Pressable>
             )}
+            {/* 개별 독촉의 실패도 여기 뜬다 — 칩은 목록 안에 있어서 스크롤로 사라진다 */}
+            {!!pokeError && <Text style={styles.pokeError}>{pokeError}</Text>}
           </View>
 
           {/*
@@ -732,6 +766,7 @@ const makeStyles = (colors: Palette) =>
   confirmText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
   confirmTextOff: { color: colors.textFaint },
 
+  pokeError: { color: colors.danger, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   voteError: { color: colors.danger, fontSize: 11, fontWeight: '700', textAlign: 'center' },
 
   doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46 },

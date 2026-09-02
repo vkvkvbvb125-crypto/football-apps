@@ -123,4 +123,52 @@ const home = read('src/features/home/screens/HomeScreen.tsx');
     '「동작 줄이기」면 체크 없이 바로 닫는다 — 눌렀는데 아무것도 안 보인다');
 }
 
+// ── 7. 독촉 — 버튼이 있으면 핸들러도 있다 ───────────────────────────
+//
+// 2026-09-02에 재서 안 것. 독촉 버튼은 있는데 **두 화면 다 핸들러를 안 넘기고
+// 있었다.** 시트는 `onPoke?.(m.id)`로 불렀고 optional 호출은 조용히 넘어간다 —
+// 버튼은 눌리고 「전송됨」으로 바뀌었다. 총무는 보냈다고 믿는데 한 번도 안 갔다.
+//
+// 「실패와 성공의 출력이 같다」의 새 모양이다. 여기서는 **없는 기능**이 성공처럼 보였다.
+// 그래서 셋을 한자리에서 본다 — 하나만 봐도 나머지가 다시 끊길 수 있다.
+{
+  // ⑴ optional 호출로 되돌아가지 않는다. 이것이 조용함의 원인이었다
+  //
+  // ⚠ **주석을 걷어내고 본다.** 안 걷으면 이 단언은 항상 실패한다 —
+  //   시트의 프롭 주석이 옛 코드 `onPoke?.(m.id)`를 근거로 인용하고 있다.
+  //   anchor.ts의 「쓰이지 않는가」 항목에 적힌 바로 그 함정이고, 여기서 또 났다.
+  //   근거를 적으면 그 이름이 주석에 남는다. 「이름이 없는가」와 「쓰이지 않는가」는 다르다.
+  const code = sheet.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/onPoke\?\.\(/.test(code) && !/onPokeAll\?\.\(/.test(code),
+    '독촉을 optional 호출(?.())로 부른다 — 핸들러가 없으면 조용히 넘어간다');
+
+  // ⑵ 핸들러가 없으면 버튼을 안 그린다. onVote가 이미 쓰는 방식이다
+  assert.ok(/const showPoke = [^;]*!!onPoke\b/.test(sheet),
+    '개별 독촉 버튼이 onPoke에 안 물려 있다 — 안 넘겨도 버튼이 그려진다');
+  assert.ok(/counts\.pending > 0 && !!onPokeAll/.test(sheet),
+    '전체 독촉 버튼이 onPokeAll에 안 물려 있다');
+
+  // ⑶ 보낸 뒤에 표시를 바꾼다. 먼저 바꾸면 실패해도 「전송됨」이 남는다
+  for (const [fn, flag] of [['handlePoke', 'setPoked'], ['handlePokeAll', 'setPokedAll']] as const) {
+    const at = sheet.indexOf(`const ${fn} =`);
+    assert.ok(at > 0, `${fn}이 없다`);
+    let d = 0, end = at;
+    for (let i = sheet.indexOf('{', at); i < sheet.length; i += 1) {
+      if (sheet[i] === '{') d += 1;
+      else if (sheet[i] === '}') { d -= 1; if (d === 0) { end = i; break; } }
+    }
+    const body = sheet.slice(at, end + 1);
+    assert.ok(body.indexOf('await') < body.indexOf(flag),
+      `${fn}이 보내기 전에 ${flag}을 부른다 — 실패해도 「전송됨」이 남는다`);
+    assert.ok(/catch \(e\)/.test(body) && /setPokeError/.test(body),
+      `${fn}이 실패를 안 알린다`);
+  }
+
+  // ⑷ **두 화면 다 넘긴다.** 한쪽만 이으면 같은 시트가 화면마다 다르게 동작한다
+  for (const [name, src] of [['AttendanceScreen', screen], ['HomeScreen', home]] as const) {
+    assert.ok(/onPoke=\{/.test(src), `${name}이 onPoke를 안 넘긴다 — 개별 독촉이 안 그려진다`);
+    assert.ok(/onPokeAll=\{/.test(src), `${name}이 onPokeAll을 안 넘긴다`);
+  }
+}
+
 console.log('rostervote ok');

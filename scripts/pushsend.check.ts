@@ -84,11 +84,13 @@ const all: string[] = [];
 })('src');
 
 let calls = 0;
+const sites: string[] = [];
 for (const f of all) {
   if (f.endsWith('pushService.ts')) continue;   // 정의부는 뺀다
   const src = strip(readFileSync(f, 'utf8'));
   for (const m of src.matchAll(/notifyTeam\(/g)) {
     calls += 1;
+    sites.push(f);
     // 호출 문장이 끝나는 ) 를 찾아 그 뒤에 .catch가 붙는지 본다.
     // 창(N줄)으로 보면 여러 줄에 걸친 호출에서 놓친다 — anchor.ts 여덟째.
     let depth = 0;
@@ -111,9 +113,29 @@ for (const f of all) {
 }
 
 // 보내는 자리 개수가 줄면 알아야 한다 — 없어진 것은 아무도 안 센다.
-// 여전히 8곳이다 — HomeScreen의 죽은 독촉이 빠지고 remindVote.ts가 들어와 상쇄됐다.
-// ⚠ 숫자가 안 변한 것이 「아무것도 안 바뀌었다」는 뜻이 아니다. 8 = 8이지만 자리가 다르다.
+// ⚠ **개수만 세면 상쇄를 못 본다.**
+//   HomeScreen의 죽은 독촉 하나를 지우고 remindVote.ts 하나를 넣었는데 **여전히 8이었다.**
+//   개수 단언만 있었으면 그 커밋이 아무 말 없이 지나간다 — 「같다」와 「안 바뀌었다」는 다르다.
+//   그래서 개수 옆에 **어디에 있는가**를 같이 건다(anchor.ts 「숫자가 안 변한 것」).
 ok(calls === 8, `notifyTeam 호출이 ${calls}곳이다 — 8곳이어야 한다. 늘거나 줄었으면 확인하고 이 숫자를 고쳐라`);
+
+/* 8번의 호출이 7개 파일에 있다 — 일정 화면은 우천 안내와 독촉 둘이 아니라 우천 하나다 */
+const WHERE = [
+  'AttendanceScreen.tsx',   // 우천 안내
+  'BoardPanel.tsx',         // 새 글
+  'PostComments.tsx',       // 댓글 · 멘션
+  'SettlementScreen.tsx',   // 회비 독촉
+  'announcementsStore.ts',  // 공지
+  'attendanceStore.ts',     // 새 경기 · 마감
+  'remindVote.ts',          // 참석 투표 독촉
+];
+const where = [...new Set(sites.map((p) => p.split('/').pop()!))].sort();
+ok(
+  where.join(',') === WHERE.join(','),
+  `notifyTeam을 부르는 파일이 달라졌다.
+     지금: ${where.join(', ')}
+     기대: ${WHERE.join(', ')}`
+);
 
 if (fails.length) {
   console.error(fails.map((f) => '  ✗ ' + f).join('\n'));

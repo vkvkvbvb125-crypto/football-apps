@@ -1,0 +1,5 @@
+{
+  "//": "deadcode.check.ts 전용 — 「선언했는데 아무도 안 쓴다」만 따로 본다. 앱 빌드는 tsconfig.json을 쓴다",
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noUnusedLocals": true }
+}

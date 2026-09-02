@@ -37,7 +37,7 @@ const RETENTION = {
 };
 
 /** 약관 시행일 — 출시일에 맞춰 바꾼다. 약관에는 시행일이 반드시 있어야 한다 */
-const EFFECTIVE_DATE = '[시행일]';
+const EFFECTIVE_DATE = '2026년 10월 1일';
 
 export interface TermDoc {
   key: string;

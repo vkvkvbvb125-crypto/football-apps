@@ -78,13 +78,6 @@ const page = (title, bodyHtml) => `<!doctype html>
 </html>
 `;
 
-// 각 약관을 /{key}/ 로 낸다. 스토어에 적을 주소는 /privacy 다.
-for (const doc of TERMS) {
-  const dir = join(root, 'web', doc.key);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'index.html'), page(doc.title, bodyToHtml(doc.body)), 'utf8');
-  console.log('생성  /' + doc.key);
-}
 
 /*
   계정·데이터 삭제 안내 — /delete-account
@@ -137,22 +130,36 @@ contact@kickday.app 에 「계정 삭제 요청」이라고 보내주세요.
 
 contact@kickday.app`;
 
-{
-  const dir = join(root, 'web', 'delete-account');
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    join(dir, 'index.html'),
-    page('계정 및 데이터 삭제', bodyToHtml(DELETE_ACCOUNT_BODY)),
-    'utf8'
-  );
-  console.log('생성  /delete-account');
+/*
+  ── 내는 것과 쓰는 것을 가른다 ──────────────────────────────────────
+  render()는 파일을 안 건드리고 { 경로: HTML }만 돌려준다.
+  webterms.check.ts가 이걸 불러 web/ 과 대조한다 — **검사가 자기 사본을 시험하지
+  않게** 하려는 것이다. 검사에 같은 조립 코드를 한 벌 더 두면 둘이 갈리는 날
+  검사는 통과하는데 배포본은 옛 문장인 상태가 된다.
+*/
+export function render() {
+  const out = {};
+
+  // 각 약관을 /{key}/ 로 낸다. 스토어에 적을 주소는 /privacy 다.
+  for (const doc of TERMS) {
+    out[`web/${doc.key}/index.html`] = page(doc.title, bodyToHtml(doc.body));
+  }
+
+  out['web/delete-account/index.html'] = page('계정 및 데이터 삭제', bodyToHtml(DELETE_ACCOUNT_BODY));
+
+  // 랜딩 페이지 하단 링크가 /terms 를 가리키므로 이용약관은 그 주소로도 낸다
+  const tos = TERMS.find((t) => t.key === 'tos');
+  if (tos) out['web/terms/index.html'] = page(tos.title, bodyToHtml(tos.body));
+
+  return out;
 }
 
-// 랜딩 페이지 하단 링크가 /terms 를 가리키므로 이용약관은 그 주소로도 낸다
-const tos = TERMS.find((t) => t.key === 'tos');
-if (tos) {
-  const dir = join(root, 'web', 'terms');
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'index.html'), page(tos.title, bodyToHtml(tos.body)), 'utf8');
-  console.log('생성  /terms');
+/* 직접 돌렸을 때만 파일을 쓴다. import는 render()만 가져간다 */
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  for (const [rel, html] of Object.entries(render())) {
+    const abs = join(root, rel);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, html, 'utf8');
+    console.log('생성  /' + rel.split('/')[1]);
+  }
 }

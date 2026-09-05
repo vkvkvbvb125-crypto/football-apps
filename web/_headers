@@ -1,4 +1,4 @@
-# Cloudflare Pages 헤더 설정
+# Cloudflare 헤더 설정 (Workers static assets — Pages가 아니다. wrangler.toml 참고)
 #
 # iOS는 apple-app-site-association의 Content-Type이 application/json이 아니면 무시한다.
 # 확장자가 없는 파일이라 Pages가 text/plain으로 내보내기 쉬워서 여기서 못박는다.

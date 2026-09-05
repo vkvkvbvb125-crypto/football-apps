@@ -18,10 +18,30 @@ Cloudflare Pages에 이 폴더를 그대로 올린다. 두 가지 일을 한다.
 
 ## 배포
 
+⚠ **Pages가 아니라 Worker다.** 이 폴더는 Cloudflare **Workers static assets**로 나간다.
+설정은 저장소 루트의 `wrangler.toml`이 들고 있고 `[assets] directory = "./web"`가 여기를 가리킨다.
+대시보드에서 Pages 프로젝트를 새로 만들면 같은 도메인을 두 곳이 다투게 된다.
+
+```bash
+# 저장소 루트(app/)에서
+npx wrangler login      # 최초 1회. 브라우저가 열리고 Cloudflare 계정을 고르면 끝난다
+npx wrangler deploy
 ```
-Cloudflare 대시보드 → Workers & Pages → Create → Pages
-  → 이 폴더를 업로드하거나 Git 저장소를 연결
-  → Custom domain 으로 kickday.app 연결
+
+⚠ 대시보드 업로더를 쓰지 않는 이유는 `wrangler.toml` 머리말에 있다 —
+`.well-known` 같은 숨김 폴더를 빠뜨리거나 중간에 멈추는 일이 있었다.
+
+### 배포됐는지 확인
+
+⚠ **200이 배포됐다는 뜻이 아니다.** `not_found_handling = "single-page-application"`
+때문에 **없는 경로도 `index.html`을 200으로 돌려준다.** 상태 코드 말고 내용을 봐야 한다.
+
+```bash
+# 계정 삭제 페이지 — 랜딩 페이지가 오면 아직 안 올라간 것이다
+curl -sL https://kickday.app/delete-account | grep -c "무엇이 지워지나"   # 1이어야 한다
+
+# 약관 시행일 — [시행일]이 보이면 옛 배포본이다
+curl -sL https://kickday.app/privacy | grep -o "이 방침은 [^부]*부터"
 ```
 
 ## 확인 방법

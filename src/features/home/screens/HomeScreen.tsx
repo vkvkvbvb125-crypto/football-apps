@@ -170,6 +170,8 @@ interface SectionCardProps {
   style?: StyleProp<ViewStyle>;
   /** 무엇에 관한 카드인가 — 경기는 초록, 돈은 금, 글은 파랑 */
   tone?: BentoTone;
+  /** 튜토리얼이 이 카드를 짚을 때 — 빈 상태든 아니든 카드 자체는 늘 그려진다 */
+  spotRef?: (node: View | null) => void;
 }
 
 /**
@@ -188,6 +190,7 @@ function SectionCard({
   children,
   style,
   tone = 'plain',
+  spotRef,
 }: SectionCardProps) {
   const { colors, styles } = useThemed(makeStyles);
   const body = empty ? (
@@ -223,10 +226,11 @@ function SectionCard({
   const cardStyle = [styles.card, toneBorder(tone), style];
 
   // 빈 상태에서는 카드를 눌러도 보여줄 게 없다 — 눌림 효과도 주지 않는다
-  if (!onPress || empty) return <View style={cardStyle}>{body}</View>;
+  if (!onPress || empty) return <View ref={spotRef} style={cardStyle}>{body}</View>;
 
   return (
     <Pressable
+      ref={spotRef}
       onPress={onPress}
       accessibilityRole="button"
       style={({ pressed }) => [cardStyle, pressed && styles.pressed]}
@@ -237,8 +241,11 @@ function SectionCard({
 }
 
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
-  /* 튜토리얼이 짚는 자리 — ref 하나뿐이고 나머지는 TourProvider가 한다 */
+  /* 튜토리얼이 짚는 자리 — ref만 달고 나머지는 TourProvider가 한다.
+     ⚠ rosterTourRef는 경기가 있을 때만 그려지는 자리다. 팀원 코스가 그걸 짚지 않는
+       이유는 steps.ts의 3단계 주석에 있다. */
   const rosterTourRef = useTourTarget('home.rosterButton');
+  const matchCardTourRef = useTourTarget('home.matchCard');
   const { colors, styles } = useThemed(makeStyles);
   const hero = heroLayout(useWindowDimensions().width);
   /* 배너 자동 전환이 세로 스크롤 중에 끼어들지 않게 하는 신호.
@@ -600,6 +607,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               </View>
             )
           }
+          spotRef={matchCardTourRef}
           style={styles.matchCard}
         >
           {next && matchDate && (

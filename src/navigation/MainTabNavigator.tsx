@@ -82,7 +82,8 @@ function tabIcon(name: keyof typeof Ionicons.glyphMap, tour?: TourTarget) {
     );
 }
 
-/** ref를 달기만 하는 껍데기 — Ionicons는 measureInWindow를 안 준다 */
+/** ref를 달기만 하는 껍데기 — Ionicons는 measureInWindow를 안 준다.
+ *  ⚠ 여백이 있는 요소는 이걸로 감싸면 안 된다. 아래 BallIcon 주석 참고. */
 function TourSpot({ name, children }: { name: TourTarget; children: React.ReactNode }) {
   const ref = useTourTarget(name);
   return <View ref={ref}>{children}</View>;
@@ -95,6 +96,18 @@ function TourSpot({ name, children }: { name: TourTarget; children: React.ReactN
 function BallIcon({ focused }: { focused: boolean }) {
   const { colors, styles } = useThemed(makeStyles);
   const themeName = useThemeName();
+  /*
+    튜토리얼이 짚을 자리 — **TourSpot으로 감싸지 않고 링에 직접 단다.**
+
+    ⚠ 이유: `styles.ring`에 `marginTop: RING_LIFT`(27)가 있다. 감싸는 View의 높이는
+      **자식의 margin을 포함**하므로, 지름 60인 링을 감싸면 껍데기가 60×87로 잡힌다.
+      measureInWindow는 ref가 달린 그 노드를 잴 뿐이라 구멍이 76×103으로 뚫렸고 —
+      원 위에 세로로 긴 둥근 네모가 올라갔다(기기에서 재서 확인한 값이다).
+      옆 탭들이 멀쩡했던 것은 그 아이콘에 margin이 없어서다.
+
+    규칙: **여백이 붙은 요소는 감싸지 말고 그 요소에 직접 ref를 단다.**
+  */
+  const tourRef = useTourTarget('tab.assignment');
   /*
     라이트에서만 공의 색을 갈아끼운다.
 
@@ -109,7 +122,7 @@ function BallIcon({ focused }: { focused: boolean }) {
      (다크의 같은 자리가 11.35:1이니 결이 비슷하다) */
   const ballTint = themeName === 'light' ? colors.greenBright : undefined;
   return (
-    <View style={[styles.ring, focused && styles.ringOn]}>
+    <View ref={tourRef} style={[styles.ring, focused && styles.ringOn]}>
       <Image
         source={require('../../assets/nav-ball.png')}
         style={[styles.ball, !focused && styles.ballIdle, !!ballTint && { tintColor: ballTint }]}
@@ -211,9 +224,7 @@ export function MainTabNavigator() {
           */
           tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => (
-            <TourSpot name="tab.assignment">
-              <BallIcon focused={focused} />
-            </TourSpot>
+            <BallIcon focused={focused} />
           ),
           // 옆 탭들의 세로 정렬(styles.item)을 여기엔 걸지 않는다 — 위 주석 참고
           tabBarItemStyle: styles.itemCenter,

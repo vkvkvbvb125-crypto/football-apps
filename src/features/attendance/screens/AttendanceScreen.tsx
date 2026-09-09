@@ -567,7 +567,6 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                     Date#setHours를 직접 쓰면 state를 그 자리에서 변형시켜버리므로 시작점 복사본으로 비교한다. */}
                 {isAdmin && startOfDay(selectedDate).getTime() >= startOfDay(new Date()).getTime() && (
                   <Pressable
-                    ref={createTourRef}
                     onPress={handleOpenCreate}
                     accessibilityRole="button"
                     accessibilityLabel="이 날짜에 경기 만들기"
@@ -598,6 +597,14 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 {/* 경기가 0건이어도 이 버튼은 뜬다 — 새 팀이 첫 경기를 만드는 유일한 입구다 */}
                 {isAdmin && (
                   <Pressable
+                    /*
+                      튜토리얼 2단계가 짚는 자리. **여기여야 한다.**
+                      전에는 아래 「이 날짜에 경기 만들기」에 달려 있었는데 그건
+                      날짜를 고른 뒤에만 그려진다 — 튜토리얼이 도는 시점(팀 생성 직후)에는
+                      없어서 구멍이 아예 안 뚫렸다(기기에서 확인했다).
+                      이 칩은 위 주석대로 경기가 0건이어도 뜬다.
+                    */
+                    ref={createTourRef}
                     onPress={handleOpenCreate}
                     accessibilityRole="button"
                     accessibilityLabel="경기 만들기"

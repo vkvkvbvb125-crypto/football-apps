@@ -409,7 +409,9 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         // 로드가 실패해도 목록이 비어 보이던 문제 — 빈 상태로 위장하지 말고 원인을 보여준다
         <>
           {!!error && <Text style={styles.errorText}>{error}</Text>}
-          <SettlementEmpty isAdmin={!!isAdmin} />
+          {/* 총무에게만 「할 일」이 간다 — 정산을 만드는 것은 총무이고,
+              그 앞 단계가 경기다. 경기가 없으면 정산도 있을 수 없다 */}
+          <SettlementEmpty isAdmin={!!isAdmin} onGoSchedule={() => navigation.navigate('Attendance')} />
         </>
       ) : (
         <View style={{ flex: 1 }}>

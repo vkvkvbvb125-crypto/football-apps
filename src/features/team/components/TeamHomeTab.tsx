@@ -712,6 +712,7 @@ export function TeamHomeTab({
                   </Pressable>
                 </ScrollView>
 
+
                 {/*
                   「팀 기록」 카드와 「내 정보」 행을 걷어냈다 — 레퍼런스에 없다.
 
@@ -906,7 +907,12 @@ export function TeamHomeTab({
                   </View>
 
                   {recentPosts.length === 0 ? (
-                    <Text style={styles.nextEmpty}>아직 게시글이 없어요</Text>
+                    /* ⚠ 문구를 BoardPanel에 맞춘다. 같은 「글이 없다」를 두 화면이
+                       다르게 말하고 있었다 — 여기는 「아직 게시글이 없어요」,
+                       게시판은 「첫 글을 남겨보세요」. 게시판이 기준이다:
+                       그 화면이 글을 쓰는 자리라 문구가 곧 다음 할 일이 된다.
+                       boardempty.check가 둘을 마주 보게 한다. */
+                    <Text style={styles.nextEmpty}>첫 글을 남겨보세요</Text>
                   ) : (
                     recentPosts.map((p) => (
                       <Pressable

@@ -28,6 +28,10 @@ import { fileURLToPath } from 'node:url';
 import { basename, join } from 'node:path';
 import ts from 'typescript';
 
+/* 이스케이프를 쓰지 않는다 — 이 저장소에서 문자열이 셸을 두 번 지나가며 열 번 넘게 샜다 */
+const BS = String.fromCharCode(92);
+const NL = String.fromCharCode(10);
+
 const SRC = fileURLToPath(new URL('../src/', import.meta.url));
 
 function walk(dir: string): string[] {
@@ -148,4 +152,43 @@ for (const file of walk(SRC)) {
   );
 }
 
-console.log(`rolelabel ok — 역할 뱃지 ${badges.length}곳, 대체 표시 ${fallbacks.length}곳`);
+// ── 4. 「팀장」은 이 앱의 말이 아니다 ───────────────────────────────
+//
+// 2026-09-09에 홈의 빈 상태에서 하나 나왔다 — 「팀장이 경기를 등록하면 여기에
+// 표시됩니다」. 다른 자리는 전부 「총무」인데 거기만 달랐다.
+//
+// ⚠ **위 세 층위 단언이 이걸 못 잡았다.** ①~④는 「팀원 ↔ 멤버」의 층위를 가르는
+//   것이라 「총무」 쪽 낱말은 아예 후보에 없었다. 반대말 하나를 통째로 놓친 것이다.
+//
+// DB의 role은 admin/member 둘뿐이고 owner 개념이 없다 — 「팀장」이 가리킬 대상이
+// 애초에 없다. 그래서 상한이 아니라 **0**이다.
+//
+// ⚠ **주석을 걷고 본다.** 안 걷으면 이 단언이 항상 실패한다 — 근거를 적은 주석에
+//   그 낱말이 남기 때문이다(TeamSettingsScreen이 「role이 admin/member 둘뿐이라
+//   팀장을 가릴 기준이 없다」고 적어 두었고, 그 문장은 남아야 한다).
+//   anchor.ts 「쓰이지 않는가」 항목의 함정이고 이 저장소에서 두 번 났다.
+{
+  const walk = (d: string): string[] =>
+    readdirSync(d, { withFileTypes: true }).flatMap((e) => {
+      const q = join(d, e.name);
+      return e.isDirectory() ? walk(q) : /\.tsx?$/.test(e.name) ? [q.split(BS).join('/')] : [];
+    });
+
+  const strip = (t: string) =>
+    t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  const hits: string[] = [];
+  for (const f of walk('src')) {
+    const src = strip(readFileSync(f, 'utf8'));
+    src.split(NL).forEach((line, i) => {
+      if (line.includes('팀장')) hits.push(`${f}:${i + 1} ${line.trim().slice(0, 70)}`);
+    });
+  }
+  assert.deepEqual(
+    hits,
+    [],
+    `「팀장」이 화면에 나온다 — 이 앱의 역할 이름은 총무/팀원이다:${NL}    ${hits.join(NL + '    ')}`
+  );
+}
+
+console.log(`rolelabel ok — 역할 뱃지 ${badges.length}곳, 대체 표시 ${fallbacks.length}곳, 「팀장」 0곳`);

@@ -23,6 +23,31 @@ import { GreenAmbient } from '../../../components/ScreenGradient';
  * 원 색도 브랜드 고정색이라 design.md의 "그린 단일 강조" 규칙에서 예외로 둔다
  * (카카오 노랑처럼 바꾸면 못 알아보는 색들이다).
  */
+/*
+  ── 애플 로그인이 왜 꺼져 있나 — 2026-09-09 ────────────────────────
+  버튼은 남겨 두고 이 플래그로 가린다. **지우지 않는다** — iOS를 낼 때 되살린다.
+
+  ⑴ **Supabase 프로젝트에서 provider가 꺼져 있다.** 재서 확인했다:
+       GET {SUPABASE_URL}/auth/v1/settings → external.apple === false
+     (google·kakao는 true다. 그래서 구글 버튼은 그대로 둔다.)
+     꺼진 채로 누르면 「Unsupported provider」가 뜬다 — 앱 코드는 멀쩡한데
+     버튼만 실패하는, 이 저장소가 계속 잡아온 「있는데 안 되는」 자리가 된다.
+
+  ⑵ **켜려면 Apple 개발자 계정이 필요하다($99/년).** Service ID와 키를 그쪽에서
+     만들어야 Supabase에 넣을 값이 나온다. 계정이 아직 없다.
+
+  ⑶ **안드로이드만 내면 Apple의 요구가 해당 없다.** 「다른 소셜 로그인을 제공하면
+     Apple 로그인도 넣어라」는 **App Store 심사 규칙**이다(HIG 4.8). Play에는 없다.
+     즉 지금은 켤 이유가 규정 쪽에서도 오지 않는다.
+
+  되살릴 때 할 일: Apple 개발자 계정 → Service ID·키 → Supabase에서 provider 켜기
+  → 이 상수를 true로 → terms.ts의 소셜 제공사 목록에 「애플」 되돌리기.
+  ⚠ terms.ts에서 뺀 이유는 그쪽 주석에 있다 — 안 쓰는 걸 적으면 그 문장이 거짓이다.
+
+  검사(`socialprovider.check.ts`)가 「플래그가 꺼졌는데 버튼이 그려지는가」를 본다.
+*/
+const APPLE_LOGIN_ENABLED = false;
+
 const SOCIALS: {
   key: SocialProvider;
   label: string;
@@ -51,7 +76,9 @@ const SOCIALS: {
   // 공식 4색 G(360px, 흰 배경 + 여백 포함). 배경까지 들어 있어 원형 컨테이너가 잘라내면 된다.
   { key: 'google', label: '구글', image: require('../../../../assets/google.png'), bg: '#FFFFFF' },
   // 애플은 검은 배경 + 흰 로고가 공식 변형 중 하나다 (흰 배경 + 검은 로고보다 이쪽이 표준에 가깝다)
-  { key: 'apple', label: '애플', icon: 'logo-apple', bg: '#2B2B2B', fg: '#FFFFFF' },
+  ...(APPLE_LOGIN_ENABLED
+    ? [{ key: 'apple' as const, label: '애플', icon: 'logo-apple' as const, bg: '#2B2B2B', fg: '#FFFFFF' }]
+    : []),
 ];
 
 /**

@@ -47,6 +47,27 @@ interface Props {
 /** 구멍 둘레의 여백 — 버튼에 딱 붙으면 뚫린 게 아니라 잘린 것으로 보인다 */
 const PAD = 8;
 
+/*
+  구멍의 모서리 반지름을 **잰 사각형에서 정한다.**
+
+  ⚠ 단계마다 모양을 적지 않는다. 「4단계는 원」이라고 박으면 순서가 바뀌는 날 갈리고,
+    모양은 **단계의 성질이 아니라 요소의 성질**이다. 요소가 바뀌면 잰 값도 같이 바뀐다.
+
+  가로세로가 거의 같으면 원으로 본다. 이 앱에서 정사각인 것은 전부 둥글다 —
+  가운데 경기운영 링(지름 60), 탭 아이콘(22), 아바타. 넓적한 것은 버튼·카드다.
+
+  ⚠ 처음에 radius.card(18) 하나로 뚫었더니 **지름 60짜리 원 위에 둥근 네모**가
+    올라갔다. 76×76 구멍에 모서리 18이면 눈에는 네모다.
+
+  ⚠ 이 규칙의 한계: **정사각인데 둥글지 않은 요소**가 생기면 원으로 뚫린다.
+    지금은 그런 대상이 없다(다섯 자리를 다 재봤다). 생기면 그때
+    steps.ts의 항목에 모양을 적을 자리를 만든다 — 미리 만들지 않는다.
+*/
+const cornerOf = (w: number, h: number) => {
+  const square = Math.abs(w - h) / Math.max(w, h) < 0.15;
+  return square ? Math.min(w, h) / 2 : radius.card;
+};
+
 export function Coachmark({ visible, spot, title, body, step, total, onNext, onSkip, isLast }: Props) {
   const { colors, styles } = useThemed(makeStyles);
   const { width, height } = useWindowDimensions();
@@ -89,7 +110,14 @@ export function Coachmark({ visible, spot, title, body, step, total, onNext, onS
               {/* 흰 곳이 보이고 검은 곳이 뚫린다 */}
               <Rect x={0} y={0} width={width} height={height} fill="#fff" />
               {hole && (
-                <Rect x={hole.x} y={hole.y} width={hole.w} height={hole.h} rx={radius.card} fill="#000" />
+                <Rect
+                  x={hole.x}
+                  y={hole.y}
+                  width={hole.w}
+                  height={hole.h}
+                  rx={cornerOf(hole.w, hole.h)}
+                  fill="#000"
+                />
               )}
             </Mask>
           </Defs>
@@ -102,7 +130,14 @@ export function Coachmark({ visible, spot, title, body, step, total, onNext, onS
             pointerEvents="none"
             style={[
               styles.ring,
-              { left: hole.x, top: hole.y, width: hole.w, height: hole.h },
+              {
+                left: hole.x,
+                top: hole.y,
+                width: hole.w,
+                height: hole.h,
+                /* 테두리도 구멍과 같은 모양이어야 한다 — 하나만 원이면 어긋나 보인다 */
+                borderRadius: cornerOf(hole.w, hole.h),
+              },
             ]}
           />
         )}
@@ -156,7 +191,6 @@ const makeStyles = (colors: Palette) =>
   StyleSheet.create({
     ring: {
       position: 'absolute',
-      borderRadius: radius.card,
       borderWidth: 2,
       borderColor: colors.green,
     },

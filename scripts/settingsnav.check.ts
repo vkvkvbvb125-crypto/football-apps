@@ -94,7 +94,7 @@ const rows = [...SETTINGS.matchAll(/label="([^"]+)"/g)].map((m) => m[1]);
     이 배열을 늘릴 때는 「진입로를 늘리지 마라」를 다시 확인해라 — 다섯째를 넣는 게
     아니라 이미 있는 화면으로 가는 줄인지부터 본다.
 */
-const EXPECTED_ROWS = ['알림 설정', '화면 모드', '팀 설정', '약관 및 정책', '고객의 소리'];
+const EXPECTED_ROWS = ['알림 설정', '화면 모드', '팀 설정', '튜토리얼 다시 보기', '약관 및 정책', '고객의 소리'];
 ok(rows.join(' > ') === EXPECTED_ROWS.join(' > '),
    '설정 목록이 달라졌다. 기대: ' + EXPECTED_ROWS.join(' > ') + ' / 실제: ' + (rows.join(' > ') || '(없음)'));
 

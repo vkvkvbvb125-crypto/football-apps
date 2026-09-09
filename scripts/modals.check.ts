@@ -36,7 +36,15 @@ const files: string[] = [];
 })('src');
 
 const CLOSE_ICON = /name="(close|close-outline|close-circle|chevron-back|chevron-down|arrow-back)"/;
-const CLOSE_TEXT = />닫기<|닫기<\/Text>|>취소<|취소<\/Text>/;
+/*
+  ⚠ 「건너뛰기」를 2026-09-10에 더했다. 튜토리얼 코치마크가 걸렸는데,
+    그 화면의 출구는 닫기도 취소도 아닌 **건너뛰기**다.
+    단언의 의도(「머무는 화면에는 보이는 출구가 있어야 한다」)는 충족하는데
+    낱말 목록에만 없었다 — 「이름으로 세면 이름 없는 것이 빠진다」의 또 한 사례다.
+  ⚠ 넓히는 것이 구멍이 되지 않는지 봤다. 「건너뛰기」는 나가는 것 말고 다른 뜻이 없다.
+    「확인」·「다음」은 안 넣는다 — 그건 앞으로 가는 말이라 출구가 아니다.
+*/
+const CLOSE_TEXT = />닫기<|닫기<\/Text>|>취소<|취소<\/Text>|>건너뛰기<|건너뛰기<\/Text>/;
 
 interface Found { file: string; line: number; back: boolean; scrim: boolean; button: boolean; works: boolean }
 const found: Found[] = [];

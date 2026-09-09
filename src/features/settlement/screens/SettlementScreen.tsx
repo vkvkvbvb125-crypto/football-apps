@@ -51,6 +51,7 @@ import { SettlementProgressPanel } from '../components/SettlementProgressPanel';
 import { DetailBreakdown, MyDueRow, SettlementDonePanel, SummaryBox, SummaryRow } from '../components/SettlementSummary';
 import { GreenFill } from '../../../components/Surface';
 import { toUserMessage } from '../../../lib/dbError';
+import { useTourTarget } from '../../tour/TourProvider';
 
 /** "보낸 시간" — 날짜까지 적어야 어제 보낸 건지 오늘인지 구분된다 */
 function sentAtLabel(iso: string | null) {
@@ -886,6 +887,8 @@ function SettlementDetailModal({
   onUpdateDetails,
   onExemptShare,
 }: SettlementDetailModalProps) {
+  /* 튜토리얼이 짚는 자리 — 팀원 코스의 마지막이자 제일 중요한 단계 */
+  const paidTourRef = useTourTarget('settlement.markPaid');
   const { colors, styles } = useThemed(makeStyles);
   if (!settlement) return null;
 
@@ -973,6 +976,7 @@ function SettlementDetailModal({
                   이미 눌렀을 때는 버튼이 아니라 상태 표시라서 면을 그대로 둔다.
                 */}
                 <Pressable
+                  ref={paidTourRef}
                   onPress={() => onMarkPaid(myShare.id, !myShare.markedPaid)}
                   accessibilityRole="button"
                   style={({ pressed }) => [

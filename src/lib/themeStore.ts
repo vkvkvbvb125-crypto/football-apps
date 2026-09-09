@@ -1,6 +1,7 @@
 // src/lib/themeStore.ts — 화면 모드(밝게 / 어둡게 / 기기 설정 따르기)
 //
-// 저장 방식은 onboardingStore와 같다 — AsyncStorage에 한 줄.
+// 저장 방식은 tourStore와 같다 — AsyncStorage에 한 줄.
+// (예전엔 onboardingStore가 같은 모양이었는데, 소개 3장을 걷어내며 같이 지웠다)
 // 서버에 두지 않는다. 기기마다 다를 수 있는 값이고(폰은 다크, 태블릿은 라이트),
 // 로그인 전에도 정해져 있어야 해서 계정에 매달 이유가 없다.
 import { create } from 'zustand';

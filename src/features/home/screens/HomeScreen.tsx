@@ -63,6 +63,7 @@ import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attend
 import { matchLabel } from '../../attendance/utils/matchLabel';
 import { HomeBanner } from '../components/HomeBanner';
 import { buildBannerSlides } from '../components/bannerSlides';
+import { useTourTarget } from '../../tour/TourProvider';
 
 /* 유예 3시간은 utils/matchWindow.ts에 있다 — 경기운영 탭과 값도 근거도 한 곳에서 본다 */
 
@@ -236,6 +237,8 @@ function SectionCard({
 }
 
 export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
+  /* 튜토리얼이 짚는 자리 — ref 하나뿐이고 나머지는 TourProvider가 한다 */
+  const rosterTourRef = useTourTarget('home.rosterButton');
   const { colors, styles } = useThemed(makeStyles);
   const hero = heroLayout(useWindowDimensions().width);
   /* 배너 자동 전환이 세로 스크롤 중에 끼어들지 않게 하는 신호.
@@ -709,6 +712,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
 
             <View style={styles.cardBtnRow}>
               <Pressable
+                ref={rosterTourRef}
                 onPress={() => setRosterOpen(true)}
                 accessibilityRole="button"
                 accessibilityLabel="참여 현황 보기"

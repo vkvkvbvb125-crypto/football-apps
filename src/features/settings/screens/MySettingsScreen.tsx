@@ -16,6 +16,7 @@ import { radius, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import { accountLabel } from '../utils/accountLabel';
 import { toUserMessage } from '../../../lib/dbError';
+import { useTourStore } from '../../tour/tourStore';
 
 /*
   문의 주소. terms.ts의 PRIVACY_OFFICER.email과 같은 곳이다 —
@@ -79,6 +80,7 @@ export function MySettingsScreen({ navigation }: any) {
   const signOut = useAuthStore((s) => s.signOut);
 
   const activeTeam = useTeamStore((s) => s.activeTeam);
+  const resetTour = useTourStore((s) => s.reset);
   const members = useTeamStore((s) => s.members);
 
   const me = members.find((m) => m.id === activeTeam?.membershipId) ?? null;
@@ -270,6 +272,21 @@ export function MySettingsScreen({ navigation }: any) {
             label="팀 설정"
             onPress={() => navigation.navigate('TeamSettings')}
           />
+          {/*
+            튜토리얼 다시 보기 — 서랍에 「화면은 있고 진입로가 없다」로 오래 있던 항목이다.
+            ⚠ **지금 역할의 코스만** 되돌린다. 총무가 팀원 코스를 다시 볼 이유가 없고,
+              반대도 마찬가지다. 되돌리면 홈으로 돌아갔을 때 1단계부터 다시 뜬다.
+          */}
+          {!!activeTeam && (
+            <SettingsRow
+              icon="school-outline"
+              label="튜토리얼 다시 보기"
+              onPress={async () => {
+                await resetTour(activeTeam.role === 'admin' ? 'admin' : 'member');
+                navigation.navigate('Main');
+              }}
+            />
+          )}
           <SettingsRow
             icon="document-text-outline"
             label="약관 및 정책"

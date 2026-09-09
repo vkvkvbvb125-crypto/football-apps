@@ -61,6 +61,7 @@ import { fetchPartnerVenues, venueMeta } from '../services/venueService';
 import type { PlaceResult } from '../services/placeService';
 import { PlaceDetailModal } from '../components/PlaceDetailModal';
 import type { MatchWithVotes } from '../services/attendanceService';
+import { useTourTarget } from '../../tour/TourProvider';
 
 interface SelectedPlace {
   name: string;
@@ -128,6 +129,8 @@ function monthOffsetFor(date: Date): number {
 }
 
 export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any>) {
+  /* 튜토리얼이 짚는 자리 */
+  const createTourRef = useTourTarget('attendance.create');
   const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
@@ -564,6 +567,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                     Date#setHours를 직접 쓰면 state를 그 자리에서 변형시켜버리므로 시작점 복사본으로 비교한다. */}
                 {isAdmin && startOfDay(selectedDate).getTime() >= startOfDay(new Date()).getTime() && (
                   <Pressable
+                    ref={createTourRef}
                     onPress={handleOpenCreate}
                     accessibilityRole="button"
                     accessibilityLabel="이 날짜에 경기 만들기"

@@ -9,8 +9,6 @@ import { ForgotPasswordScreen } from '../features/auth/screens/ForgotPasswordScr
 import { ResetPasswordScreen } from '../features/auth/screens/ResetPasswordScreen';
 import { useTeamStore } from '../features/team/stores/teamStore';
 import { TeamStartScreen } from '../features/team/screens/TeamStartScreen';
-import { useOnboardingStore } from '../features/onboarding/stores/onboardingStore';
-import { OnboardingScreen } from '../features/onboarding/screens/OnboardingScreen';
 import { MainTabNavigator } from './MainTabNavigator';
 import { TeamSettingsScreen } from '../features/team/screens/TeamSettingsScreen';
 import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen';
@@ -30,6 +28,7 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Text } from '../components/nativeText';
 import { palettes, type Palette } from '../theme';
 import { useColors, useThemeName, useThemed } from '../lib/useThemed';
+import { TourProvider } from '../features/tour/TourProvider';
 
 const Stack = createNativeStackNavigator();
 
@@ -182,11 +181,6 @@ export function RootNavigator() {
   const loadMemberships = useTeamStore((s) => s.loadMemberships);
   const resetTeam = useTeamStore((s) => s.reset);
 
-  const onboardingLoaded = useOnboardingStore((s) => s.loaded);
-  const onboardingSeen = useOnboardingStore((s) => s.seen);
-  const checkOnboardingSeen = useOnboardingStore((s) => s.checkSeen);
-  const markOnboardingSeen = useOnboardingStore((s) => s.markSeen);
-
   const loadNotifications = useNotificationsStore((s) => s.load);
 
   // 세션 복구는 보통 순식간이라 그대로 두면 로고가 한 프레임 번쩍이고 만다
@@ -195,10 +189,9 @@ export function RootNavigator() {
   const [splashMounted, setSplashMounted] = useState(true);
   const exit = useRef(new Animated.Value(1)).current;
 
-  const ready = authInitialized && onboardingLoaded && splashHeld;
+  const ready = authInitialized && splashHeld;
 
   useEffect(() => {
-    checkOnboardingSeen();
     const t = setTimeout(() => setSplashHeld(true), SPLASH_MIN_MS);
     return () => clearTimeout(t);
   }, []);
@@ -290,17 +283,17 @@ export function RootNavigator() {
         {recoveryMode ? (
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         ) : /*
-             튜토리얼은 "아직 로그인 안 한 첫 사용자"에게만 보여준다.
-             전에는 세션보다 먼저 검사해서, 로그인된 사람도 온보딩 플래그가 없으면
-             튜토리얼을 봤다 — 앱 업데이트로 저장 키가 바뀌거나(이 저장소에서 실제로 한 번
-             바뀌었다) 기기 저장소만 날아가면 멀쩡히 쓰던 사람이 소개 화면부터 다시 봤다.
-             세션이 있으면 이미 이 앱을 아는 사람이다. 곧장 안으로 들여보낸다.
+             ⚠ **로그인 전 소개 3장(OnboardingScreen)을 걷어냈다 — 2026-09-10.**
+               셋 다 그림이 `visual: null`이라 240px 빈 사각형이 떠 있었고, 실기기에서
+               보니 첫 화면의 절반이 빈 채로 첫인상을 만들고 있었다.
+
+               대신 **팀이 생긴 뒤** 화면 위에서 버튼을 하나씩 짚는다(features/tour).
+               그때가 되어야 짚을 대상이 있고, 무엇보다 **역할이 정해진다** —
+               팀을 만든 사람과 참가한 사람이 배워야 하는 것이 완전히 다르다.
+
+               로그인 전에 「이 앱이 뭐냐」를 말하던 자리는 스토어 설명이 맡는다.
            */
-        !session && !onboardingSeen ? (
-          <Stack.Screen name="Onboarding">
-            {() => <OnboardingScreen onDone={markOnboardingSeen} />}
-          </Stack.Screen>
-        ) : !session ? (
+        !session ? (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
@@ -320,7 +313,22 @@ export function RootNavigator() {
           <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
         ) : (
           <>
-            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen name="Main">
+              {(props) => (
+                /*
+                  ⚠ 팀이 있는 구간에만 감싼다. 짚을 대상이 그때 생기고, 무엇보다
+                    **역할이 그때 정해진다** — activeTeam.role이 'admin'이면 팀을 만든
+                    사람이고 'member'면 참가한 사람이다(schema.sql의 create_team/join_team).
+                    따로 기억할 필요가 없어서 TeamStartScreen에서 무엇을 눌렀는지 안 남긴다.
+                */
+                <TourProvider
+                  role={activeTeam?.role === 'admin' ? 'admin' : activeTeam ? 'member' : null}
+                  onNavigate={(screen) => props.navigation.navigate('Main', { screen })}
+                >
+                  <MainTabNavigator />
+                </TourProvider>
+              )}
+            </Stack.Screen>
             {/* 팀이 있어도 열 수 있어야 한다 — 팀 전환 시트의 「새 팀 만들기 / 참여」가 여기로 온다.
                 팀이 없을 때의 등록(위 브랜치)과 같은 화면이고, 그쪽은 브랜치 교체로 닫힌다 */}
             <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />

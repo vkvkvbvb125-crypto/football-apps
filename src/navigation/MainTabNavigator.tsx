@@ -23,6 +23,8 @@ import { AttendanceScreen } from '../features/attendance/screens/AttendanceScree
 import { AssignmentScreen } from '../features/assignment/screens/AssignmentScreen';
 import { SettlementScreen } from '../features/settlement/screens/SettlementScreen';
 import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
+import { useTourTarget } from '../features/tour/TourProvider';
+import type { TourTarget } from '../features/tour/steps';
 
 const Tab = createBottomTabNavigator();
 
@@ -67,8 +69,23 @@ function tabLabel(title: string) {
 }
 
 /** 옆 탭 아이콘 — 현재 탭 표시는 색(ACTIVE/IDLE)만으로 한다 */
-function tabIcon(name: keyof typeof Ionicons.glyphMap) {
-  return ({ color }: { color: string }) => <Ionicons name={name} size={22} color={color} />;
+function tabIcon(name: keyof typeof Ionicons.glyphMap, tour?: TourTarget) {
+  return ({ color }: { color: string }) =>
+    tour ? (
+      /* 튜토리얼이 짚을 자리. ref 하나만 달고 나머지는 TourProvider가 한다 —
+         화면에 분기를 심으면 튜토리얼이 끝나도 그 분기가 남는다 */
+      <TourSpot name={tour}>
+        <Ionicons name={name} size={22} color={color} />
+      </TourSpot>
+    ) : (
+      <Ionicons name={name} size={22} color={color} />
+    );
+}
+
+/** ref를 달기만 하는 껍데기 — Ionicons는 measureInWindow를 안 준다 */
+function TourSpot({ name, children }: { name: TourTarget; children: React.ReactNode }) {
+  const ref = useTourTarget(name);
+  return <View ref={ref}>{children}</View>;
 }
 
 /**
@@ -178,7 +195,7 @@ export function MainTabNavigator() {
         component={AttendanceScreen}
         options={{
           tabBarLabel: tabLabel('일정'),
-          tabBarIcon: tabIcon('calendar-outline'),
+          tabBarIcon: tabIcon('calendar-outline', 'tab.attendance'),
         }}
       />
       <Tab.Screen
@@ -193,7 +210,11 @@ export function MainTabNavigator() {
             공 크기와 바 안에 머무는 쪽을 택했다. 맥락은 공 그림이 맡는다.
           */
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => <BallIcon focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TourSpot name="tab.assignment">
+              <BallIcon focused={focused} />
+            </TourSpot>
+          ),
           // 옆 탭들의 세로 정렬(styles.item)을 여기엔 걸지 않는다 — 위 주석 참고
           tabBarItemStyle: styles.itemCenter,
         }}
@@ -203,7 +224,7 @@ export function MainTabNavigator() {
         component={SettlementScreen}
         options={{
           tabBarLabel: tabLabel('정산'),
-          tabBarIcon: tabIcon('card-outline'),
+          tabBarIcon: tabIcon('card-outline', 'tab.settlement'),
           /* 금액이 아니라 점이다 — 탭 라벨 옆에 숫자를 적으면 「무슨 숫자지」가 되고,
              자릿수에 따라 탭 폭이 흔들린다. 「볼 것이 있다」만 알리고 액수는 화면이 말한다 */
           tabBarBadge: hasUnpaid ? '' : undefined,

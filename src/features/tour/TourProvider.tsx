@@ -107,6 +107,14 @@ export function TourProvider({
     }
     let tries = 0;
     let alive = true;
+    /* 직전에 잰 값. 「같은 값이 두 번 나올 때까지」의 기준이다 */
+    let last: SpotRect | null = null;
+    const same = (a: SpotRect | null, b: SpotRect) =>
+      !!a &&
+      Math.abs(a.x - b.x) < 1 &&
+      Math.abs(a.y - b.y) < 1 &&
+      Math.abs(a.width - b.width) < 1 &&
+      Math.abs(a.height - b.height) < 1;
     const tick = () => {
       if (!alive) return;
       const node = nodes.current[step.target!];
@@ -114,16 +122,29 @@ export function TourProvider({
       node.measureInWindow((x, y, width, height) => {
         if (!alive) return;
         const r = { x, y, width, height };
-        if (usable(r)) {
+        if (!usable(r)) return retry();
+        /*
+          ⚠ **첫 번째로 나온 0 아닌 값을 답으로 쓰면 안 된다.**
+          탭을 옮기고 260ms 뒤에 재면 크기는 이미 제대로 나오는데 **자리가 아직 아니다** —
+          화면이 마운트되면서 위쪽 요소들이 자리를 잡는 중이라 y가 나중에 내려간다.
+          일정 탭의 「경기 만들기」 칩이 그랬다: 구멍이 칩보다 56dp 위에 뚫렸다
+          (기기에서 재서 확인했다. 크기는 128.8×51.8dp로 정확했고 y만 틀렸다).
+          그래서 **같은 값이 두 번 연속 나와야** 답으로 삼는다.
+        */
+        if (same(last, r)) {
           setSpot(r);
           setReady(true);
-        } else retry();
+          return;
+        }
+        last = r;
+        retry();
       });
     };
     const retry = () => {
       tries += 1;
       if (tries > 12) {
-        /* 못 쟀다 — 구멍 없이 설명만. 「짚는 척」보다 낫다 */
+        /* 끝내 안 멎었다 — 마지막으로 잰 값이라도 쓴다. 아무것도 안 짚는 것보다 낫다 */
+        if (last) setSpot(last);
         setReady(true);
         return;
       }

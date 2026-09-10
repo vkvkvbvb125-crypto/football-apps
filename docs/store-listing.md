@@ -187,20 +187,75 @@ KickDay는 그 반복을 대신합니다.
   피하려는 바로 그것이다. 여덟 장에 게시판이 없으므로 지금은 안 넣는다.
   넣기로 하면 서비스에 「대체 함수 슬롯」을 두고 이 파일이 등록하는 방식이 맞다.
 
-### 켜고 끄는 법
+### 켜고 끄는 법 — 2026-09-10 바뀜
 
-    EXPO_PUBLIC_SCREENSHOT=1 npx expo start --dev-client
+    npx eas-cli build -p android --profile screenshot
 
-가드가 셋이고 셋 다 있어야 돈다. `screenshot.check.ts`가 넷을 붙든다:
+**`screenshot` 프로필로 뽑은 APK를 설치해서 찍는다.** 전에는
+`EXPO_PUBLIC_SCREENSHOT=1 npx expo start --dev-client`였는데 그럴 수 없게 됐다 —
+dev client는 좌상단에 반투명 톱니 버블을 얹고 그게 앱 헤더의 뒤로가기와 겹친다
+(기기에서 확대해 확인했다). 잘라내면 헤더까지 잘린다.
 
-  ① 픽스처 안에서 `__DEV__`와 환경변수를 **둘 다** 본다 (부르는 쪽을 안 믿는다)
-  ② `setState`가 가드 **뒤에** 온다 (앞이면 가드가 무의미하다)
-  ③ 부르는 자리가 `App.tsx` 하나뿐이다 — `src/` 안에서 부르면 실패한다
-  ④ 픽스처가 supabase도 fetch도 안 쓴다 (스토어에 넣는 것까지다)
-  ⑤ 「테스트1」·「asdf」 같은 임시 문구가 없다
+⚠ **가드에서 `__DEV__`를 뺐다.** 릴리스 빌드에서 켜져야 하기 때문이다.
+  대가: 전에는 Metro가 그 블록을 접어 없애서 모듈이 릴리스 번들에 안 들어갔는데,
+  이제는 **들어간다 — 잠든 채로.** 그래서 안전장치를 옮겼다:
 
-⚠ `__DEV__` 하나로 안 끝낸 이유: 개발 빌드로 시연하다 켜진 채 남는 경로가 있다.
-  환경변수를 따로 두면 **켜는 것이 언제나 의도적인 일**이 된다.
+| 전 | 후 |
+|---|---|
+| 「릴리스 번들에 없다」 | **「켜진 빌드는 스토어에 올라갈 수가 없다」** |
+| `__DEV__`가 지켰다 | **Play가 지킨다** — 신규 앱은 AAB만 받는데, 변수를 주는 프로필은 APK만 뽑는다 |
+
+접미사(`com.kickday.app.shot`)나 버전 꼬리표도 검토했는데, 둘 다 **사람이 확인해야**
+한다. AAB/APK는 사람이 실수해도 Play가 막는다.
+
+⚠ **`production-apk`에는 이 변수를 주지 않는다.** 그건 내가 설치해서 확인하는
+  빌드다 — 거기 픽스처가 켜지면 실기기 확인이 가짜 데이터로 이뤄진다.
+
+`screenshot.check.ts`가 붙드는 것:
+
+  ① 픽스처의 **첫 문장**이 `if (process.env.EXPO_PUBLIC_SCREENSHOT !== '1') return false;` 한 줄이다.
+     모양을 통째로 고정한다 — `||`가 하나만 붙어도 실패한다
+  ② `App.tsx`의 호출 조건도 정확한 모양이고, 부르는 자리가 거기 하나뿐이다
+  ③ `EXPO_PUBLIC_SCREENSHOT`을 주는 프로필이 `screenshot` 하나뿐이다
+  ④ 그 프로필의 `buildType`이 `apk`다 (`extends`를 풀어서 본다)
+  ⑤ 픽스처가 supabase도 fetch도 안 쓴다
+  ⑥ 「테스트1」·「asdf」 같은 임시 문구가 없다
+
+변이 여섯으로 확인했다: 가드에 `||` 붙이기 · 가드 앞에 문장 끼우기 ·
+App.tsx 조건 느슨하게 · `production-apk`에도 변수 주기 · `screenshot`을 AAB로 ·
+`screenshot`에서 env 빼기. 여섯 다 잡힌다.
+
+#### ⚠ 검사가 못 보는 것 — 사람이 확인한다
+
+**EAS 서버의 환경(environment)에 이 변수를 넣으면 `eas.json`에 아무 흔적이 없다.**
+그러면 `production`(AAB)도 그 변수를 받아서 픽스처가 스토어 빌드에 켜진다.
+
+검사 묶음에 안 넣은 이유: 네트워크와 로그인이 필요하다. 로그아웃 상태에서
+조용히 건너뛰게 만들면 그건 **죽은 단언**이고, 죽은 단언을 「한계」로 적어 두면
+그 자리는 영영 안 고쳐진다(anchor.ts 「단언이 죽어 있는 것」).
+
+    npx eas-cli env:list production
+
+2026-09-10 확인: 다섯 개뿐이고 `EXPO_PUBLIC_SCREENSHOT`은 **없다.**
+`EXPO_PUBLIC_KAKAO_MAPS_JS_KEY` · `EXPO_PUBLIC_KAKAO_REST_API_KEY` ·
+`EXPO_PUBLIC_NAVER_CLIENT_ID` · `EXPO_PUBLIC_SUPABASE_ANON_KEY` · `EXPO_PUBLIC_SUPABASE_URL`
+
+**→ 출시 직전에 한 번 더 돌린다. 출시 체크리스트 항목이다.**
+
+### 픽스처가 채우는 것 — 2026-09-10 둘 추가
+
+경기운영 탭의 두 자리가 비어 있었다. 스토어 다섯만 채우고 있어서다.
+
+    추가  assignmentStore   fx-1 경기의 A·B 팀. 참석 확정 여섯을 나눈다
+                            (실력 합 A 7 · B 6, 포지션도 갈리게 — 화면이
+                             「실력 균형 자동 고려」라고 적으므로 그게 보여야 한다)
+    추가  scoreStore        fx-1 = A 5 : B 3. 0-0이면 「아직 시작 안 한 화면」으로 읽힌다
+
+⚠ **타이머는 픽스처로 못 넣는다.** `TimerPanel`의 지역 상태(`useState`)다.
+  찍을 때 굴려서 **전반이 끝나갈 즈음**을 잡는다.
+
+⚠ 로더도 함께 막았다 — `loadAssignments`·`loadScores` 둘 다 NOOP이다.
+  `AssignmentScreen:125`가 마운트되면서 `loadScores(nearestMatch.id)`를 부른다.
 
 ### 어느 화면을 넣을까 — 제안
 

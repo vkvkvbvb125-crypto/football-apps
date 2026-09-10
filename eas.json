@@ -16,6 +16,14 @@
       "distribution": "internal",
       "environment": "production",
       "android": { "buildType": "apk" }
+    },
+    "screenshot": {
+      "extends": "production",
+      "autoIncrement": false,
+      "distribution": "internal",
+      "environment": "production",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_SCREENSHOT": "1" }
     }
   }
 }

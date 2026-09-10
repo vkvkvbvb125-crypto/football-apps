@@ -83,11 +83,13 @@ export default function App() {
 
     ⚠ **여기가 유일한 부르는 자리다.** 조건을 여기서 한 번, 함수 안에서 또 한 번 본다 —
       한 곳에만 두면 다른 데서 부르는 순간 새어 나간다.
-      릴리스에서는 __DEV__가 false라 이 블록이 통째로 접혀 없어지고, 모듈도 안 딸려간다.
+      ⚠ 전에는 `__DEV__ &&`가 앞에 있었고 그래서 릴리스에서는 이 블록이 통째로 접혔다.
+      스토어 스크린샷을 릴리스 빌드로 찍어야 해서 뺐다 — 근거와 대가는 픽스처 파일 머리에 있다.
+      대신 그 변수를 주는 프로필이 APK만 뽑고, Play는 신규 앱에 AAB만 받는다.
       screenshot.check.ts가 이 모양을 붙든다.
   */
   useEffect(() => {
-    if (__DEV__ && process.env.EXPO_PUBLIC_SCREENSHOT === '1') {
+    if (process.env.EXPO_PUBLIC_SCREENSHOT === '1') {
       applyScreenshotFixtures();
     }
   }, []);

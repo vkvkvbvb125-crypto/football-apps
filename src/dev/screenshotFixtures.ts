@@ -1,14 +1,28 @@
 // src/dev/screenshotFixtures.ts — 스토어 스크린샷용 가짜 데이터
 //
-// ⚠ **릴리스에 절대 들어가면 안 된다.** 가드가 셋이고 셋 다 있어야 돈다:
+// ⚠ **켜는 스위치는 환경변수 하나다. 그리고 그 변수가 켜진 빌드는 스토어에 못 간다.**
 //
-//     ① __DEV__ 가 참       릴리스 번들에서는 false다 (Metro가 상수로 접어 없앤다)
-//     ② EXPO_PUBLIC_SCREENSHOT === '1'
-//     ③ 부르는 자리가 App.tsx 한 곳뿐이고 거기서도 같은 조건을 다시 본다
+//     ① EXPO_PUBLIC_SCREENSHOT === '1'   — 이 파일과 App.tsx에서 각각 본다
+//     ② 부르는 자리가 App.tsx 한 곳뿐이다
+//     ③ 그 변수를 주는 프로필은 `screenshot` 하나뿐이고, 그 프로필은 **APK**를 뽑는다.
+//        Play는 신규 앱에 **AAB만** 받는다 — 스크린샷 빌드는 올릴 수가 없다.
 //
-//   screenshot.check.ts가 셋을 붙든다 — 하나라도 풀리면 검사가 실패한다.
-//   ⚠ 「__DEV__면 되겠지」로 끝내지 않은 이유: 개발 빌드로 시연하다가 켜진 채
-//     남는 경로가 있다. 환경변수를 따로 두면 켜는 것이 언제나 의도적인 일이 된다.
+//   screenshot.check.ts가 셋을 붙든다.
+//
+// ── ⚠ 전에는 `__DEV__`가 첫 가드였다. 왜 뺐나 ──────────────────────
+// 스토어 스크린샷은 **릴리스 빌드로 찍어야 한다.** dev client는 좌상단에 반투명
+// 톱니 버블을 얹고 그게 앱 헤더와 겹친다(기기에서 확대해 확인했다) — 잘라내면
+// 헤더까지 잘린다. 그런데 `__DEV__`는 릴리스에서 false라, 그 가드가 있는 한
+// **찍어야 할 빌드에서 픽스처가 안 켜진다.**
+//
+// ⚠ 대가가 있다. `__DEV__`가 있을 때는 Metro가 이 블록을 통째로 접어 없애서
+//   모듈 자체가 릴리스 번들에 안 들어갔다. 이제는 **들어간다 — 잠든 채로.**
+//   그래서 안전장치를 「번들에 없다」에서 **「켜진 빌드는 올릴 수가 없다」**로 옮겼다.
+//   그쪽이 사람이 실수할 자리가 없다 — 접미사나 꼬리표는 사람이 확인해야 하지만
+//   AAB/APK는 Play가 막는다.
+//
+// ⚠ `production-apk`에는 이 변수를 주지 마라. 그건 **내가 설치해서 확인하는 빌드**다.
+//   거기에 픽스처가 켜지면 실기기 확인이 가짜 데이터로 이뤄진다.
 //
 // ── 왜 스토어에 직접 넣는가 ────────────────────────────────────────
 // 화면을 한 줄도 안 고치려고 그런다. 픽스처를 위해 컴포넌트에 분기를 넣으면
@@ -25,10 +39,12 @@
 // 서비스에 「대체 함수 슬롯」을 하나 두고 이 파일이 등록하는 방식이 맞다.
 
 import { useAnnouncementsStore } from '../features/announcements/stores/announcementsStore';
+import { useAssignmentStore } from '../features/assignment/stores/assignmentStore';
 import { useAttendanceStore } from '../features/attendance/stores/attendanceStore';
 import { usePollsStore } from '../features/polls/stores/pollsStore';
 import { useSettlementStore } from '../features/settlement/stores/settlementStore';
 import { useTeamStore } from '../features/team/stores/teamStore';
+import { useScoreStore } from '../features/timer/stores/scoreStore';
 
 const TEAM_ID = 'fx-team';
 const NOOP = async () => {};
@@ -275,6 +291,30 @@ const polls = [
   },
 ];
 
+/* ── 팀 분배 ──────────────────────────────────────────────────────
+   ⚠ 없으면 경기운영 탭의 팀 칸이 **빈 채로** 찍힌다. 「랜덤 분배」 칩만 남고
+     그 아래가 비는데, 눌러도 안 된다 — randomize는 supabase에 쓰고 팀 id가
+     'fx-team'이라 실패한다. 그래서 결과를 미리 넣어 둔다.
+
+   가장 가까운 경기(fx-1)에 붙인다. 그 경기는 team_count가 2라 칸이 A·B다.
+   정원 6이므로 참석 확정 여섯을 나눈다(일곱째는 대기, 여덟째는 미투표).
+
+   ⚠ 나누는 기준을 눈에 보이게 했다 — 화면이 「실력 균형 자동 고려」라고 적으므로
+     실력 합이 비슷해야 하고(A 7 · B 6), 포지션도 한 칸에 몰리면 안 된다.
+     한쪽에 3점짜리 둘을 몰아 두면 그 문장이 거짓말이 된다. */
+const SQUAD_A = [0, 1, 3]; // 김도현(피보3) · 박준서(알라2) · 최민재(골레이로2)
+const SQUAD_B = [2, 4, 5]; // 이지훈(픽소3) · 정우성(알라1) · 한서준(피보2)
+const assignments = [
+  ...SQUAD_A.map((i) => ({ id: `fx-a${i}`, match_id: 'fx-1', team_member_id: members[i].id, group_label: 'A', updated_at: at(-0.1) })),
+  ...SQUAD_B.map((i) => ({ id: `fx-b${i}`, match_id: 'fx-1', team_member_id: members[i].id, group_label: 'B', updated_at: at(-0.1) })),
+];
+
+/* ── 스코어 ───────────────────────────────────────────────────────
+   ⚠ 0-0이면 「아직 시작 안 한 화면」으로 읽힌다. 접전이라야 경기 중으로 보인다.
+   ⚠ 타이머는 여기서 못 넣는다 — TimerPanel의 지역 상태(useState)다.
+     찍을 때 굴려서 전반이 끝나갈 즈음을 잡는다. */
+const scores = { 'fx-1': { A: 5, B: 3 } };
+
 /**
  * 스토어를 픽스처로 채우고 로더를 막는다.
  *
@@ -282,7 +322,7 @@ const polls = [
  *   가드가 한 곳에만 있으면 다른 데서 부르는 순간 새어 나간다.
  */
 export function applyScreenshotFixtures(): boolean {
-  if (!__DEV__ || process.env.EXPO_PUBLIC_SCREENSHOT !== '1') return false;
+  if (process.env.EXPO_PUBLIC_SCREENSHOT !== '1') return false;
 
   const membership = { membershipId: ME.id, role: 'admin' as const, team };
 
@@ -327,6 +367,23 @@ export function applyScreenshotFixtures(): boolean {
     loading: false,
     error: null,
     load: NOOP,
+  });
+
+  useAssignmentStore.setState({
+    assignments: assignments as never,
+    loaded: true,
+    loading: false,
+    error: null,
+    loadAssignments: NOOP,
+  });
+
+  useScoreStore.setState({
+    byMatch: scores,
+    loadingMatchId: null,
+    failedMatchId: null,
+    error: null,
+    /* ⚠ 화면이 마운트되면서 nearestMatch로 부른다(AssignmentScreen:125) — 막아야 한다 */
+    loadScores: NOOP,
   });
 
   useAnnouncementsStore.setState({

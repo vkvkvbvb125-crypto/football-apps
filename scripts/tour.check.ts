@@ -153,24 +153,32 @@ assert.ok(
 /*
   ── 셋째: 화면 코드가 Main으로 되돌아갈 때 스택을 쌓지 않는가 ────────
 
-  `navigation.navigate('Main')`으로 돌아갔더니 스택에 Main이 하나 더 얹혔고 옛것은
-  안 사라졌다. Main 안에 TourProvider가 있어서 **튜토리얼이 둘** 돌았고, 각자 자기
-  단계를 들고 있어 **코치마크 두 장이 동시에** 떴다(기기에서 인스턴스 id로 확인).
-  돌아가는 것은 goBack이다.
+  `navigation.navigate('Main', …)`으로 돌아갔더니 스택이 이렇게 됐다
+  (기기에서 NavigationContainer의 onStateChange로 찍었다):
 
-  ⚠ `navigate('Main', { screen })`은 다르다 — 탭을 고르는 것이라 그대로 둔다.
-    RootNavigator 자신은 그 용도로 쓰므로 여기서 뺀다.
+      Main > MySettings   →   Main > MySettings > Main
+
+  **하나가 더 얹히고 옛것은 안 죽는다.** Main 안에 TourProvider가 있어서 튜토리얼이
+  둘 돌았고, 각자 자기 단계를 들고 있어 코치마크 두 장이 동시에 떴다.
+  파라미터가 붙은 형태(`navigate('Main', { screen, params })`)도 똑같이 쌓인다 —
+  둘 다 기기에서 확인했다(MAIN MOUNT 2, UNMOUNT 0).
+
+  갈 곳에 따라 둘 중 하나를 쓴다:
+      돌아가기만 하면 될 때        navigation.goBack()
+      돌아가면서 탭까지 골라야 할 때 navigation.popTo('Main', { screen, params })
+  popTo는 이미 있는 Main으로 되돌아가면서 파라미터를 넘긴다. 스택이 안 늘어난다.
+
+  ⚠ **Main 화면 자신은 예외다.** RootNavigator의 MainWithTour가 튜토리얼 단계마다
+    `navigate('Main', { screen })`으로 탭을 고르는데, 그건 **자기 자신**이라 밀지 않고
+    파라미터만 바꾼다. 다섯 단계를 도는 동안 MAIN MOUNT가 1로 유지되는 것을 확인했다.
+    그래서 RootNavigator는 여기서 뺀다.
+
+  ⚠ 이 검사는 'Main'만 본다. 다른 화면들은 늘 새로 미는 자리라(설정 → 상세) 같은
+    사고가 안 난다. 마운트 상태를 들고 있는 화면이 스택 아래에 또 생기면 그때 넓힌다.
 */
-/*
-  ⚠ **주석을 빼고 본다.** 이 저장소는 근거를 주석에 적으므로 같은 문자열이 코드와
-    주석 양쪽에 있는 일이 흔하다 — 실제로 「goBack이다, navigate('Main')이 아니다」라고
-    적어 둔 주석을 이 검사가 코드로 잡았다. checks.mjs가 경고하는 그 함정이다.
-*/
-
-
 const stacking = walk('src')
   .filter((f) => !f.includes(join('navigation', 'RootNavigator')))
-  .filter((f) => /navigate\(\s*'Main'\s*\)/.test(stripComments(read(f))));
+  .filter((f) => /navigate\(\s*'Main'\s*[,)]/.test(stripComments(read(f))));
 assert.deepEqual(
   stacking.map((f) => f.split(String.fromCharCode(92)).join('/')),
   [],

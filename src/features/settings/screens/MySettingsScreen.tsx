@@ -132,7 +132,18 @@ export function MySettingsScreen({ navigation }: any) {
             message,
             confirmLabel: '총무 넘기러 가기',
           });
-          if (go) navigation.navigate('Main', { screen: 'Team', params: { tab: 'members' } });
+          /*
+            ⚠ **popTo다. navigate가 아니다.** `navigate('Main', …)`으로 두었더니
+              스택이 `Main > MySettings`에서 **`Main > MySettings > Main`**이 됐다
+              (기기에서 onStateChange로 찍어 확인). 옛 Main은 안 죽어서 그 안의
+              TourProvider가 둘 돌았고, 코치마크 두 장이 동시에 떴다.
+              같은 사고를 「튜토리얼 다시 보기」에서 이미 한 번 겪었다.
+
+            ⚠ 여기서는 goBack을 못 쓴다 — 돌아가면서 **팀 탭의 멤버 칸**까지 골라야
+              한다. popTo는 이미 있는 Main으로 되돌아가면서 그 파라미터를 넘긴다.
+              기기에서 확인했다: 스택이 `… > Main`으로 줄고 팀 화면이 떴다.
+          */
+          if (go) navigation.popTo('Main', { screen: 'Team', params: { tab: 'members' } });
         } else {
           alertMessage('아직 탈퇴할 수 없어요', message);
         }

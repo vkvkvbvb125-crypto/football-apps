@@ -65,6 +65,17 @@ export const useTourStore = create<TourState>((set, get) => ({
     await AsyncStorage.setItem(keyOf(role), 'true');
   },
 
+  /*
+    ⚠ **finish와 순서가 반대다. 대칭을 맞춘다고 뒤집지 마라.**
+
+    가르는 것은 「그 사이에 누가 옛 상태를 보면 안 되는가」다.
+      finish  닫는 쪽이 running을 즉시 비우므로, done이 늦으면 자동 시작 effect가
+              그 틈에 투어를 다시 켠다 → **상태를 먼저** 올린다.
+      reset   done을 먼저 내리면 그 순간 자동 시작 effect가 돌아서, 아직 설정 화면에
+              있는데 코치마크가 그 위에 뜬다. 부르는 쪽이 await 뒤에 goBack하므로
+              **저장을 먼저** 하고 상태는 그다음이다.
+    기기에서 확인했다 — 「다시 보기」를 누른 뒤 0.8초까지 설정 화면에 막이 없다.
+  */
   reset: async (role) => {
     await AsyncStorage.removeItem(keyOf(role));
     set({ done: { ...get().done, [role]: false } });

@@ -25,6 +25,28 @@
 // 골라 돌리기 시작하면, 고르는 사람이 관련 없다고 판단한 검사가 목록에서 빠지고
 // 빠졌다는 사실이 아무 데도 안 남는다. 느리면 느린 대로 전부 돌린다.
 //
+// ── 목록을 자동으로 만드는 것과, 그 목록이 전부를 덮는 것은 다르다 ──
+//
+// 위 절의 교훈으로 디렉터리를 읽게 만들었다. 그건 맞았다 — 새 검사를 만들면 그날부터
+// 자동으로 포함된다. 그런데 **읽는 디렉터리가 scripts/ 하나였고, 거기 있는 것은
+// scripts/*.check.ts뿐이었다.**
+//
+//   src/**/__tests__/*.test.ts   시험 파일 5개 · 48항목  ← 묶음 밖에 있었다
+//   tsc --noEmit                 타입                    ← 묶음 밖에 있었다
+//
+// 2026-09-10에 드러났다. 알림 라우팅을 2단계로 바꾸고 `npm run check`가 **55개 전부
+// 통과**를 찍었는데, `npx vitest run`을 따로 돌리니 1단계 전제를 못 박아 둔 시험이
+// 실패했다. 「검사에 FAIL이 하나라도 있으면 커밋하지 않는다」가 저 48개는 안 지키고
+// 있었던 것이다. 같은 날 deadcode 쪽에서 tsc를 안 돌린 채 통과로 읽은 일도 있었다.
+//
+//   자동 목록은 **그 디렉터리 안에서만** 전부다.
+//   묶음이 무엇을 덮는지는 따로 물어야 한다 — 「빠진 게 있나」가 아니라
+//   「이 앱이 깨졌는지 알려주는 것 중 여기 안 도는 게 뭔가」로 묻는다.
+//
+// 그래서 아래 TOOLS를 **손으로** 적었다. 이건 「검사 하나」가 아니라 「도구 하나」라
+// 디렉터리에서 발견될 수 있는 것이 아니다. 손으로 적은 목록은 빠지기 마련이므로,
+// 무엇을 왜 넣었는지를 여기 남긴다. 새 도구가 생기면 여기에 적어라.
+
 // ── 변이를 주입했으면 들어갔는지 확인할 것 ──────────────────────────
 //
 // 「변이가 안 잡힌다」와 「변이가 안 들어갔다」는 다른 일인데 출력이 같다. 앵커를 못 찾아
@@ -113,7 +135,39 @@ const files = readdirSync(SCRIPTS)
   .filter((f) => f.endsWith('.check.ts'))
   .sort();
 
+/*
+  검사 파일 밖의 게이트. 위 머리말 참고 — 디렉터리로는 못 찾는 것들이라 손으로 적는다.
+
+    tsc      타입이 깨졌는데 검사가 통과하는 일이 있었다. 검사들은 tsx로 도는데
+             tsx는 타입을 안 본다 — 즉 이 묶음은 타입에 관해 아무 말도 안 했다.
+    vitest   순수 함수 시험 48항목. 라우팅·정원·알림 대상처럼 「틀리면 조용히 엉뚱한
+             결과를 내는」 것들이라 검사보다 여기가 본체인 자리도 있다.
+
+  먼저 돈다. 타입이나 시험이 깨진 채로 검사 55개를 돌리면 엉뚱한 실패가 쏟아진다.
+*/
+const TOOLS = [
+  { name: 'tsc', argv: ['tsc', '--noEmit'] },
+  { name: 'vitest', argv: ['vitest', 'run'] },
+];
+
 const failed = [];
+
+for (const { name, argv } of TOOLS) {
+  process.stdout.write(name.padEnd(18));
+  try {
+    /*
+      ⚠ execFileSync는 종료 코드가 0이 아니면 **던진다.** 그래서 catch가 곧 FAIL이다.
+        파이프(`| tail`)로 감싸면 마지막 명령의 코드가 남아 실패가 가려진다 —
+        이 저장소에서 이미 겪은 자리라 여기서는 파이프를 안 쓴다.
+      ⚠ 변이로 확인했다: 시험 하나를 틀리게, 타입을 하나 깨뜨려 각각 FAIL이 났다.
+    */
+    execFileSync('npx', argv, { cwd: ROOT, stdio: 'pipe', shell: true });
+    console.log('ok');
+  } catch (e) {
+    console.log('FAIL');
+    failed.push({ name, out: `${e.stdout ?? ''}${e.stderr ?? ''}`.trim() });
+  }
+}
 for (const f of files) {
   const name = f.replace('.check.ts', '');
   process.stdout.write(name.padEnd(18));
@@ -133,8 +187,8 @@ if (failed.length) {
     const line = out.split('\n').find((l) => /AssertionError|Error:/.test(l)) ?? out.split('\n')[0];
     console.error(`  ${name}: ${line.trim().slice(0, 160)}`);
   }
-  console.error(`\n하나씩 보려면: npx tsx scripts/<이름>.check.ts`);
+  console.error(`\n하나씩 보려면: npx tsx scripts/<이름>.check.ts\n도구는: npx tsc --noEmit  ·  npx vitest run`);
   process.exit(1);
 }
 
-console.log(`\n${files.length}개 전부 통과.`);
+console.log(`\n도구 ${TOOLS.length}개 + 검사 ${files.length}개, 전부 통과.`);

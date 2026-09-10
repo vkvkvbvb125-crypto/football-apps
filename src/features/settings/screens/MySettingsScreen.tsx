@@ -283,7 +283,15 @@ export function MySettingsScreen({ navigation }: any) {
               label="튜토리얼 다시 보기"
               onPress={async () => {
                 await resetTour(activeTeam.role === 'admin' ? 'admin' : 'member');
-                navigation.navigate('Main');
+                /*
+                  ⚠ **goBack이다. `navigate('Main')`이 아니다.**
+                    그렇게 두었더니 스택에 Main이 하나 더 얹혔고, 옛 Main은 안 사라졌다.
+                    Main 안에 TourProvider가 있으니 **튜토리얼이 둘** 돌게 되고,
+                    각자 자기 단계를 들고 있어서 **코치마크 두 장이 동시에** 떴다.
+                    기기에서 인스턴스에 id를 붙여 확인했다(MAIN MOUNT 둘, UNMOUNT 없음).
+                    이 화면은 홈 헤더의 톱니에서만 열리므로 돌아갈 곳은 늘 Main이다.
+                */
+                navigation.goBack();
               }}
             />
           )}

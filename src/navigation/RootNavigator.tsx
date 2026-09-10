@@ -169,6 +169,38 @@ const SPLASH_MIN_MS = 1700;
 /** 걷히는 시간. 더 짧으면 툭 꺼지고, 더 길면 앱이 늦게 열리는 것처럼 느껴진다 */
 const SPLASH_EXIT_MS = 420;
 
+/**
+ * Main 화면 — 탭 네비게이터에 튜토리얼 오버레이를 두른 것.
+ *
+ * ⚠ **이 컴포넌트를 인라인 화살표 함수로 되돌리지 마라.** 전에 이랬다:
+ *
+ *     <Stack.Screen name="Main">{(props) => <TourProvider …>…</TourProvider>}</Stack.Screen>
+ *
+ *   화살표 함수가 RootNavigator를 그릴 때마다 새로 만들어져서 React에게는 매번 다른
+ *   컴포넌트다 — 이 화면 전체가 쓸데없이 다시 마운트될 수 있는 모양이다.
+ *
+ * ⚠ **다만 「코치마크 두 장」의 원인은 이게 아니었다.** 이렇게 올린 뒤에도 그대로 났고,
+ *   원인은 `MySettingsScreen`이 `navigate('Main')`으로 돌아가면서 Main을 하나 더
+ *   얹은 것이었다(기기에서 인스턴스에 id를 붙여 확인 — MAIN MOUNT 둘, UNMOUNT 없음).
+ *   그건 그쪽에서 `goBack()`으로 고쳤다. 여기 것은 **다른 위험을 하나 덜어낸 것**이지
+ *   그 버그의 처방이 아니다. 둘을 섞어 기억하지 마라.
+ *
+ * ⚠ 역할은 여기서 직접 읽는다. 바깥에서 프롭으로 받으면 다시 클로저가 생긴다.
+ *   판정 근거는 schema.sql — create_team → role 'admin', join_team → 'member'라
+ *   TeamStartScreen에서 무엇을 눌렀는지 따로 기억할 필요가 없다.
+ */
+function MainWithTour({ navigation }: any) {
+  const activeTeam = useTeamStore((s) => s.activeTeam);
+  return (
+    <TourProvider
+      role={activeTeam?.role === 'admin' ? 'admin' : activeTeam ? 'member' : null}
+      onNavigate={(screen) => navigation.navigate('Main', { screen })}
+    >
+      <MainTabNavigator />
+    </TourProvider>
+  );
+}
+
 export function RootNavigator() {
   const themeName = useThemeName();
   const colors = useColors();
@@ -313,22 +345,7 @@ export function RootNavigator() {
           <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
         ) : (
           <>
-            <Stack.Screen name="Main">
-              {(props) => (
-                /*
-                  ⚠ 팀이 있는 구간에만 감싼다. 짚을 대상이 그때 생기고, 무엇보다
-                    **역할이 그때 정해진다** — activeTeam.role이 'admin'이면 팀을 만든
-                    사람이고 'member'면 참가한 사람이다(schema.sql의 create_team/join_team).
-                    따로 기억할 필요가 없어서 TeamStartScreen에서 무엇을 눌렀는지 안 남긴다.
-                */
-                <TourProvider
-                  role={activeTeam?.role === 'admin' ? 'admin' : activeTeam ? 'member' : null}
-                  onNavigate={(screen) => props.navigation.navigate('Main', { screen })}
-                >
-                  <MainTabNavigator />
-                </TourProvider>
-              )}
-            </Stack.Screen>
+            <Stack.Screen name="Main" component={MainWithTour} />
             {/* 팀이 있어도 열 수 있어야 한다 — 팀 전환 시트의 「새 팀 만들기 / 참여」가 여기로 온다.
                 팀이 없을 때의 등록(위 브랜치)과 같은 화면이고, 그쪽은 브랜치 교체로 닫힌다 */}
             <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />

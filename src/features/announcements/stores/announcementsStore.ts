@@ -95,13 +95,26 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
     if (!activeTeam) return;
     set({ loading: true, error: null });
     try {
-      await createAnnouncementRequest({ ...input, teamId: activeTeam.team.id, authorId: activeTeam.membershipId });
+      const created = await createAnnouncementRequest({
+        ...input,
+        teamId: activeTeam.team.id,
+        authorId: activeTeam.membershipId,
+      });
       await get().loadAnnouncements();
 
       const myUserId = useAuthStore.getState().session?.user.id;
       // toPlainText로 감싼다 — notify-team은 받은 문자열을 그대로 알림에 넣고 푸시로도 보내서,
       // 마커가 섞여 들어오면 잠금화면에 @[김범준](3f2a-…)가 그대로 뜬다
-      notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 공지사항`, toPlainText(input.title), myUserId, undefined, 'announcement').catch(() => {
+      notifyTeam(
+        activeTeam.team.id,
+        `${activeTeam.team.name} 공지사항`,
+        toPlainText(input.title),
+        myUserId,
+        undefined,
+        'announcement',
+        /* 눌렀을 때 이 공지를 바로 펴려고 싣는다. id가 없으면 공지 탭까지만 간다 */
+        created?.id ? { announcementId: created.id } : undefined
+      ).catch(() => {
         // 알림 전송 실패는 조용히 무시 (공지 작성 자체는 이미 성공)
       });
     } catch (err) {

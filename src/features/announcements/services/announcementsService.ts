@@ -83,14 +83,30 @@ export interface CreateAnnouncementInput {
 }
 
 export async function createAnnouncement(input: CreateAnnouncementInput) {
-  const { error } = await supabase.from('announcements').insert({
-    team_id: input.teamId,
-    author_id: input.authorId,
-    title: input.title,
-    body: input.body,
-    is_pinned: input.isPinned,
-  });
+  /*
+    ⚠ **.select()를 붙여 만든 행을 돌려준다.** 알림이 「이 공지를 열어라」고 하려면
+      id가 있어야 하는데, insert만 하면 안 온다.
+
+    ⚠ id만이 아니라 **행 전체**를 돌려준다. .select()가 어차피 행을 싣고 오므로
+      비용이 같고, 나중에 created_at·is_pinned가 필요해질 때 시그니처를 또 안 바꾼다.
+
+    ⚠ 이 저장소에 insert().select() 전례가 없어서(insert 12곳 중 0곳) 기기에서
+      재봤다 — 실제로 전체 행이 돌아온다. 정책상 될 것으로 읽히는 것과 오는 것은
+      다른 이야기라, 추론으로 넘기지 않았다.
+  */
+  const { data, error } = await supabase
+    .from('announcements')
+    .insert({
+      team_id: input.teamId,
+      author_id: input.authorId,
+      title: input.title,
+      body: input.body,
+      is_pinned: input.isPinned,
+    })
+    .select()
+    .single();
   if (error) throw error;
+  return data;
 }
 
 export interface UpdateAnnouncementInput {

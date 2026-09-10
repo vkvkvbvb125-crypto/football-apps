@@ -163,11 +163,19 @@ export async function notifyTeam(
       싣는다. 마침 경기를 만드는 자리 둘은 insert 결과를 버려서 matchId가 손에
       없는데, matchDate는 입력값이라 항상 있다.
 
+    ⚠ 공지는 반대다 — 목적지(AnnouncementDetailModal)가 **행 자체**를 받으므로
+      id로 목록에서 찾아야 한다. 그래서 createAnnouncement에 .select()를 붙여
+      id를 받아 온다. 이 저장소에 insert().select() 전례가 없어서 기기에서 재봤다:
+      전체 행이 그대로 돌아온다(announcements_select 정책이 팀원에게 열려 있다).
+
+    ⚠ mention·comment에는 target이 없다. 글 상세 화면이 존재하지 않아 목적지가
+      **게시판 목록**이고, 목록에는 id가 필요 없다 — routeFor가 tab만 싣는다.
+
     ⚠ 위치로 붙였다. 여기까지 인자가 여섯이고 여덟 호출이 전부 여섯을 넘긴다 —
       세어서 확인했다. 개수가 자리마다 다르면 일곱째를 붙일 때 여섯째 자리에
       undefined를 채워야 하고, 그걸 놓치면 kind가 target 자리로 조용히 들어간다.
   */
-  target?: { matchDate?: string; settlementId?: string }
+  target?: { matchDate?: string; settlementId?: string; announcementId?: string }
 ) {
   const { error } = await supabase.functions.invoke('notify-team', {
     body: { teamId, title, body, excludeUserId, userIds, kind, target },

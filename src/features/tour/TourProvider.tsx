@@ -165,16 +165,40 @@ export function TourProvider({
   }, [running, finish]);
 
   const next = useCallback(() => {
-    if (index + 1 >= steps.length) close();
-    else setIndex((i) => i + 1);
+    if (index + 1 >= steps.length) return close();
+    /*
+      ⚠ **여기서 같이 감춰야 한다.** setIndex만 하면 말풍선을 지우는 것은 아래 측정
+        effect의 setReady(false)인데, 그 리렌더가 화면 전환 렌더에 밀린다 —
+        기기에서 327·344·348ms로 쟀다. 그동안 **다음 단계로 넘어간 뒤에도 이전 자리의
+        말풍선이 남아** 있고, 탭은 이미 바뀌어 있어서 남의 화면 위에 뜬다.
+        같은 커밋에 넣으면 한 번의 렌더로 감춰진다.
+    */
+    setReady(false);
+    setSpot(null);
+    setIndex((i) => i + 1);
   }, [index, steps.length, close]);
 
   return (
     <TourCtx.Provider value={{ register, start }}>
       {children}
-      {!!step && ready && (
+      {/*
+        ⚠ **`ready`를 이 조건에 넣지 마라.** 넣으면 단계마다 Modal이 언마운트/리마운트되고,
+          안드로이드에서 Modal은 네이티브 Dialog 창이라 그때마다 창이 새로 만들어진다.
+          그렇게 두었더니 셋이 났다(전부 기기에서 logcat으로 재서 확인):
+
+            · setReady(false)를 부른 뒤 실제 언마운트까지 327·344·348ms.
+              그 1~2ms 전에 이미 탭이 바뀌어 있어서 **홈용 말풍선이 일정 화면 위에** 남았다.
+            · 언마운트~다음 마운트 사이 0.8~1.4초 동안 **막이 아예 없었다.**
+              그동안 화면이 그냥 눌린다.
+            · Fast Refresh가 쌓이면 TourProvider가 둘이 되어 창이 겹쳤다.
+
+          투어가 도는 동안 Modal 하나를 계속 띄우고 안의 내용만 바꾼다.
+          다 잴 때까지는 `ready={false}`로 넘겨서 막만 남기고 말풍선을 감춘다.
+      */}
+      {!!step && (
         <Coachmark
           visible
+          ready={ready}
           spot={spot}
           title={step.title}
           body={step.body}

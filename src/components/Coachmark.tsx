@@ -42,6 +42,19 @@ interface Props {
   onSkip: () => void;
   /** 마지막 단계면 버튼이 「확인」 대신 「시작하기」가 된다 */
   isLast?: boolean;
+  /*
+    짚을 자리를 다 쟀는가.
+
+    ⚠ **false여도 이 컴포넌트는 언마운트되지 않는다.** 막은 그대로 두고 구멍과
+      말풍선만 감춘다. 부르는 쪽이 `{... && ready && <Coachmark/>}`로 씌우면
+      단계마다 Modal이 새로 만들어지고, 그게 실제로 사고를 냈다 —
+      TourProvider의 「왜 계속 띄워 두는가」 주석에 근거가 있다.
+
+    ⚠ 아직 안 쟀을 때 **이전 단계의 말풍선을 남기지 않는다.** 이 시점의 title·body는
+      이미 다음 단계 것인데 구멍은 아직 이전 자리다. 남기면 「새 글 + 옛 구멍」이라
+      가장 헷갈리는 조합이 된다. 글을 지우고 막만 남기는 쪽이 맞다.
+  */
+  ready?: boolean;
 }
 
 /** 구멍 둘레의 여백 — 버튼에 딱 붙으면 뚫린 게 아니라 잘린 것으로 보인다 */
@@ -68,7 +81,7 @@ const cornerOf = (w: number, h: number) => {
   return square ? Math.min(w, h) / 2 : radius.card;
 };
 
-export function Coachmark({ visible, spot, title, body, step, total, onNext, onSkip, isLast }: Props) {
+export function Coachmark({ visible, spot, title, body, step, total, onNext, onSkip, isLast, ready = true }: Props) {
   const { colors, styles } = useThemed(makeStyles);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -77,18 +90,20 @@ export function Coachmark({ visible, spot, title, body, step, total, onNext, onS
   /* 단계가 바뀔 때 말풍선이 살짝 올라온다 — 같은 자리에서 글자만 바뀌면 바뀐 걸 놓친다 */
   const rise = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!visible) return;
+    /* 재는 동안은 말풍선이 없다 — 그때 애니메이션을 돌리면 다 잰 순간 이미 끝나 있다 */
+    if (!visible || !ready) return;
     if (reduceMotion) {
       rise.setValue(1);
       return;
     }
     rise.setValue(0);
     Animated.timing(rise, { toValue: 1, duration: 220, useNativeDriver: true }).start();
-  }, [visible, step, reduceMotion]);
+  }, [visible, step, ready, reduceMotion]);
 
-  const hole = spot
-    ? { x: spot.x - PAD, y: spot.y - PAD, w: spot.width + PAD * 2, h: spot.height + PAD * 2 }
-    : null;
+  const hole =
+    ready && spot
+      ? { x: spot.x - PAD, y: spot.y - PAD, w: spot.width + PAD * 2, h: spot.height + PAD * 2 }
+      : null;
 
   /*
     말풍선을 구멍 위에 둘지 아래에 둘지.
@@ -142,6 +157,7 @@ export function Coachmark({ visible, spot, title, body, step, total, onNext, onS
           />
         )}
 
+        {ready && (
         <Animated.View
           style={[
             styles.card,
@@ -180,6 +196,7 @@ export function Coachmark({ visible, spot, title, body, step, total, onNext, onS
             </Pressable>
           </View>
         </Animated.View>
+        )}
       </View>
       {/* 아래 여백만큼 말풍선이 시스템 바에 안 닿게 한다 */}
       <View pointerEvents="none" style={{ height: insets.bottom }} />

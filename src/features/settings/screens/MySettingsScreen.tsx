@@ -133,6 +133,17 @@ export function MySettingsScreen({ navigation }: any) {
             confirmLabel: '총무 넘기러 가기',
           });
           /*
+            ⚠ **두 번 고친 자리다. 둘은 다른 고장이었다.**
+              같은 날 앞뒤로 고쳤는데, 하나만 고쳤을 때는 「고쳤는데 여전히 안 된다」였다.
+
+                ⑴ navigate → popTo    스택에 Main이 하나 더 얹히던 것을 막았다
+                ⑵ 받는 쪽 effect      **스택은 안 쌓이게 됐는데 파라미터가 안 먹었다**
+
+              ⑵가 없으면 여기서 무엇을 넘겨도 멤버 칸이 안 열린다. 규칙으로 적어 둔다:
+              **하단 탭 화면은 한 번 마운트되면 계속 살아 있다. route.params를
+              useState 초기값으로만 읽으면 두 번째 방문부터 조용히 무시된다.**
+              (TeamHomeScreen에 effect로 받는 자리가 있다 — 그쪽 주석 참고)
+
             ⚠ **popTo다. navigate가 아니다.** `navigate('Main', …)`으로 두었더니
               스택이 `Main > MySettings`에서 **`Main > MySettings > Main`**이 됐다
               (기기에서 onStateChange로 찍어 확인). 옛 Main은 안 죽어서 그 안의

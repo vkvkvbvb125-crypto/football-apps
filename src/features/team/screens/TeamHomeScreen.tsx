@@ -99,8 +99,18 @@ export function TeamHomeScreen({ navigation, route }: any) {
     ⚠ **초기값만으로는 안 된다.** 위 useState는 이 화면이 **처음 마운트될 때** 한 번만
       읽는다. 그런데 팀은 하단 탭이라 한 번 열리면 계속 살아 있어서, 두 번째부터
       들어오는 파라미터는 아무 일도 안 일으킨다.
+
       실제로 그랬다 — 탈퇴 안내의 「총무 넘기러 가기」가 팀 화면을 이미 본 뒤에는
-      멤버 칸을 안 열었다. 알림 라우팅도 같은 길을 탄다.
+      멤버 칸을 안 열었다. 그 자리는 같은 날 `navigate`를 `popTo`로 고친 참이었는데,
+      **스택은 안 쌓이게 됐지만 파라미터는 여전히 안 먹었다.** 고장이 둘이었고
+      하나만 고친 상태가 「고쳤는데 여전히 안 된다」로 보였다.
+
+      ⚠ 초기값을 남겨 둔 이유: effect는 그려진 뒤에 돌아서, 초기값이 없으면 첫 프레임에
+        홈 칸이 한 번 번쩍인다. 둘 다 있는 것이 맞다 — 초기값은 첫 마운트, effect는 그 뒤.
+
+      규칙: **route.params는 effect로 받는다.** useState 초기값은 첫 마운트용 보조다.
+      (같은 패턴을 AttendanceScreen의 focusDate와 SettlementScreen의 openSettlementId가
+       이미 effect로 받고 있다 — 훑어서 확인했고, 깨져 있던 것은 이 화면뿐이었다.)
     ⚠ 소비했으면 지운다. 남겨두면 홈 칸으로 옮겨도 다시 끌려온다.
   */
   const paramTab = route?.params?.tab as 'home' | 'members' | 'notices' | 'board' | undefined;

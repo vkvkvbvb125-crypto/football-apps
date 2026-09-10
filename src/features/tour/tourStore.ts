@@ -49,9 +49,20 @@ export const useTourStore = create<TourState>((set, get) => ({
     set({ done: { admin: admin === 'true', member: member === 'true' }, loaded: true });
   },
 
+  /*
+    ⚠ **상태를 먼저 올리고 저장은 그다음이다.** 반대로 두었더니 닫자마자 다시 켜졌다.
+
+    닫는 쪽(TourProvider의 close)은 `setRunning(null)`을 곧바로 한다. 그런데 여기서
+    AsyncStorage를 먼저 기다리면 그 사이 `done[role]`이 아직 false라, 자동 시작 effect가
+    「안 본 코스가 있고 지금 안 돌고 있다」로 읽고 **1단계부터 다시 띄운다.**
+    기기에서 잡았다 — 뒤로가기로 닫은 뒤 310ms 만에 재시작됐다(logcat).
+    쓰기가 빠르면 안 나서 「가끔 되는」 것으로 보인다.
+
+    저장이 실패하면 다음 실행 때 한 번 더 뜰 뿐이고, 그건 지금 상태보다 낫다.
+  */
   finish: async (role) => {
-    await AsyncStorage.setItem(keyOf(role), 'true');
     set({ done: { ...get().done, [role]: true } });
+    await AsyncStorage.setItem(keyOf(role), 'true');
   },
 
   reset: async (role) => {

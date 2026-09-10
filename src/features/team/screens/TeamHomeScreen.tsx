@@ -87,13 +87,28 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const hasMultipleTeams = memberships.length > 1;
   const [copied, setCopied] = useState(false);
   /** 팀 탭 안의 네 화면. 총무·팀원 모두 같은 탭을 쓰고, 안에서 할 수 있는 일만 달라진다.
-      route.params.tab으로 열 화면을 지정할 수 있다 — 탈퇴 거부 메시지가 「총무 넘기러 가기」로
-      멤버 화면을 바로 연다. 없으면 여느 때처럼 홈이다. */
+      route.params.tab으로 열 화면을 지정한다 — 탈퇴 안내의 「총무 넘기러 가기」와
+      알림 라우팅(공지 → notices, 언급·댓글 → board)이 쓴다. 없으면 홈이다. */
   const [tab, setTab] = useState<'home' | 'members' | 'notices' | 'board'>(
     route?.params?.tab ?? 'home',
   );
   const [memberQuery, setMemberQuery] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
+
+  /*
+    ⚠ **초기값만으로는 안 된다.** 위 useState는 이 화면이 **처음 마운트될 때** 한 번만
+      읽는다. 그런데 팀은 하단 탭이라 한 번 열리면 계속 살아 있어서, 두 번째부터
+      들어오는 파라미터는 아무 일도 안 일으킨다.
+      실제로 그랬다 — 탈퇴 안내의 「총무 넘기러 가기」가 팀 화면을 이미 본 뒤에는
+      멤버 칸을 안 열었다. 알림 라우팅도 같은 길을 탄다.
+    ⚠ 소비했으면 지운다. 남겨두면 홈 칸으로 옮겨도 다시 끌려온다.
+  */
+  const paramTab = route?.params?.tab as 'home' | 'members' | 'notices' | 'board' | undefined;
+  useEffect(() => {
+    if (!paramTab) return;
+    setTab(paramTab);
+    navigation.setParams({ tab: undefined });
+  }, [paramTab]);
 
   /* 팀을 바꾸면 홈으로 되돌린다. 멤버 탭에 서서 팀을 바꾸면 제목만 바뀐 채
      「멤버 관리」에 남아, 방금 무엇이 바뀐 건지 안 보인다 */
@@ -144,6 +159,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
   }, [recentTeamId, nameByUserId]);
 
   const announcements = useAnnouncementsStore((s) => s.announcements);
+  const announcementsLoaded = useAnnouncementsStore((s) => s.loaded);
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
   const myReadIds = useAnnouncementsStore((s) => s.myReadIds);
   const loadMyReads = useAnnouncementsStore((s) => s.loadMyReads);
@@ -185,6 +201,30 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const [editingAnnouncement, setEditingAnnouncement] = useState<AnnouncementRow | null>(null);
   const [listVisible, setListVisible] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementRow | null>(null);
+
+  /*
+    공지 알림에서 넘어왔다 — 그 공지를 편다.
+
+    ⚠ 목록이 아직 안 불렸을 수 있어서 id를 들고 기다린다. 정산이 detailTarget만
+      세워두고 로드가 끝나면 뜨는 것과 같은 모양이다(SettlementScreen:145).
+    ⚠ **못 찾으면 그냥 접는다.** 지워진 공지면 모달이 안 뜨고 공지 목록만 남는다 —
+      「없어졌어요」를 띄우지 않는다. 정산이 같은 자리에서 그렇게 하고, 목록에 그
+      공지가 없다는 것이 이미 답이다.
+  */
+  const openAnnouncementId = route?.params?.openAnnouncementId as string | undefined;
+  const [pendingAnnouncementId, setPendingAnnouncementId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openAnnouncementId) return;
+    setPendingAnnouncementId(openAnnouncementId);
+    navigation.setParams({ openAnnouncementId: undefined });
+  }, [openAnnouncementId]);
+  useEffect(() => {
+    if (!pendingAnnouncementId || !announcementsLoaded) return;
+    const found = announcements.find((a) => a.id === pendingAnnouncementId);
+    if (found) setSelectedAnnouncement(found);
+    setPendingAnnouncementId(null);
+  }, [pendingAnnouncementId, announcementsLoaded, announcements]);
+
 
   const polls = usePollsStore((s) => s.polls);
   const loadPolls = usePollsStore((s) => s.loadPolls);
@@ -545,9 +585,18 @@ export function TeamHomeScreen({ navigation, route }: any) {
           */}
 
           {/*
-            게시판 — 화면에서만 걷어냈다. 코드와 DB(posts·post_likes·post_comments·post_pins)는
-            그대로 둔다: 이미 쌓인 글이 있고, 되살릴 때 마이그레이션부터 다시 보게 되면
-            비용이 훨씬 크다. tab이 'board'가 되는 경로가 없어져서 이 줄은 지금 안 그려진다.
+            게시판.
+
+            ⚠ **전에 여기 「tab이 'board'가 되는 경로가 없어져서 이 줄은 지금 안 그려진다」고
+              적혀 있었다. 지금은 사실이 아니다.** 걷어냈다가 팀 홈의 「최근 게시글」 카드로
+              되살아났고(TeamHomeTab의 onGoTile('board')), 2026-09-10부터는 언급·댓글
+              알림도 여기로 온다.
+              전제가 무너졌는데 주석이 남아 「안 그려지는 코드」로 읽히게 하고 있었다 —
+              그런 주석은 없느니만 못하다(AGENTS.md 「주석은 결론이 아니라 전제를 적는다」).
+
+            걷어낼 때 「코드와 DB(posts·post_likes·post_comments·post_pins)는 그대로 둔다:
+            이미 쌓인 글이 있고, 되살릴 때 마이그레이션부터 다시 보게 되면 비용이 훨씬
+            크다」고 적어 뒀는데 그 판단이 값을 했다 — 되살리는 데 든 것이 주석 두 줄이다.
           */}
           {tab === 'board' && !!myUserId && (
             <TeamBoardTab teamId={activeTeam.team.id} myUserId={myUserId} isAdmin={isAdmin} />

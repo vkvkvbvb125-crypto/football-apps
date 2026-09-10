@@ -22,9 +22,21 @@ describe('routeFor — 갈 곳이 있을 때', () => {
     });
   });
 
-  it('공지·게시판은 1단계에서 팀 탭까지만 간다 (파라미터 없음)', () => {
-    for (const kind of ['announcement', 'mention', 'comment']) {
-      expect(routeFor({ kind })).toEqual({ screen: 'Team' });
+  /*
+    팀 탭은 안에 화면이 넷이라(홈·멤버·공지·게시판) 탭만으로는 목적지가 아니다.
+    ⚠ 1단계에서는 여기가 `{ screen: 'Team' }`이었고, 그때 사용자는 팀 홈에 떨어졌다.
+      「최근 게시글」이 셋만 보여서 언급된 글이 그 안에 없으면 다시 찾아야 했다.
+  */
+  it('공지 알림은 공지 칸을 열고 그 공지를 편다', () => {
+    expect(routeFor({ kind: 'announcement', announcementId: 'ann-1' })).toEqual({
+      screen: 'Team',
+      params: { tab: 'notices', openAnnouncementId: 'ann-1' },
+    });
+  });
+
+  it('언급·댓글은 게시판 칸까지 간다 — 그 글로 스크롤하지 않는다', () => {
+    for (const kind of ['mention', 'comment']) {
+      expect(routeFor({ kind })).toEqual({ screen: 'Team', params: { tab: 'board' } });
     }
   });
 
@@ -33,6 +45,15 @@ describe('routeFor — 갈 곳이 있을 때', () => {
     expect(routeFor({ kind: 'settlement' })).toEqual({ screen: 'Settlement' });
     // 빈 문자열도 없는 것으로 본다 — ''를 focusDate로 넘기면 Invalid Date가 된다
     expect(routeFor({ kind: 'new_match', matchDate: '' })).toEqual({ screen: 'Attendance' });
+    /*
+      ⚠ 공지 id가 없는 옛 알림 — 공지 칸까지만 간다.
+        목록에 그 공지가 있으면 사용자가 거기서 찾고, 지워졌으면 없는 것이 답이다.
+    */
+    expect(routeFor({ kind: 'announcement' })).toEqual({ screen: 'Team', params: { tab: 'notices' } });
+    expect(routeFor({ kind: 'announcement', announcementId: '' })).toEqual({
+      screen: 'Team',
+      params: { tab: 'notices' },
+    });
   });
 });
 

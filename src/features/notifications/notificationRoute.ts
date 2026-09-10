@@ -12,12 +12,24 @@
 // 버려서 matchId가 손에 없는데, matchDate는 입력값이라 항상 있다.
 // 「id를 실어야 한다」로 시작했으면 그 둘은 라우팅을 못 붙일 뻔했다.
 //
-// ── 1단계의 한계 ────────────────────────────────────────────────────
-// announcement · mention · comment는 **팀 탭까지만** 간다. 공지 상세와 글 상세는
-// 화면 안의 지역 상태로 열려서(AnnouncementDetailModal · PostCard 안의
-// PostComments) 밖에서 지정할 파라미터가 없다. 2단계에서 붙인다 — 서랍 참고.
-// 여기까지라도 붙이는 이유: 지금은 「마지막에 보던 화면」에 떨어진다. 팀 탭은
-// 적어도 그 알림이 온 곳이다.
+// ── 2단계 — 공지는 펴고, 글은 목록까지 ─────────────────────────────
+// announcement  공지 탭을 열고 **그 공지를 편다.** 목적지가 행을 받는 모달이라
+//               id로 목록에서 찾는다(createAnnouncement가 .select()로 돌려준다).
+// mention·comment  **게시판 탭까지** 간다. 그 글로 스크롤하지 않는다 — 아래 참고.
+//
+// ⚠ **「그 글로 스크롤」을 하지 않는 근거.**
+//   글 상세 화면이 **존재하지 않는다.** BoardPanel이 posts.map으로 PostCard를
+//   그대로 늘어놓고, 본문·댓글이 그 카드 안에 인라인이다. FlatList도 아니라
+//   scrollToIndex도 없다 — 조상 ScrollView를 참조해 measureLayout으로 밀어야 한다.
+//
+//   그리고 **앱 자신이 이미 「그 글로 간다」를 「목록을 연다」로 하고 있다.**
+//   팀 홈의 「최근 게시글」에서 개별 글 행을 눌러도 onGoTile('board')뿐이다
+//   (TeamHomeTab). 알림만 다르게 만들면 같은 행동이 두 곳에서 다르게 끝난다 —
+//   바꾸려면 그 자리도 같이 바꿔야 하고, 그래서 얻는 것은 「목록 맨 위 대신
+//   세 번째 글에 선다」뿐이다. 값이 안 맞는다.
+//
+// ⚠ 그래서 mention·comment에는 target이 없다. 목적지가 목록이라 id가 필요 없고,
+//   createPost에 .select()를 붙일 이유도 없다. 스크롤을 하기로 하면 그때 붙인다.
 
 /** 알림에 실려 오는 값. Edge Function의 messages[].data와 같은 모양이어야 한다. */
 export interface NotificationData {
@@ -25,6 +37,8 @@ export interface NotificationData {
   /** 경기 알림 — ISO 문자열. id가 아니라 날짜다(위 주석) */
   matchDate?: string;
   settlementId?: string;
+  /** 공지 알림 — 이건 id다. 목적지 모달이 행을 받아서 목록에서 찾아야 한다 */
+  announcementId?: string;
 }
 
 /** 어느 탭으로 갈지와 그 탭에 넘길 파라미터. */
@@ -83,6 +97,18 @@ export function routeFor(data: unknown): RouteIntent | null {
   }
   if (screen === 'Settlement' && typeof d.settlementId === 'string' && d.settlementId) {
     return { screen, params: { openSettlementId: d.settlementId } };
+  }
+  /*
+    팀 탭은 안에 화면이 넷이라(홈·멤버·공지·게시판) 탭만으로는 아직 목적지가 아니다.
+    kind마다 어느 칸인지가 정해져 있으므로 여기서 같이 싣는다.
+    ⚠ 공지 id가 없으면(옛 알림) 공지 칸까지만 간다 — 목록이 그 자체로 답이다.
+  */
+  if (screen === 'Team') {
+    if (d.kind === 'announcement') {
+      const id = typeof d.announcementId === 'string' ? d.announcementId : '';
+      return { screen, params: id ? { tab: 'notices', openAnnouncementId: id } : { tab: 'notices' } };
+    }
+    return { screen, params: { tab: 'board' } };
   }
   return { screen };
 }

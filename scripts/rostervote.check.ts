@@ -160,8 +160,14 @@ const home = read('src/features/home/screens/HomeScreen.tsx');
     const body = sheet.slice(at, end + 1);
     assert.ok(body.indexOf('await') < body.indexOf(flag),
       `${fn}이 보내기 전에 ${flag}을 부른다 — 실패해도 「전송됨」이 남는다`);
-    assert.ok(/catch \(e\)/.test(body) && /setPokeError/.test(body),
-      `${fn}이 실패를 안 알린다`);
+    /*
+      ⚠ **`setPokeError`였다.** 서버 쿨다운이 붙으면서 여기 들어갈 말이 실패만이
+        아니게 됐다 — 「4명에게 보냈어요. 2명은 건너뛰었어요」는 고장이 아니다.
+        이름이 `pokeNote`로 바뀌었고, 이 단언이 보는 것은 그때나 지금이나 같다:
+        **결과가 화면에 닿는가.**
+    */
+    assert.ok(/catch \(e\)/.test(body) && /setPokeNote/.test(body),
+      `${fn}이 결과를 안 알린다 — 실패도 차단도 조용해진다`);
   }
 
   // ⑷ **두 화면 다 넘긴다.** 한쪽만 이으면 같은 시트가 화면마다 다르게 동작한다

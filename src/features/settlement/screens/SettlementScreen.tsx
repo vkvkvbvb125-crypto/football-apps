@@ -565,7 +565,16 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         onExemptShare={(shareId) => {
           if (!current) return;
           // "이미 입금 확인된 사람" 같은 거절 사유는 사용자에게 보여야 한다 — 조용히 삼키면 안 눌린 걸로 보인다
-          exemptShare(current.id, shareId).catch((e) => showError(toUserMessage(e, {}, 'exemptShare')));
+          /*
+            ⚠ 실패하면 **목록을 다시 읽는다.** 낙관적 잠금에 걸렸다는 건 내 화면의
+              금액이 낡았다는 뜻이라, 문구만 띄우면 같은 낡은 값으로 또 누르게 된다.
+              문구가 「다시 해주세요」인데 그냥 다시 하면 또 걸리는 상태를 만들지 않는다.
+              23505(정산 중복)도 같은 모양이다.
+          */
+          exemptShare(current.id, shareId).catch((e) => {
+            showError(toUserMessage(e, {}, 'exemptShare'));
+            reloadSettlements();
+          });
         }}
       />
 

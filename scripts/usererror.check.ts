@@ -48,9 +48,11 @@ const HUMAN: [string, string][] = [
   ['src/features/settlement/stores/settlementStore.ts', '마지막 한 명은 제외할 수 없어요'],
   /* 낙관적 잠금에 걸렸을 때. 「막힌 이유」와 「할 수 있는 일」이 둘 다 들어 있어야 하는
      자리라 특히 덮이면 안 된다 — 총무는 자기가 무엇을 잘못했는지 알 방법이 없다.
-     ⚠ 「현황 새로고침」은 **화면에 실제로 있는 버튼 이름**이다. 당겨서 새로고침은 없다
-       (RefreshControl이 이 화면에 0곳) — 말이 가리키는 것이 실재해야 한다. */
-  ['src/features/settlement/stores/settlementStore.ts', '다른 총무가 방금 금액을 바꿨어요. 「현황 새로고침」을 누르고 다시 해주세요'],
+     ⚠ **사용자가 실제로 할 수 있는 것만 적는다.** 처음엔 「「현황 새로고침」을 누르고」였다.
+       그 버튼이 실재하긴 하지만(당겨서 새로고침은 없다 — RefreshControl 0곳),
+       막힌 쪽은 이미 한 번 헛수고한 사람이라 손으로 할 일을 더 주지 않는다.
+       화면이 실패 직후 목록을 다시 읽고, 남은 할 일은 「다시 해주세요」 하나다. */
+  ['src/features/settlement/stores/settlementStore.ts', '다른 총무가 방금 금액을 바꿨어요. 금액을 새로 불러왔어요 — 다시 해주세요'],
   ['src/features/team/stores/teamStore.ts', '마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.'],
 ];
 for (const [f, msg] of HUMAN) {

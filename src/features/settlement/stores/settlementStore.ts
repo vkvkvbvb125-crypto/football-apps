@@ -353,7 +353,17 @@ export const useSettlementStore = create<State>((set, get) => ({
           제대로 고치려면 postgres 함수(RPC) 하나로 내려야 한다.
           총무가 둘인 팀이 생기고 이 자리가 실제로 아프면 그때 옮긴다.
       */
-      const { data: locked, error: lockError } = await supabase
+      /*
+      ⚠ **이 잠금의 한계: 총액이 0이면 아무것도 안 잡는다.**
+        per_person이 늘 0이라 `.eq('per_person', 0)`이 언제나 통과한다.
+        「값」으로 잠그기 때문이고, 「그 값을 만든 재료」(남은 인원)로 잠그려면
+        settlements에 인원수나 버전 컬럼이 필요한데 지금 없다.
+
+        그대로 두는 근거: **총액 0이면 나눌 금액이 없어 제외가 금액을 안 바꾼다.**
+        경합이 나도 틀릴 값이 없다. 컬럼을 하나 늘릴 값어치가 없다.
+        총액이 0이 아닌 정산에서 인원이 줄면 1인당은 반드시 오르므로 거기서는 잡힌다.
+    */
+    const { data: locked, error: lockError } = await supabase
         .from('settlements')
         .update({ per_person: perPerson, surplus })
         .eq('id', settlementId)
@@ -361,8 +371,18 @@ export const useSettlementStore = create<State>((set, get) => ({
         .select('id');
       if (lockError) throw lockError;
       if (!locked || locked.length === 0) {
-        /* ⚠ 한 줄로 둔다 — usererror.check가 `UserFacingError('…')` 한 줄 꼴을 찾는다 */
-        throw new UserFacingError('다른 총무가 방금 금액을 바꿨어요. 「현황 새로고침」을 누르고 다시 해주세요');
+      /*
+        ⚠ **막힌 사람에게 손으로 할 일을 더 시키지 않는다.**
+          처음엔 「「현황 새로고침」을 누르고 다시 해주세요」였다. 그 버튼이 실재하긴
+          하지만, 막힌 쪽은 이미 한 번 헛수고한 사람이다 — 낡은 것을 **여기서 바로**
+          다시 읽고, 남은 할 일은 「다시 해주세요」 하나로 줄인다.
+        ⚠ **다시 읽는 것은 화면이 한다.** 스토어의 load는 teamId·membershipId를 받는데
+          여기엔 그 값이 없다 — 억지로 끌어오면 스토어가 팀 상태에 의존하게 된다.
+          부르는 쪽(SettlementScreen)이 이미 reloadSettlements를 들고 있고,
+          23505도 같은 모양으로 처리한다.
+        ⚠ 한 줄로 던진다 — usererror.check가 `UserFacingError('…')` 한 줄 꼴을 찾는다.
+      */
+      throw new UserFacingError('다른 총무가 방금 금액을 바꿨어요. 금액을 새로 불러왔어요 — 다시 해주세요');
       }
 
       const { error: delError } = await supabase.from('settlement_shares').delete().eq('id', shareId);

@@ -57,6 +57,8 @@ export interface PendingMatch {
 }
 
 interface State {
+  /** 제외가 도는 중인가 — 연타로 낡은 스냅샷이 두 번 계산되는 것을 막는다 */
+  exempting: boolean;
   /** 아직 정산이 없는 종료 경기 (미등록 카드용) */
   pendingMatches: PendingMatch[];
   current: Settlement | null;
@@ -144,6 +146,7 @@ const SELECT = `
 `;
 
 export const useSettlementStore = create<State>((set, get) => ({
+  exempting: false,
   pendingMatches: [],
   current: null,
   past: [],
@@ -298,50 +301,98 @@ export const useSettlementStore = create<State>((set, get) => ({
   },
 
   async exemptShare(settlementId, shareId) {
-    const target = get().current;
-    if (!target || target.id !== settlementId) return;
+    /*
+      ⚠ **연타 가드. 낙관적 잠금보다 이게 먼저다.**
 
-    const share = target.shares.find((r) => r.id === shareId);
-    if (!share) return;
-    // 이미 확인된 입금을 되돌리면 걷은 금액과 장부가 어긋난다
-    if (share.paid) throw new UserFacingError('이미 입금 확인된 사람은 제외할 수 없어요');
+      제외 버튼에 in-flight 가드가 없어서, 총무 **한 명**이 빠르게 둘을 빼면
+      두 번째가 첫 번째의 결과를 못 보고 **낡은 스냅샷으로 계산한다.**
+      6명에서 둘을 빼면 4명인데 5명 기준 금액이 들어간다 —
+      **총무가 하나뿐인 지금도 나는 고장이고, 오류 없이 조용히 틀린다.**
 
-    const remaining = target.shares.filter((r) => r.id !== shareId);
-    if (remaining.length === 0) throw new UserFacingError('마지막 한 명은 제외할 수 없어요');
+      ⚠ 그리고 이 가드가 없으면 **아래 잠금이 없던 오류를 만든다.**
+        혼자 두 번 누른 것뿐인데 「다른 총무가 방금 바꿨어요」가 뜬다.
+        잠금은 **남과의 경합**만 잡아야 한다 — 자기 자신과의 경합은 여기서 막는다.
+      ⚠ finally로 푼다. 실패해도 안 풀면 그 화면에서 제외가 영영 안 된다.
+    */
+    if (get().exempting) return;
+    set({ exempting: true });
+    try {
+      const target = get().current;
+      if (!target || target.id !== settlementId) return;
 
-    const { perPerson, surplus } = splitAmount(target.totalAmount, remaining.length);
+      const share = target.shares.find((r) => r.id === shareId);
+      if (!share) return;
+      // 이미 확인된 입금을 되돌리면 걷은 금액과 장부가 어긋난다
+      if (share.paid) throw new UserFacingError('이미 입금 확인된 사람은 제외할 수 없어요');
 
-    const { error: delError } = await supabase.from('settlement_shares').delete().eq('id', shareId);
-    if (delError) throw delError;
+      const remaining = target.shares.filter((r) => r.id !== shareId);
+      if (remaining.length === 0) throw new UserFacingError('마지막 한 명은 제외할 수 없어요');
 
-    // 남은 사람의 몫을 다시 나눈다 — 총액은 그대로이므로 1인당이 올라간다
-    const { error: shareError } = await supabase
-      .from('settlement_shares')
-      .update({ amount: perPerson })
-      .in(
-        'id',
-        remaining.map((r) => r.id)
+      const { perPerson, surplus } = splitAmount(target.totalAmount, remaining.length);
+
+      /*
+        ── 낙관적 잠금 ─────────────────────────────────────────────────
+
+        이 함수는 **읽은 스냅샷으로 계산해서 여러 행에 쓴다** — 화면의 shares를 세어
+        1인당을 구하고, 남은 전원의 amount와 정산의 per_person을 덮는다.
+        총무가 둘일 때 각자 다른 사람을 빼면 둘 다 자기 스냅샷으로 계산한다:
+
+            6명 → A가 하나 빼서 5명 기준으로 씀
+                 B도 (5명인 줄 모르고) 5명 기준으로 씀
+            실제로는 4명인데 5명 기준 금액이 전원에게 덮인다
+
+        ⚠ **화면이 낡는 게 아니라 데이터가 틀린다.** 총액과 (1인당 × 인원)이 안 맞는데
+          숫자가 그럴듯하고 오류도 안 뜨고 누가 덮었는지 흔적도 없다. 조용히 틀린다.
+
+        그래서 **내가 읽은 per_person일 때만** 갱신한다. 0행이면 그 사이 누가 바꾼 것이다.
+
+        ⚠ **이 갱신이 첫 쓰기다(문지기).** 삭제를 먼저 하면 잠금에 걸렸을 때 이미
+          지워진 뒤라 되돌릴 수 없다.
+        ⚠ **대신 원자적이지 않다.** 여기가 성공하고 아래 삭제가 실패하면 정산의 per_person만
+          앞서 간다. 지금 구조로는 세 쓰기를 한 트랜잭션에 묶을 수 없다 —
+          제대로 고치려면 postgres 함수(RPC) 하나로 내려야 한다.
+          총무가 둘인 팀이 생기고 이 자리가 실제로 아프면 그때 옮긴다.
+      */
+      const { data: locked, error: lockError } = await supabase
+        .from('settlements')
+        .update({ per_person: perPerson, surplus })
+        .eq('id', settlementId)
+        .eq('per_person', target.perPerson)
+        .select('id');
+      if (lockError) throw lockError;
+      if (!locked || locked.length === 0) {
+        /* ⚠ 한 줄로 둔다 — usererror.check가 `UserFacingError('…')` 한 줄 꼴을 찾는다 */
+        throw new UserFacingError('다른 총무가 방금 금액을 바꿨어요. 「현황 새로고침」을 누르고 다시 해주세요');
+      }
+
+      const { error: delError } = await supabase.from('settlement_shares').delete().eq('id', shareId);
+      if (delError) throw delError;
+
+      // 남은 사람의 몫을 다시 나눈다 — 총액은 그대로이므로 1인당이 올라간다
+      const { error: shareError } = await supabase
+        .from('settlement_shares')
+        .update({ amount: perPerson })
+        .in(
+          'id',
+          remaining.map((r) => r.id)
+        );
+      if (shareError) throw shareError;
+
+      set((s) =>
+        s.current?.id === settlementId
+          ? {
+              current: {
+                ...s.current,
+                perPerson,
+                surplus,
+                shares: remaining.map((r) => ({ ...r, amount: perPerson })),
+              },
+            }
+          : {}
       );
-    if (shareError) throw shareError;
-
-    const { error: sError } = await supabase
-      .from('settlements')
-      .update({ per_person: perPerson, surplus })
-      .eq('id', settlementId);
-    if (sError) throw sError;
-
-    set((s) =>
-      s.current?.id === settlementId
-        ? {
-            current: {
-              ...s.current,
-              perPerson,
-              surplus,
-              shares: remaining.map((r) => ({ ...r, amount: perPerson })),
-            },
-          }
-        : {}
-    );
+    } finally {
+      set({ exempting: false });
+    }
   },
 
   async markPaid(shareId, on) {

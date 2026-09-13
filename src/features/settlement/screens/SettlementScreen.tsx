@@ -700,8 +700,22 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
             // 만들자마자 링크 공유 화면으로 — Reference 총무②→④ 순서.
             // create()가 끝나면 store의 load()도 끝나 current가 방금 만든 정산이다.
             .then(() => setShareLinkOpen(true))
-            /* 같은 경기로 정산을 두 번 만들면 23505다 — 그 자리에서만 뜻이 있는 말이라 known으로 준다 */
-            .catch((e) => showError(toUserMessage(e, { '23505': '이 경기는 이미 정산이 있어요' }, 'createSettlement')));
+            /*
+              같은 경기로 정산을 두 번 만들면 23505다 — 그 자리에서만 뜻이 있는 말이라
+              known으로 준다. 제약은 DB에 있다(20260727 리디자인의 `unique (match_id)`).
+
+              ⚠ **목록을 다시 읽는다.** 이 오류가 났다는 건 내 화면의 「미등록」 카드가
+                낡았다는 뜻이다 — 다른 총무가 만들었거나, 내가 연타했거나.
+                문구만 띄우고 말면 그 카드가 그대로 남아서 또 누르게 된다.
+
+              ⚠ **그 정산을 강제로 열지는 않는다.** 방금 실패한 동작 위에 새 화면을
+                얹으면 「내가 만든 건가?」가 된다. 목록이 스스로 고쳐져서 그 경기가
+                「미등록」에서 「진행중」으로 옮겨 가는 것이 이미 답이다.
+            */
+            .catch((e) => {
+              showError(toUserMessage(e, { '23505': '이 경기는 이미 정산이 있어요' }, 'createSettlement'));
+              reloadSettlements();
+            });
         }}
       />
 

@@ -46,6 +46,11 @@ const HUMAN: [string, string][] = [
   ['src/features/settings/services/avatarService.ts', '사진 접근을 허용해야 바꿀 수 있어요'],
   ['src/features/settlement/stores/settlementStore.ts', '이미 입금 확인된 사람은 제외할 수 없어요'],
   ['src/features/settlement/stores/settlementStore.ts', '마지막 한 명은 제외할 수 없어요'],
+  /* 낙관적 잠금에 걸렸을 때. 「막힌 이유」와 「할 수 있는 일」이 둘 다 들어 있어야 하는
+     자리라 특히 덮이면 안 된다 — 총무는 자기가 무엇을 잘못했는지 알 방법이 없다.
+     ⚠ 「현황 새로고침」은 **화면에 실제로 있는 버튼 이름**이다. 당겨서 새로고침은 없다
+       (RefreshControl이 이 화면에 0곳) — 말이 가리키는 것이 실재해야 한다. */
+  ['src/features/settlement/stores/settlementStore.ts', '다른 총무가 방금 금액을 바꿨어요. 「현황 새로고침」을 누르고 다시 해주세요'],
   ['src/features/team/stores/teamStore.ts', '마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.'],
 ];
 for (const [f, msg] of HUMAN) {
@@ -53,7 +58,7 @@ for (const [f, msg] of HUMAN) {
   ok(src.includes(`UserFacingError('${msg}')`),
      `${f.split('/').pop()}: 「${msg.slice(0, 20)}…」이 UserFacingError로 안 던져진다 — 화면에서 덮인다`);
 }
-/* 던지는 자리가 넷이다. 다섯째가 생기면 이 목록에 넣어야 한다 */
+/* 던지는 자리가 다섯이다. 여섯째가 생기면 이 목록에 넣어야 한다 */
 const thrownCount = HUMAN.map(([f]) => f)
   .filter((f, i, a) => a.indexOf(f) === i)
   .reduce((n, f) => n + (read(f).match(/new UserFacingError\(/g) ?? []).length, 0);

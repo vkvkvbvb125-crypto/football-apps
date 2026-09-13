@@ -146,6 +146,22 @@ export type NotifyKind =
   /* 정산 토글(notify_settlement) */
   | 'settlement';
 
+/**
+ * 알림을 보낸 결과. 화면이 총무에게 무엇을 말할지 여기서 갈린다.
+ *
+ *   sent          알림을 받은 사람 수 (푸시 건수가 아니라 사람 수다)
+ *   skipped       독촉 쿨다운으로 건너뛴 사람 수
+ *   retryAfterMin 건너뛴 사람 **전원**이 다시 받을 수 있게 되기까지 남은 분
+ */
+export interface NotifyResult {
+  sent: number;
+  skipped: number;
+  retryAfterMin: number;
+}
+
+/** 보낼 사람이 없어 부르지도 않은 경우. 「0명에게 보냈다」가 아니라 「아무 일도 없었다」다 */
+export const EMPTY_NOTIFY: NotifyResult = { sent: 0, skipped: 0, retryAfterMin: 0 };
+
 export async function notifyTeam(
   teamId: string,
   title: string,
@@ -176,9 +192,23 @@ export async function notifyTeam(
       undefined를 채워야 하고, 그걸 놓치면 kind가 target 자리로 조용히 들어간다.
   */
   target?: { matchDate?: string; settlementId?: string; announcementId?: string }
-) {
-  const { error } = await supabase.functions.invoke('notify-team', {
+): Promise<NotifyResult> {
+  const { data, error } = await supabase.functions.invoke('notify-team', {
     body: { teamId, title, body, excludeUserId, userIds, kind, target },
   });
   if (error) throw error;
+  /*
+    ⚠ **data를 버리지 않는다.** 전에는 `const { error }`만 읽었다. 그 상태로 서버가
+      쿨다운을 걸면 총무 화면에는 아무 변화가 없다 — 눌렀는데 아무 일도 안 나는
+      것이고, 그건 이 저장소가 이미 한 번 겪은 「찌르기가 한 번도 안 감」과 같은 모양이다.
+      막는 것보다 **막았다고 말하는 것**이 이 기능의 본체다.
+    ⚠ 값이 없으면 0으로 채운다. 옛 함수가 배포돼 있으면 skipped가 안 오는데,
+      그때 undefined가 화면까지 흘러가면 「NaN명 건너뜀」이 된다.
+  */
+  const r = (data ?? {}) as Partial<NotifyResult>;
+  return {
+    sent: r.sent ?? 0,
+    skipped: r.skipped ?? 0,
+    retryAfterMin: r.retryAfterMin ?? 0,
+  };
 }

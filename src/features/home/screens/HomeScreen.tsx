@@ -57,6 +57,7 @@ import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
 import { resolveCapacity } from '../../attendance/utils/capacity';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 import { notVotedUserIds, remindVote } from '../../attendance/utils/remindVote';
+import { EMPTY_NOTIFY } from '../../notifications/services/pushService';
 import { DEFAULT_CAPACITY } from '../../attendance/components/ScheduleRow';
 import { relativeTime } from '../../../lib/relativeTime';
 import { monthlyAttendanceRate, formatRate } from '../../attendance/utils/attendanceRate';
@@ -468,7 +469,7 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           toUserIds,
           excludeUserId: myUserId,
         })
-      : Promise.resolve();
+      : Promise.resolve(EMPTY_NOTIFY);
 
   const matchDate = next ? new Date(next.match_date) : null;
 

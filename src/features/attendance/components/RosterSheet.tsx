@@ -18,6 +18,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../../components/nativeText';
+import { remindMessage, type RemindMessage } from '../../notifications/remindMessage';
+import type { NotifyResult } from '../../notifications/services/pushService';
 import { useReduceMotion } from '../../../lib/useReduceMotion';
 import { type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
@@ -66,8 +68,8 @@ interface Props {
    *   총무는 보냈다고 믿는데 아무것도 안 갔다. **없는 기능이 성공처럼 보이는 자리였다.**
    *   두 화면 다 안 넘기고 있었으므로 아무에게도 한 번도 안 갔다.
    */
-  onPoke?: (memberId: string) => Promise<void>;
-  onPokeAll?: () => Promise<void>;
+  onPoke?: (memberId: string) => Promise<NotifyResult>;
+  onPokeAll?: () => Promise<NotifyResult>;
   /**
    * 마감돼서 못 바꾸는 상태.
    *
@@ -143,7 +145,12 @@ export function RosterSheet({
   const [poked, setPoked] = useState<Record<string, boolean>>({});
   const [pokedAll, setPokedAll] = useState(false);
   const [poking, setPoking] = useState(false);
-  const [pokeError, setPokeError] = useState<string | null>(null);
+  /*
+    ⚠ **`pokeError`였다. 이름을 바꿨다.** 서버 쿨다운이 붙으면서 여기 들어갈 말이
+      실패만이 아니게 됐다 — 「4명에게 보냈어요. 2명은 방금 보내서 건너뛰었어요」는
+      고장이 아니다. `error`라는 이름 아래 두면 읽는 사람이 실패로 본다.
+  */
+  const [pokeNote, setPokeNote] = useState<RemindMessage | null>(null);
 
   // ── 내 응답 바꾸기 ──────────────────────────────────────────
   /** 알약이 펼쳐져 있는가. 접혀 있을 때는 버튼 하나만 보인다 */
@@ -283,12 +290,14 @@ export function RosterSheet({
   const handlePoke = async (m: RosterMember) => {
     if (!onPoke || poking) return;
     setPoking(true);
-    setPokeError(null);
+    setPokeNote(null);
     try {
-      await onPoke(m.id);
-      setPoked((p) => ({ ...p, [m.id]: true }));
+      const r = await onPoke(m.id);
+      setPokeNote(remindMessage(r));
+      /* ⚠ 실제로 간 경우에만 「전송됨」으로 바꾼다. 막혔는데 전송됨이면 거짓말이다 */
+      if (r.sent > 0) setPoked((p) => ({ ...p, [m.id]: true }));
     } catch (e) {
-      setPokeError(e instanceof Error ? e.message : '독촉을 보내지 못했어요');
+      setPokeNote({ tone: 'none', text: e instanceof Error ? e.message : '독촉을 보내지 못했어요' });
     }
     setPoking(false);
   };
@@ -296,12 +305,18 @@ export function RosterSheet({
   const handlePokeAll = async () => {
     if (!onPokeAll || poking) return;
     setPoking(true);
-    setPokeError(null);
+    setPokeNote(null);
     try {
-      await onPokeAll();
-      setPokedAll(true);
+      const r = await onPokeAll();
+      setPokeNote(remindMessage(r));
+      /*
+        ⚠ **전원에게 갔을 때만 전체를 「보냈어요」로 바꾼다.**
+          일부가 쿨다운이라 건너뛰었으면 나머지는 아직 못 받은 것이고,
+          그 상태를 「보냈어요」로 덮으면 총무가 남은 사람을 못 본다.
+      */
+      if (r.skipped === 0 && r.sent > 0) setPokedAll(true);
     } catch (e) {
-      setPokeError(e instanceof Error ? e.message : '독촉을 보내지 못했어요');
+      setPokeNote({ tone: 'none', text: e instanceof Error ? e.message : '독촉을 보내지 못했어요' });
     }
     setPoking(false);
   };
@@ -511,8 +526,18 @@ export function RosterSheet({
                 </Text>
               </Pressable>
             )}
-            {/* 개별 독촉의 실패도 여기 뜬다 — 칩은 목록 안에 있어서 스크롤로 사라진다 */}
-            {!!pokeError && <Text style={styles.pokeError}>{pokeError}</Text>}
+            {/* 개별 독촉의 결과도 여기 뜬다 — 칩은 목록 안에 있어서 스크롤로 사라진다 */}
+            {!!pokeNote && (
+              <Text
+                style={[
+                  styles.pokeNote,
+                  pokeNote.tone === 'ok' && { color: colors.green },
+                  pokeNote.tone === 'none' && { color: colors.danger },
+                ]}
+              >
+                {pokeNote.text}
+              </Text>
+            )}
           </View>
 
           {/*
@@ -766,7 +791,9 @@ const makeStyles = (colors: Palette) =>
   confirmText: { color: colors.bgRoot, fontSize: 13, fontWeight: '800' },
   confirmTextOff: { color: colors.textFaint },
 
-  pokeError: { color: colors.danger, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 },
+  /* 독촉 결과 한 줄. 기본색이다 — 색은 tone이 정한다.
+     ⚠ 차단(「3시간 뒤에」)을 빨강으로 하지 않는다. 고장이 아니라 「아직 이르다」다 */
+  pokeNote: { color: colors.textDim, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   voteError: { color: colors.danger, fontSize: 11, fontWeight: '700', textAlign: 'center' },
 
   doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46 },

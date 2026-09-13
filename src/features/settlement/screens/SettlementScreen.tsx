@@ -37,6 +37,7 @@ import { shareSettlement, settlementLink, settlementShareMessage } from '../link
 import { useSettlementRealtime } from '../hooks/useSettlementRealtime';
 import { fetchTeamSettings, upsertTeamSettings } from '../../team/services/teamSettingsService';
 import { notifyTeam } from '../../notifications/services/pushService';
+import { remindMessage, type RemindMessage } from '../../notifications/remindMessage';
 import { BankPicker } from '../components/BankPicker';
 import { SendMoneySheet, getRememberedSendApp } from '../components/SendMoneySheet';
 import { SEND_APPS, directSend } from '../sendApps';
@@ -132,7 +133,9 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
   /** 정산을 만든 직후 뜨는 링크 공유 화면 (Reference 총무④) */
   const [shareLinkOpen, setShareLinkOpen] = useState(false);
   const [selectedShareIds, setSelectedShareIds] = useState<Record<string, boolean>>({});
-  const [reminded, setReminded] = useState(false);
+  /* 독촉 결과 한 줄. null이면 아직 안 눌렀다는 뜻이다 */
+  const [remindNote, setRemindNote] = useState<RemindMessage | null>(null);
+  const [reminding, setReminding] = useState(false);
   /** 상세 모달로 열려 있는 정산 — 'current' 또는 지난 정산의 id */
   const [detailTarget, setDetailTarget] = useState<'current' | string | null>(null);
   /** 송금 앱으로 나간 뒤 돌아오면 여기에 앱 이름이 담긴다 — 입금 확인을 한 번 물어보려고 */
@@ -276,20 +279,47 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
     await confirmPaid(ids);
   };
 
-  const remindUnpaid = (s: Settlement) => {
+  /*
+    ⚠ **전에 이 함수는 결과를 통째로 버렸다.** `.catch(() => {})`라 실패해도 아무 말이
+      없었고, 성공 여부와 무관하게 `setReminded(true)`로 2초 동안 「보냈어요」가 떴다.
+      즉 **안 갔는데 갔다고 보이는** 상태가 이미 있었다 — 서버 쿨다운을 붙이면
+      그게 일상이 된다(막힌 만큼 매번 안 간다).
+
+    ⚠ 그래서 이 작업의 본체는 막는 것이 아니라 **막았다고 말하는 것**이다.
+      `reminded` 불리언을 걷어내고 문구를 담는 자리로 바꾼다. 성공·부분 차단·전면 차단·
+      실패가 전부 같은 자리에 뜬다.
+  */
+  const remindUnpaid = async (s: Settlement) => {
     if (!activeTeam) return;
     const unpaidUserIds = s.shares
       .filter((sh) => !sh.paid && sh.teamMemberId)
       .map((sh) => members.find((m) => m.id === sh.teamMemberId)?.userId)
       .filter((id): id is string => !!id);
     if (unpaidUserIds.length === 0) return;
-    notifyTeam(activeTeam.team.id, `${activeTeam.team.name} 회비 독촉`, '아직 회비를 입금하지 않으셨어요', undefined, unpaidUserIds, 'settlement', {
-      settlementId: s.id,
-    }).catch(
-      () => {}
-    );
-    setReminded(true);
-    setTimeout(() => setReminded(false), 2000);
+    setRemindNote(null);
+    setReminding(true);
+    try {
+      const r = await notifyTeam(
+        activeTeam.team.id,
+        `${activeTeam.team.name} 회비 독촉`,
+        '아직 회비를 입금하지 않으셨어요',
+        undefined,
+        unpaidUserIds,
+        'settlement',
+        { settlementId: s.id }
+      );
+      setRemindNote(remindMessage(r));
+    } catch (e) {
+      /*
+        ⚠ 삼키지 않는다. 조용히 넘어가면 「눌렀는데 아무 일도 안 난다」가 된다.
+        ⚠ 다만 **오류 원문을 그대로 쓰지 않는다.** usererror.check가 이 화면을 그 목록에
+          두고 있다 — 서버 문구는 사용자에게 아무 뜻이 없고 때로 내부를 드러낸다.
+          원인은 로그로 남기고 화면에는 할 일을 적는다.
+      */
+      console.warn('[remindUnpaid]', e);
+      setRemindNote({ tone: 'none', text: '독촉을 보내지 못했어요. 잠시 뒤 다시 시도해 주세요' });
+    }
+    setReminding(false);
   };
 
   const handleSaveAccount = async (draft: AccountDraft) => {
@@ -510,7 +540,8 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
         isAdmin={!!isAdmin}
         copied={copied}
         selectedShareIds={selectedShareIds}
-        reminded={reminded}
+        remindNote={remindNote}
+        reminding={reminding}
         sentVia={isDetailCurrent ? sentVia : null}
         nameFor={nameFor}
         onClose={() => setDetailTarget(null)}
@@ -839,7 +870,8 @@ interface SettlementDetailModalProps {
   isAdmin: boolean;
   copied: boolean;
   selectedShareIds: Record<string, boolean>;
-  reminded: boolean;
+  remindNote: RemindMessage | null;
+  reminding: boolean;
   sentVia: string | null;
   nameFor: (id: string | null) => string;
   onClose: () => void;
@@ -870,7 +902,8 @@ function SettlementDetailModal({
   isAdmin,
   copied,
   selectedShareIds,
-  reminded,
+  remindNote,
+  reminding,
   sentVia,
   nameFor,
   onClose,
@@ -1102,15 +1135,35 @@ function SettlementDetailModal({
 
             {/* 완료 처리 버튼은 위 완료 패널이 들고 있다 — 여기선 아직 안 낸 사람 독촉만 */}
             {isCurrent && isAdmin && !allPaid && unpaidShares.length > 0 && (
-              <Pressable
-                onPress={onRemindUnpaid}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.remindBtn, reminded && styles.remindBtnDone, pressed && styles.pressed]}
-              >
-                <Text style={[styles.remindText, reminded && { color: colors.green }]}>
-                  {reminded ? '독촉 알림을 보냈어요' : `미입금 ${unpaidShares.length}명에게 알림`}
-                </Text>
-              </Pressable>
+              <>
+                {/*
+                  ⚠ **누른 뒤에도 계속 눌린다.** 막는 것은 서버다 —
+                    화면 상태로 막으면 시트를 닫았다 열거나 다른 기기에서 또 눌린다.
+                    여기서는 「보내는 중」에만 막고, 나머지는 결과를 말로 알린다.
+                */}
+                <Pressable
+                  onPress={onRemindUnpaid}
+                  disabled={reminding}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.remindBtn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.remindText}>
+                    {reminding ? '보내는 중…' : `미입금 ${unpaidShares.length}명에게 알림`}
+                  </Text>
+                </Pressable>
+                {/* 성공·부분 차단·전면 차단·실패가 전부 여기 뜬다 */}
+                {!!remindNote && (
+                  <Text
+                    style={[
+                      styles.remindNote,
+                      remindNote.tone === 'ok' && { color: colors.green },
+                      remindNote.tone === 'none' && { color: colors.danger },
+                    ]}
+                  >
+                    {remindNote.text}
+                  </Text>
+                )}
+              </>
             )}
           </ScrollView>
         </View>
@@ -1346,8 +1399,10 @@ const makeStyles = (colors: Palette) =>
     borderWidth: 1,
     borderColor: colors.border,
   },
-  remindBtnDone: { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: colors.greenDeep },
   remindText: { ...font.body, color: colors.textStrong, fontWeight: '800' },
+  /* 독촉 결과 한 줄 — 버튼 바로 아래. 성공은 초록, 실패는 빨강, 차단은 기본색이다.
+     ⚠ 차단을 빨강으로 하지 않는다. 고장이 아니라 「아직 이르다」라서 그렇다 */
+  remindNote: { ...font.meta, color: colors.textDim, textAlign: 'center', marginTop: 8 },
 
   input: {
     borderWidth: 1,

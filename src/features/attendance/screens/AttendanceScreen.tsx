@@ -54,6 +54,7 @@ import { resolveCapacity } from '../utils/capacity';
 import { createResultLabel } from '../utils/createResult';
 import { isVotingOpen, votingLockNote } from '../utils/voting';
 import { notVotedUserIds, remindVote } from '../utils/remindVote';
+import { EMPTY_NOTIFY } from '../../notifications/services/pushService';
 import { upcomingFrom } from '../utils/upcoming';
 import { matchDateTimeLabel, matchLabel } from '../utils/matchLabel';
 import { fetchMatchWeather, type MatchWeather as ServiceWeather } from '../services/weatherService';
@@ -426,7 +427,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
    * ⚠ 실패를 삼키지 않는다 — 시트가 결과를 보고 「전송됨」을 그린다.
    */
   const remindVoteTo = (memberId?: string) => {
-    if (!rosterMatch || !activeTeam) return Promise.resolve();
+    if (!rosterMatch || !activeTeam) return Promise.resolve(EMPTY_NOTIFY);
     const toUserIds = memberId
       ? members.filter((m) => m.id === memberId).map((m) => m.userId)
       : notVotedUserIds(rosterMatch.votes, members);

@@ -1141,17 +1141,16 @@ function SettlementDetailModal({
                     화면 상태로 막으면 시트를 닫았다 열거나 다른 기기에서 또 눌린다.
                     여기서는 「보내는 중」에만 막고, 나머지는 결과를 말로 알린다.
                 */}
-                <Pressable
-                  onPress={onRemindUnpaid}
-                  disabled={reminding}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.remindBtn, pressed && styles.pressed]}
-                >
-                  <Text style={styles.remindText}>
-                    {reminding ? '보내는 중…' : `미입금 ${unpaidShares.length}명에게 알림`}
-                  </Text>
-                </Pressable>
-                {/* 성공·부분 차단·전면 차단·실패가 전부 여기 뜬다 */}
+                {/*
+                  성공·부분 차단·전면 차단·실패가 전부 여기 뜬다.
+
+                  ⚠ **버튼 위다. 아래에 두었다가 화면 밖으로 밀렸다.**
+                    이 버튼은 스크롤 내용의 맨 끝이라, 그 아래에 뭘 붙이면 시트의
+                    아래 여백을 넘어 잘린다. 기기에서 확인했다 — uiautomator 트리에는
+                    「이미 보냈어요…」가 있는데 화면에는 홈 인디케이터만 보였다.
+                    **값은 있는데 안 보이는 것은 안 만든 것과 같다** — 이 작업이
+                    막으려던 바로 그 상태(「눌렀는데 아무 일도 안 난다」)다.
+                */}
                 {!!remindNote && (
                   <Text
                     style={[
@@ -1163,6 +1162,16 @@ function SettlementDetailModal({
                     {remindNote.text}
                   </Text>
                 )}
+                <Pressable
+                  onPress={onRemindUnpaid}
+                  disabled={reminding}
+                  accessibilityRole="button"
+                  style={({ pressed }) => [styles.remindBtn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.remindText}>
+                    {reminding ? '보내는 중…' : `미입금 ${unpaidShares.length}명에게 알림`}
+                  </Text>
+                </Pressable>
               </>
             )}
           </ScrollView>
@@ -1402,7 +1411,7 @@ const makeStyles = (colors: Palette) =>
   remindText: { ...font.body, color: colors.textStrong, fontWeight: '800' },
   /* 독촉 결과 한 줄 — 버튼 바로 아래. 성공은 초록, 실패는 빨강, 차단은 기본색이다.
      ⚠ 차단을 빨강으로 하지 않는다. 고장이 아니라 「아직 이르다」라서 그렇다 */
-  remindNote: { ...font.meta, color: colors.textDim, textAlign: 'center', marginTop: 8 },
+  remindNote: { ...font.meta, color: colors.textDim, textAlign: 'center', marginBottom: 8 },
 
   input: {
     borderWidth: 1,

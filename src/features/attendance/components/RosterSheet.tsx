@@ -514,6 +514,25 @@ export function RosterSheet({
                   : '전원 투표 완료'}
               </Text>
             </View>
+            {/*
+              개별 독촉의 결과도 여기 뜬다 — 칩은 목록 안에 있어서 스크롤로 사라진다.
+
+              ⚠ **버튼 위다.** 정산 화면에서 같은 문구를 버튼 아래에 뒀다가 화면 밖으로
+                밀렸다 — 트리에는 「이미 보냈어요…」가 있는데 눈에는 홈 인디케이터만
+                보였다. **값은 있는데 안 보이는 것은 안 만든 것과 같다.**
+                여기도 시트 맨 아래라 같은 위험이 있어서 미리 위로 올린다.
+            */}
+            {!!pokeNote && (
+              <Text
+                style={[
+                  styles.pokeNote,
+                  pokeNote.tone === 'ok' && { color: colors.green },
+                  pokeNote.tone === 'none' && { color: colors.danger },
+                ]}
+              >
+                {pokeNote.text}
+              </Text>
+            )}
             {isAdmin && counts.pending > 0 && !!onPokeAll && (
               <Pressable
                 onPress={handlePokeAll}
@@ -525,18 +544,6 @@ export function RosterSheet({
                   {poking ? '보내는 중…' : pokedAll ? '알림을 보냈어요' : `미투표 ${counts.pending}명 독촉`}
                 </Text>
               </Pressable>
-            )}
-            {/* 개별 독촉의 결과도 여기 뜬다 — 칩은 목록 안에 있어서 스크롤로 사라진다 */}
-            {!!pokeNote && (
-              <Text
-                style={[
-                  styles.pokeNote,
-                  pokeNote.tone === 'ok' && { color: colors.green },
-                  pokeNote.tone === 'none' && { color: colors.danger },
-                ]}
-              >
-                {pokeNote.text}
-              </Text>
             )}
           </View>
 
@@ -793,7 +800,7 @@ const makeStyles = (colors: Palette) =>
 
   /* 독촉 결과 한 줄. 기본색이다 — 색은 tone이 정한다.
      ⚠ 차단(「3시간 뒤에」)을 빨강으로 하지 않는다. 고장이 아니라 「아직 이르다」다 */
-  pokeNote: { color: colors.textDim, fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 6 },
+  pokeNote: { color: colors.textDim, fontSize: 11, fontWeight: '700', textAlign: 'center', marginBottom: 6 },
   voteError: { color: colors.danger, fontSize: 11, fontWeight: '700', textAlign: 'center' },
 
   doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 46 },

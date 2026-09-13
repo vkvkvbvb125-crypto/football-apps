@@ -51,8 +51,68 @@ export default {
       }
       userIds = (members ?? []).map((m) => m.user_id).filter((id) => id !== excludeUserId);
     }
+    /*
+      ── 독촉 쿨다운 ──────────────────────────────────────────────────
+
+      화면 상태로는 못 막는다. 시트를 닫았다 열면 초기화되고, 다른 기기에는 없고,
+      총무가 둘이면 서로를 모른다. 실측으로 회비 독촉은 disabled조차 없어 열 번
+      누르면 열 번 다 나갔다. 그래서 여기서 막는다.
+
+      ⚠ **독촉에만 건다.** 공지·언급·댓글은 사건 알림이라, 막으면 일어난 일을 못 알린다.
+      ⚠ **키가 없으면 안 막는다.** 막는 쪽으로 기울면 「왜 안 가지」가 되는데, 그건
+        이 저장소에서 이미 겪은 「조용히 안 감」이다. 못 세면 보낸다.
+      ⚠ **3시간은 matchWindow의 MATCH_GRACE_MS와 무관하다. 우연히 같은 값이다.**
+        저쪽은 「경기가 진행 중으로 볼 수 있는 구간」이고 이쪽은 「사람이 알림을 받고
+        반응할 시간」이다. 함께 바꾸지 마라.
+      ⚠ 상수를 DB가 아니라 여기 둔 이유: 바꾸는 데 마이그레이션이 필요하면
+        「조금 줄여보자」를 못 하게 된다.
+    */
+    const COOLDOWN_MINUTES: Record<string, number> = {
+      settlement: 3 * 60,
+      deadline: 3 * 60,
+    };
+    const cooldownMin = kind ? COOLDOWN_MINUTES[kind] : undefined;
+    const targetKey =
+      kind === 'settlement'
+        ? target?.settlementId
+        : kind === 'deadline'
+          ? target?.matchDate
+          : undefined;
+    const cooldownOn = !!cooldownMin && typeof targetKey === 'string' && !!targetKey;
+
+    let skipped = 0;
+    let retryAfterMin = 0;
+    if (cooldownOn) {
+      const windowMs = cooldownMin! * 60_000;
+      const since = new Date(Date.now() - windowMs).toISOString();
+      const { data: recent, error: cdError } = await ctx.supabaseAdmin
+        .from('notify_cooldown')
+        .select('user_id, sent_at')
+        .eq('team_id', teamId)
+        .eq('kind', kind)
+        .eq('target_key', targetKey)
+        .in('user_id', userIds)
+        .gte('sent_at', since);
+      if (cdError) {
+        return Response.json({ error: cdError.message }, { status: 400 });
+      }
+      const blocked = new Map((recent ?? []).map((r) => [r.user_id, r.sent_at as string]));
+      if (blocked.size > 0) {
+        skipped = blocked.size;
+        /*
+          ⚠ **가장 늦게 풀리는 사람** 기준이다(max). 「N분 뒤에 다시 보낼 수 있어요」가
+            「그때 누르면 전원에게 간다」를 뜻해야 하기 때문이다. min으로 잡으면 그때
+            눌러도 일부만 가고, 총무는 「1명에게 보냈어요」를 보고 또 헷갈린다.
+        */
+        const waitMs = Math.max(
+          ...[...blocked.values()].map((t) => new Date(t).getTime() + windowMs - Date.now())
+        );
+        retryAfterMin = Math.max(1, Math.ceil(waitMs / 60_000));
+        userIds = userIds.filter((id) => !blocked.has(id));
+      }
+    }
     if (userIds.length === 0) {
-      return Response.json({ sent: 0 });
+      return Response.json({ sent: 0, skipped, retryAfterMin });
     }
 
     const { error: notifError } = await ctx.supabaseAdmin
@@ -60,6 +120,33 @@ export default {
       .insert(userIds.map((userId) => ({ team_id: teamId, user_id: userId, title, body })));
     if (notifError) {
       return Response.json({ error: notifError.message }, { status: 400 });
+    }
+
+    /*
+      ⚠ **여기서 기록한다 — 보내기 전이 아니라 받은 뒤다.**
+        먼저 적고 실패하면 **안 갔는데 막힌다.** 그 상태는 총무 눈에 「보냈다」로
+        보이고 팀원에게는 아무것도 안 가서, 되돌릴 방법도 알아챌 방법도 없다.
+
+      ⚠ 기준이 푸시가 아니라 **알림함 행**인 이유: 푸시 토큰이 없는 사람도 알림함으로는
+        받는다. 그 행이 이 앱에서 「알림이 갔다」의 정의다. 푸시는 그 위에 얹는 최선노력이고,
+        exp.host가 실패해도 받은 사실은 남는다.
+    */
+    if (cooldownOn) {
+      const now = new Date().toISOString();
+      const { error: cdWriteError } = await ctx.supabaseAdmin.from('notify_cooldown').upsert(
+        userIds.map((userId) => ({
+          team_id: teamId,
+          kind,
+          target_key: targetKey,
+          user_id: userId,
+          /* ⚠ 기본값 now()는 insert에만 걸린다. 갱신 때도 밀려면 손으로 넣어야 한다 */
+          sent_at: now,
+        })),
+        { onConflict: 'team_id,kind,target_key,user_id' }
+      );
+      if (cdWriteError) {
+        return Response.json({ error: cdWriteError.message }, { status: 400 });
+      }
     }
 
     const { data: profiles, error: profilesError } = await ctx.supabaseAdmin
@@ -72,7 +159,8 @@ export default {
 
     const tokens = (profiles ?? []).map((p) => p.push_token).filter((t): t is string => !!t);
     if (tokens.length === 0) {
-      return Response.json({ sent: 0 });
+      /* 푸시 토큰이 하나도 없다 — 그래도 알림함에는 들어갔으므로 sent는 사람 수다 */
+      return Response.json({ sent: userIds.length, skipped, retryAfterMin, pushed: 0 });
     }
 
     /*
@@ -130,6 +218,19 @@ export default {
     });
     const pushJson = await pushRes.json();
 
-    return Response.json({ sent: tokens.length, result: pushJson });
+    /*
+      ⚠ **sent는 알림을 받은 사람 수이지 푸시 건수가 아니다.** 전에는 tokens.length였는데,
+        그건 토큰 없는 사람을 「안 받은 것」으로 세는 값이라 화면이 「4명에게 보냈어요」를
+        말할 때 숫자가 어긋난다. 푸시 건수는 pushed로 따로 낸다.
+      ⚠ skipped·retryAfterMin을 **항상** 싣는다. 부르는 쪽이 「있으면 읽고 없으면 만다」로
+        짜면, 값이 안 온 날이 곧 조용한 무시가 된다.
+    */
+    return Response.json({
+      sent: userIds.length,
+      skipped,
+      retryAfterMin,
+      pushed: tokens.length,
+      result: pushJson,
+    });
   }),
 };

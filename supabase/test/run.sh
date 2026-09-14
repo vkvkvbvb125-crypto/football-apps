@@ -37,6 +37,8 @@
 # 쓰는 법:  bash supabase/test/run.sh
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
+TMP_SCHEMA="$(mktemp)"
+trap 'rm -f "$TMP_SCHEMA"' EXIT
 cd "$(dirname "$0")/../.."
 
 C=pgtest$$
@@ -66,10 +68,20 @@ create table storage.objects (id uuid primary key default gen_random_uuid(), buc
 create function storage.foldername(text) returns text[] language sql immutable as $f$ select string_to_array($1,'/') $f$;
 SQL
 
-# schema.sql만 부으면 production과 다른 DB가 나온다 — 20260727 리디자인이 settlements와
-# payments를 drop하고 다시 만드는 등, 마이그레이션이 스키마를 실제로 갈아치운다.
-# 파일명 순서가 곧 적용 순서다(날짜 접두사).
-$PSQL < supabase/schema.sql
+# ⚠ **기반 스키마는 git 이력에서 꺼낸다. 저장소에 파일이 없다.**
+#   supabase/schema.sql을 2026-09-14에 지웠다 — 한 파일에 두 시절이 섞여 있어서
+#   무엇이 참인지 파일만 봐서는 못 갈랐다(근거는 README의 「스키마는 어디에 있나」).
+#   ⚠ 지울 때 이 검사대가 그 파일을 붓는다는 것을 놓쳤다. 여기가 그 자리다.
+#
+#   꺼내는 커밋을 못 박는다. 그 시점의 파일에는 **리디자인 이전의 settlements·payments**가
+#   들어 있는데, 그건 문제가 안 된다 — 바로 아래 마이그레이션이 그 둘을 drop하고
+#   다시 만든다. 애초에 그것이 이 검사대가 마이그레이션을 전부 붓는 이유다.
+BASE_COMMIT=37604a7
+git show "$BASE_COMMIT^:supabase/schema.sql" > "$TMP_SCHEMA" || {
+  echo "!! 기반 스키마를 못 꺼냈다 — $BASE_COMMIT^:supabase/schema.sql"
+  exit 1
+}
+$PSQL < "$TMP_SCHEMA"
 for f in supabase/migrations/*.sql; do
   [ "$f" = "supabase/migrations/20260824_account_deletion_fks.sql" ] && continue
   $PSQL < "$f" || { echo "!! 마이그레이션 실패: $f"; exit 1; }
@@ -185,12 +197,20 @@ SQL
 echo "롤백(null) : 막힘 · 네 곳을 행 수까지 지목 · 제약은 그대로"
 
 # 주인을 정해 주면 되돌아가야 한다
+#
+# ⚠ **teams만 트리거를 잠깐 끈다.** 20260914부터 teams.created_by는 null → 값이 금지다
+#   (창립자 기록을 남이 덮어쓰는 것을 막으려고). 여기서 하는 일은 앱의 동작이 아니라
+#   **검사대가 다음 단계를 위해 되심는 것**이라 그 금지의 대상이 아니다.
+#   끄는 범위를 teams 한 테이블로 좁힌다 — session_replication_role로 전부 끄면
+#   다른 트리거까지 잠들어 이 뒤의 단계가 무엇을 검사하는지 흐려진다.
+$PSQL -c "alter table teams disable trigger teams_created_by_immutable;" >/dev/null
 $PSQL <<'SQL'
 update teams         set created_by='22222222-2222-2222-2222-222222222222' where created_by is null;
 update matches       set created_by='bbbbbbbb-0000-0000-0000-000000000002' where created_by is null;
 update announcements set author_id ='bbbbbbbb-0000-0000-0000-000000000002' where author_id  is null;
 update polls         set author_id ='bbbbbbbb-0000-0000-0000-000000000002' where author_id  is null;
 SQL
+$PSQL -c "alter table teams enable trigger teams_created_by_immutable;" >/dev/null
 $PSQL < supabase/rollback/20260824_account_deletion_fks.sql
 # 메타데이터가 아니라 동작이 돌아왔는지 본다 — 다시 막혀야 진짜 롤백이다
 if $PSQL -c "delete from auth.users where id='22222222-2222-2222-2222-222222222222'" 2>/dev/null; then
@@ -634,5 +654,89 @@ $PSQL < supabase/migrations/20260830_notify_prefs_v2.sql >/dev/null
 [ "$(pref 1)" = "f" ] || { echo "!! 사용자가 끈 새 토글이 재실행에 되살아났다"; exit 1; }
 echo "사용자 선택: 끈 것을 재실행이 안 되살린다"
 
+# ═══════════════════════════════════════════════════════════════
+# F. teams.created_by 불변 (20260914)
+# ═══════════════════════════════════════════════════════════════
+#
+# ⚠ **쓰기를 막았는지는 값을 다시 읽어서 본다.** 이 파일 머리의 규칙 그대로다 —
+#   RLS가 막은 UPDATE는 오류가 아니라 0행이라 종료 코드로는 안 갈린다.
+#   여기서는 트리거가 raise를 하므로 오류가 나기도 하지만, **정책이 막는 경우와
+#   트리거가 막는 경우의 출력이 다르다.** 둘 다 「값이 안 바뀌었다」로 판정한다.
 echo
-echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok / matches-update ok / notify-prefs-v2 ok"
+echo "── F. teams.created_by 불변 ──"
+
+$PSQL -c "truncate auth.users cascade;" >/dev/null
+$PSQL >/dev/null <<'SQL'
+insert into auth.users (id, email) values
+  ('ffff0000-0000-0000-0000-000000000001', 'owner@x.com'),
+  ('ffff0000-0000-0000-0000-000000000002', 'other@x.com');
+-- ⚠ profiles는 안 만든다 — auth.users insert 트리거가 자동으로 만든다(위 준비 단계 주석).
+--    손으로 넣으면 profiles_pkey 중복이다. 검사대가 잡아 줬다.
+
+-- 팀 하나는 created_by가 있고(정상), 하나는 null이다(생성자 탈퇴한 팀을 흉내).
+insert into teams (id, name, invite_code, created_by) values
+  ('ffff1111-0000-0000-0000-000000000001', '있는팀', 'FFFF0001', 'ffff0000-0000-0000-0000-000000000001'),
+  ('ffff1111-0000-0000-0000-000000000002', '없는팀', 'FFFF0002', null);
+
+-- 둘 다 총무가 둘이다 — 상호 축출 조건을 그대로 흉내 낸다.
+insert into team_members (id, team_id, user_id, role) values
+  ('ffff2222-0000-0000-0000-000000000001', 'ffff1111-0000-0000-0000-000000000001', 'ffff0000-0000-0000-0000-000000000001', 'admin'),
+  ('ffff2222-0000-0000-0000-000000000002', 'ffff1111-0000-0000-0000-000000000001', 'ffff0000-0000-0000-0000-000000000002', 'admin'),
+  ('ffff2222-0000-0000-0000-000000000003', 'ffff1111-0000-0000-0000-000000000002', 'ffff0000-0000-0000-0000-000000000002', 'admin');
+SQL
+
+# ⚠ 흉내 방식을 이 파일의 기존 것과 맞춘다 — `set role` + `set request.jwt.claim.sub`다.
+#   처음에 `set local role` + `request.jwt.claims`(JSON)로 썼다가 ①이 막혔다.
+#   auth.uid()가 못 읽어서 is_team_admin이 false가 됐고, 「with check가 경로를 깼다」로
+#   읽힐 뻔했다 — **검사대를 잘못 짜서 난 실패였다.**
+as_other() { # as_other <sql>
+  docker exec -i $C psql -U postgres -q >/dev/null 2>&1 <<SQL
+set role authenticated;
+set request.jwt.claim.sub = 'ffff0000-0000-0000-0000-000000000002';
+$1
+SQL
+}
+cb() { $PSQL -tAc "select coalesce(created_by::text,'NULL') from teams where id='$1'" | tail -1 | tr -d ' '; }
+
+# ① ⚠ 지금 도는 경로가 안 걸린다 — 이름·지역·정기모임·회비를 고치는 것이 전부 통과해야 한다
+as_other "update teams set name='새이름', region_label='강남', slogan='한마디' where id='ffff1111-0000-0000-0000-000000000001';" >/dev/null 2>&1
+[ "$($PSQL -tAc "select name from teams where id='ffff1111-0000-0000-0000-000000000001'" | tail -1 | tr -d ' ')" = "새이름" ] \
+  || { echo "!! 평범한 팀 수정이 막혔다 — with check가 지금 도는 경로를 깼다"; exit 1; }
+echo "평상시 수정 : 이름·지역·슬로건 통과"
+
+# ② 남이 created_by를 자기 것으로 바꾸려 하면 막힌다
+as_other "update teams set created_by='ffff0000-0000-0000-0000-000000000002' where id='ffff1111-0000-0000-0000-000000000001';" >/dev/null 2>&1 || true
+[ "$(cb ffff1111-0000-0000-0000-000000000001)" = "ffff0000-0000-0000-0000-000000000001" ] \
+  || { echo "!! created_by가 바뀌었다 — 다른 총무가 창립자를 덮어썼다"; exit 1; }
+echo "덮어쓰기    : 막힘 (값이 그대로)"
+
+# ③ ⚠ null → 값 도 막힌다. 창립자가 탈퇴해 빈 자리를 남이 차지하는 것을 막는 것이다.
+#    변이로 확인했다: 「null이 끼면 허용」으로 바꾸면 이 단언이 실패한다.
+#    ⚠ 처음에 「<>로 짰으면 여기가 통과했을 것」이라고 적었는데 **틀렸다.**
+#      `=`로 바꿔서 돌려 보니 ③이 아니라 ④가 잡았다 — null 비교가 틀리면
+#      **덜 막는 것이 아니라 더 막는다**(null=null이 null이라 정상 수정까지 걸린다).
+#      두 단언이 서로 다른 고장을 잡는다는 뜻이라 둘 다 남긴다.
+as_other "update teams set created_by='ffff0000-0000-0000-0000-000000000002' where id='ffff1111-0000-0000-0000-000000000002';" >/dev/null 2>&1 || true
+[ "$(cb ffff1111-0000-0000-0000-000000000002)" = "NULL" ] \
+  || { echo "!! created_by가 null인 팀에 값이 들어갔다 — is distinct from이 아니라 <>로 짰나"; exit 1; }
+echo "null → 값   : 막힘 (is distinct from)"
+
+# ④ ⚠ 기존 팀(created_by null)을 **수정할 수는 있어야 한다.** 잠금이 과하면 안 된다.
+as_other "update teams set name='없는팀2' where id='ffff1111-0000-0000-0000-000000000002';" >/dev/null 2>&1
+[ "$($PSQL -tAc "select name from teams where id='ffff1111-0000-0000-0000-000000000002'" | tail -1 | tr -d ' ')" = "없는팀2" ] \
+  || { echo "!! created_by가 null인 팀을 수정할 수 없다 — null 비교가 정상 경로까지 막았다"; exit 1; }
+echo "null 팀 수정: 통과 (잠금이 과하지 않다)"
+
+# ⑤ create_team은 그대로 돈다 — security definer가 RLS를 우회하고, 트리거는 update에만 걸린다
+NEW_TEAM=$(docker exec -i $C psql -U postgres -tA <<'SQL' 2>/dev/null | tail -1 | tr -d ' '
+set role authenticated;
+set request.jwt.claim.sub = 'ffff0000-0000-0000-0000-000000000001';
+select (create_team('새팀')).created_by;
+SQL
+)
+[ "$NEW_TEAM" = "ffff0000-0000-0000-0000-000000000001" ] \
+  || { echo "!! create_team이 created_by를 못 채운다 (받은 값: $NEW_TEAM)"; exit 1; }
+echo "create_team : 그대로 채운다"
+
+echo
+echo "d1 ok / d2 ok / d3 ok / votes-deadline ok / votes-updated-at ok / matches-update ok / notify-prefs-v2 ok / created-by ok"

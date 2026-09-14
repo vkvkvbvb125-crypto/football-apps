@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useAuthStore } from '../../auth/stores/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createTeam as createTeamRequest,
@@ -88,7 +89,18 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   loadMemberships: async (preferTeamId) => {
     set({ loading: true, error: null });
     try {
-      const memberships = await fetchMyMemberships();
+      /*
+        ⚠ userId를 여기서 얻어 넘긴다. 서비스는 스토어를 안 본다 —
+          announcementsStore·attendanceStore가 같은 모양이다.
+        ⚠ 세션이 없으면 **빈 목록으로 끝낸다.** 전에는 fetchMyMemberships가 조건 없이
+          전부 읽어서, 세션이 없어도 남의 행이 돌아올 수 있었다.
+      */
+      const myUserId = useAuthStore.getState().session?.user.id;
+      if (!myUserId) {
+        set({ memberships: [], activeTeam: null, loaded: true, loading: false });
+        return;
+      }
+      const memberships = await fetchMyMemberships(myUserId);
 
       /*
        * 보던 팀을 유지한다.

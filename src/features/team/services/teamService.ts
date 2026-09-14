@@ -10,10 +10,28 @@ export interface TeamMembership {
   team: TeamRow;
 }
 
-export async function fetchMyMemberships(): Promise<TeamMembership[]> {
+/**
+ * 내가 속한 팀들.
+ *
+ * ⚠ **user_id로 좁히지 않으면 팀원 전원이 「내 소속」으로 들어온다.**
+ *   RLS(team_members_select)가 `is_team_member(team_id)`라 **팀 단위**로 열려 있어서,
+ *   조건 없이 select하면 내가 속한 팀의 **모든 멤버 행**이 돌아온다.
+ *   「내 것」은 RLS가 아니라 앱이 좁혀야 한다.
+ *
+ *   혼자인 팀에서는 1개라 정상으로 보이고, **팀원이 늘면서 조용히 깨진다.**
+ *   실제로 6명 팀에서 memberships가 6이었다(2026-09-15 실측: db는 1, 스토어는 6).
+ *   그러면 hasMultipleTeams가 켜지고, activeTeam이 **남의 행**으로 잡힐 수 있다 —
+ *   membershipId가 남의 것이면 role이 뒤집히고(총무↔팀원), 정산 「내 몫」·미납·
+ *   독촉 대상이 전부 남의 값이 된다. 화면에 오류가 없어서 아무도 못 알아챈다.
+ *
+ * ⚠ userId를 **인자로 받는다.** 이 저장소의 서비스는 스토어를 직접 보지 않는다 —
+ *   fetchMyReadAnnouncementIds·fetchNotifications가 같은 모양이다.
+ */
+export async function fetchMyMemberships(userId: string): Promise<TeamMembership[]> {
   const { data: memberships, error } = await supabase
     .from('team_members')
     .select('*')
+    .eq('user_id', userId)
     .order('joined_at', { ascending: true });
   if (error) throw error;
   if (!memberships || memberships.length === 0) return [];

@@ -78,9 +78,25 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
    */
   assert.ok(/⚠ 팀 종속 스토어를 새로 만들면 여기에도 등록할 것/.test(root),
     '새 스토어를 등록하라는 경고가 사라졌다 — 다음 사람이 목록을 못 보고 지나간다');
-  // teamStore는 다른 스토어를 import하면 안 된다 (attendance·announcements가 teamStore를 본다)
+  /*
+    teamStore는 다른 스토어를 import하면 안 된다 (attendance·announcements가 teamStore를 본다).
+
+    ⚠ **import 줄만 본다.** 전에는 파일 전체에서 이름을 찾았는데, 그러면 **주석에 그
+      이름을 적기만 해도 실패한다.** 실제로 그랬다 — teamStore에 「announcementsStore·
+      attendanceStore가 같은 모양이다」라고 전례를 적었더니 순환 import로 잡혔다.
+      근거를 주석에 적는 저장소라 앵커가 코드와 주석 양쪽에 있는 일이 흔하다
+      (checks.mjs 머리말의 그 함정이다).
+
+    ⚠ authStore는 이 목록에 없다. 그건 team을 전혀 안 보므로 순환이 아니다 —
+      teamStore가 세션을 얻으려고 import한다(2026-09-15).
+  */
+  const noComments = store
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(String.fromCharCode(10))
+    .map((l) => l.replace(/\/\/.*$/, ''))
+    .join(String.fromCharCode(10));
   for (const bad of ['attendanceStore', 'settlementStore', 'announcementsStore']) {
-    assert.ok(!store.includes(bad), `teamStore가 ${bad}를 import한다 — 순환 import가 된다`);
+    assert.ok(!noComments.includes(bad), `teamStore가 ${bad}를 import한다 — 순환 import가 된다`);
   }
 }
 

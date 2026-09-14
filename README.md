@@ -29,12 +29,58 @@ pnpm install
 ### 2. Supabase 프로젝트 설정
 
 1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성
-2. SQL Editor에서 `supabase/schema.sql` 내용을 실행 (테이블 + RLS 정책 + 트리거 생성)
+2. 스키마 적용 — 아래 「스키마는 어디에 있나」 참고
 3. **Authentication > Providers > Kakao** 활성화
    - [Kakao Developers](https://developers.kakao.com)에서 앱 생성 후 REST API 키, Client Secret 발급
    - Kakao 앱 설정에서 Redirect URI에 Supabase가 제공하는 콜백 URL(`https://<project-ref>.supabase.co/auth/v1/callback`) 등록
    - Kakao Login 동의항목에서 `profile_nickname`, `profile_image` 활성화 (이메일은 선택)
    - `account_email`을 요청하지 않는다면 Supabase 대시보드에서 "Allow users without an email" 옵션 켜기
+
+### ⚠ 스키마는 어디에 있나 — 2026-09-14
+
+**원본은 Supabase의 실제 DB다. 저장소에 사본을 두지 않는다.**
+
+`supabase/schema.sql`이 있었고 위 2번이 그것을 실행하라고 했다. 지웠다.
+
+이유는 「낡아서」가 아니다. **한 파일 안에 두 시절이 섞여 있어서, 파일만 봐서는
+무엇이 참인지 못 갈랐다.** 2026-07-27 리디자인이 `settlements`·`payments`를
+`drop table` 후 새로 만들었는데 그 파일은 안 따라갔다 — 그래서 같은 파일에
+현재 정의 10개와 폐기된 정의 2개가 나란히 있었고, **둘 다 똑같이 그럴듯해 보였다.**
+실제로 2026-09-14에 그 파일의 `settlements`를 근거로 판단하다 잡았다.
+
+참고용 사본은 갈리기 마련이다. 이 저장소는 「사본을 시험하는 검사」를 이미 셋
+걷어냈고(score·timerring·upcoming), `dupmatch.check`가 넷째였다 —
+하필 **갈려 있던 그 파일**을 읽고 있었다. 같이 거뒀다.
+
+#### 실제 스키마가 필요하면 그때 뽑는다
+
+```bash
+# 전체 (테이블·정책·트리거·함수)
+npx supabase db dump --project-ref <ref> --schema public > /tmp/schema.sql
+
+# 한 테이블만 보고 싶을 때는 대시보드 SQL Editor가 더 빠르다
+#   select column_name, data_type, is_nullable
+#   from information_schema.columns where table_name = 'matches';
+```
+
+⚠ 뽑은 파일을 **저장소에 커밋하지 마라.** 커밋하는 순간 다시 사본이 되고,
+같은 일이 반복된다. 필요할 때 뽑아 쓰고 버린다.
+
+#### ⚠ 그래서 빈 DB를 새로 세우려면
+
+**마이그레이션만으로는 안 선다.** 테이블 12개 중 11개가 지운 파일에만 있었고
+(`teams`·`team_members`·`matches`·`profiles`·`announcements`·`attendance_votes`·
+`notifications`·`polls`·`poll_responses`·`team_assignments`·`payments`),
+`20260727_kickday_redesign.sql`은 그것들이 **이미 있다고 전제하고** 시작한다.
+
+지금 운영 중인 프로젝트가 하나뿐이라 새로 세울 일이 없어서 이 비용을 받아들였다.
+새 환경이 필요해지면 순서는 이렇다:
+
+1. 운영 DB에서 위 명령으로 뽑는다 → 그것이 원본이다
+2. 운영 DB가 없는 상황이면 **git 이력에서 꺼낸다** —
+   `git show 73a6026^:supabase/schema.sql`
+   ⚠ 그건 **2026-07-27 이전 시절의 `settlements`·`payments`를 담고 있다.**
+   그 두 절은 버리고 `20260727_kickday_redesign.sql`의 정의를 쓴다.
 
 ### 3. 환경변수 설정
 
@@ -74,9 +120,8 @@ src/
     team/        # 팀 생성/가입/홈 (screens, services, stores)
   navigation/    # RootNavigator
   lib/           # Supabase 클라이언트
-  types/         # DB 타입 (schema.sql과 대응)
+  types/         # DB 타입 (실제 DB와 대응 — 위 「스키마는 어디에 있나」)
 supabase/
-  schema.sql     # 테이블, RLS 정책, 트리거, RPC 함수
 ```
 
 ## 배포 (EAS Build)

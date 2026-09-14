@@ -1,6 +1,6 @@
 // src/features/team/screens/TeamStartScreen.tsx — 로그인 직후 팀 선택 단계 (리디자인 적용판)
 // rn-code 원본은 팀 이름 입력이 없고(onCreate()만 호출) 초대 코드도 6칸 탭-삭제 전용
-// 목업이라, 실제 8자리 invite_code 스펙(supabase/schema.sql)과 teamStore API에 맞춰
+// 목업이라, 실제 8자리 invite_code 스펙(DB의 teams.invite_code)과 teamStore API에 맞춰
 // 이름 입력 폼 + 실제 키보드 입력을 붙였다.
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';

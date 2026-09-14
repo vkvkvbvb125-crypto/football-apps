@@ -186,7 +186,7 @@ const SPLASH_EXIT_MS = 420;
  *   그 버그의 처방이 아니다. 둘을 섞어 기억하지 마라.
  *
  * ⚠ 역할은 여기서 직접 읽는다. 바깥에서 프롭으로 받으면 다시 클로저가 생긴다.
- *   판정 근거는 schema.sql — create_team → role 'admin', join_team → 'member'라
+ *   판정 근거는 DB의 가입 함수다 — create_team → role 'admin', join_team → 'member'라
  *   TeamStartScreen에서 무엇을 눌렀는지 따로 기억할 필요가 없다.
  */
 function MainWithTour({ navigation }: any) {

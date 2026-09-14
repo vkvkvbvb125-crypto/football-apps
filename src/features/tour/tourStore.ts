@@ -5,7 +5,7 @@
 //   팀원에게 「경기 만들기」를 알려주면 없는 버튼을 찾게 된다.
 //
 //   그 갈림은 **이미 코드에 있다.** 따로 기억할 필요가 없다:
-//     create_team → team_members.role = 'admin'   (schema.sql:220)
+//     create_team → team_members.role = 'admin'   (supabase의 create_team 함수)
 //     join_team   → team_members.role = 'member'
 //   그래서 activeTeam.role만 보면 어느 코스인지 정해진다.
 //

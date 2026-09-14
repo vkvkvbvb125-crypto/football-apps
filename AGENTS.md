@@ -2,6 +2,23 @@
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
 
+# 스키마는 저장소에 없다 — 2026-09-14
+
+`supabase/schema.sql`을 지웠다. **원본은 Supabase의 실제 DB다.**
+
+⚠ 「낡아서」가 아니다. **한 파일에 두 시절이 섞여 있어서 파일만 봐서는 무엇이 참인지
+못 갈랐다.** 리디자인이 `settlements`·`payments`를 갈아엎었는데 그 파일은 안 따라갔고,
+현재 정의 10개와 폐기된 정의 2개가 나란히 있었다 — **둘 다 똑같이 그럴듯했다.**
+
+    필요하면 그때 뽑는다
+    npx supabase db dump --project-ref <ref> --schema public > /tmp/schema.sql
+
+⚠ **뽑은 것을 커밋하지 마라.** 커밋하는 순간 다시 사본이 되고 같은 일이 반복된다.
+⚠ **스키마를 근거로 무언가를 단언하지 마라** — 검사든 주석이든. 사본을 시험하는 검사를
+  이 저장소에서 넷 걷어냈다(score·timerring·upcoming·dupmatch).
+  DB의 사실이 필요하면 **실제로 재라** — 읽기 전용 조회나 기기 확인으로.
+  자세한 절차와 「빈 DB를 새로 세우려면」은 README의 「스키마는 어디에 있나」.
+
 # 코드 작성 규칙
 
 ## 주석은 결론이 아니라 전제를 적는다

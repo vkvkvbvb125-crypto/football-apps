@@ -92,8 +92,21 @@ assert.equal(createResultLabel({ created: 0, skipped: ['2026-09-03'] }), '모두
 {
   const s = read('supabase/migrations/20260821_match_unique.sql');
   assert.ok(/unique \(team_id, match_date\)/.test(s), 'unique 제약이 없다');
-  // match_date는 timestamptz — 하루 두 타임이 서로 다른 값이라 허용된다
-  assert.ok(/timestamptz/.test(read('supabase/schema.sql').match(/match_date[^\n]*/)![0]), 'match_date가 timestamptz가 아니다');
+  /*
+    ⚠ **여기 `match_date`가 timestamptz인지 보는 단언이 있었다. 걷어냈다.**
+
+    `supabase/schema.sql`을 읽어서 확인하고 있었는데, 그 파일을 지웠다 —
+    두 시절이 섞여 있어서 무엇이 참인지 파일만 봐서는 못 갈랐기 때문이다
+    (근거는 README의 「스키마는 어디에 있나」).
+
+    이 저장소는 「사본을 시험하는 검사」를 이미 셋 걷어냈다(score·timerring·upcoming).
+    이것이 넷째였고, 하필 **사본이 실제와 갈려 있던** 파일을 보고 있었다.
+    지우면서 같이 거둔다 — 파일이 없어서 실패하는 것은 이 작업의 결과지 결함이 아니다.
+
+    잃는 것: 「하루 두 타임이 서로 다른 값이라 유니크가 허용된다」는 전제를 저장소
+    안에서 못 확인한다. 그건 DB에 있는 사실이라 대조하려면 실제 스키마를 뽑아야 한다.
+    위의 unique 제약 단언은 그대로 남아 회귀를 막는다.
+  */
 }
 
 console.log('dupmatch.check: ok');

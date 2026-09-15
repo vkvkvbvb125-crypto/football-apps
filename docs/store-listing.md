@@ -420,6 +420,44 @@ Play에는 **일시 처리(ephemeral) 예외**가 있다 — 메모리에서만 
   남는 값이 있다는 뜻이므로, Play 양식의 「삭제 요청 가능」과 함께 읽히면
   모순으로 보인다. 처리방침에 이유가 적혀 있으니 문구를 맞춰 두는 게 안전하다.
 
+### ⚠ EAS는 로컬 `android/`를 **아예 안 쓴다** (2026-09-16 실측)
+
+권한을 만질 때(미사용 `CAMERA`·`RECORD_AUDIO` 제거 등) **가장 먼저 알아야 할 것**이다.
+
+    /android  →  .gitignore:42 에 있고  git ls-files 결과도 비어 있다
+
+git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에서 prebuild가 새로 돌고
+매니페스트를 **템플릿에서 다시 만든다**. 따라서:
+
+  ⚠ **로컬 `android/app/src/main/AndroidManifest.xml`을 고쳐도 빌드에 안 들어간다.**
+    고치고 「됐다」고 하기 딱 좋은 자리다. 권한은 `app.json`(`android.permissions` ·
+    `android.blockedPermissions`)이나 config plugin으로 바꿔야 한다.
+  ⚠ 반대로 **로컬이 낡아도 빌드에는 영향이 없다.** 로컬 매니페스트는 「지난번 prebuild가
+    뭘 만들었나」의 흔적일 뿐이라 현재 설정과 다를 수 있다.
+
+**INTERNET은 어디서 오나 —** `@expo/config-plugins/build/plugins/withAndroidBaseMods.js:60`.
+`getAndroidManifestTemplate()`이 bare 템플릿을 통째로 찍어내고 그 첫 권한이 INTERNET이다.
+같은 템플릿의 「OPTIONAL PERMISSIONS, REMOVE WHATEVER YOU DO NOT NEED」 블록에서
+`SYSTEM_ALERT_WINDOW` · `VIBRATE` · `READ/WRITE_EXTERNAL_STORAGE`도 같이 온다 —
+라이브러리가 아니라 **보일러플레이트**다.
+
+2026-09-16에 EAS 산출물에서 직접 읽어 확인했다:
+
+    aapt2 dump permissions shot3.apk   →  INTERNET 있음
+
+⚠ **AAB는 아직 직접 안 읽었다.** 없어서 못 읽었다. `production-apk`가
+`extends: production`이고 델타가 `buildType` 하나뿐이라 같을 것으로 보지만 **그건 추론이다** —
+출시용 AAB를 뽑을 때 직접 읽는다.
+
+  ⚠ **아래 명령은 아직 안 돌려 봤다. 돌려 보고 나서 절차로 굳힌다.**
+    안 돌려본 명령을 절차에 적으면 「처방이 실행 안 되는」 자리가 된다.
+
+      unzip -p <aab> base/manifest/AndroidManifest.xml > m.xml
+      aapt2 dump xmltree m.xml
+
+  그때 `blockedPermissions`가 실제로 먹었는지도 같은 명령으로 확인되고,
+  그 목록이 생기는 순간 「의도한 것만 들어 있다」를 붙드는 검사를 세울지도 판단한다.
+
 ### ⚠ 출시 전에 반드시 채워야 하는 것
 
 | | 무엇 | 지금 값 |

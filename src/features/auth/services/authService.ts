@@ -12,6 +12,28 @@ const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_CLIENT_ID;
 const redirectTo = Linking.createURL('auth-callback');
 
+/*
+  가입 확인 메일만 **웹 주소로** 받는다.
+
+  ⚠ 위의 redirectTo(`kickday://auth-callback`)를 쓰면 안 되는 이유:
+    커스텀 스킴이라 **브라우저가 열 수 있는 주소가 아니다.** 폰에서 메일을 열면 앱이
+    열리지만 **데스크톱에서 열면 흰 화면**이다. 확인 처리 자체는 그 전에 Supabase가
+    끝내므로 계정은 확인되지만, 사용자 눈에는 「가입했는데 아무 일도 안 일어났다」다.
+    2026-09-16에 실제로 겪었고, 심사자가 데스크톱에서 누르면 같은 것을 본다.
+
+  ⚠ **위 상수를 통째로 바꾸면 안 된다.** redirectTo는 카카오·네이버·구글의
+    등록된 redirect_uri이기도 하다(아래 105·155·189행). 그쪽은 각 제공자 콘솔에
+    등록된 값이라 앱에서 바꾸면 로그인이 깨진다. **이 한 줄만 갈라낸다.**
+
+  ⚠ 비밀번호 재설정(passwordResetRedirectTo)은 **안 바꿨다.** 같은 흰 화면 문제가
+    있지만 모양이 다르다 — 재설정은 링크의 토큰으로 **앱이 세션을 세워야** 해서
+    (completeRecovery) 웹 페이지가 대신 끝낼 수 없다. 따로 다룬다.
+
+  ⚠ 이 주소는 Supabase의 **Redirect URLs 허용목록**에도 있어야 한다
+    (Authentication > URL Configuration). 없으면 Site URL로 떨어진다.
+*/
+const emailConfirmRedirectTo = 'https://kickday.app/auth/confirm';
+
 /**
  * 네이버에 넘기는 콜백 주소.
  *
@@ -231,7 +253,7 @@ export async function signUpWithPassword(email: string, password: string, displa
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
-    options: { data: { full_name: displayName.trim() }, emailRedirectTo: redirectTo },
+    options: { data: { full_name: displayName.trim() }, emailRedirectTo: emailConfirmRedirectTo },
   });
   if (error) throw error;
   return { session: data.session, needsEmailConfirm: !data.session };

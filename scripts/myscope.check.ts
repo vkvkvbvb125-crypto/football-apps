@@ -95,8 +95,15 @@ assert.ok(
   /fetchMyMemberships[\s\S]{0,400}?\.eq\('user_id', userId\)/.test(team),
   'fetchMyMemberships가 user_id로 안 좁힌다 — 팀원 전원이 내 소속으로 잡힌다'
 );
+/*
+  ⚠ 서식이 아니라 **의도**를 본다. 2026-09-16에 인자가 둘이 되면서(타임아웃용 signal)
+    시그니처가 여러 줄로 바뀌었고, `\(userId: string\)`로 닫아 두었던 예전 식이 깨졌다.
+    지켜야 하는 것은 「한 줄이다」가 아니라 **「userId를 인자로 받는다」**이므로
+    여는 괄호 뒤 공백·줄바꿈을 견디게 하고 닫는 괄호는 안 본다.
+    ⚠ 그래도 약화가 아니다 — userId를 지우면 여전히 실패한다(변이로 확인했다).
+*/
 assert.ok(
-  /export async function fetchMyMemberships\(userId: string\)/.test(team),
+  /export async function fetchMyMemberships\(\s*userId: string/.test(team),
   'fetchMyMemberships가 userId를 인자로 안 받는다 — 서비스는 스토어를 보지 않는다'
 );
 

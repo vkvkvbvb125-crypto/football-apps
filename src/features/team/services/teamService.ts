@@ -27,17 +27,33 @@ export interface TeamMembership {
  * ⚠ userId를 **인자로 받는다.** 이 저장소의 서비스는 스토어를 직접 보지 않는다 —
  *   fetchMyReadAnnouncementIds·fetchNotifications가 같은 모양이다.
  */
-export async function fetchMyMemberships(userId: string): Promise<TeamMembership[]> {
-  const { data: memberships, error } = await supabase
+export async function fetchMyMemberships(
+  userId: string,
+  /*
+    ⚠ **시한은 스토어가 정하고 여기는 그 신호만 받는다.**
+
+    「몇 초가 적당한가」는 화면 사정이라 서비스가 알 일이 아니다. 서비스는 **끊을 수단**만
+    제공하고, 언제 끊을지는 부르는 쪽이 정한다 — userId를 인자로 받는 것과 같은 이유다.
+
+    ⚠ **요청이 둘이라 신호 하나를 둘 다에 건다.** 순차라서 ①에서 매달리면 ②는 시작도
+      못 하고, ②에서 매달려도 전체가 안 끝난다. 하나만 걸면 반쪽이 된다.
+  */
+  signal?: AbortSignal
+): Promise<TeamMembership[]> {
+  let q = supabase
     .from('team_members')
     .select('*')
     .eq('user_id', userId)
     .order('joined_at', { ascending: true });
+  if (signal) q = q.abortSignal(signal);
+  const { data: memberships, error } = await q;
   if (error) throw error;
   if (!memberships || memberships.length === 0) return [];
 
   const teamIds = memberships.map((m) => m.team_id);
-  const { data: teams, error: teamsError } = await supabase.from('teams').select('*').in('id', teamIds);
+  let tq = supabase.from('teams').select('*').in('id', teamIds);
+  if (signal) tq = tq.abortSignal(signal);
+  const { data: teams, error: teamsError } = await tq;
   if (teamsError) throw teamsError;
 
   const teamsById = new Map((teams ?? []).map((t) => [t.id, t]));

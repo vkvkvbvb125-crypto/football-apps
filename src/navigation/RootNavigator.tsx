@@ -25,6 +25,7 @@ import { useAnnouncementsStore } from '../features/announcements/stores/announce
 import { palettes, type Palette } from '../theme';
 import { useColors, useThemeName } from '../lib/useThemed';
 import { TourProvider } from '../features/tour/TourProvider';
+import { EmptyState } from '../components/EmptyState';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +41,41 @@ const navThemeOf = (name: 'dark' | 'light') => {
   const c: Palette = palettes[name];
   return { ...base, colors: { ...base.colors, background: c.bgRoot, card: c.bgRoot, text: c.text, border: c.border } };
 };
+
+/*
+  팀을 못 불러왔을 때. **두 갈래가 한 화면을 쓰되 문구가 다르다.**
+
+      failed    「불러오지 못했어요」  답이 **오류로** 왔다
+      timeout   「응답이 없어요」      답이 **안 왔다** (12초를 넘겨 끊었다)
+
+  ⚠ **「팀 시작」 화면으로 보내지 않는다.** 전에는 catch가 `loaded: true`만 세워서
+    `!activeTeam` 갈래로 떨어졌고, 그 화면의 큰 버튼은 「팀 만들기 / 참가」다 —
+    **팀이 있는 사람에게 팀을 만들라고 권하는 화면**이고 누르면 중복 팀이 생긴다.
+    오류를 한 줄 그리긴 했지만 그 줄보다 버튼이 크다.
+
+  ⚠ **「다시 시도」는 loadMemberships를 그대로 다시 부른다.** 상한이 그 함수 **안**에
+    있어서 재시도에도 다시 걸린다 — 한 번 끊긴 뒤 두 번째가 무한정 기다리면
+    같은 자리로 돌아온다.
+*/
+function TeamLoadErrorScreen() {
+  const loadError = useTeamStore((s) => s.loadError);
+  const loading = useTeamStore((s) => s.loading);
+  const loadMemberships = useTeamStore((s) => s.loadMemberships);
+  const timedOut = loadError === 'timeout';
+  return (
+    <EmptyState
+      emoji={timedOut ? '⏳' : '⚠️'}
+      title={timedOut ? '응답이 없어요' : '불러오지 못했어요'}
+      subtitle={
+        timedOut
+          ? '서버가 제때 답하지 않았어요.\n연결을 확인하고 다시 시도해 주세요'
+          : '팀 정보를 불러오는 중 문제가 생겼어요.\n잠시 뒤 다시 시도해 주세요'
+      }
+      actionLabel={loading ? '불러오는 중…' : '다시 시도'}
+      onAction={loading ? undefined : () => void loadMemberships()}
+    />
+  );
+}
 
 function LoadingScreen() {
   const colors = useColors();
@@ -108,6 +144,7 @@ export function RootNavigator() {
   const recoveryMode = useAuthStore((s) => s.recoveryMode);
 
   const teamLoaded = useTeamStore((s) => s.loaded);
+  const loadError = useTeamStore((s) => s.loadError);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const loadMemberships = useTeamStore((s) => s.loadMemberships);
   const resetTeam = useTeamStore((s) => s.reset);
@@ -216,6 +253,12 @@ export function RootNavigator() {
            * 보고 있던 탭도 스크롤도 잃는다. 다시 읽는 건 뒤에서 조용히 하면 된다.
            */
           <Stack.Screen name="TeamLoading" component={LoadingScreen} />
+        ) : /*
+             ⚠ **activeTeam 판정보다 먼저다.** 못 불러온 것과 팀이 없는 것은 둘 다
+               `memberships: []`라 여기서 안 가르면 같은 화면으로 떨어진다.
+           */
+        loadError ? (
+          <Stack.Screen name="TeamLoadError" component={TeamLoadErrorScreen} />
         ) : !activeTeam ? (
           <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
         ) : (

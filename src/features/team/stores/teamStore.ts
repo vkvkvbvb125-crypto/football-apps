@@ -56,6 +56,16 @@ interface TeamState {
   loading: boolean;
   error: string | null;
   /**
+   * 팀을 못 불러온 이유. null이면 정상이다.
+   *
+   * ⚠ `memberships: []`만으로는 **「팀이 없다」와 「못 불러왔다」를 못 가른다.**
+   *   둘 다 빈 배열이라 화면이 똑같이 「팀 만들기」를 권하게 되고, 팀이 있는 사람에게
+   *   팀을 만들라고 하면 **중복 팀**이 생긴다. 그래서 이유를 따로 들고 있는다.
+   * ⚠ 'failed'와 'timeout'을 가르는 이유는 문구가 달라야 해서다 —
+   *   「불러오지 못했어요」는 답이 오류로 온 것이고 「응답이 없어요」는 답이 안 온 것이다.
+   */
+  loadError: 'failed' | 'timeout' | null;
+  /**
    * @param preferTeamId 이 팀을 활성으로 삼는다(있으면). 팀을 새로 만들거나 초대로
    *   막 가입했을 때 그 팀으로 들어가려고 쓴다.
    */
@@ -79,6 +89,46 @@ interface TeamState {
   reset: () => void;
 }
 
+/*
+  팀 조회의 상한. 이 시간이 지나면 요청을 **끊는다**.
+
+  ── 왜 상한이 필요한가 ────────────────────────────────────────────
+  이 조회가 안 돌아오면 앱이 **TeamLoading에 갇힌다** — 글자도 탭바도 뒤로가기도 없는
+  화면이다. RN의 fetch에는 기본 시한이 없어서 멈춘 연결·캡티브 포털이면 그대로 선다.
+  실패는 오히려 낫다(아래 catch가 받는다). 나쁜 것은 **안 끝나는 것**이다.
+
+  ── 왜 여기만 감싸나 — 「갇히는 로더」와 「안 갇히는 로더」 ──────────
+  같은 모양(시한 없는 supabase 호출)은 저장소 전체에 있다. 2026-09-15에 세어 보니
+  **호출 73개 · 파일 17개**다. 그런데 **가두는 것은 이 하나뿐**이다:
+
+      TeamLoading           ❌ 탭바도 뒤로가기도 없다. 갇힌다
+      TeamSettingsScreen    ✅ 뒤로가기 버튼이 있다
+      일정·정산·경기운영     ✅ 탭 네비게이터 안이라 탭바가 있다
+
+  **게이트가 있는 자리만 문제고, 그게 지금 하나다.** 그래서 공용으로 안 쌌다 —
+  `global.fetch`에 씌우면 한 줄로 73개를 덮지만, 아바타 업로드(`storage.upload`)와
+  토큰 갱신(`auth`)까지 같은 상한에 걸려 **멀쩡한 것을 끊는다.**
+  ⚠ **게이트가 늘면 그때 공용화를 다시 본다.** 그때 재야 할 것은 「호출이 몇 개인가」가
+    아니라 「빠져나갈 수 없는 화면이 몇 개인가」다.
+
+  ── 왜 12초인가 ──────────────────────────────────────────────────
+  ⚠ 이 저장소에 **네트워크 타임아웃 전례가 없다.** 유일한 `LOCATION_TIMEOUT_MS = 5000`은
+    **GPS 측위** 대기라 성격이 다르다 — 위치는 없어도 전국 검색으로 앱을 쓸 수 있지만,
+    팀은 값이 없으면 **앱을 못 쓴다.** 그래서 그 값을 그대로 가져오지 않았다.
+
+  근거 둘:
+    ⑴ **요청이 둘이고 순차다**(team_members → teams). 각 왕복을 넉넉히 4~5초로 잡아도
+       합이 8~10초라, 그 위에 여유를 둔 값이다.
+    ⑵ 앱 시작이 1.2~2.1초다(2026-09-15 실측). 12초는 그 **6~10배**라
+       「정상적으로 느린 것」과 명백히 갈린다.
+
+  ⚠ **너무 짧게 잡는 비용이 작아진 것은 행선지를 바꿨기 때문이다.** 끊긴 뒤 「팀 시작」
+    화면으로 보냈다면 잘못 끊는 순간 중복 팀을 권하게 되어 20초쯤으로 올려야 했다.
+    「다시 시도」로 보내니 잘못 끊어도 한 번 누르면 된다. **두 결정은 묶여 있다 —
+    행선지를 되돌리려면 이 값도 다시 재라.**
+*/
+const TEAM_LOAD_TIMEOUT_MS = 12_000;
+
 export const useTeamStore = create<TeamState>((set, get) => ({
   memberships: [],
   activeTeam: null,
@@ -86,8 +136,20 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   loaded: false,
   loading: false,
   error: null,
+  loadError: null,
   loadMemberships: async (preferTeamId) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, loadError: null });
+
+    /*
+      ⚠ **Promise.race가 아니라 AbortSignal이다.**
+        race는 결과만 버리고 요청은 살려 둔다 — 뒤늦게 온 응답이 그 사이에 세운 상태를
+        덮어쓸 수 있다. 재시도로 두 요청이 겹치면 **늦게 온 쪽이 이긴다.**
+        여기서는 실제로 끊으므로 그 경합 자체가 없다.
+      ⚠ `AbortSignal.timeout(ms)`를 안 쓴다 — RN이 쓰는 폴리필
+        (abort-controller@3.0.0)에 그 static이 **없다.** 릴리스에서만 죽는다.
+    */
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), TEAM_LOAD_TIMEOUT_MS);
     try {
       /*
         ⚠ userId를 여기서 얻어 넘긴다. 서비스는 스토어를 안 본다 —
@@ -100,7 +162,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
         set({ memberships: [], activeTeam: null, loaded: true, loading: false });
         return;
       }
-      const memberships = await fetchMyMemberships(myUserId);
+      const memberships = await fetchMyMemberships(myUserId, ac.signal);
 
       /*
        * 보던 팀을 유지한다.
@@ -121,8 +183,17 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       if (activeTeam) storeTeamId(activeTeam.team.id);
       get().loadMembers();
     } catch (err) {
-      set({ error: toUserMessage(err, {}, 'loadMemberships'), loaded: true });
+      /*
+        ⚠ **끊어서 난 오류와 진짜 오류를 가른다.** 중단도 catch로 오므로 err만 보면
+          둘이 같은 출력이 된다. `signal.aborted`가 그 자리를 가른다.
+      */
+      if (ac.signal.aborted) {
+        set({ loadError: 'timeout', loaded: true });
+      } else {
+        set({ error: toUserMessage(err, {}, 'loadMemberships'), loadError: 'failed', loaded: true });
+      }
     } finally {
+      clearTimeout(timer);
       set({ loading: false });
     }
   },
@@ -314,5 +385,5 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       set({ error: toUserMessage(err, { '42501': '총무만 할 수 있어요' }, 'removeMember') });
     }
   },
-  reset: () => set({ memberships: [], activeTeam: null, members: [], loaded: false, error: null }),
+  reset: () => set({ memberships: [], activeTeam: null, members: [], loaded: false, error: null, loadError: null }),
 }));

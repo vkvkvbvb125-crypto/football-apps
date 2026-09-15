@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../features/auth/stores/authStore';
@@ -22,12 +22,8 @@ import { useNotificationsStore } from '../features/notifications/stores/notifica
 import { useAttendanceStore } from '../features/attendance/stores/attendanceStore';
 import { useSettlementStore } from '../features/settlement/stores/settlementStore';
 import { useAnnouncementsStore } from '../features/announcements/stores/announcementsStore';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { Text } from '../components/nativeText';
 import { palettes, type Palette } from '../theme';
-import { useColors, useThemeName, useThemed } from '../lib/useThemed';
+import { useColors, useThemeName } from '../lib/useThemed';
 import { TourProvider } from '../features/tour/TourProvider';
 
 const Stack = createNativeStackNavigator();
@@ -54,121 +50,25 @@ function LoadingScreen() {
   );
 }
 
-/**
- * 레퍼런스의 순서를 그대로 따른다 (스펙 3절):
- *   200ms   중앙에 아주 약한 초록 빛
- *   300~800 공 등장 (opacity 0→1, scale 0.92→1)
- *   600~1100 로고 등장 (opacity 0→1, translateY 8→0)
- *   900~1400 화면 하단에 얇은 가로 빛이 퍼졌다 사라진다
- *
- * bounce·회전·파티클은 쓰지 않는다. 예전 버전은 글자가 하나씩 튀어 오르고 공이 한 바퀴
- * 굴러 들어왔는데, 레퍼런스의 조용하고 무거운 인상과는 다른 종류의 움직임이었다.
- */
-/** 로고 뒤에서 번지는 빛의 지름. 로고 너비의 두 배쯤이라야 뒤에서 비추는 것으로 읽힌다 */
-const GLOW = 420;
+/*
+  ⚠ **JS 스플래시(KickDay 로고 + 초록 글로우)를 걷어냈다 — 2026-09-15.**
 
-function SplashScreen() {
-  const splashStyles = useThemed(makeSplash).styles;
-  const colors = useColors();
-  const glow = useRef(new Animated.Value(0)).current;
-  const logo = useRef(new Animated.Value(0)).current;
-  const sweep = useRef(new Animated.Value(0)).current;
+  브랜드가 두 번 떴다. 네이티브 스플래시(검정 + 축구공)가 뜨고, 그게 사라진 자리에
+  이 컴포넌트가 또 떴다. 같은 브랜드를 두 번 보여주는 것은 한 번보다 **느리게** 느껴진다.
 
-  useEffect(() => {
-    const fade = (v: Animated.Value, delay: number, duration: number) =>
-      Animated.timing(v, { toValue: 1, delay, duration, useNativeDriver: true });
+  ⚠ 결정적인 것은 **이 겹이 아무것도 안 기다렸다**는 사실이다.
+    `ready = authInitialized && splashHeld`에서 splashHeld는 데이터가 아니라
+    **고정 타이머**였다 — `setTimeout(…, SPLASH_MIN_MS)`, 1700ms. 걷히는 페이드가 420ms.
+    합쳐서 **2,120ms를 순수하게 애니메이션을 보여주려고** 썼다.
+    「로딩 중이라 필요하다」가 아니었다. 그걸 확인하기 전에는 지울 수 없는 자리였다.
 
-    Animated.parallel([
-      fade(glow, 200, 500),
-      // 공을 걷어내면서 로고가 주인공이 됐다 — 빛이 번진 직후 바로 이어 붙는다
-      fade(logo, 380, 560),
-      // 퍼졌다 사라진다 — 0에서 1로 갔다가 다시 0으로
-      Animated.sequence([
-        Animated.delay(900),
-        Animated.timing(sweep, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.timing(sweep, { toValue: 0, duration: 240, useNativeDriver: true }),
-      ]),
-    ]).start();
-  }, []);
+  대신 네이티브 스플래시를 준비가 끝날 때까지 붙잡는다 —
+  App.tsx의 `preventAutoHideAsync()` + 단 한 곳의 `hideAsync()`. 「준비」의 정의도 거기 있다.
 
-  return (
-    <View style={splashStyles.root}>
-      {/*
-        공 뒤에서 번지는 빛.
-
-        처음엔 borderRadius를 준 초록 View 한 장으로 때웠는데, 그건 글로우가 아니라
-        가장자리가 딱 끊긴 초록 원판이었다 — 공 뒤에 접시를 받쳐 둔 것처럼 보였다.
-        빛은 중심에서 바깥으로 서서히 사라져야 하므로 방사형 그라디언트가 필요하다.
-        react-native-svg의 RadialGradient를 쓴다(이미 설치돼 있다).
-      */}
-      <Animated.View style={[splashStyles.glow, { opacity: glow }]} pointerEvents="none">
-        <Svg width={GLOW} height={GLOW}>
-          <Defs>
-            <RadialGradient id="splashGlow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={colors.green} stopOpacity={0.34} />
-              <Stop offset="0.45" stopColor={colors.green} stopOpacity={0.12} />
-              <Stop offset="1" stopColor={colors.green} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={GLOW / 2} cy={GLOW / 2} r={GLOW / 2} fill="url(#splashGlow)" />
-        </Svg>
-      </Animated.View>
-
-      {/*
-        축구공 렌더(축구공.png)를 걷어냈다.
-
-        사진풍 3D 렌더라 흰 스페큘러와 바닥 그림자가 이미 구워져 있어서, 평평한 다크 UI 위에
-        놓으면 혼자 다른 재질로 떠 있었다. 빛 위에 로고만 두면 남는 건 브랜드와 빛뿐이라
-        훨씬 조용하다 — 스플래시가 보여줘야 하는 것도 그 둘이다.
-      */}
-      <Animated.View
-        style={{
-          opacity: logo,
-          transform: [
-            { translateY: logo.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
-            { scale: logo.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
-          ],
-        }}
-      >
-        <View style={splashStyles.logoRow}>
-          <Text style={splashStyles.logo}>
-            <Text style={{ color: colors.green }}>Kick</Text>
-            <Text style={{ color: colors.text }}>Day</Text>
-          </Text>
-          <Ionicons name="football" size={28} color={colors.green} style={{ marginLeft: 10, marginBottom: 5 }} />
-        </View>
-      </Animated.View>
-
-      {/* 하단 가로 빛 — 가운데가 밝고 양끝으로 사라진다.
-          단색 막대로 두면 양끝이 칼로 자른 것처럼 끊긴다. 가로 그라디언트로 흘려보낸다. */}
-      <Animated.View style={[splashStyles.sweep, { opacity: sweep }]} pointerEvents="none">
-        <LinearGradient
-          colors={['rgba(34,197,94,0)', colors.green, 'rgba(34,197,94,0)']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-    </View>
-  );
-}
-
-const makeSplash = (colors: Palette) =>
-  StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgRoot },
-  // 이제 화면 한가운데에 로고 하나뿐이라 빛도 그냥 가운데다 — 보정할 게 없다
-  glow: { position: 'absolute', width: GLOW, height: GLOW },
-  logoRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  // 화면의 유일한 요소가 됐으니 그만큼 키운다 (34 → 42)
-  logo: { fontFamily: 'Pretendard-ExtraBold', fontSize: 42, letterSpacing: -1.4 },
-  sweep: { position: 'absolute', bottom: 96, width: 240, height: 2, overflow: 'hidden' },
-  });
-
-/** 애니메이션을 다 볼 수 있게 최소한 이만큼은 스플래시를 띄운다 */
-const SPLASH_MIN_MS = 1700;
-/** 걷히는 시간. 더 짧으면 툭 꺼지고, 더 길면 앱이 늦게 열리는 것처럼 느껴진다 */
-const SPLASH_EXIT_MS = 420;
-
+  ⚠ **되살리고 싶어지면 먼저 읽어라:** docs/session-2026-08.md 「스플래시 두 겹」.
+    로고를 크게 쓰고 싶다는 이유라면 이 컴포넌트를 되살릴 게 아니라
+    **app.json의 네이티브 스플래시 이미지를 바꾸는 것**이 답이다. 겹은 다시 늘리지 마라.
+*/
 /**
  * Main 화면 — 탭 네비게이터에 튜토리얼 오버레이를 두른 것.
  *
@@ -205,7 +105,6 @@ export function RootNavigator() {
   const themeName = useThemeName();
   const colors = useColors();
   const session = useAuthStore((s) => s.session);
-  const authInitialized = useAuthStore((s) => s.initialized);
   const recoveryMode = useAuthStore((s) => s.recoveryMode);
 
   const teamLoaded = useTeamStore((s) => s.loaded);
@@ -214,30 +113,6 @@ export function RootNavigator() {
   const resetTeam = useTeamStore((s) => s.reset);
 
   const loadNotifications = useNotificationsStore((s) => s.load);
-
-  // 세션 복구는 보통 순식간이라 그대로 두면 로고가 한 프레임 번쩍이고 만다
-  const [splashHeld, setSplashHeld] = useState(false);
-  /** 겹이 완전히 사라지기 전까지는 트리에 남겨 둔다 — 먼저 지우면 페이드가 끊긴다 */
-  const [splashMounted, setSplashMounted] = useState(true);
-  const exit = useRef(new Animated.Value(1)).current;
-
-  const ready = authInitialized && splashHeld;
-
-  useEffect(() => {
-    const t = setTimeout(() => setSplashHeld(true), SPLASH_MIN_MS);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    Animated.timing(exit, {
-      toValue: 0,
-      duration: SPLASH_EXIT_MS,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) setSplashMounted(false);
-    });
-  }, [ready]);
 
   /**
    * 누가 로그인했는지가 바뀔 때만 다시 한다.
@@ -304,11 +179,11 @@ export function RootNavigator() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgRoot }}>
       {/*
-        준비되기 전에는 네비게이터를 아예 마운트하지 않는다 — 세션·팀을 모르는 상태로
-        먼저 그리면 로그인 화면이 한 번 스쳤다가 홈으로 바뀐다.
+        준비되기 전에는 이 트리가 아예 안 그려진다 — 그 판단은 **App.tsx가 한다**
+        (테마·폰트·세션 셋). 세션을 모르는 상태로 먼저 그리면 로그인 화면이
+        한 번 스쳤다 홈으로 바뀌므로, 그때까지는 네이티브 스플래시가 덮고 있다.
       */}
-      {ready && (
-        <NavigationContainer theme={navThemeOf(themeName)}>
+      <NavigationContainer theme={navThemeOf(themeName)}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {/* 재설정 링크로 들어오면 세션이 이미 서 있다 — 그대로 두면 홈으로 지나쳐서
             정작 비밀번호를 바꿀 기회가 없다. 아래 모든 분기보다 먼저 잡는다. */}
@@ -358,29 +233,7 @@ export function RootNavigator() {
           </>
         )}
           </Stack.Navigator>
-        </NavigationContainer>
-      )}
-
-      {/*
-        스플래시는 조건부 return이 아니라 위에 얹힌 한 겹이다.
-        전에는 준비되는 순간 통째로 갈아치워서 로고에서 앱으로 한 프레임에 툭 잘렸다.
-        앱을 밑에서 먼저 그려 두고 이 겹을 걷어내면, 걷히는 동안 이미 완성된 화면이 비친다.
-
-        걷힐 때 아주 살짝 확대한다(1 → 1.04). 불투명도만 줄이면 그냥 꺼지는 느낌인데,
-        조금 다가오면서 사라지면 화면 뒤로 물러나는 것처럼 읽힌다.
-        pointerEvents를 꺼서 걷히는 동안의 탭이 스플래시에 먹히지 않게 한다.
-      */}
-      {splashMounted && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { opacity: exit, transform: [{ scale: exit.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) }] },
-          ]}
-        >
-          <SplashScreen />
-        </Animated.View>
-      )}
+      </NavigationContainer>
     </View>
   );
 }

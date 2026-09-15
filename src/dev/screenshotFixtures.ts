@@ -334,9 +334,25 @@ const polls = [
      한쪽에 3점짜리 둘을 몰아 두면 그 문장이 거짓말이 된다. */
 const SQUAD_A = [0, 1, 3]; // 김도현(피보3) · 박준서(알라2) · 최민재(골레이로2)
 const SQUAD_B = [2, 4, 5]; // 이지훈(픽소3) · 정우성(알라1) · 한서준(피보2)
+
+/* ⚠ **다음 경기도 나눠 둔다. 한 경기만 채우면 다음 카드가 빈 채로 남는다.**
+
+   경기운영 화면은 `operableMatches = liveMatches`라 **살아 있는 경기를 전부** 카드로
+   그린다(AssignmentScreen:111). fx-1만 채웠더니 fx-2 카드가
+   「A팀 0명 · 비어 있음 / B팀 0명 · 비어 있음」으로 화면 아래 1/3을 차지했다 —
+   2026-09-15에 4번 장을 찍다가 걸렸다. 화면에서는 못 고친다: randomize가 원격 저장이
+   먼저라(saveAssignments → loadAssignments) 가짜 match id로는 실패하고,
+   낙관적 갱신이 없어 카드가 안 채워진다. 빌드를 한 번 더 돌렸다.
+
+   참석 넷(투표 [1,1,3,2,1,0,1,3]의 1들 = 0·1·4·6)을 2:2로. 실력 합 4 · 3, 포지션도 갈랐다. */
+const SQUAD2_A = [0, 4]; // 김도현(피보3) · 정우성(알라1) — 합 4
+const SQUAD2_B = [1, 6]; // 박준서(알라2) · 오현우(픽소1) — 합 3
+
 const assignments = [
   ...SQUAD_A.map((i) => ({ id: `fx-a${i}`, match_id: 'fx-1', team_member_id: members[i].id, group_label: 'A', updated_at: at(-0.1) })),
   ...SQUAD_B.map((i) => ({ id: `fx-b${i}`, match_id: 'fx-1', team_member_id: members[i].id, group_label: 'B', updated_at: at(-0.1) })),
+  ...SQUAD2_A.map((i) => ({ id: `fx-2a${i}`, match_id: 'fx-2', team_member_id: members[i].id, group_label: 'A', updated_at: at(-0.1) })),
+  ...SQUAD2_B.map((i) => ({ id: `fx-2b${i}`, match_id: 'fx-2', team_member_id: members[i].id, group_label: 'B', updated_at: at(-0.1) })),
 ];
 
 /* ── 스코어 ───────────────────────────────────────────────────────

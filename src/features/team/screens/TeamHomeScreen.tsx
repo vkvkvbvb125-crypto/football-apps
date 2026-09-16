@@ -719,7 +719,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
         memberships={memberships}
         activeTeamId={activeTeam.team.id}
         onSelect={setActiveTeam}
-        onCreateOrJoin={() => navigation.navigate('TeamOnboarding')}
+        onCreateOrJoin={() => navigation.navigate('TeamAddAnother')}
       />
 
       <MemberListModal

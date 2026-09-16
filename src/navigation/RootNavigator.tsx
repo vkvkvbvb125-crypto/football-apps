@@ -264,9 +264,22 @@ export function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainWithTour} />
-            {/* 팀이 있어도 열 수 있어야 한다 — 팀 전환 시트의 「새 팀 만들기 / 참여」가 여기로 온다.
-                팀이 없을 때의 등록(위 브랜치)과 같은 화면이고, 그쪽은 브랜치 교체로 닫힌다 */}
-            <Stack.Screen name="TeamOnboarding" component={TeamStartScreen} />
+            {/*
+              팀이 있어도 열 수 있어야 한다 — 팀 전환 시트의 「새 팀 만들기 / 참여」가 여기로 온다.
+              같은 화면이지만 **이름이 달라야 한다.**
+
+              ⚠ **전에는 둘 다 "TeamOnboarding"이었고, 그게 팀 생성이 먹통으로 보이는 원인이었다.**
+                React Navigation은 조건부로 화면 목록이 바뀔 때, **지금 포커스된 라우트 이름이
+                새 목록에도 있으면 그대로 머문다.** 그래서 팀이 없다가 생겨서 브랜치가 통째로
+                바뀌어도, 같은 이름이 이쪽에 또 있으니 화면이 안 넘어갔다.
+
+                사용자 눈에는 「만들기를 눌렀는데 아무 일도 안 난다」이고, 그래서 다시 누른다 —
+                **누를 때마다 팀이 하나씩 실제로 만들어진다.** 2026-09-16에 10개를 만들고서야 봤다.
+                앱을 재시작하면 그제서야 홈으로 들어갔다. 데이터는 처음부터 맞았고 화면만 안 따라왔다.
+
+              ⚠ 이름을 다시 합치지 마라. 합치는 순간 같은 증상이 돌아온다.
+            */}
+            <Stack.Screen name="TeamAddAnother" component={TeamStartScreen} />
             <Stack.Screen name="TeamSettings" component={TeamSettingsScreen} />
             <Stack.Screen name="MySettings" component={MySettingsScreen} />
             <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />

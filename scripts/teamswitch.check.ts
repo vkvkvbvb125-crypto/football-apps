@@ -121,9 +121,17 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
   // 뱃지 문구는 rolelabel.check가 전수로 붙든다 — 여기서는 있는지만 본다
   assert.ok(/role === 'admin' \? '총무' : '팀원'/.test(sheet), '역할 뱃지가 없다');
   assert.ok(/onCreateOrJoin/.test(sheet), '새 팀 만들기 / 참여 진입이 없다');
-  // 팀이 있을 때도 그 화면이 등록돼 있어야 한다
-  assert.ok(/name="TeamOnboarding"[\s\S]{0,400}name="TeamSettings"/.test(root),
-    '팀이 있는 상태에서 TeamOnboarding 라우트가 없다 — 시트의 「새 팀」이 죽는다');
+  /*
+    팀이 있을 때도 그 화면이 등록돼 있어야 한다.
+
+    ⚠ **이름이 "TeamAddAnother"다 — "TeamOnboarding"이 아니다.** 2026-09-16까지 둘 다
+      같은 이름이었고, 그게 「팀을 만들어도 화면이 안 넘어간다」의 원인이었다
+      (React Navigation은 바뀐 목록에 같은 이름이 있으면 그 라우트에 머문다).
+    ⚠ 여기서 옛 이름을 다시 못 박으면 **고친 것을 되돌리라고 검사가 요구하게 된다.**
+      이름이 겹치는 것 자체는 screenname.check가 따로 막는다.
+  */
+  assert.ok(/name="TeamAddAnother"[\s\S]{0,400}name="TeamSettings"/.test(root),
+    '팀이 있는 상태에서 TeamAddAnother 라우트가 없다 — 시트의 「새 팀」이 죽는다');
   /*
     그리고 팀이 생기면 스스로 내려와야 한다.
 

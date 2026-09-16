@@ -9,21 +9,30 @@
     },
     "production": {
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" }
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
     },
     "production-apk": {
       "extends": "production",
       "distribution": "internal",
       "environment": "production",
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      }
     },
     "screenshot": {
       "extends": "production",
       "autoIncrement": false,
       "distribution": "internal",
       "environment": "production",
-      "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_SCREENSHOT": "1" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SCREENSHOT": "1"
+      }
     }
   }
 }

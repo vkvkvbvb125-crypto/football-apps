@@ -499,17 +499,70 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
        → 번들에서 SUPABASE_URL과 ANON_KEY 문자열을 찾는다(값은 출력하지 않는다)
        ⚠ 한글 등 비ASCII는 Hermes가 UTF-16LE로 담으므로 두 인코딩으로 다 찾는다
 
-    ② 권한이 의도대로인가
-       aapt2 dump permissions <apk>
-       AAB:  unzip -p <aab> base/manifest/AndroidManifest.xml > m.xml
-             aapt2 dump xmltree m.xml
-       → CAMERA · RECORD_AUDIO 가 **없어야** 한다(app.json의 blockedPermissions)
-       → INTERNET · ACCESS_FINE_LOCATION · POST_NOTIFICATIONS 는 **있어야** 한다
+    ② 권한이 의도대로인가 — **컨테이너와 `--file`을 같이 준다**
+
+       APK:  aapt2 dump permissions <apk>
+       AAB:  aapt2 dump xmltree <aab> --file base/manifest/AndroidManifest.xml
+
+       빠르게 보려면:
+         for p in CAMERA RECORD_AUDIO INTERNET ACCESS_FINE_LOCATION; do
+           echo -n "$p: "
+           aapt2 dump xmltree <artifact> --file <manifest 경로> | grep -c "android.permission.$p\""
+         done
+
+       → CAMERA · RECORD_AUDIO 가 **0이어야** 한다(app.json의 blockedPermissions)
+       → INTERNET · ACCESS_FINE_LOCATION · POST_NOTIFICATIONS 는 **1이어야** 한다
        ⚠ 소스에서 막았다는 것만으로는 근거가 아니다 — 라이브러리가 병합 단계에서
          다시 넣을 수 있다. **산출물을 읽어야 한다.**
 
-⚠ **AAB 쪽 명령은 아직 안 돌려 봤다**(AAB를 뽑은 적이 없다). 처음 뽑을 때 돌려 보고,
-  되면 이 줄을 지우고 절차로 굳힌다.
+    ⚠ **2026-09-16에 이 명령을 고쳤다.** 처음에 이렇게 적어 뒀었다:
+
+          unzip -p <aab> base/manifest/AndroidManifest.xml > m.xml
+          aapt2 dump xmltree m.xml            ← 안 된다
+
+      `aapt2 dump xmltree`는 **컨테이너(APK/AAB)를 받고 그 안의 경로를 `--file`로**
+      지정한다. 꺼낸 파일을 그냥 주면 `missing required flag --file`로 죽는다.
+      APK로 미리 돌려 보고서야 알았다 — **안 돌려본 명령을 절차에 적으면
+      「처방이 실행 안 되는」 자리가 된다.**
+      ⚠ AAB 안의 경로(`base/manifest/AndroidManifest.xml`)는 **아직 확인 못 했다.**
+        AAB를 뽑은 적이 없다. 처음 뽑을 때 `unzip -l`로 경로부터 본다.
+
+#### AAB 첫 빌드 — 준비 상태 (2026-09-16 실측)
+
+명령은 하나다. **사용자가 말하면 건다.**
+
+    eas build -p android --profile production
+
+**빌드에 필요한 것은 다 되어 있다:**
+
+| | 값 | |
+|---|---|---|
+| `production.buildType` | `app-bundle` | ✅ Play는 신규 앱에 AAB만 받는다 |
+| `production.environment` | `production` | ✅ **직접 적혀 있다.** `extends`는 이걸 안 물려준다 |
+| `autoIncrement` | `true` | versionCode 7 → **8**로 오른다 |
+| `blockedPermissions` | CAMERA · RECORD_AUDIO | ✅ APK(vc 7)에서 실제로 빠진 것 확인함 |
+| 아이콘 512² · 피처 그래픽 1024×500 | `assets/store/` | ✅ |
+| 스크린샷 | 일곱 장 1080×2400 | ✅ |
+| package / version | `com.kickday.app` / `1.0.0` | ✅ |
+
+**뽑은 뒤 바로 할 것 — 위 ①②를 그대로 돌린다.**
+⚠ AAB 안의 매니페스트 경로부터 본다: `unzip -l <aab> | grep -i manifest`
+
+#### 빌드가 아니라 **콘솔**에서 막히는 것
+
+AAB가 나와도 아래가 없으면 트랙을 못 연다. **전부 사람 일이다.**
+
+| | 무엇 | 왜 막히나 |
+|---|---|---|
+| ⬜ | **Play 개발자 계정** | 없으면 아무것도 못 올린다. 신원 확인에 며칠 |
+| ⬜ | **데이터 안전 양식** | 미제출이면 출시 불가. 수집 항목은 위에 적어 뒀다 |
+| ⬜ | **콘텐츠 등급 설문 · 대상 연령층** | 미제출이면 출시 불가 |
+| ⬜ | **심사/테스터용 계정** | ⚠ 로그인 없이는 앱이 **아무것도 안 보인다**. 심사 노트에 자격증명을 적어야 한다 |
+| ⬜ | **테스터 12명(목표 15명)** | 비공개 테스트 14일의 재료 |
+
+⚠ **AAB를 뽑는 것보다 이쪽이 오래 걸린다.** 계정 심사 며칠 + 테스트 14일 +
+  프로덕션 신청 검토 최대 7일이라 **최소 3~4주**다. 빌드는 언제든 20분이면 나온다 —
+  **계정을 먼저 걸어 두는 것이 순서다.**
 
 #### 테스터 12명 운영 — 재본 것
 

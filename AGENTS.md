@@ -55,6 +55,39 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 ⚠ `&&`로 이어도 된다. 핵심은 **커밋이 게이트의 성공에 매달려 있어야 한다**는 것이지
   사람이 출력을 읽고 판단하는 자리로 두지 않는 것이다.
 
+# 네이티브 모듈은 `expo install`로 넣는다 — 2026-09-17
+
+**`npx expo install <pkg>`** 을 쓴다. `pnpm add`도, package.json을 손으로 고치는 것도 안 된다.
+
+`expo install`은 편의 래퍼가 아니라 **`expo/bundledNativeModules.json`을 읽어
+SDK가 못 박은 버전을 고르는 그 자리**다. 우회하면 설치만 되고 **버전 결정이 사라진다.**
+
+2026-09-17에 그렇게 깨졌다. `expo install`이 무관한 패키지에서 `ERR_PNPM_ENOENT`로
+죽길래 손으로 적었더니, pnpm이 피어를 자동 설치하며 최신을 집었다:
+
+    Expo가 못 박은 값   reanimated 4.5.0 · worklets 0.10.0
+    들어간 값           reanimated 4.6.0 · worklets 0.12.2
+    expo-modules-core   피어 범위가 ^0.10.0까지 — 겹치는 버전이 없다
+
+C++ 컴파일에서 죽었다(`no member named 'executeSync'`). **로컬에는 아무 신호도 없었다** —
+네이티브가 로컬에서 안 돌아서 설치도 타입 검사도 통과했고, 15분짜리 EAS 빌드가
+죽고 나서야 보였다.
+
+⚠ **`expo install --check`가 이걸 못 잡는다.** package.json에 없는 **자동 설치 피어**는
+  목록에 아예 안 나온다.
+
+  그래서 **네이티브 모듈의 피어도 `expo install`로 같이 넣어 못 박는다** —
+  선언이 없으면 pnpm이 자동 설치하면서 다음 install마다 최신을 다시 집는다.
+  이건 위의 「손으로 적지 마라」와 어긋나지 않는다. 금지되는 것은 **버전을 손으로
+  정하는 것**이지 package.json에 이름이 오르는 것이 아니다 —
+  버전은 `bundledNativeModules.json`이 정하고, 선언은 그 결정을 **고정**한다.
+
+      npx expo install react-native-keyboard-controller react-native-reanimated react-native-worklets
+
+⚠ `ERR_PNPM_ENOENT [importPackage ...]`가 나면 **`rm -rf node_modules` 후 재설치**다.
+  `node-linker=hoisted`라 pnpm이 기존 디렉터리 이름을 바꾸다 죽는다 — 깨끗하면 안 겪는다.
+  (`--force`도 `--config.package-import-method=copy`도 안 통했다. 지우는 것만 통했다.)
+
 # 코드 작성 규칙
 
 ## 주석은 결론이 아니라 전제를 적는다

@@ -502,6 +502,110 @@ HomeScreen에 `remindNotVoted`가 이미 있었는데 **정의만 되고 아무�
 | ~~**18**~~ | ~~**가입 폼에서 ANR**~~ — **환경 문제로 확정, 닫는다 (2026-09-17)** | ⚠ **앱 결함이 아니었다. 재현 조건을 갖춰서 재고 닫았다.**<br>**닫은 근거 — 환경을 정상으로 만들고 같은 절차를 돌렸다.** AVD를 RAM 4GB · VM heap 512MB로 올리고 **Cold Boot Now**로 띄웠다:<br>　`RAM 4.01GB · 여유 2.34GB` / `I/O wait 0%` / `idle 400/400%` / `load 0.65`<br>　(문제 때: `여유 133MB` / `iow 76%` / `load 33~50` / ANR이 난 것은 `com.android.phone`)<br>　→ **이름·이메일·비밀번호 입력이 한 번에 끝났고 ANR이 없었다.** 앱 ANR 로그도 없다.<br>　→ 비밀번호도 **정확히 12자**로 들어갔다(문제 때는 13자가 DEL 25번에도 안 지워졌다).<br><br>⚠ **곁다리로 같이 의심했던 「체크박스가 안 눌린다」도 앱 결함이 아니었다.** 환경이 깨끗한데도 재현돼서 별개 문제인 줄 알았는데, 재보니 **키보드가 그 자리를 덮고 있었다** — `dumpsys input_method`의 `mInputShown=true`였고, BACK으로 키보드만 내리고 같은 좌표를 누르니 **한 번에 눌렸다**(`가입하기 enabled=true`).<br>　**내 조작 문제였다.** uiautomator 덤프는 레이아웃 좌표를 주지 화면을 덮은 IME를 안 알려준다 — 「보이는 좌표」와 「누를 수 있는 좌표」가 다르다.<br>　⚠ 다음에 탭이 안 먹으면 **`dumpsys input_method \| grep mInputShown`부터** 본다. 앱을 의심하기 전에 키보드를 의심한다. |
 | **19** | **iOS의 `KeyboardAvoidingView` 분기 — 안드로이드 출시엔 무관 (2026-09-17)** | ⚠ **지금 고칠 것이 아니다.** 안드로이드만 출시하므로 이 분기는 한 번도 안 돈다. iOS를 시작할 때 꺼내는 항목이다.<br>**무엇인가:** 입력 폼 넷이 `behavior={Platform.OS === 'ios' ? 'padding' : undefined}`를 쓴다. **안드로이드에서는 `undefined`라 `KeyboardAvoidingView`가 아무 일도 안 한다** — 키보드 회피는 전적으로 매니페스트의 `windowSoftInputMode=adjustResize`가 한다(빌드 산출물에서 `0x10` 확인).<br>⚠ **그래서 「KeyboardAvoidingView가 있으니 괜찮겠지」가 함정이었다.** 2026-09-17에 제출 버튼이 키보드에 덮이는 결함(`88d3130`)을 찾을 때, 이 컴포넌트가 있다는 것이 오히려 판단을 늦췄다. 있는 것과 도는 것은 다르다.<br>**iOS에서 재야 할 것:** iOS에는 `adjustResize`가 없어서 **`behavior='padding'`이 유일한 회피 수단**이다. 그런데 지금 구조는 버튼을 `ScrollView` 안에 둔 것이라 padding과 겹칠 때 어떻게 되는지 안 봤다 — 이중으로 밀려 버튼이 화면 위로 튀어 오를 수 있다. ⚠ 맥이 없어 **iOS는 한 번도 못 돌려 봤다**(서랍 11번과 같은 제약).<br>**볼 화면:** SignUp · Login · ForgotPassword · ResetPassword · TeamStart 다섯. `keyboardform.check`가 구조는 붙들지만 **화면에 어떻게 보이는지는 못 본다.** |
 
+### 팀이 하나면 두 번째 팀에 못 간다 — 설계 (2026-09-17)
+
+⭐ **출시 전 필수다.** 키보드 건이 확정된 뒤 고친다. 여기는 **설계만** 적는다.
+
+#### 무엇인가 — 재서 확인한 것
+
+㉮ 시험용으로 TeamStartScreen에 닿으려다 나왔다. 앱 안에 **길이 없었다.**
+
+    TeamHomeScreen.tsx:472   onPressTitle={hasMultipleTeams ? () => setTeamSwitchVisible(true) : undefined}
+    TeamHomeScreen.tsx:87    const hasMultipleTeams = memberships.length > 1
+    TeamHomeScreen.tsx:722   onCreateOrJoin={() => navigation.navigate('TeamAddAnother')}
+
+`TeamAddAnother`(=TeamStartScreen)로 가는 `navigate`가 **저장소에 이 한 줄뿐이고**,
+그 시트는 팀이 **둘 이상일 때만** 열린다. 팀이 정확히 하나면:
+
+  · 새 팀을 **만들 수 없다**
+  · 초대 코드로 **참여할 수 없다**
+  · 초대 **링크를 받아도 쓸 수 없다** — `pendingInviteCode`를 읽는 자리가
+    `TeamStartScreen.tsx:60-65` **하나뿐**이라, 그 화면에 못 가면 코드가
+    스토어에 들어앉은 채 영영 소비되지 않는다
+
+⚠ **야홍 팀원 6명 전원이 이 상태다.** 다른 팀 초대를 받으면 그대로 막힌다.
+
+⚠ **닭과 달걀이다.** 두 번째 팀을 만들려면 시트가 필요하고, 시트가 열리려면
+  두 번째 팀이 이미 있어야 한다. 팀 0개(가입 직후)에서만 빠져나갈 수 있는 구조다.
+
+#### ⑴ 진입점 — 시트를 항상 연다
+
+    - onPressTitle={hasMultipleTeams ? () => setTeamSwitchVisible(true) : undefined}
+    + onPressTitle={() => setTeamSwitchVisible(true)}
+
+⚠ **`teamswitch.check` #6이 지금 이 조건을 못 박고 있다.** 고치려면 그 단언도 같이
+  바꿔야 하는데, **그 단언의 근거가 틀렸다는 것을 먼저 적어야 한다:**
+
+    '팀이 하나여도 제목이 눌린다 — 셰브론이 붙고 빈 시트가 열린다'
+
+  **시트는 빈 적이 없다.** 같은 검사 #8이 `onCreateOrJoin`이 있다고 단언한다 —
+  즉 팀이 하나여도 시트에는 내 팀 하나 + 「새 팀 만들기/참여」가 있다.
+  「빈 시트」는 근거가 아니라 **짐작이었다.** 검사를 바꿀 때 이 문장을 고친다.
+  (anchor.ts 「단언을 넣기 전에」 — 실패할 수 있는가만 보고 **전제가 참인가**를 안 봤다)
+
+⚠ 남는 판단 하나: **팀이 하나일 때 제목 옆 셰브론이 「전환할 것이 있다」로 읽히는가.**
+  읽힌다면 셰브론 대신 시트 안에서 구분하거나(현재 팀에 체크가 이미 붙는다),
+  아이콘을 `chevron-down`이 아니라 `add`/`swap` 쪽으로 바꾼다.
+  ⚠ 아이콘을 바꾸면 **접근성 문구도 같이 본다** — AGENTS.md의 「아이콘 이름이 아니라
+    `onPress`를 보고 정해라」가 그대로 걸리는 자리다.
+
+#### ⑵ 팀이 있는 사용자의 초대 링크 — 어디서 소비하나
+
+딥링크는 `App.tsx:57-60`에서 `pendingInviteStore.setCode(code)`만 하고 끝난다.
+소비는 `TeamStartScreen`이 하고, 그 화면은 팀이 없을 때만 저절로 뜬다.
+
+**설계: 소비 자리를 옮기지 않고, 그 화면으로 보낸다.**
+
+    activeTeam이 있고 pendingInviteCode가 있으면 → navigate('TeamAddAnother')
+
+  근거 셋:
+  · `TeamStartScreen`이 이미 코드를 **읽어서 칸에 채우고 지운다**(60-65줄).
+    소비 로직을 두 벌로 만들면 갈린다.
+  · **어느 팀에 들어가는지 사용자가 보고 눌러야 한다.** 링크를 열자마자 조용히
+    가입시키면 「내가 뭘 한 거지」가 된다. 화면을 띄우고 「참여하기」를 누르게 한다.
+  · 나온 뒤가 이미 설계돼 있다 — `TeamStartScreen`은 스택에 얹히면 닫기 버튼을 내고
+    (`navigation.canGoBack()`), 팀이 바뀌면 스스로 `goBack()`한다.
+
+⚠ **어디에 두는가가 남은 판단이다.** `App.tsx`에는 `navigation`이 없다.
+  후보 둘: ⓐ `RootNavigator` 안의 `useEffect`(activeTeam·pendingInviteCode를 본다)
+  ⓑ `TeamHomeScreen`의 `useEffect`. **ⓐ가 맞다** — 홈이 아닌 탭에 서 있어도 걸려야 하고,
+  이미 `RootNavigator`가 팀 전환 때 스토어를 비우는 같은 성격의 자리를 갖고 있다.
+
+⚠ **팀 조회가 끝나기 전에는 판단하지 마라.** `loaded`가 false인 동안 `activeTeam`은
+  null이라, 그때 보내면 팀 있는 사용자에게도 팀 0개 경로가 돈다.
+  조건은 `loaded && pendingInviteCode`여야 한다.
+
+#### ⑶ 이미 멤버인 팀의 초대를 다시 열면
+
+**지금:** `teamStore.joinTeam` 254-275줄. RPC가 `on conflict do nothing`이라
+이미 멤버면 **null**을 주고, `error: '이미 가입한 팀이에요'`가 뜬다.
+**틀리진 않지만 막다른 길이다** — 그 팀으로 가지도 않고, 어느 팀인지도 안 알려준다.
+
+**설계: 부르기 전에 클라이언트에서 갈라 「전환」으로 처리한다.**
+
+    const mine = memberships.find((m) => m.team.invite_code === code);
+    if (mine) { setActiveTeam(mine.team.id); /* 「이미 참여 중인 팀이에요」 */ return; }
+
+  ⚠ **새 질의도 마이그레이션도 필요 없다.** `fetchMyMemberships`가
+    `teams.select('*')`라 `invite_code`가 이미 모든 membership에 딸려 온다
+    (`teamService.ts:54`, `database.ts:40`). 재서 확인했다.
+
+  ⚠ **그래도 `joinTeam`의 null 갈래를 지우지 마라.** 클라이언트 목록은 낡을 수 있고
+    (다른 기기에서 가입했다면), 그때는 RPC가 여전히 null을 준다.
+    앞의 것은 **좋은 경로**고 뒤의 것은 **안전망**이다 — 둘 다 있어야 한다.
+
+  ⚠ 문구를 가른다. 「이미 가입한 팀이에요」(막힘)가 아니라
+    **「이미 참여 중인 팀이에요 — {팀 이름}으로 이동할게요」**(진행)다.
+    AGENTS.md 「같은 사실은 같은 말로」의 반대 자리다 — **다른 사실이라 말이 달라야 한다.**
+
+#### 무엇을 재면 갈리나
+
+  · 팀이 하나인 계정에서 제목을 눌러 시트가 열리고 「새 팀 만들기」로 넘어가는가
+  · 팀이 있는 상태에서 `kickday://join?code=…`를 열면 그 화면이 뜨고 코드가 채워지는가
+  · **이미 멤버인 팀의 코드**를 열면 오류가 아니라 그 팀으로 전환되는가
+  · 팀 조회 중(`loaded=false`)에 링크를 열어도 팀 0개 경로로 안 빠지는가
+
+
 ### 총무 여럿 — 미래 대비 (2026-09-14 실측)
 
 ⭐ **총무가 둘 이상인 팀이 0이다.** 야홍은 총무 1 · 팀원 5다.

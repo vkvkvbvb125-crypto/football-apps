@@ -194,27 +194,42 @@ export function TeamStartScreen() {
           팀은 나중에 여러 개 만들 수도 있어요.{'\n'}초대 링크를 받았다면 링크만 눌러도 바로 참여됩니다.
         </Text>
 
-        {pick === 'join' ? (
-          <Pressable
-            accessibilityRole="button"
-            disabled={code.length < CODE_LENGTH || loading}
-            onPress={handleJoin}
-            style={[styles.cta, (code.length < CODE_LENGTH || loading) && { opacity: 0.4 }]}
-          >
-            <Text style={styles.ctaText}>{loading ? '참여 중…' : '참여하기'}</Text>
-          </Pressable>
-        ) : pick === 'create' ? (
-          <Pressable
-            accessibilityRole="button"
-            disabled={!teamName.trim() || loading}
-            onPress={handleCreate}
-            style={[styles.cta, (!teamName.trim() || loading) && { opacity: 0.4 }]}
-          >
-            <Text style={styles.ctaText}>{loading ? '만드는 중…' : '만들기'}</Text>
-          </Pressable>
-        ) : null}
-
         </ScrollView>
+
+        {/*
+          ⚠ **버튼은 ScrollView 밖, KAV 안이다.** 안에 두면 작은 화면에서 키보드 아래로
+            들어간다 — 2026-09-18에 1080x1920에서 쟀다(버튼 상단 1373, 잘림선 1048).
+            큰 화면(1080x2400)에서는 여유 58px로 **통과했다.** 큰 화면만 보면 안 보인다.
+
+          창이 키보드 위로 줄면 그 마지막 형제가 키보드 바로 위에 선다.
+          SignUpScreen이 같은 이유로 같은 모양이다(237cc87).
+
+          ⚠ 이 화면은 **내용이 짧아 스크롤로 버튼을 데려올 수도 없다** —
+            안에 두면 닿을 방법 자체가 없다.
+        */}
+        {pick === 'join' ? (
+          <View style={styles.ctaBar}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={code.length < CODE_LENGTH || loading}
+              onPress={handleJoin}
+              style={[styles.cta, (code.length < CODE_LENGTH || loading) && { opacity: 0.4 }]}
+            >
+              <Text style={styles.ctaText}>{loading ? '참여 중…' : '참여하기'}</Text>
+            </Pressable>
+          </View>
+        ) : pick === 'create' ? (
+          <View style={styles.ctaBar}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!teamName.trim() || loading}
+              onPress={handleCreate}
+              style={[styles.cta, (!teamName.trim() || loading) && { opacity: 0.4 }]}
+            >
+              <Text style={styles.ctaText}>{loading ? '만드는 중…' : '만들기'}</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         {/* 절대배치라 형제 중 마지막에 둬야 한다 —
             앞에 두면 뒤따르는 콘텐츠가 위를 덮어서 눌러도 반응하지 않는다 */}
@@ -249,6 +264,8 @@ const makeStyles = (colors: Palette) =>
   /* gap은 스크롤 내용 쪽으로 옮겼다 — root에 두면 ScrollView 한 덩어리에만 걸린다.
      flexGrow로 내용이 짧아도 화면을 채워 아래 여백이 비지 않게 한다. */
   scrollBody: { flexGrow: 1, gap: 18, paddingBottom: 8 },
+  /* 버튼이 ScrollView 밖으로 나가면서 생긴 바. 스크롤 내용과 붙지 않게 위를 띄운다 */
+  ctaBar: { paddingTop: 12 },
   signOutRow: { position: 'absolute', top: 8, right: 24 },
   signOutText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   greetRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

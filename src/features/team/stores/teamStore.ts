@@ -138,7 +138,18 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   error: null,
   loadError: null,
   loadMemberships: async (preferTeamId) => {
-    set({ loading: true, error: null, loadError: null });
+    /*
+      ⚠ **loadError를 여기서 지우지 않는다. 성공했을 때만 지운다.**
+
+      지우면 「다시 시도」를 누르는 순간 오류 화면이 사라지고, loaded는 이미 true인데
+      activeTeam은 아직 null이라 **「팀 시작」 화면이 튀어나온다** — 팀이 있는 사람에게
+      팀을 만들라고 권하는 그 화면이고, 이 갈래를 만든 이유가 바로 그걸 막는 것이었다.
+      2026-09-17에 기기에서 잡았다(기내 모드로 실패시킨 뒤 「다시 시도」).
+
+      화면은 loading을 읽어 버튼을 「불러오는 중…」으로 바꾼다(TeamLoadErrorScreen).
+      그러니 **실패 화면을 유지한 채 진행 표시만 바뀌는 것**이 원래 의도였다.
+    */
+    set({ loading: true, error: null });
 
     /*
       ⚠ **Promise.race가 아니라 AbortSignal이다.**
@@ -179,7 +190,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       // 그 팀에서 나갔거나 팀이 사라졌으면 첫 팀으로 떨어진다
       const activeTeam = memberships.find((m) => m.team.id === wanted) ?? memberships[0] ?? null;
 
-      set({ memberships, activeTeam, loaded: true });
+      set({ memberships, activeTeam, loaded: true, loadError: null });
       if (activeTeam) storeTeamId(activeTeam.team.id);
       get().loadMembers();
     } catch (err) {

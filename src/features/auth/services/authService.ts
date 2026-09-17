@@ -8,6 +8,8 @@ import { supabase } from '../../../lib/supabase';
 // 웹에서 팝업으로 열린 카카오 인증 창이 리다이렉트 완료를 opener 창에 알리기 위해 필요 (네이티브에서는 no-op)
 WebBrowser.maybeCompleteAuthSession();
 
+import { EMAIL_CONFIRM_REDIRECT } from '../authRedirects';
+
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_CLIENT_ID;
 const redirectTo = Linking.createURL('auth-callback');
@@ -29,10 +31,11 @@ const redirectTo = Linking.createURL('auth-callback');
     있지만 모양이 다르다 — 재설정은 링크의 토큰으로 **앱이 세션을 세워야** 해서
     (completeRecovery) 웹 페이지가 대신 끝낼 수 없다. 따로 다룬다.
 
-  ⚠ 이 주소는 Supabase의 **Redirect URLs 허용목록**에도 있어야 한다
-    (Authentication > URL Configuration). 없으면 Site URL로 떨어진다.
+  ⚠ **값 자체는 `../authRedirects`에 있다.** 여기 두면 스크립트가 못 읽는다 —
+    이 파일은 expo-linking·supabase를 import해서 node에서 안 열린다. 시험용 재발송이
+    같은 redirect를 넘겨야 해서 import 없는 파일로 갈라 뒀다(2026-09-18).
 */
-const emailConfirmRedirectTo = 'https://kickday.app/auth/confirm';
+const emailConfirmRedirectTo = EMAIL_CONFIRM_REDIRECT;
 
 /**
  * 네이버에 넘기는 콜백 주소.

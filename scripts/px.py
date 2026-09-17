@@ -1,4 +1,5 @@
-# px.py <file.png> <x> <y> — 그 좌표의 RGB를 찍는다
+# px.py <file.png> <x> <y>        — 그 좌표의 RGB를 찍는다
+# px.py <file.png> <x> <y1>-<y2>  — 그 열을 y1..y2까지 훑어 줄마다 찍는다
 #
 # ── 왜 있나 ────────────────────────────────────────────────────────
 # 「흰색은 아닌 것 같다」로 끝나는 확인이 이 저장소에서 반복됐다.
@@ -34,13 +35,20 @@
 # ── 쓰는 법 ────────────────────────────────────────────────────────
 #   adb exec-out screencap -p > f.png
 #   python scripts/px.py f.png 20 1200      # 배경 한 점
+#   python scripts/px.py f.png 540 1400-1600 | awk '...'   # 그 열의 모서리를 찾는다
+#
+# ⚠ **구간 읽기는 모서리를 찾으려고 붙였다.** 한 점 읽기로는 「키보드 상단이 어디냐」를
+#   못 잰다 — 답이 좌표 자체라서, 찍어 볼 좌표를 이미 알아야 하는 자리가 된다.
+#   2026-09-17에 키보드가 제출 버튼을 덮는지 재려다 막혔다. 판정 기준이
+#   「버튼 하단 < 키보드 상단」인데 양쪽 다 모서리다.
 #
 # ⚠ 좌표는 **원본 픽셀**이다(이 프로젝트 기기는 1080x2400).
 #   스크린샷을 축소해서 보고 그 좌표를 쓰면 엉뚱한 점을 읽는다.
 # ⚠ 한 점만 읽는다. 「영역의 평균」이 필요하면 여러 점을 찍어 눈으로 견줘라 —
 #   평균을 내는 순간 계단이 뭉개져서 밴딩을 못 본다.
 import sys, zlib, struct
-f, X, Y = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+f, X, arg = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+Y0, Y1 = (int(v) for v in arg.split('-')) if '-' in arg else (int(arg), int(arg))
 d = open(f, 'rb').read()
 i, idat, w, h, bd, ct = 8, b'', 0, 0, 0, 0
 while i < len(d):
@@ -65,7 +73,10 @@ for y in range(h):
             p = a + b - c; pa, pb, pc = abs(p-a), abs(p-b), abs(p-c)
             pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
             line[x] = (line[x] + pr) & 255
-    if y == Y:
+    if Y0 <= y <= Y1:
         o = X * ch
-        print(f, f"({X},{Y})", tuple(line[o:o+3])); break
+        rgb = tuple(line[o:o+3])
+        # 한 점이면 예전 형식 그대로 — 구간이면 줄마다 「y r g b」로 찍어 awk에 넘긴다
+        print(f, f"({X},{y})", rgb) if Y0 == Y1 else print(y, *rgb)
+        if y == Y1: break
     prev = line

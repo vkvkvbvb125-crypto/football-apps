@@ -4,7 +4,7 @@
 // 이름 입력 폼 + 실제 키보드 입력을 붙였다.
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView,Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { TextInput as RNTextInput } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -78,7 +78,14 @@ export function TeamStartScreen() {
 
   return (
     <ScreenGradient>
-      <View style={styles.root}>
+      {/*
+        ⚠ **behavior는 "padding"이다. `Platform.OS === 'ios' ? ... : undefined`로 쓰면
+          안드로이드에서 아무 일도 안 한다** — 창이 안 줄어서 ScrollView에 스크롤할
+          것조차 안 생긴다. 2026-09-17에 네 화면에서 그 꼴로 깨져 있었다(3ccf014).
+        ⚠ 이 화면은 내용이 짧아 스크롤로 버튼을 데려올 수 없다. KAV가 창을 키보드
+          위로 줄여 주는 것이 **유일한** 수단이다.
+      */}
+      <KeyboardAvoidingView style={styles.root} behavior="padding">
         {/*
           ⚠ **스크롤이 있어야 한다. 없으면 키보드가 「만들기」를 덮는다.**
 
@@ -231,7 +238,7 @@ export function TeamStartScreen() {
             <Text style={styles.signOutText}>로그아웃</Text>
           </Pressable>
         )}
-      </View>
+      </KeyboardAvoidingView>
     </ScreenGradient>
   );
 }

@@ -1,56 +1,57 @@
 /*
   입력 폼의 제출 버튼이 키보드에 가려지지 않는가.
 
-  ── 왜 이 검사가 있나 ──────────────────────────────────────────────
-  안드로이드는 `windowSoftInputMode=adjustResize`로 **창을 줄인다.** 그런데
-  `</ScrollView>` **뒤에 고정된 footer는 줄어든 창의 바닥에 그대로 붙어**
-  키보드 아래로 들어간다. 스크롤해도 footer는 안 움직이니 **닿을 방법이 없다.**
+  ── 기준 — 2026-09-17에 기기에서 재서 정했다 ──────────────────────
+  판정은 **버튼 하단 < 키보드 상단**이다. 조건은 **마지막 입력칸에 포커스한 채
+  스크롤하지 않은 상태**. 재는 수단은 `scripts/kbmeasure.sh`다(창 관리자의 IME 인셋 +
+  uiautomator의 bounds).
 
-  ⚠ `KeyboardAvoidingView`가 있어도 안 막힌다. 이 저장소는 `behavior`를
-    `Platform.OS === 'ios' ? 'padding' : undefined`로 주므로 **안드로이드에서는
-    아무 일도 안 한다.** 「KeyboardAvoidingView가 있으니 괜찮겠지」가 함정이다.
+  **구조로 지킬 수 있는 것은 하나뿐이다: 제출 버튼이 KeyboardAvoidingView 안에 있고,
+  그 KAV의 behavior가 안드로이드에서 살아 있는 것.**
 
-  2026-09-17에 기기에서 확인했다:
-      SignUpScreen         「가입하기」가 화면 밖 — 키보드를 내려야만 눌린다
-      TeamStartScreen      ScrollView가 아예 없어서 스크롤조차 안 됐다
-      ForgotPasswordScreen 같은 구조
-      LoginScreen          버튼이 ScrollView 안 → 키보드 위에 남는다 (정상)
+  ⚠ **「버튼이 ScrollView 안에 있는가」는 기준이 아니었다.** 이 검사가 그렇게 보다가
+    두 번 헛짚었다:
 
-  ⚠ **TeamStartScreen은 가입 직후 반드시 지나는 화면**이다. 첫인상에서 막히고,
-    사용자는 「만들기가 안 눌린다」로 읽는다.
+      ① 88d3130   버튼을 ScrollView 안으로 옮기고 「고쳤다」고 했다. 검사는 통과했다.
+                  **화면에서는 안 닿았다** — behavior가 ios 분기라 KAV가 아무 일도
+                  안 했고, 창이 안 줄어드니 스크롤할 것조차 없었다.
+      ② 3ccf014   behavior="padding"으로 살렸다. 닿기는 하는데 **스크롤해야 보였다**.
+                  작은 화면(1080x1920)에서는 두 번 스크롤해야 했다.
+
+    갈린 것은 **KAV 안이냐**였다. 창이 키보드 위로 줄면 그 안의 마지막 형제는
+    키보드 바로 위에 선다 — ScrollView 안이든 밖이든.
+
+  ── 확정된 모양 ───────────────────────────────────────────────────
+      <KeyboardAvoidingView behavior="padding">     ← 창을 키보드 위로 줄인다
+        <header/>
+        <ScrollView keyboardShouldPersistTaps="handled"> … </ScrollView>
+        <footer><제출 버튼/></footer>                ← 줄어든 창의 바닥 = 키보드 바로 위
+      </KeyboardAvoidingView>
+
+  ⚠ 버튼을 ScrollView **안**에 둬도 된다 — Login·Forgot·ResetPassword가 그 모양이고
+    내용이 짧아 통과한다. **긴 폼(SignUp)만 밖으로 꺼냈다.** 안에 두면 스크롤해야
+    보이기 때문이다. 둘 다 KAV 안이라는 점이 같다.
+
+  ── 버린 길 둘 (기기에서 재고 버렸다) ─────────────────────────────
+  ⓐ `KeyboardAwareScrollView` + 큰 `bottomOffset` — 큰 화면에서는 버튼이 올라오는데
+     **작은 화면에서 포커스된 입력칸이 위로 잘려 나갔다.** 버튼과 입력칸을 맞바꾸는
+     손잡이라 답이 아니다.
+  ⓑ `KeyboardStickyView`로 버튼을 띄우기 — 버튼이 **포커스된 입력칸 위에 겹쳐
+     그려졌다.** 스크롤 영역은 키보드 상단까지인데 버튼이 그 위에 떠서다.
+  둘 다 `react-native-keyboard-controller`가 필요했다. **확정된 방법은 RN만으로 된다.**
 
   ── 이 검사가 보는 것 ─────────────────────────────────────────────
-  입력 폼 화면마다 ⑴ ScrollView가 있고 ⑵ 제출 버튼(styles.cta)이 그 **안**에 있고
-  ⑶ `keyboardShouldPersistTaps`가 걸려 있는가.
+  ⑴ ScrollView가 있고 `keyboardShouldPersistTaps`가 걸려 있다
+     (⚠ 없으면 키보드가 떠 있을 때 **첫 탭이 키보드를 내리는 데만 쓰인다**)
+  ⑵ KeyboardAvoidingView가 있고 `behavior="padding"`이다 — 안드로이드에서 죽어 있지 않다
+  ⑶ 제출 버튼(styles.cta)이 **전부** 그 KAV 안에 있다
 
-  ⚠ ⑶이 없으면 키보드가 떠 있을 때 **첫 탭이 키보드를 내리는 데만 쓰이고**
-    버튼에 안 닿는다 — 「한 번 눌렀는데 아무 일도 안 난다」가 된다.
+  ⚠ 못 보는 것: 실제 픽셀은 **기기에서 재야** 안다(anchor.ts 「단언이 볼 수 없는 것」).
+    이 검사는 「구조가 그럴 수 있는 모양인가」까지다.
 
-  ── 2026-09-17에 기기에서 재고 안 것 ──────────────────────────────
-  「버튼이 ScrollView 안에 있다」만으로는 **근거가 안 됐다.** 구조는 맞는데 화면에서
-  안 닿았다. 원인은 `behavior`가 `Platform.OS === 'ios' ? 'padding' : undefined`라
-  **안드로이드에서 KeyboardAvoidingView가 아무 일도 안 한 것**이었다.
-  창이 안 줄어드니 ScrollView의 뷰포트가 화면 전체(2400)였고, 내용이 그 안에 다
-  들어가서 **스크롤할 것이 없었다.** 버튼은 안에 있는데 영영 못 닿는다.
-
-  `behavior="padding"`으로 바꾸고 잰 값(1080x2400, 키보드 상단 1517):
-
-      Login    버튼 하단 1356 → 1031   여유 161 → 486   (자동으로 올라온다)
-      SignUp   1785(키보드 아래 268) → 스크롤하면 1320  여유 197
-      Forgot   847 그대로                여유 670
-
-  ⚠ **SignUp은 스크롤해야 보인다.** 포커스를 마지막 칸에 둬도 안 올라온다 —
-    RN의 ScrollView는 안드로이드에서 포커스 자동 스크롤을 안 한다.
-    작은 화면(1080x1920, 키보드 상단 1048)에서는 **두 번** 스크롤해야 한다.
-    「닿는다」로는 고쳐졌고 「보인다」로는 아직이다.
-
-  ── 이 검사가 보는 것 (추가) ──────────────────────────────────────
-  ⑷ KeyboardAvoidingView의 behavior가 **안드로이드에서 죽어 있지 않은가.**
-
-  ⚠ 못 보는 것: 버튼이 실제로 키보드 위에 오는지는 **기기에서 재야** 안다.
-    이 검사는 「구조가 그럴 수 있는 모양인가」까지다(anchor.ts 「단언이 볼 수 없는 것」).
-    재는 수단은 `scripts/kbmeasure.sh`다 — 창 관리자의 IME 인셋과 uiautomator의
-    bounds를 읽어 「버튼 하단 < 키보드 상단」을 숫자로 낸다.
+  ⚠ **주석을 걷어내고 본다.** 안 걷으면 위 설명 안의 `</ScrollView>`·`behavior=` 글자가
+    코드로 잡힌다. 2026-09-17에 실제로 그랬다 — 근거 주석을 달자마자 검사가 실패했고,
+    코드가 아니라 **내가 쓴 주석**이 원인이었다(anchor.ts 「사본을 셀 때」).
 */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -86,14 +87,9 @@ for (const f of FORMS) {
   const src = read(f);
   const name = f.split('/').pop();
 
-  /* ⑴ 스크롤이 있는가 */
+  /* ⑴ 스크롤이 있고 첫 탭을 키보드가 먹지 않는다 */
   const open = src.indexOf('<ScrollView');
-  assert.ok(open > 0, `${name}에 ScrollView가 없다 — 키보드가 덮으면 스크롤로도 못 닿는다`);
-
-  const close = src.indexOf('</ScrollView>', open);
-  assert.ok(close > open, `${name}의 </ScrollView>를 못 찾았다`);
-
-  /* ⑶ 첫 탭을 키보드가 먹지 않게 */
+  assert.ok(open > 0, `${name}에 ScrollView가 없다 — 내용이 길어지면 닿을 방법이 없다`);
   const tag = src.slice(open, src.indexOf('>', open));
   assert.ok(
     /keyboardShouldPersistTaps/.test(tag),
@@ -101,49 +97,48 @@ for (const f of FORMS) {
       `키보드가 떠 있으면 첫 탭이 키보드를 내리는 데만 쓰인다`
   );
 
+  /* ⑵ KAV가 안드로이드에서 살아 있는가 */
+  const kavOpen = src.indexOf('<KeyboardAvoidingView');
+  assert.ok(kavOpen > 0, `${name}에 KeyboardAvoidingView가 없다 — 창이 키보드 위로 안 줄어든다`);
+  const kavClose = src.lastIndexOf('</KeyboardAvoidingView>');
+  assert.ok(kavClose > kavOpen, `${name}의 </KeyboardAvoidingView>를 못 찾았다`);
+
+  const kavTag = src.slice(kavOpen, src.indexOf('>', kavOpen));
+  assert.ok(
+    !/Platform\.OS/.test(kavTag),
+    `${name}의 behavior가 플랫폼으로 갈린다 — 안드로이드에서 undefined면 ` +
+      `KeyboardAvoidingView가 아무 일도 안 한다. 창이 안 줄어서 스크롤할 것조차 안 생긴다`
+  );
+  assert.ok(
+    /behavior="padding"/.test(kavTag),
+    `${name}의 KeyboardAvoidingView에 behavior="padding"이 없다 — ` +
+      `기기에서 이 값으로 재서 정했다(2026-09-17)`
+  );
+
   /*
-    ⑵ 제출 버튼이 스크롤 **안**에 있는가.
+    ⑶ 제출 버튼이 **전부** KAV 안에 있는가.
 
-    ⚠ 위치로 본다 — 「styles.cta가 파일에 있는가」로 보면 밖에 있어도 통과한다.
-      이 검사가 막으려는 것이 정확히 「밖에 있는 것」이라 자리를 봐야 한다.
+    ⚠ 하나만 보면 안 된다 — TeamStartScreen은 「참여하기」와 「만들기」 둘이 같은
+      styles.cta를 쓴다. 첫 번째만 보면 두 번째가 밖으로 나가도 통과한다
+      (anchor.ts 「하나와 전부」).
+    ⚠ ScrollView 안이냐 밖이냐는 **안 본다.** 그게 기준이 아니라는 것이
+      이 검사가 두 번 헛짚고 알아낸 것이다. 위 머리말 참고.
   */
-  const cta = src.indexOf('styles.cta');
-  assert.ok(cta > 0, `${name}에서 제출 버튼(styles.cta)을 못 찾았다 — 이름이 바뀌었으면 이 검사도 고쳐라`);
+  const ctas: number[] = [];
+  for (let at = src.indexOf('styles.cta'); at !== -1; at = src.indexOf('styles.cta', at + 1)) ctas.push(at);
   assert.ok(
-    cta > open && cta < close,
-    `${name}의 제출 버튼이 ScrollView 밖에 있다 — ` +
-      `adjustResize는 창만 줄이고 고정 footer는 키보드 아래에 남는다. 스크롤해도 안 움직인다`
+    ctas.length > 0,
+    `${name}에서 제출 버튼(styles.cta)을 못 찾았다 — 이름이 바뀌었으면 이 검사도 고쳐라`
   );
-}
-
-/*
-  ⑷ behavior가 안드로이드에서 죽어 있지 않은가.
-
-  ⚠ **이 단언이 이 검사에서 유일하게 기기 측정에서 나온 것이다.** 나머지 셋은
-    「구조가 그럴 수 있는가」인데, 이건 「그 구조가 안드로이드에서 실제로 동작하는가」다.
-    2026-09-17 전까지 네 화면 모두 ios 분기였고 검사는 전부 통과했다.
-*/
-{
-  const AVOIDERS = FORMS.filter((f) => read(f).includes('KeyboardAvoidingView'));
-  assert.ok(
-    AVOIDERS.length > 0,
-    'KeyboardAvoidingView를 쓰는 폼이 하나도 없다 — 이름이 바뀌었으면 이 검사도 고쳐라'
-  );
-  for (const f of AVOIDERS) {
-    const name = f.split('/').pop();
-    const src = read(f);
+  for (const at of ctas) {
     assert.ok(
-      !/behavior=\{[^}]*Platform\.OS[^}]*undefined[^}]*\}/.test(src),
-      `${name}의 behavior가 안드로이드에서 undefined다 — KeyboardAvoidingView가 ` +
-        `아무 일도 안 한다. 창이 안 줄어서 ScrollView에 스크롤할 것조차 안 생긴다`
-    );
-    assert.ok(
-      /behavior="padding"/.test(src),
-      `${name}에 behavior="padding"이 없다 — 기기에서 이 값으로 재서 정했다(2026-09-17)`
+      at > kavOpen && at < kavClose,
+      `${name}의 제출 버튼이 KeyboardAvoidingView 밖에 있다(${at}) — ` +
+        `창이 줄어도 그 버튼은 안 따라와서 키보드 아래에 남는다`
     );
   }
 }
 
 console.log(
-  `keyboardform ✓ 입력 폼 ${FORMS.length}개의 제출 버튼이 스크롤 안에 있고 behavior가 안드로이드에서 살아 있다`
+  `keyboardform ✓ 입력 폼 ${FORMS.length}개: 스크롤 · behavior="padding" · 제출 버튼이 KAV 안`
 );

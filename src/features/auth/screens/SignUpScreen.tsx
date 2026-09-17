@@ -178,8 +178,17 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
             가입 확인 메일을 보냈어요. 메일함에서 인증하면 로그인할 수 있어요.
           </Text>
         )}
-      </ScrollView>
+      {/*
+        ⚠ **버튼이 ScrollView 안에 있어야 한다. 밖에 고정하면 키보드가 덮는다.**
 
+        전에는 </ScrollView> 뒤의 고정 footer였다. 안드로이드는 창을 adjustResize로
+        줄이지만 **고정 footer는 줄어든 창의 바닥에 그대로 붙어 키보드 아래로 들어간다** —
+        스크롤해도 footer는 안 움직이니 **닿을 방법이 없다.**
+        2026-09-17에 기기에서 확인했다(회원가입 화면에서 「가입하기」가 화면 밖).
+
+        안으로 넣으면 스크롤이 버튼까지 데려온다. LoginScreen·ResetPasswordScreen이
+        원래 이 모양이었고, 키보드가 떠도 버튼이 키보드 위에 남는 것을 기기에서 확인했다.
+      */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
           accessibilityRole="button"
@@ -190,6 +199,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
           <Text style={styles.ctaText}>{signingIn ? '잠시만요…' : '가입하기'}</Text>
         </Pressable>
       </View>
+      </ScrollView>
 
       {/* 약관 전문 — 읽고 바로 동의까지 할 수 있게 한다(닫고 다시 체크하러 가지 않도록).
           설정 화면도 같은 모달을 쓴다 — 조항이 바뀔 때 한쪽만 고치면 안 된다. */}

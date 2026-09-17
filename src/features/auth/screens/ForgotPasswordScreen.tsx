@@ -108,8 +108,17 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={8} style={styles.linkRow}>
           <Text style={styles.linkText}>간편 로그인으로 가입하셨나요? 로그인으로 돌아가기</Text>
         </Pressable>
-      </ScrollView>
+      {/*
+        ⚠ **버튼이 ScrollView 안에 있어야 한다. 밖에 고정하면 키보드가 덮는다.**
 
+        전에는 </ScrollView> 뒤의 고정 footer였다. 안드로이드는 창을 adjustResize로
+        줄이지만 **고정 footer는 줄어든 창의 바닥에 그대로 붙어 키보드 아래로 들어간다** —
+        스크롤해도 footer는 안 움직이니 **닿을 방법이 없다.**
+        2026-09-17에 기기에서 확인했다(회원가입 화면에서 「가입하기」가 화면 밖).
+
+        안으로 넣으면 스크롤이 버튼까지 데려온다. LoginScreen·ResetPasswordScreen이
+        원래 이 모양이었고, 키보드가 떠도 버튼이 키보드 위에 남는 것을 기기에서 확인했다.
+      */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
           accessibilityRole="button"
@@ -120,6 +129,7 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
           <Text style={styles.ctaText}>{signingIn ? '보내는 중…' : sent ? '다시 보내기' : '재설정 메일 받기'}</Text>
         </Pressable>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

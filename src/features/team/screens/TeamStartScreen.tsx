@@ -4,7 +4,7 @@
 // 이름 입력 폼 + 실제 키보드 입력을 붙였다.
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ScrollView,Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { TextInput as RNTextInput } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -79,6 +79,25 @@ export function TeamStartScreen() {
   return (
     <ScreenGradient>
       <View style={styles.root}>
+        {/*
+          ⚠ **스크롤이 있어야 한다. 없으면 키보드가 「만들기」를 덮는다.**
+
+          팀 이름을 치면 키보드가 올라오는데, 이 화면은 전에 ScrollView가 없어서
+          버튼이 키보드 아래로 들어가면 **닿을 방법이 아예 없었다** — 스크롤도 안 되고
+          창도 그만큼 안 줄었다. 사용자는 키보드를 내려야만 팀을 만들 수 있었다.
+          **가입 직후 반드시 지나는 화면**이라 첫인상에서 막히는 자리다.
+          2026-09-17에 기기에서 확인했다(1080x2400에서 버튼이 화면 밖).
+
+          ⚠ 버튼을 이 안에 둔다 — 밖에 고정하면 같은 문제가 돌아온다.
+            LoginScreen·ResetPasswordScreen이 이미 이 모양이고 키보드 위로 올라온다.
+          ⚠ keyboardShouldPersistTaps="handled" 가 없으면 키보드가 떠 있을 때
+            첫 탭이 키보드를 내리는 데만 쓰이고 버튼에 안 닿는다.
+        */}
+        <ScrollView
+          contentContainerStyle={styles.scrollBody}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={{ gap: 8, paddingTop: 10 }}>
           <View style={styles.greetRow}>
             <Text style={styles.greet}>{userName}님, 반가워요</Text>
@@ -188,6 +207,8 @@ export function TeamStartScreen() {
           </Pressable>
         ) : null}
 
+        </ScrollView>
+
         {/* 절대배치라 형제 중 마지막에 둬야 한다 —
             앞에 두면 뒤따르는 콘텐츠가 위를 덮어서 눌러도 반응하지 않는다 */}
         {/*
@@ -217,7 +238,10 @@ export function TeamStartScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  root: { flex: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 34, gap: 18 },
+  root: { flex: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 34 },
+  /* gap은 스크롤 내용 쪽으로 옮겼다 — root에 두면 ScrollView 한 덩어리에만 걸린다.
+     flexGrow로 내용이 짧아도 화면을 채워 아래 여백이 비지 않게 한다. */
+  scrollBody: { flexGrow: 1, gap: 18, paddingBottom: 8 },
   signOutRow: { position: 'absolute', top: 8, right: 24 },
   signOutText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   greetRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

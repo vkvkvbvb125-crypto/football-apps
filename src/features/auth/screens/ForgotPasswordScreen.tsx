@@ -5,7 +5,7 @@
 // 본인인증 단계가 필요 없다. 메일함이 곧 본인 확인이다.
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, TextInput } from '../../../components/nativeText';
 import { useAuthStore } from '../stores/authStore';
@@ -44,7 +44,7 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
       <GreenAmbient />
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>

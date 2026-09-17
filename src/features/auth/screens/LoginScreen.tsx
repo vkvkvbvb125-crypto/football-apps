@@ -6,7 +6,7 @@
 // 1px 보더 카드, pill 배지 (design.md). 참고한 화면의 배치·색을 그대로 쓰지 않는다.
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, CREDENTIAL_MISMATCH, type SocialProvider } from '../stores/authStore';
@@ -141,7 +141,7 @@ export function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
       <GreenAmbient />
       <ScrollView

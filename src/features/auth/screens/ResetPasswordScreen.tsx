@@ -4,7 +4,7 @@
 // 이 시점엔 이미 세션이 서 있다(링크의 토큰으로 로그인된 상태). 그래서 평소 규칙대로면
 // 곧장 홈으로 들어가 버리는데, authStore.recoveryMode가 그걸 붙잡아 이 화면을 먼저 보여준다.
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, TextInput } from '../../../components/nativeText';
 import { useAuthStore } from '../stores/authStore';
@@ -28,7 +28,7 @@ export function ResetPasswordScreen() {
   const canSubmit = isValidPassword(password) && password === confirm && !signingIn;
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
       <GreenAmbient />
       <ScrollView

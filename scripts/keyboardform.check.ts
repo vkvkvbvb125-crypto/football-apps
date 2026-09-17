@@ -26,8 +26,31 @@
   ⚠ ⑶이 없으면 키보드가 떠 있을 때 **첫 탭이 키보드를 내리는 데만 쓰이고**
     버튼에 안 닿는다 — 「한 번 눌렀는데 아무 일도 안 난다」가 된다.
 
-  ⚠ 못 보는 것: 버튼이 실제로 키보드 위에 오는지는 **화면을 봐야** 안다.
+  ── 2026-09-17에 기기에서 재고 안 것 ──────────────────────────────
+  「버튼이 ScrollView 안에 있다」만으로는 **근거가 안 됐다.** 구조는 맞는데 화면에서
+  안 닿았다. 원인은 `behavior`가 `Platform.OS === 'ios' ? 'padding' : undefined`라
+  **안드로이드에서 KeyboardAvoidingView가 아무 일도 안 한 것**이었다.
+  창이 안 줄어드니 ScrollView의 뷰포트가 화면 전체(2400)였고, 내용이 그 안에 다
+  들어가서 **스크롤할 것이 없었다.** 버튼은 안에 있는데 영영 못 닿는다.
+
+  `behavior="padding"`으로 바꾸고 잰 값(1080x2400, 키보드 상단 1517):
+
+      Login    버튼 하단 1356 → 1031   여유 161 → 486   (자동으로 올라온다)
+      SignUp   1785(키보드 아래 268) → 스크롤하면 1320  여유 197
+      Forgot   847 그대로                여유 670
+
+  ⚠ **SignUp은 스크롤해야 보인다.** 포커스를 마지막 칸에 둬도 안 올라온다 —
+    RN의 ScrollView는 안드로이드에서 포커스 자동 스크롤을 안 한다.
+    작은 화면(1080x1920, 키보드 상단 1048)에서는 **두 번** 스크롤해야 한다.
+    「닿는다」로는 고쳐졌고 「보인다」로는 아직이다.
+
+  ── 이 검사가 보는 것 (추가) ──────────────────────────────────────
+  ⑷ KeyboardAvoidingView의 behavior가 **안드로이드에서 죽어 있지 않은가.**
+
+  ⚠ 못 보는 것: 버튼이 실제로 키보드 위에 오는지는 **기기에서 재야** 안다.
     이 검사는 「구조가 그럴 수 있는 모양인가」까지다(anchor.ts 「단언이 볼 수 없는 것」).
+    재는 수단은 `scripts/kbmeasure.sh`다 — 창 관리자의 IME 인셋과 uiautomator의
+    bounds를 읽어 「버튼 하단 < 키보드 상단」을 숫자로 낸다.
 */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -93,4 +116,34 @@ for (const f of FORMS) {
   );
 }
 
-console.log(`keyboardform ✓ 입력 폼 ${FORMS.length}개의 제출 버튼이 스크롤 안에 있다`);
+/*
+  ⑷ behavior가 안드로이드에서 죽어 있지 않은가.
+
+  ⚠ **이 단언이 이 검사에서 유일하게 기기 측정에서 나온 것이다.** 나머지 셋은
+    「구조가 그럴 수 있는가」인데, 이건 「그 구조가 안드로이드에서 실제로 동작하는가」다.
+    2026-09-17 전까지 네 화면 모두 ios 분기였고 검사는 전부 통과했다.
+*/
+{
+  const AVOIDERS = FORMS.filter((f) => read(f).includes('KeyboardAvoidingView'));
+  assert.ok(
+    AVOIDERS.length > 0,
+    'KeyboardAvoidingView를 쓰는 폼이 하나도 없다 — 이름이 바뀌었으면 이 검사도 고쳐라'
+  );
+  for (const f of AVOIDERS) {
+    const name = f.split('/').pop();
+    const src = read(f);
+    assert.ok(
+      !/behavior=\{[^}]*Platform\.OS[^}]*undefined[^}]*\}/.test(src),
+      `${name}의 behavior가 안드로이드에서 undefined다 — KeyboardAvoidingView가 ` +
+        `아무 일도 안 한다. 창이 안 줄어서 ScrollView에 스크롤할 것조차 안 생긴다`
+    );
+    assert.ok(
+      /behavior="padding"/.test(src),
+      `${name}에 behavior="padding"이 없다 — 기기에서 이 값으로 재서 정했다(2026-09-17)`
+    );
+  }
+}
+
+console.log(
+  `keyboardform ✓ 입력 폼 ${FORMS.length}개의 제출 버튼이 스크롤 안에 있고 behavior가 안드로이드에서 살아 있다`
+);

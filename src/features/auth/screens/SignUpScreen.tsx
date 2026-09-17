@@ -7,7 +7,7 @@
 // 뜨는 것보다 낫다.
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, TextInput } from '../../../components/nativeText';
 import { useAuthStore } from '../stores/authStore';
@@ -62,7 +62,7 @@ export function SignUpScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       {/* 앱 전체 공통 배경 — ScreenGradient를 안 쓰는 화면이라 조각만 가져다 쓴다 */}
       <GreenAmbient />
       <View style={[styles.head, { paddingTop: insets.top + 8 }]}>

@@ -531,7 +531,11 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
 
 명령은 하나다. **사용자가 말하면 건다.**
 
-    eas build -p android --profile production
+    node scripts/buildready.mjs && eas build -p android --profile production
+
+⚠ **`buildready.mjs`를 앞에 `&&`로 묶는다.** EAS는 작업 트리가 아니라 **커밋된 상태**를
+  올린다 — `c142635`가 네 파일을 빠뜨린 채 커밋됐고 게이트는 통과했다.
+  20분 뒤 컴파일 오류로 죽기 전에 여기서 막는다(AGENTS.md 「커밋 누락은 …」).
 
 **빌드에 필요한 것은 다 되어 있다:**
 

@@ -293,3 +293,53 @@ RN의 Pressable이 `disabled` 프롭을 스스로 넘긴다 (`Pressable.js:236`)
 게시판과 팀 홈이 「글이 없다」를 다르게 말하고 있었다(「첫 글을 남겨보세요」 /
 「아직 게시글이 없어요」). 같은 앱에서 같은 사실이 두 말로 나오면 **다른 상태인 줄 안다.**
 **글을 쓰는 화면이 기준**이고 요약 화면이 따라간다 — `boardempty.check`가 붙든다.
+
+# 커밋 누락은 게이트가 못 막는다 — 빌드 직전에 막는다 — 2026-09-19
+
+`c142635`가 네 파일을 빠뜨린 채 커밋됐다. **게이트는 통과했다.** 당연하다 —
+
+    checks.mjs가 보는 것    작업 트리
+    커밋에 담기는 것        `git add`에 **내가 적은 목록**
+
+**둘이 다른 것을 본다.** 게이트가 아무리 초록이어도 커밋에 빠진 파일은 못 본다.
+그리고 **EAS는 작업 트리가 아니라 커밋된 상태를 올린다.** 그대로 걸었으면
+20분 뒤에 컴파일 오류로 죽었다.
+
+⚠ **게이트에 넣을 수 없다.** 「커밋에 다 담겼나」는 커밋이 **끝나야** 답이 나오는데
+  게이트는 커밋 **전에** 돈다. 시점이 다른 질문이라 같은 자리에 못 둔다.
+  `git status --short` 경고를 게이트에 넣어도 **커밋 전 트리가 더러운 건 정상**이라
+  매번 울리고, 매번 울리는 경고는 안 읽는다.
+
+⚠ post-commit 훅도 아니다. `.git/hooks`는 커밋되지 않아서 **기계가 바뀌면 사라진다** —
+  「있는 줄 알았는데 없었다」가 이 사고와 같은 종류다.
+
+**그래서 빌드 직전에 둔다.** 빌드는 하루에 몇 번 안 걸리고, 실패 비용이 20분이다.
+
+    node scripts/buildready.mjs && npx eas build --platform android --profile production-apk …
+
+⚠ `&&`로 묶는 이유는 위 「게이트와 커밋은 한 문장으로 묶는다」와 같다.
+  출력을 읽고 사람이 판단하는 자리로 두면 **읽고도 지나간다.** 실제로 그랬다.
+
+`buildready.mjs`가 보는 것 둘:
+
+  ① `git status --short`에 **소스**가 남아 있지 않은가
+     (추적 중인 변경 전부 + `src`·`scripts`·`web`·`supabase`·`assets` 아래의 새 파일.
+      루트의 잡파일 `gate.txt`·`metro.log` 따위는 EAS에 안 올라가므로 지나간다)
+  ② **HEAD만 풀어서** `tsc --noEmit`이 서는가
+     (`git archive HEAD | tar -x` → node_modules는 junction으로 빌린다)
+
+②가 진짜다. ①은 「빠뜨린 걸 아직 안 지웠을 때」만 잡고, **커밋 순서가 엇갈린 경우**
+— 앞 커밋이 뒤 커밋의 export를 참조 — 는 ②만 잡는다. 그게 c142635의 모양이었다.
+
+**변이로 확인했다.** 사고 난 커밋에 대고 실제로 재 봤다:
+
+    $ node scripts/buildready.mjs c142635
+      ✗ c142635만으로는 타입이 안 선다 — 커밋에서 빠진 파일이 있다
+          teamStore.ts(9,3): error TS2305:
+          Module '"../services/teamService"' has no exported member 'leaveTeam'.
+
+⚠ **`extends`는 `autoIncrement`를 물려주는데 `environment`는 안 물려준다.**
+  `production-apk`가 `production`을 상속해서 빌드마다 `app.json`의 `versionCode`가
+  올라간다 — 빌드 뒤 `app.json`이 더러워지는 건 이 때문이고, ①이 그걸 잡는다.
+  같은 `extends`인데 한쪽만 상속되는 이 비대칭이 `environment`를 **네 번** 빠뜨린
+  원인이다(`scripts/easenv.check.ts`).

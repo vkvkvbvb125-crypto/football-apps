@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<!--
+  비밀번호 재설정 메일의 착지 페이지.
+
+  ── 가입 확인 페이지와 무엇이 다른가 ──────────────────────────────
+  `/auth/confirm`은 **결과를 말해 주기만** 한다. 확인 처리는 Supabase가 리다이렉트
+  **전에** 이미 끝내기 때문이다.
+
+  재설정은 다르다. **아직 아무것도 안 끝났다** — Supabase는 토큰만 실어 보내고,
+  그 토큰으로 세션을 세워 새 비밀번호를 저장하는 일은 **앱 안에서** 일어난다
+  (`authStore.startRecovery` → `completeRecovery(url)` → `recoveryMode: true`).
+  새 비밀번호를 넣는 화면이 앱에 있으므로 **웹이 대신 끝낼 수 없다.**
+
+  그래서 이 페이지가 하는 일은 하나다: **토큰을 앱으로 넘긴다.**
+
+  ── 왜 https 주소가 필요한가 ──────────────────────────────────────
+  전에는 재설정 메일의 redirect_to가 `kickday://auth-callback`이었다. 커스텀 스킴이라
+  **브라우저가 열 수 있는 주소가 아니다** — 폰에서는 앱이 열리지만 데스크톱에서는
+  **흰 화면**이다. 2026-09-18에 가입 확인 쪽에서 같은 것을 실제로 겪었다
+  (scripts/lib/anchor.ts 「흰 화면의 세 원인」의 ③).
+
+  ── 무엇을 하지 않는가 ────────────────────────────────────────────
+  ⚠ **자동 이동하지 않는다.** 커스텀 스킴으로 자동 이동하면 데스크톱에서 흰 화면이
+    그대로 돌아온다. 결과를 글로 먼저 보여주고 앱 열기는 **버튼**으로 둔다.
+
+  ⚠ **키를 쓰지 않는다.** 프래그먼트를 그대로 전달만 하므로 anon key도 fetch도 필요 없다.
+
+  ⚠ **「링크 복사」 버튼을 두지 않았다.** 복사해도 **폰으로 옮길 방법이 마땅치 않다** —
+    데스크톱 클립보드는 폰과 이어져 있지 않다. 버튼이 있으면 「이걸 쓰면 되겠네」로
+    읽혀 막다른 길로 보낸다. 실제로 할 수 있는 일 하나만 적는다:
+    **휴대폰에서 그 메일을 다시 열기.**
+
+  ⚠ **프래그먼트를 검사하고 넘긴다.** `type=recovery`와 `access_token`이 둘 다 있을
+    때만 앱을 연다. 이상한 값을 그대로 앱에 던지면 앱이 어떻게 반응하는지 모르고,
+    모르는 것을 사용자에게 시험하게 할 수 없다.
+-->
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KickDay 비밀번호 재설정</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #07100d;
+        color: #e7ece9;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: 24px;
+      }
+      .card { max-width: 420px; width: 100%; text-align: center; }
+      .mark { font-size: 44px; line-height: 1; margin-bottom: 18px; }
+      h1 { font-size: 20px; margin: 0 0 10px; }
+      p { font-size: 15px; line-height: 1.6; color: #a8b3ad; margin: 0 0 22px; }
+      .btn {
+        display: block;
+        padding: 15px 20px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 700;
+        text-decoration: none;
+        margin-top: 10px;
+      }
+      .btn-primary { background: #22c55e; color: #06130c; }
+      .btn-ghost { border: 1px solid #2a3a32; color: #e7ece9; }
+      .hint { font-size: 13px; color: #6f7c75; margin-top: 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="mark" id="mark">⏳</div>
+      <h1 id="title">확인하는 중…</h1>
+      <p id="desc"></p>
+      <div id="actions"></div>
+      <div class="hint" id="hint"></div>
+    </div>
+
+    <script>
+      (function () {
+        /*
+          Supabase는 결과를 쿼리(?)에도 프래그먼트(#)에도 싣는다 — 흐름과 버전에 따라
+          갈린다. 한쪽만 읽으면 성공을 실패로 읽는 날이 온다. 둘을 합쳐서 본다.
+        */
+        function params() {
+          var out = {};
+          [window.location.search, window.location.hash].forEach(function (raw) {
+            if (!raw || raw.length < 2) return;
+            raw
+              .slice(1)
+              .split('&')
+              .forEach(function (pair) {
+                if (!pair) return;
+                var i = pair.indexOf('=');
+                var k = i < 0 ? pair : pair.slice(0, i);
+                var v = i < 0 ? '' : pair.slice(i + 1);
+                out[decodeURIComponent(k)] = decodeURIComponent(v.replace(/\+/g, ' '));
+              });
+          });
+          return out;
+        }
+
+        var p = params();
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPad|iPhone|iPod/.test(ua);
+        var isAndroid = /Android/.test(ua);
+        var isMobile = isIOS || isAndroid;
+        var STORE = isIOS
+          ? 'https://apps.apple.com/app/id0000000000'
+          : 'https://play.google.com/store/apps/details?id=com.kickday.app';
+
+        function render(mark, title, desc, actions, hint) {
+          document.getElementById('mark').textContent = mark;
+          document.getElementById('title').textContent = title;
+          document.getElementById('desc').innerHTML = desc;
+          document.getElementById('actions').innerHTML = actions;
+          document.getElementById('hint').innerHTML = hint || '';
+        }
+
+        if (p.error || p.error_code) {
+          /*
+            ⚠ **만료와 「이미 썼다」를 가를 수 없다.** Supabase는 둘 다 `otp_expired` /
+              `access_denied`로 돌려준다 — 한 번 쓴 링크와 시간이 지난 링크가 서버
+              입장에서 같은 상태라서다. 그래서 **둘 다 맞는 문구**를 쓴다.
+          */
+          render(
+            '⚠️',
+            '링크를 쓸 수 없어요',
+            '만료됐거나 이미 사용한 링크예요.<br />' +
+              '앱에서 <b>비밀번호 찾기</b>를 다시 해주세요.',
+            '',
+            '재설정 링크는 <b>1시간</b> 동안만 쓸 수 있어요.'
+          );
+          return;
+        }
+
+        /*
+          ⚠ **넘기기 전에 형태를 본다.** `type=recovery`와 `access_token`이 둘 다 있어야
+            앱이 세션을 세울 수 있다(App.tsx의 isRecovery 판정 + completeRecovery).
+            하나라도 없으면 **앱을 열지 않는다** — 이상한 프래그먼트를 그대로 던지면
+            앱이 어떻게 반응하는지 모르고, 모르는 것을 사용자에게 시험하게 할 수 없다.
+          ⚠ 여기서 「확인됐어요」라고 말하지도 않는다. 아무것도 안 끝났다.
+        */
+        var usable = p.type === 'recovery' && !!p.access_token;
+        if (!usable) {
+          render(
+            '✉️',
+            '재설정 정보가 없어요',
+            '비밀번호 재설정 메일의 링크로 들어와 주세요.<br />' +
+              '메일을 못 받으셨다면 스팸함도 확인해 주세요.',
+            '',
+            '앱에서 <b>비밀번호 찾기</b>로 메일을 다시 보낼 수 있어요.'
+          );
+          return;
+        }
+
+        /*
+          ⚠ **프래그먼트를 원본 그대로 실어 보낸다.** 여기서 다시 조립하면 Supabase가
+            나중에 항목을 더할 때 그것만 빠진다. `location.hash`는 `#`을 포함한다.
+        */
+        var appUrl = 'kickday://auth-callback' + (window.location.hash || '');
+
+        if (isMobile) {
+          render(
+            '🔑',
+            '앱에서 새 비밀번호를 정해주세요',
+            '아래 버튼을 누르면 KickDay 앱이 열려요.',
+            '<a class="btn btn-primary" href="' + appUrl + '">앱에서 비밀번호 바꾸기</a>' +
+              '<a class="btn btn-ghost" href="' + STORE + '">앱 설치하기</a>',
+            '링크는 <b>1시간</b> 동안만 쓸 수 있어요.'
+          );
+          return;
+        }
+
+        /*
+          ⚠ **데스크톱에는 「앱에서 열기」 버튼을 두지 않는다.** 열 앱이 없어서 눌러도
+            아무 일이 없고, 그게 이 페이지를 만든 이유인 **흰 화면과 같은 경험**이다.
+            할 수 있는 일 하나만 적는다.
+        */
+        render(
+          '📱',
+          '휴대폰에서 열어주세요',
+          '비밀번호는 <b>KickDay 앱에서만</b> 바꿀 수 있어요.<br />' +
+            '휴대폰에서 이 메일을 다시 열고 링크를 눌러주세요.',
+          '',
+          '링크는 <b>1시간</b> 동안만 쓸 수 있어요. 지났다면 앱에서 <b>비밀번호 찾기</b>를 다시 해주세요.'
+        );
+      })();
+    </script>
+  </body>
+</html>

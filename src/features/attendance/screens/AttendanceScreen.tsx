@@ -52,7 +52,7 @@ import { ScheduleRow, resolveBadge } from '../components/ScheduleRow';
 import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../components/CreateMatchSheet';
 import { resolveCapacity } from '../utils/capacity';
 import { createResultLabel } from '../utils/createResult';
-import { isVotingOpen, votingLockNote } from '../utils/voting';
+import { isMatchRecord, isVotingOpen, votingLockNote } from '../utils/voting';
 import { notVotedUserIds, remindVote } from '../utils/remindVote';
 import { EMPTY_NOTIFY } from '../../notifications/services/pushService';
 import { upcomingFrom } from '../utils/upcoming';
@@ -408,9 +408,23 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
     [matches, rosterMatchId],
   );
 
+  /*
+    참석 명단. **예정과 지난 경기가 답이 다르다.**
+
+      예정  「누가 오나」   → 현재 멤버만. 나간 사람의 투표는 명단에서 뺀다
+      지난  「누가 왔었나」 → 투표한 사람 전부. 나간 사람도 이름을 붙여 남긴다
+
+    2026-09-18에 소프트 삭제로 바꾸고 끝난 경기의 「참석 1명」이 「참석 0명」이 됐다 —
+    투표 행은 DB에 남았는데 명단이 현재 멤버만 돌았다. 기록이 화면에서 틀려졌다.
+
+    ⚠ **DB는 건드리지 않는다. 화면에서만 거른다.** 예정 경기에서 빠진 투표도
+      attendance_votes에 그대로 있고, 그 사람이 재참여하면(join_team_by_invite가
+      left_at을 비운다) 다음 렌더부터 다시 명단에 나타난다.
+    ⚠ 나간 사람의 이름은 `memberNames`에서 온다 — `members`(뷰)에는 없다.
+  */
   const rosterMembers: RosterMember[] = useMemo(() => {
     if (!rosterMatch) return [];
-    return members.map((m) => {
+    const rows: RosterMember[] = members.map((m) => {
       const v = rosterMatch.votes.find((vote) => vote.team_member_id === m.id);
       return {
         id: m.id,
@@ -421,7 +435,23 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         isMe: m.id === activeTeam?.membershipId,
       };
     });
-  }, [rosterMatch, members, activeTeam]);
+    if (!isMatchRecord(rosterMatch)) return rows;
+
+    /* 지난 경기 — 현재 멤버가 아닌데 투표한 사람을 뒤에 붙인다 */
+    const seen = new Set(rows.map((r) => r.id));
+    for (const v of rosterMatch.votes) {
+      if (seen.has(v.team_member_id)) continue;
+      rows.push({
+        id: v.team_member_id,
+        name: memberNames.get(v.team_member_id) ?? '멤버',
+        position: null,
+        role: 'member',
+        status: v.status,
+        isMe: false,
+      });
+    }
+    return rows;
+  }, [rosterMatch, members, memberNames, activeTeam]);
 
   /**
    * 독촉을 보낸다. 인자가 없으면 미투표자 전원.

@@ -15,6 +15,34 @@ export function isDeadlinePassed(match: VotableMatch, now = new Date()) {
   return match.vote_deadline ? new Date(match.vote_deadline) < now : false;
 }
 
+/**
+ * 이 경기를 **기록으로 보는가** — 명단이 「누가 왔었나」를 말하는 경기인가.
+ *
+ * ── 왜 필요한가 ───────────────────────────────────────────────────
+ * 참석 명단이 두 질문에 쓰인다. 답이 반대다:
+ *
+ *   예정 경기  「누가 오나」   → 팀을 나간 사람은 **빼야 한다.** 오지 않을 사람이다
+ *   지난 경기  「누가 왔었나」 → 나간 사람도 **남아야 한다.** 실제로 왔던 기록이다
+ *
+ * 2026-09-18에 소프트 삭제로 바꾸고 나서 끝난 경기의 「참석 1명」이 「참석 0명」이 됐다 —
+ * 투표 행은 DB에 남았는데 명단이 현재 멤버만 돌았다. **기록이 화면에서 틀려졌다.**
+ *
+ * ⚠ **상태 플래그만으로는 모자란다.** `status`는 'open' | 'locked' | 'completed'인데,
+ *   날짜가 지났는데 아무도 완료 처리를 안 한 경기는 계속 'open'이다. 그 경기의 명단을
+ *   「누가 오나」로 그리면 이미 지난 경기에서 나간 사람이 빠진다. 그래서 날짜도 본다.
+ *
+ * ⚠ **유예(MATCH_GRACE_MS)를 안 쓴다.** 그건 「지금 다루는 경기인가」(경기운영·정산이
+ *   쓰는 창)고, 이건 「기록인가」다 — matchWindow.ts 머리말의 그 구분이다.
+ *   킥오프가 지나면 그 순간부터 명단은 기록이다. 오늘 저녁 8시 경기를 밤 9시에 봐도
+ *   「왔던 사람」이 맞다.
+ */
+export function isMatchRecord(
+  match: { status: MatchStatus; match_date: string },
+  now = new Date()
+) {
+  return match.status === 'completed' || new Date(match.match_date) < now;
+}
+
 /** 지금 이 경기에 투표할 수 있는지 */
 export function isVotingOpen(match: VotableMatch, now = new Date()) {
   return match.status === 'open' && !isDeadlinePassed(match, now);

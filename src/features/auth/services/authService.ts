@@ -8,7 +8,7 @@ import { supabase } from '../../../lib/supabase';
 // 웹에서 팝업으로 열린 카카오 인증 창이 리다이렉트 완료를 opener 창에 알리기 위해 필요 (네이티브에서는 no-op)
 WebBrowser.maybeCompleteAuthSession();
 
-import { EMAIL_CONFIRM_REDIRECT } from '../authRedirects';
+import { EMAIL_CONFIRM_REDIRECT, PASSWORD_RESET_REDIRECT } from '../authRedirects';
 
 const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 const NAVER_CLIENT_ID = process.env.EXPO_PUBLIC_NAVER_CLIENT_ID;
@@ -87,7 +87,18 @@ async function functionError(err: unknown): Promise<Error> {
  *
  * 실사용에서는 사용자가 폰 앱에서 요청하므로 앱 스킴이 박힌다.
  */
-const passwordResetRedirectTo = redirectTo;
+/*
+  ⚠ **2026-09-19에 https로 바꿨다.** 위 주석은 `redirectTo`(앱 스킴)를 쓰던 시절의
+    근거이고, 그때는 「개발 중 확인할 방법」이 이유였다. 실사용에서 갈린 것은 다른
+    자리였다 — **데스크톱에서 메일을 열면 흰 화면**이었다(커스텀 스킴은 브라우저가
+    못 연다). 폰에서는 앱이 열리므로 **폰만 보면 멀쩡해 보인다.**
+
+  이제 https 페이지가 받아서 프래그먼트를 `kickday://auth-callback`으로 넘긴다.
+  앱이 받는 주소는 결국 같으므로 completeRecovery 쪽은 안 바뀐다.
+  ⚠ 이 주소는 Supabase의 **Redirect URLs 허용목록**에 있어야 한다(2026-09-19에 등록).
+    없으면 오류가 아니라 **조용히 Site URL로 떨어진다.**
+*/
+const passwordResetRedirectTo = PASSWORD_RESET_REDIRECT;
 
 /** edge function이 돌려준 token_hash로 실제 Supabase 세션을 발급받는다 — 웹/네이티브 공통 마지막 단계 */
 async function verifyWithTokenHash(tokenHash: string) {

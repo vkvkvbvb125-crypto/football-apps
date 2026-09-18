@@ -29,3 +29,20 @@
  * 이 주소가 그리는 페이지: `web/auth/confirm/index.html`
  */
 export const EMAIL_CONFIRM_REDIRECT = 'https://kickday.app/auth/confirm';
+
+/**
+ * 비밀번호 재설정 메일의 착지 주소.
+ *
+ * ⚠ **가입 확인과 성격이 다르다.** 확인은 Supabase가 리다이렉트 **전에** 끝내므로
+ *   그 페이지는 결과를 말해 주기만 한다. 재설정은 **아직 아무것도 안 끝났다** —
+ *   토큰으로 세션을 세우고 새 비밀번호를 저장하는 일이 **앱 안에서** 일어난다
+ *   (`startRecovery` → `completeRecovery` → `recoveryMode`).
+ *   그래서 이 페이지는 프래그먼트를 검사해 `kickday://auth-callback`으로 **넘긴다.**
+ *
+ * ⚠ 그럼에도 **https여야 한다.** `kickday://`를 직접 쓰면 브라우저가 열 수 없는
+ *   주소라 데스크톱에서 흰 화면이 된다(2026-09-18에 가입 확인 쪽에서 겪었다).
+ *   폰에서는 앱이 열리므로 **폰만 보면 멀쩁해 보이는** 것이 이 결함의 성질이다.
+ *
+ * 이 주소가 그리는 페이지: `web/auth/reset/index.html`
+ */
+export const PASSWORD_RESET_REDIRECT = 'https://kickday.app/auth/reset';

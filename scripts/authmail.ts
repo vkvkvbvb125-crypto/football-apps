@@ -26,7 +26,7 @@
     「요청이 접수됐다」까지지 발송 근거가 아니다.
 */
 import { readFileSync } from 'node:fs';
-import { EMAIL_CONFIRM_REDIRECT } from '../src/features/auth/authRedirects.ts';
+import { EMAIL_CONFIRM_REDIRECT, PASSWORD_RESET_REDIRECT } from '../src/features/auth/authRedirects.ts';
 
 const [, , kind, email] = process.argv;
 const KINDS = ['confirm', 'reset'] as const;
@@ -54,14 +54,6 @@ if (!url || !key) {
   process.exit(1);
 }
 
-/*
-  ⚠ **재설정은 아직 웹 착지 주소가 없다.** 링크의 토큰으로 앱이 세션을 세워야 해서
-    (completeRecovery) 웹 페이지가 대신 끝낼 수 없다 — 그래서 앱은 `kickday://`를 쓴다.
-    그 주소는 **데스크톱에서 흰 화면**이므로 폰에서 눌러야 한다.
-    착지 페이지를 만들면(㉯) authRedirects.ts에 상수를 더하고 여기도 그걸 쓴다.
-*/
-const PENDING_RESET_NOTE =
-  '⚠ 재설정 링크는 아직 kickday:// 스킴이다 — **폰에서 눌러라.** 데스크톱은 흰 화면이다.';
 
 async function main() {
   const isConfirm = kind === 'confirm';
@@ -71,15 +63,17 @@ async function main() {
   /*
     ⚠ **redirect_to는 쿼리 파라미터다.** 본문에 넣으면 GoTrue가 무시하고
       Site URL로 떨어진다 — 오류가 안 나므로 **성공한 것처럼 보인다.**
-      확인 메일만 넘긴다. 재설정은 앱이 스킴을 쓰므로 여기서도 안 넘긴다
-      (넘기면 앱과 달라져서, 이 스크립트를 만든 이유가 무너진다).
+    ⚠ **둘 다 넘긴다.** 2026-09-19에 재설정도 https 착지 페이지가 생겼다
+      (web/auth/reset). 앱과 같은 상수를 쓰므로 값이 갈릴 수 없다 —
+      이 스크립트를 만든 이유가 그것이다.
   */
-  const qs = isConfirm ? `?redirect_to=${encodeURIComponent(EMAIL_CONFIRM_REDIRECT)}` : '';
+  const redirect = isConfirm ? EMAIL_CONFIRM_REDIRECT : PASSWORD_RESET_REDIRECT;
+  const qs = `?redirect_to=${encodeURIComponent(redirect)}`;
   const target = `${url}${endpoint}${qs}`;
 
   console.log(`보낸다: ${kind} → ${email}`);
   console.log(`  endpoint   ${target}`);
-  console.log(`  redirect   ${isConfirm ? EMAIL_CONFIRM_REDIRECT : '(앱과 같게 — 안 넘긴다, Site URL/스킴)'}`);
+  console.log(`  redirect   ${redirect}`);
   console.log(`  보낸 시각  ${new Date().toISOString()}  (링크 수명 1시간)`);
 
   const res = await fetch(target, {
@@ -90,7 +84,10 @@ async function main() {
   const text = await res.text();
   console.log(`  HTTP ${res.status}  ${text || '{}'}`);
 
-  if (!isConfirm) console.log(`  ${PENDING_RESET_NOTE}`);
+  if (!isConfirm) {
+    console.log('  ⚠ 재설정 링크는 **폰에서** 눌러야 끝난다 — 새 비밀번호 화면이 앱 안에 있다.');
+    console.log('    데스크톱에서 열면 착지 페이지가 「휴대폰에서 열어주세요」를 띄운다(흰 화면은 아니다).');
+  }
   console.log('  ⚠ 발송 판정은 Resend의 Emails 로그 Delivered다. 위 HTTP 200은 근거가 아니다.');
 
   if (!res.ok) process.exit(1);

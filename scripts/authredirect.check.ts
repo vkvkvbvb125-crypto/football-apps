@@ -150,11 +150,26 @@ const NO_REDIRECT = new Set([
     `${CONST_FILE}에 import가 생겼다 — 이 파일은 node에서 그대로 읽혀야 한다. ` +
       `RN 전용 모듈이 딸려 오면 scripts/authmail.ts가 이 값을 못 쓰고 베껴 적게 된다`
   );
+  /*
+    ⚠ **상수가 늘면 여기도 늘려야 한다.** 2026-09-19에 재설정 착지 페이지가 생기면서
+      PASSWORD_RESET_REDIRECT가 추가됐다. 확인 주소만 보고 있으면 새 상수가 커스텀
+      스킴이어도 통과한다 — 「검사가 있으니 됐다」가 그렇게 깨진다.
+    ⚠ 그래서 **파일에 있는 `*_REDIRECT` 상수를 전부 세서** 하나하나 본다.
+      손으로 목록을 들고 다니지 않는다(checks.mjs 머리말과 같은 이유).
+  */
+  const consts = [...body.matchAll(/export const (\w*_REDIRECT) = '([^']*)'/g)];
   assert.ok(
-    /export const EMAIL_CONFIRM_REDIRECT = 'https:\/\//.test(body),
-    `${CONST_FILE}의 EMAIL_CONFIRM_REDIRECT가 https 주소가 아니다 — ` +
-      `커스텀 스킴이면 데스크톱에서 흰 화면이 된다`
+    consts.length >= 2,
+    `${CONST_FILE}의 *_REDIRECT 상수가 ${consts.length}개뿐이다 — 정규식이 안 맞나`
   );
+  for (const [, name, url] of consts) {
+    assert.ok(
+      url.startsWith('https://'),
+      `${CONST_FILE}의 ${name}이 https 주소가 아니다(${url}) — ` +
+        `커스텀 스킴이면 브라우저가 못 열어 **데스크톱에서 흰 화면**이 된다. ` +
+        `폰에서는 앱이 열리므로 폰만 보면 멀쩡해 보인다`
+    );
+  }
 }
 
 /* ── ⑶ 앱과 스크립트가 그 상수를 쓰는가 ──────────────────────────── */
@@ -168,6 +183,15 @@ const NO_REDIRECT = new Set([
     !/emailConfirmRedirectTo = '/.test(svc),
     `${SERVICE}가 확인 주소를 문자열로 다시 적는다 — 상수와 갈릴 수 있다`
   );
+  /*
+    ⚠ **재설정도 https 상수를 써야 한다.** 예전에는 `passwordResetRedirectTo = redirectTo`
+      (= kickday://auth-callback)였고, 그게 데스크톱 흰 화면의 원인이었다(2026-09-19 전환).
+  */
+  assert.ok(
+    /passwordResetRedirectTo = PASSWORD_RESET_REDIRECT;/.test(svc),
+    `${SERVICE}의 재설정 주소가 PASSWORD_RESET_REDIRECT가 아니다 — ` +
+      `앱 스킴으로 돌아가면 데스크톱에서 흰 화면이다`
+  );
 
   const sc = strip(read(SCRIPT));
   assert.ok(
@@ -175,9 +199,33 @@ const NO_REDIRECT = new Set([
     `${SCRIPT}가 EMAIL_CONFIRM_REDIRECT를 import하지 않는다 — ` +
       `주소를 손으로 적으면 앱과 갈리고, 갈린 채로도 HTTP 200이 온다`
   );
+  /*
+    ⚠ **스크립트가 두 상수를 다 쓰는가.** 재설정만 안 싣고 보내면 Site URL로 떨어져
+      데스크톱에서 흰 화면이 된다 — 2026-09-18에 확인 메일에서 실제로 그랬다.
+  */
+  const scNoImports = sc
+    .split(String.fromCharCode(10))
+    .filter((l) => !/^\s*import\s/.test(l))
+    .join(String.fromCharCode(10));
+  for (const name of ['EMAIL_CONFIRM_REDIRECT', 'PASSWORD_RESET_REDIRECT']) {
+    assert.ok(
+      /*
+        ⚠ **정규식을 문자열로 만들 때 이스케이프가 한 겹 더 필요하다.** `'\b'`는
+          단어 경계가 아니라 **백스페이스 문자(U+0008)**라 절대 안 맞는다.
+          2026-09-19에 이걸로 통과해야 할 단언이 실패했다 — memberview.check에서
+          같은 실수를 하루 전에 했고(그때는 반대로 **실패해야 할 것이 통과**했다),
+          기록해 뒀는데도 다시 밟았다. 이 줄은 `\\b`다.
+        ⚠ **import 줄을 빼고 센다.** 「이름이 파일에 있는가」로 보면 **쓰지 않고**
+          **import만 남아도 통과한다** — 2026-09-19에 변이로 걸렸다. 재설정 상수를
+          안 쓰게 바꿨는데 import가 남아 검사가 지나갔다(anchor.ts 「쓰이지 않는가」).
+      */
+      new RegExp('\\b' + name + '\\b').test(scNoImports),
+      `${SCRIPT}가 ${name}을 안 쓴다 — 그 메일이 Site URL로 떨어진다`
+    );
+  }
   assert.ok(
-    /redirect_to=\$\{encodeURIComponent\(EMAIL_CONFIRM_REDIRECT\)\}/.test(sc),
-    `${SCRIPT}가 redirect_to에 그 상수를 안 싣는다`
+    /redirect_to=\$\{encodeURIComponent\(/.test(sc),
+    `${SCRIPT}가 redirect_to를 쿼리에 안 싣는다`
   );
   /*
     ⚠ **본문이 아니라 쿼리에 실어야 한다.** GoTrue는 본문의 redirect_to를 무시하고

@@ -6,6 +6,7 @@
       "environment": "production"
     },
     "preview": {
+      "environment": "production",
       "distribution": "internal"
     },
     "production": {

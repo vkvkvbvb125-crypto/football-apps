@@ -72,8 +72,23 @@ export function toMatchWeatherBlockData(raw: ServiceWeather | null): MatchWeathe
   };
 }
 
-export function weatherAccent(level: WeatherLevel) {
-  const { colors, styles } = useThemed(makeStyles);
+/*
+  ⚠ **훅을 부르지 않는다. 팔레트를 인자로 받는다.**
+
+  전에는 안에서 `useThemed(makeStyles)`를 불렀다. 이 함수는 **컴포넌트가 아니라
+  JSX 안에서 값으로 불리는 일반 함수**라, 그 호출이 곧 **조건부 훅**이 됐다:
+
+      const { colors, styles } = useThemed(makeStyles);   훅 3개
+      if (!weather?.available) return (…);                 ← 여기서 끝나면 3개
+      color: 아래 함수 호출                                ← 여기까지 오면 6개
+
+  같은 컴포넌트가 렌더마다 3개 또는 6개를 불러서, `available`이 false → true로
+  바뀌는 순간 **Rendered more hooks than during the previous render**로 죽는다.
+  날씨는 비동기로 붙으므로 그 전환이 실제로 일어난다(2026-09-18에 참석 명단에서 봤다).
+
+  ⚠ `styles`는 원래도 안 썼다 — 훅을 부르는 이유가 `colors` 하나였다.
+*/
+export function weatherAccent(level: WeatherLevel, colors: Palette) {
   if (level === 'rain' || level === 'snow') return colors.blue;
   if (level === 'clear') return colors.weatherClear;
   return colors.textMuted;
@@ -131,7 +146,7 @@ export function MatchWeatherBlock({
         <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
           <View style={styles.tempRow}>
             <Text style={styles.temp}>{weather.temp}</Text>
-            <Text style={[styles.state, { color: weatherAccent(weather.level) }]}>{weather.stateText}</Text>
+            <Text style={[styles.state, { color: weatherAccent(weather.level, colors) }]}>{weather.stateText}</Text>
           </View>
           <Text style={styles.meta}>
             {short

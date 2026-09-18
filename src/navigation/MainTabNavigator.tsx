@@ -63,8 +63,20 @@ const RING = 60;
  */
 const RING_LIFT = 27;
 
-function tabLabel(title: string) {
-  const { colors, styles } = useThemed(makeStyles);
+/*
+  ⚠ **훅을 부르지 않는다. 스타일을 인자로 받는다.**
+
+  전에는 안에서 `useThemed(makeStyles)`를 불렀다. 이 함수는 컴포넌트가 아니라
+  **JSX의 options 값으로 불리는 일반 함수**라, 호출 횟수가 곧 훅 수가 된다.
+  지금은 라벨 있는 탭 넷이 무조건 그려져서 안 터지지만, **탭 하나라도 조건부가 되는
+  순간** 렌더마다 훅 수가 달라져 「Rendered more hooks than during the previous render」다.
+  2026-09-18에 MatchWeatherBlock의 weatherAccent가 같은 모양으로 실제로 죽었다 —
+  거기는 조건부 호출이 이미 있었을 뿐이다.
+
+  `MainTabNavigator`가 이미 styles를 들고 있으므로 그대로 넘긴다.
+  ⚠ `colors`는 원래도 안 썼다.
+*/
+function tabLabel(title: string, styles: ReturnType<typeof makeStyles>) {
   return ({ color }: { color: string }) => <Text style={[styles.label, { color }]}>{title}</Text>;
 }
 
@@ -199,7 +211,7 @@ export function MainTabNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: tabLabel('홈'),
+          tabBarLabel: tabLabel('홈', styles),
           tabBarIcon: tabIcon('home-outline'),
         }}
       />
@@ -207,7 +219,7 @@ export function MainTabNavigator() {
         name="Attendance"
         component={AttendanceScreen}
         options={{
-          tabBarLabel: tabLabel('일정'),
+          tabBarLabel: tabLabel('일정', styles),
           tabBarIcon: tabIcon('calendar-outline', 'tab.attendance'),
         }}
       />
@@ -234,7 +246,7 @@ export function MainTabNavigator() {
         name="Settlement"
         component={SettlementScreen}
         options={{
-          tabBarLabel: tabLabel('정산'),
+          tabBarLabel: tabLabel('정산', styles),
           tabBarIcon: tabIcon('card-outline', 'tab.settlement'),
           /* 금액이 아니라 점이다 — 탭 라벨 옆에 숫자를 적으면 「무슨 숫자지」가 되고,
              자릿수에 따라 탭 폭이 흔들린다. 「볼 것이 있다」만 알리고 액수는 화면이 말한다 */
@@ -246,7 +258,7 @@ export function MainTabNavigator() {
         name="Team"
         component={TeamHomeScreen}
         options={{
-          tabBarLabel: tabLabel('팀'),
+          tabBarLabel: tabLabel('팀', styles),
           tabBarIcon: tabIcon('people-outline'),
         }}
       />

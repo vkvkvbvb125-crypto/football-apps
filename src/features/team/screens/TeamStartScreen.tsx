@@ -161,28 +161,47 @@ export function TeamStartScreen() {
           </View>
 
           {pick === 'join' && (
-            <>
-              <Pressable
-                onPress={() => codeInputRef.current?.focus()}
-                accessibilityRole="button"
-                accessibilityLabel={`초대 코드 입력, ${code.length}자리 입력함`}
-                style={styles.codeRow}
-              >
+            /*
+              ⚠ **입력칸이 실제 크기여야 한다. 0픽셀 숨은 입력은 키보드를 못 띄운다.**
+
+              전에는 `hiddenInput: { width: 0, height: 0, opacity: 0 }`를 두고
+              칸 8개를 감싼 Pressable이 `ref.focus()`를 불렀다. **화면 크기에 따라
+              갈렸다** — 2026-09-18에 쟀다:
+
+                  1080x2400   눌러도 뜬다     mInputShown=true
+                  1080x1920   **안 뜬다**     x를 155·300·540 어디서 눌러도 false
+                              (같은 화면의 팀 이름 칸은 뜬다 — IME는 멀쩡하다)
+
+              크기가 0인 뷰에 안드로이드가 `showSoftInput`을 거부하는 자리고,
+              **막히면 총무가 아닌 모든 팀원의 가입 경로가 막힌다.**
+
+              지금은 **칸 위에 실제 크기의 TextInput을 겹친다.** 글자만 투명하게 해서
+              보이는 것은 그대로 칸 8개고, 탭·붙여넣기·선택은 진짜 입력이 받는다.
+              ⚠ 칸들은 `pointerEvents="none"`이라 탭이 그 아래 입력으로 내려간다 —
+                안 그러면 칸이 탭을 먹고 다시 같은 증상이 된다.
+            */
+            <View style={styles.codeWrap}>
+              <View style={styles.codeRow} pointerEvents="none">
                 {Array.from({ length: CODE_LENGTH }).map((_, i) => (
                   <View key={i} style={[styles.codeCell, i === code.length && styles.codeCellActive]}>
                     <Text style={styles.codeText}>{code[i] ?? ''}</Text>
                   </View>
                 ))}
-              </Pressable>
+              </View>
               <TextInput
                 ref={codeInputRef}
                 value={code}
                 onChangeText={(t) => setCode(t.replace(/[^a-zA-Z0-9]/g, '').slice(0, CODE_LENGTH))}
                 autoFocus
                 autoCapitalize="none"
-                style={styles.hiddenInput}
+                autoCorrect={false}
+                autoComplete="off"
+                maxLength={CODE_LENGTH}
+                caretHidden
+                accessibilityLabel={`초대 코드 입력, ${code.length}자리 입력함`}
+                style={styles.codeInput}
               />
-            </>
+            </View>
           )}
         </Pressable>
 
@@ -317,7 +336,29 @@ const makeStyles = (colors: Palette) =>
   },
   codeCellActive: { borderColor: colors.green },
   codeText: { color: colors.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  hiddenInput: { position: 'absolute', width: 0, height: 0, opacity: 0 },
+  /* 칸과 입력을 겹치는 자리. 높이는 칸이 정하고 입력이 그 위를 덮는다 */
+  codeWrap: { position: 'relative' },
+  /*
+    ⚠ **투명하게 하되 크기는 실제로 준다.** width/height 0이면 안드로이드가
+      키보드를 안 띄운다(2026-09-18 실측). 글자색만 투명하게 해서 칸 8개가 보이게 둔다.
+    ⚠ `caretHidden` — 칸이 활성 테두리로 자기 커서를 그리므로 두 개가 되면 안 된다.
+  */
+  codeInput: {
+    /*
+      ⚠ **오프셋을 숫자로 맞추지 않는다.** codeRow에 marginTop·borderTop·paddingTop이
+        겹쳐 있어서 「칸이 시작하는 y」를 상수로 적으면 그 셋 중 하나만 바뀌어도 어긋난다.
+        wrap 전체를 덮는다 — 위쪽 여백을 눌러도 입력이 잡히니 탭 영역만 넓어진다.
+    */
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    color: 'transparent',
+    fontSize: 15,
+    textAlign: 'center',
+    padding: 0,
+  },
 
   errorText: { color: colors.danger, fontSize: 12, textAlign: 'center' },
   note: { color: colors.textFaint, fontSize: 11, textAlign: 'center', lineHeight: 18 },

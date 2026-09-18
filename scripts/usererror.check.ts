@@ -53,7 +53,6 @@ const HUMAN: [string, string][] = [
        막힌 쪽은 이미 한 번 헛수고한 사람이라 손으로 할 일을 더 주지 않는다.
        화면이 실패 직후 목록을 다시 읽고, 남은 할 일은 「다시 해주세요」 하나다. */
   ['src/features/settlement/stores/settlementStore.ts', '다른 총무가 방금 금액을 바꿨어요. 금액을 새로 불러왔어요 — 다시 해주세요'],
-  ['src/features/team/stores/teamStore.ts', '마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.'],
 ];
 for (const [f, msg] of HUMAN) {
   const src = read(f);
@@ -66,6 +65,33 @@ const thrownCount = HUMAN.map(([f]) => f)
   .reduce((n, f) => n + (read(f).match(/new UserFacingError\(/g) ?? []).length, 0);
 ok(thrownCount === HUMAN.length,
    `UserFacingError를 던지는 자리가 ${thrownCount}곳인데 목록은 ${HUMAN.length}곳이다 — 새로 생긴 것을 목록에 넣어라`);
+
+/*
+  ── ①-b 서버가 쓴 사람 말도 화면까지 가는가 ──────────────────────
+
+  위 HUMAN은 **클라이언트가 리터럴로 던지는** 문구다. 2026-09-18에 성격이 다른 자리가
+  하나 생겼다 — 「마지막 총무는 팀을 나갈 수 없어요」를 **서버가** 던진다.
+  `leave_team()` RPC가 P0001로 올려 보내고, 클라이언트는 그걸 받아 전달만 한다.
+  문구가 소스에 리터럴로 없으므로 위 방식으로는 못 본다.
+
+  ⚠ 그냥 두면 toUserMessage의 switch가 default로 떨어뜨려
+    **「문제가 생겼어요. 잠시 후 다시 시도해주세요」**가 뜬다 — 기기에서 실제로 봤다.
+    영원히 안 되는 일을 다시 시도하라고 말하는 셈이다.
+  ⚠ P0001을 toUserMessage에서 통째로 열면 안 된다 — join_team_by_invite의
+    'invalid invite code'(영어 개발자 문구)도 같은 코드다. **호출 단위로** 연다.
+*/
+{
+  const svc = read('src/features/team/services/teamService.ts');
+  const from = svc.indexOf('export async function leaveTeam');
+  ok(from > 0, 'teamService의 leaveTeam을 못 찾았다 — 이름이 바뀌었으면 이 검사도 고쳐라');
+  const body = svc.slice(from, svc.indexOf('export async function', from + 10));
+  ok(/'P0001'/.test(body), 'leaveTeam이 P0001을 안 가른다 — 서버 문구가 「문제가 생겼어요」로 덮인다');
+  ok(/new UserFacingError\(error\.message\)/.test(body),
+     'leaveTeam이 서버 문구를 UserFacingError로 안 바꾼다 — toUserMessage가 통과시키지 않는다');
+  /* 통째로 여는 것을 막는다 — 영어 개발자 문구가 화면에 샌다 */
+  ok(!/case '?P0001'?:/.test(read('src/lib/dbError.ts')),
+     "dbError가 P0001을 통째로 통과시킨다 — 'invalid invite code' 같은 개발자 문구가 화면에 샌다");
+}
 
 // ── ② 원문이 화면에 안 샌다 ──
 /*

@@ -103,6 +103,7 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
   const bottomPad = useTabBarPadding();
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
+  const memberNames = useTeamStore((s) => s.memberNames);
   const isAdmin = activeTeam?.role === 'admin';
 
   const matches = useAttendanceStore((s) => s.matches);
@@ -253,7 +254,14 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
     return { bankName: latest.bankName, accountNo: latest.accountNo, accountHolder: latest.accountHolder };
   }, [defaultAccount, current, past]);
 
-  const nameFor = (teamMemberId: string | null) => members.find((m) => m.id === teamMemberId)?.displayName ?? '멤버';
+  /*
+    ⚠ **이름은 memberNames에서 찾는다. members에는 나간 사람이 없다.**
+      정산 몫은 나간 뒤에도 남아서(소프트 삭제), members로 찾으면 폴백 「멤버」가 뜬다 —
+      **총무가 누가 안 냈는지 알 수 없게 된다.** 2026-09-18에 기기에서 그 화면을 봤다.
+      합계는 멀쩡했다(20,000원·1명 미납). 금액은 남고 사람만 지워진 모양이었다.
+  */
+  const nameFor = (teamMemberId: string | null) =>
+    (teamMemberId ? memberNames.get(teamMemberId) : undefined) ?? '멤버';
   // 판정은 account.ts가 갖는다 — 시트의 버튼 활성 조건과 반드시 같아야 한다
   const isAccountComplete = (a: AccountDraft) =>
     accountComplete({ bank: a.bankName, no: a.accountNo, holder: a.accountHolder });
@@ -293,6 +301,13 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
     if (!activeTeam) return;
     const unpaidUserIds = s.shares
       .filter((sh) => !sh.paid && sh.teamMemberId)
+      /*
+        ⚠ **푸시 대상은 members(현재 멤버)에서 찾는다 — 여기서는 memberNames를 쓰면 안 된다.**
+          팀을 떠난 사람에게 독촉 알림이 가는 것은 과하다. 총무 화면에는 이름이 보이되
+          (nameFor는 memberNames를 쓴다) 푸시 대상에서는 빠지는 것이 맞다.
+          members에 없으면 userId가 undefined가 되고 아래 filter가 걸러 낸다 —
+          **결과는 전과 같지만 이제 의도한 것이다.** 전에는 우연히 그랬다(2026-09-18).
+      */
       .map((sh) => members.find((m) => m.id === sh.teamMemberId)?.userId)
       .filter((id): id is string => !!id);
     if (unpaidUserIds.length === 0) return;
@@ -365,7 +380,7 @@ export function SettlementScreen({ navigation, route }: BottomTabScreenProps<any
       const fromAllMembers = voted.length === 0;
       const ids = fromAllMembers ? members.map((m) => m.id) : voted;
       return {
-        list: ids.map((id) => ({ id, name: members.find((m) => m.id === id)?.displayName ?? '멤버' })),
+        list: ids.map((id) => ({ id, name: nameFor(id) })),
         fromAllMembers,
       };
     },

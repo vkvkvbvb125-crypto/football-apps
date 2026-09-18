@@ -135,6 +135,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
+  const memberNames = useTeamStore((s) => s.memberNames);
   const myUserId = useAuthStore((s) => s.session?.user.id);
   const bottomPad = useTabBarPadding();
 
@@ -238,7 +239,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const waitlistEntriesFor = (memberIds: string[]): WaitlistEntry[] =>
     memberIds.map((id, i) => ({
       position: i + 1,
-      name: members.find((m) => m.id === id)?.displayName ?? '멤버',
+      /* ⚠ 나간 사람의 투표도 남는다(소프트 삭제). members로 찾으면 「멤버」가 된다 */
+      name: memberNames.get(id) ?? '멤버',
       isMe: id === activeTeam?.membershipId,
     }));
 

@@ -45,6 +45,20 @@ export function resolveAuthor(
   post: Pick<Post, 'authorId' | 'authorName' | 'authorAvatar'>,
   members: { userId: string; displayName: string; avatarUrl: string | null }[]
 ) {
+  /*
+    ⚠ **이 폴백이 탈퇴자를 구해 준다. 「어차피 같은 값이니 정리하자」로 지우지 마라.**
+
+    `members`는 현재 멤버(team_members_active)라 **나간 사람이 없다.** 그래서 `live`가
+    undefined가 되는데, 그때 떨어지는 `post.authorName`은 **profiles에서 온 값**이라
+    (boardService의 fetch들이 profiles를 직접 읽는다) 이름이 그대로 살아 있다.
+
+    2026-09-18에 소프트 삭제로 바꾸면서 정산·참석·분배는 이름을 잃고 「멤버」가 떴는데
+    게시판만 안 깨졌다 — **폴백이 우연히 맞는 값을 들고 있었기 때문이다.**
+    `live`를 「최신 이름·아바타를 반영한다」로만 읽고 폴백을 지우면 그 순간 깨진다.
+
+    ⚠ live가 앞에 오는 이유는 **이름을 바꾼 사람** 때문이다(글은 옛 이름을 박아 둔다).
+      탈퇴자는 그 반대 경로로 폴백에 기대므로, 순서와 폴백 **둘 다** 필요하다.
+  */
   const live = members.find((m) => m.userId === post.authorId);
   return {
     name: live?.displayName ?? post.authorName,

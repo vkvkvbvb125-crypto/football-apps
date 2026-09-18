@@ -53,6 +53,7 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
 
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
+  const memberNames = useTeamStore((s) => s.memberNames);
   const isAdmin = activeTeam?.role === 'admin';
   const bottomPad = useTabBarPadding();
 
@@ -97,7 +98,8 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   }, [activeTeam?.team.id]);
 
   const memberOf = (teamMemberId: string) => members.find((m) => m.id === teamMemberId);
-  const nameFor = (teamMemberId: string) => memberOf(teamMemberId)?.displayName ?? '멤버';
+  /* ⚠ 나간 사람의 분배 기록도 남는다. 이름은 memberNames에서 찾는다 */
+  const nameFor = (teamMemberId: string) => memberNames.get(teamMemberId) ?? '멤버';
 
   const liveMatches = useMemo(() => liveMatchesFrom(matches), [matches]);
 

@@ -6,6 +6,7 @@ import {
   fetchMyMemberships,
   fetchTeamMembers,
   joinTeamByInvite as joinTeamByInviteRequest,
+  leaveTeam as leaveTeamRequest,
   removeMember as removeMemberRequest,
   updateMemberRole as updateMemberRoleRequest,
   updateMemberSkillTag as updateMemberSkillTagRequest,
@@ -21,8 +22,9 @@ import {
   updateTeamProfile as updateTeamProfileRequest,
   type TeamProfileInput,
 } from '../services/teamService';
+import { fetchMemberNames, type MemberNames } from '../services/memberNameService';
 import type { SkillTag } from '../../../types/database';
-import { UserFacingError, toUserMessage } from '../../../lib/dbError';
+import { toUserMessage } from '../../../lib/dbError';
 
 /**
  * 마지막으로 보던 팀. 앱을 다시 켰을 때 그 팀으로 돌아온다.
@@ -52,6 +54,15 @@ interface TeamState {
   memberships: TeamMembership[];
   activeTeam: TeamMembership | null;
   members: TeamMemberWithProfile[];
+  /**
+   * team_members.id → 이름. **나간 사람도 들어 있다.**
+   *
+   * ⚠ `members`와 쓰임이 다르다. `members`는 「현재 멤버가 누구인가」(뷰, 나간 사람 제외),
+   *   이것은 「이 id의 이름이 무엇인가」(전체)다. 정산 몫·참석 투표·팀 분배는
+   *   나간 뒤에도 남아서, 이름을 `members`에서 찾으면 폴백 「멤버」가 뜬다.
+   * ⚠ **이것으로 멤버 수를 세지 마라.** 나간 사람이 포함돼 실제와 갈린다.
+   */
+  memberNames: MemberNames;
   loaded: boolean;
   loading: boolean;
   error: string | null;
@@ -133,6 +144,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   memberships: [],
   activeTeam: null,
   members: [],
+  memberNames: new Map(),
   loaded: false,
   loading: false,
   error: null,
@@ -235,8 +247,17 @@ export const useTeamStore = create<TeamState>((set, get) => ({
     const activeTeam = get().activeTeam;
     if (!activeTeam) return;
     try {
-      const members = await fetchTeamMembers(activeTeam.team.id);
-      set({ members });
+      /*
+        ⚠ **둘을 같이 받는다. 쓰임이 다르다.**
+          members     현재 멤버(뷰) — 멤버 수·초대·권한·분배 대상
+          memberNames 전체 이름(나간 사람 포함) — 과거 기록에 이름 붙이기
+        하나로 합치면 2026-09-18의 회귀가 돌아온다(정산 미납자가 「멤버」로 표시).
+      */
+      const [members, memberNames] = await Promise.all([
+        fetchTeamMembers(activeTeam.team.id),
+        fetchMemberNames(activeTeam.team.id),
+      ]);
+      set({ members, memberNames });
     } catch {
       // 멤버 목록은 부가 정보라 실패해도 조용히 무시
     }
@@ -348,17 +369,28 @@ export const useTeamStore = create<TeamState>((set, get) => ({
    *
    * 나간 뒤에는 소속이 사라지므로 멤버십을 다시 불러 화면이 팀 선택으로 돌아가게 한다.
    */
+  /*
+    팀 나가기.
+
+    ⚠ **예전에는 DELETE였고 조용히 실패했다.** `team_members_delete_admin`이
+      `is_team_admin(team_id)`뿐이라 본인 탈퇴 정책이 없고, RLS에 막힌 DELETE는
+      PostgREST에서 **200에 0행·오류 없음**으로 온다. 그래서 여기까지 성공으로 올라와
+      화면에서 팀만 지웠다가 다음 조회에서 되살아났다 — **오류 문구 없이 홈으로**.
+      2026-09-18에 응답을 직접 읽어 확정했다(본인 `[]`, 총무는 그 행).
+
+    ⚠ **마지막 총무 검사를 여기서 걷어냈다.** 이제 `leave_team()`이 서버에서 막고
+      같은 문구를 예외로 돌려준다. 두 곳에 두면 언젠가 갈리고, 갈리면 **화면이
+      거짓말하는 쪽**이 이긴다(클라이언트가 통과시키면 서버가 막아도 사용자는
+      「눌렀는데 아무 일도 안 났다」를 본다). 조건은 한 곳에만 둔다.
+
+    ⚠ try/catch를 두지 않는다 — **화면이 받아야 한다.** TeamSettingsScreen이
+      `.catch`로 받아 `alertMessage('나갈 수 없어요', …)`를 띄운다. 여기서 삼키면
+      그 경로가 죽는다.
+  */
   leaveTeam: async () => {
     const activeTeam = get().activeTeam;
     if (!activeTeam) return;
-    const members = get().members;
-    const adminCount = members.filter((m) => m.role === 'admin').length;
-    const alone = members.length <= 1;
-    if (!alone && activeTeam.role === 'admin' && adminCount <= 1) {
-      set({ error: '마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.' });
-      throw new UserFacingError('마지막 총무는 팀을 나갈 수 없어요. 먼저 다른 총무를 임명해주세요.');
-    }
-    await removeMemberRequest(activeTeam.membershipId);
+    await leaveTeamRequest(activeTeam.team.id);
     /*
      * 방금 나간 팀이 activeTeam으로 남아 있으면 loadMemberships가 그 id를 원한다.
      * 목록에 없으니 첫 팀으로 떨어지긴 하지만, 의도를 남겨 두려고 먼저 비운다.

@@ -51,11 +51,23 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
      * 투표와 상관없이 나오는 팀이 있다. 몰래 전원을 끼워 넣지는 않는다.
      * 안 온다고 찍은 사람(absent)은 그때도 뺀다 — 명시적으로 안 온다고 했다.
      */
-    const attendeeIds = includeAll
-      ? members
-          .filter((m) => !match?.votes.some((v) => v.team_member_id === m.id && v.status === 'absent'))
-          .map((m) => m.id)
-      : (match?.votes ?? []).filter((v) => v.status === 'attend').map((v) => v.team_member_id);
+    /*
+      ⚠ **둘 다 현재 멤버로 좁힌다.** includeAll 갈래는 members에서 나와 이미 안전하지만,
+        기본 갈래는 `match.votes`에서 나온다 — 소프트 삭제 뒤로 **나간 사람의 투표가
+        남아 있어서**(2026-09-18) 그 사람이 분배 대상에 섞인다. 팀을 떠난 사람을
+        오늘 경기 팀에 넣는 셈이고, skillTag도 못 찾아 전부 「미지정」 통에 들어가
+        **균형 계산까지 흐트러진다.**
+      ⚠ 전제를 주석으로 두지 않고 코드로 건다 — 「분배 대상은 현재 멤버뿐」이
+        보장되지 않는다는 것이 이 회귀로 드러났다.
+    */
+    const activeIds = new Set(members.map((m) => m.id));
+    const attendeeIds = (
+      includeAll
+        ? members
+            .filter((m) => !match?.votes.some((v) => v.team_member_id === m.id && v.status === 'absent'))
+            .map((m) => m.id)
+        : (match?.votes ?? []).filter((v) => v.status === 'attend').map((v) => v.team_member_id)
+    ).filter((id) => activeIds.has(id));
 
     const buckets: Record<(typeof SKILL_BUCKET_ORDER)[number], string[]> = {
       상: [],

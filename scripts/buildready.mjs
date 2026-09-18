@@ -35,6 +35,7 @@ import { join } from 'node:path';
 
 /* 기본은 HEAD. 인자를 주면 그 커밋을 잰다 (변이 시험용 — 머리말 참고) */
 const REF = process.argv[2] || 'HEAD';
+const TSC = join(process.cwd(), 'node_modules', 'typescript', 'bin', 'tsc');
 
 const run = (cmd, args, opts = {}) =>
   execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
@@ -96,7 +97,14 @@ const ok = (what) => console.log(`  ✓ ${what}`);
       fail(`${REF}에 tsconfig.json이 없다 — 커밋 상태가 온전하지 않다`);
     } else {
       try {
-        run('npx', ['tsc', '--noEmit'], { cwd: dir, shell: true });
+        /*
+          ⚠ **`npx`를 안 쓴다.** `shell: true`로 부르면 node가 「인자가 이스케이프
+            안 된다」고 경고를 찍는데, 이 스크립트는 **출력을 읽으라고** 있는 것이라
+            잡음을 두면 안 된다. 그렇다고 `shell`을 떼면 윈도에서 `.cmd`를 못 띄운다
+            (Node 20+가 막는다 — `EINVAL`. 실제로 여기서 겪었다).
+            tsc는 그냥 JS 파일이므로 **node로 직접 부른다** — 셸이 아예 안 낀다.
+        */
+        run(process.execPath, [TSC, '--noEmit'], { cwd: dir });
         ok(`${REF}만으로 tsc 통과`);
       } catch (e) {
         fail(`${REF}만으로는 타입이 안 선다 — 커밋에서 빠진 파일이 있다`, String(e.stdout || e.message).slice(0, 1200));

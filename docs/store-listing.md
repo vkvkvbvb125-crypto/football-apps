@@ -537,13 +537,24 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
   올린다 — `c142635`가 네 파일을 빠뜨린 채 커밋됐고 게이트는 통과했다.
   20분 뒤 컴파일 오류로 죽기 전에 여기서 막는다(AGENTS.md 「커밋 누락은 …」).
 
+⚠ **`autoIncrement`는 빌드 *전에* 올린다 — 파일에 적힌 숫자가 아니라 +1이 나온다.**
+2026-09-19에 `app.json`이 `9`인 커밋(`3a0cf0e`)으로 걸었는데 **나온 APK는 10**이었다
+(`dumpsys package com.kickday.app` → `versionCode=10`). EAS가 빌드 뒤 파일도 10으로
+고쳐 놓는다 — 빌드 끝나면 `app.json`이 더러워지는 게 이 때문이다.
+
+  · 「vc 9로 걸어라」로 시작한 그 빌드의 **실제 산출물은 vc 10**이다
+    (md5 `7257efae9730a20478a9cf1b10cda03d`, 105,964,386 bytes).
+  · 그러므로 **AAB는 vc 11로 나온다.** 파일에 10이 적혀 있어도 그렇다.
+  · ⚠ Play는 versionCode를 **되돌릴 수 없다.** 올라간 숫자는 그대로 간다 —
+    내부 APK로 태운 번호도 사실상 못 쓴다고 보는 편이 안전하다.
+
 **빌드에 필요한 것은 다 되어 있다:**
 
 | | 값 | |
 |---|---|---|
 | `production.buildType` | `app-bundle` | ✅ Play는 신규 앱에 AAB만 받는다 |
 | `production.environment` | `production` | ✅ **직접 적혀 있다.** `extends`는 이걸 안 물려준다 |
-| `autoIncrement` | `true` | versionCode 7 → **8**로 오른다 |
+| `autoIncrement` | `true` | ⚠ **빌드 전에** 올려서 찍는다 — 아래 |
 | `blockedPermissions` | CAMERA · RECORD_AUDIO | ✅ APK(vc 7)에서 실제로 빠진 것 확인함 |
 | 아이콘 512² · 피처 그래픽 1024×500 | `assets/store/` | ✅ |
 | 스크린샷 | 일곱 장 1080×2400 | ✅ |

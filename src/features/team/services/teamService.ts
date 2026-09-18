@@ -1,4 +1,26 @@
 import { supabase } from '../../../lib/supabase';
+import { UserFacingError } from '../../../lib/dbError';
+
+/*
+  현재 멤버의 **유일한** 정의.
+
+  ── 왜 상수인가 ────────────────────────────────────────────────────
+  `team_members`에는 나간 사람의 행이 `left_at`을 달고 **남아 있다**. 행을 지우지 않는
+  이유는 settlement_shares·attendance_votes·team_assignments·poll_responses·waitlist가
+  team_member_id를 **ON DELETE CASCADE**로 물고 있어서다 — 지우면 그 사람의 정산 몫과
+  참석 기록이 함께 사라진다(2026-09-18 스키마 확인).
+
+  그래서 조회는 **전부** 이 뷰를 탄다. `left_at is null`을 부르는 쪽마다 적는 방식은
+  **빠뜨린다** — 빠뜨린 화면에만 탈퇴자가 남고, 그건 화면을 봐야만 보인다.
+  뷰는 DB에 정의가 하나뿐이라 빠뜨릴 자리가 없다.
+
+  ⚠ **쓰기에는 못 쓴다.** 뷰가 `security_invoker=true`라 UPDATE/DELETE는 테이블로
+    직접 가야 하고, 그쪽은 총무 정책(team_members_update_admin / _delete_admin)이 막는다.
+    나가기는 테이블을 건드리지 않고 `leave_team()` RPC가 한다.
+
+  ⚠ `from('team_members')`로 직접 조회하면 `memberview.check`가 FAIL을 낸다.
+*/
+export const ACTIVE_MEMBERS = 'team_members_active';
 import type { Database } from '../../../types/database';
 
 type TeamMemberRow = Database['public']['Tables']['team_members']['Row'];
@@ -41,7 +63,7 @@ export async function fetchMyMemberships(
   signal?: AbortSignal
 ): Promise<TeamMembership[]> {
   let q = supabase
-    .from('team_members')
+    .from(ACTIVE_MEMBERS)
     .select('*')
     .eq('user_id', userId)
     .order('joined_at', { ascending: true });
@@ -172,7 +194,7 @@ export async function updateTeamHomeLocation(teamId: string, location: TeamHomeL
 }
 
 export async function fetchTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
-  const { data: members, error } = await supabase.from('team_members').select('*').eq('team_id', teamId);
+  const { data: members, error } = await supabase.from(ACTIVE_MEMBERS).select('*').eq('team_id', teamId);
   if (error) throw error;
   if (!members || members.length === 0) return [];
 
@@ -245,6 +267,46 @@ export async function updateMemberRole(teamMemberId: string, role: TeamMemberRow
   if (error) throw error;
 }
 
+/**
+ * 팀 나가기.
+ *
+ * ⚠ **DELETE로 하면 조용히 실패한다.** `team_members_delete_admin`이
+ *   `is_team_admin(team_id)`뿐이라 **본인 탈퇴 정책이 없다.** RLS에 막힌 DELETE를
+ *   PostgREST는 「조건에 맞는 행이 없었다」와 똑같이 취급한다 — **200에 0행, 오류 없음**이다.
+ *   2026-09-18에 실측했다: 본인은 `[]`, 총무는 그 행이 그대로 돌아왔다.
+ *   그래서 `removeMember`를 쓰던 예전 경로는 **화면만 나간 척**하고 다음 조회에서
+ *   팀이 되살아났다(오류 문구 없이 홈으로 돌아갔다).
+ *
+ * 지금은 RPC 하나가 규칙까지 들고 있다:
+ *   혼자면 팀 해체 · 마지막 총무면 거절 · 그 외에는 left_at을 찍는다(소프트 삭제).
+ * 거절은 **예외로 온다**(P0001) — `error`가 실제로 채워지므로 조용히 지나갈 수 없다.
+ */
+export async function leaveTeam(teamId: string) {
+  const { data, error } = await supabase.rpc('leave_team', { p_team_id: teamId });
+  /*
+    ⚠ **서버가 쓴 사람 말을 여기서 UserFacingError로 바꿔 준다.**
+
+    `toUserMessage`는 클라이언트의 `UserFacingError`만 통과시킨다. 이 문구는 이제
+    **서버에서** 온다 — `leave_team()`이 `raise exception ... using errcode='P0001'`로
+    「마지막 총무는 팀을 나갈 수 없어요」를 던진다. 그대로 두면 code로 가르는 switch가
+    default로 떨어뜨려 **「문제가 생겼어요. 잠시 후 다시 시도해주세요」**가 뜬다 —
+    영원히 안 되는 일을 다시 시도하라고 말하는 셈이다. 2026-09-18에 기기에서 봤다.
+
+    ⚠ **P0001을 toUserMessage에서 통째로 통과시키면 안 된다.** P0001은 plpgsql의
+      `raise exception` 기본값이라 `join_team_by_invite`의 `'invalid invite code'`
+      (영어 개발자 문구)도 같은 코드로 온다. 그래서 **이 호출에서만** 연다 —
+      여기서 나오는 P0001은 둘 뿐이고 둘 다 사람에게 보여주려고 쓴 한국어다
+      (「마지막 총무는…」·「이 팀의 멤버가 아니에요」).
+  */
+  if (error) {
+    throw (error as { code?: string }).code === 'P0001'
+      ? new UserFacingError(error.message)
+      : error;
+  }
+  return data;
+}
+
+/** 총무의 강퇴. 본인 탈퇴는 leaveTeam을 쓴다 — 여기로는 조용히 실패한다 */
 export async function removeMember(teamMemberId: string) {
   const { error } = await supabase.from('team_members').delete().eq('id', teamMemberId);
   if (error) throw error;

@@ -2,6 +2,7 @@
 // 명단 시트 / 팀 분배가 필요한 멤버 필드(position, attendanceRate, role, skillLevel)를
 // 한 번에 가져온다. team_members + team_member_stats 뷰를 조인.
 import { supabase } from '../../../lib/supabase';
+import { ACTIVE_MEMBERS } from './teamService';
 import type { SkillLevel } from '../../../types/database';
 
 export interface MemberProfile {
@@ -25,7 +26,7 @@ export async function fetchMemberProfiles(teamId: string): Promise<MemberProfile
   // 두 번 나눠 받아서 JS에서 붙인다.
   const [{ data, error }, { data: stats }] = await Promise.all([
     supabase
-      .from('team_members')
+      .from(ACTIVE_MEMBERS)
       .select('id, user_id, role, position, skill_level, profiles ( display_name )')
       .eq('team_id', teamId)
       .order('role', { ascending: true }),

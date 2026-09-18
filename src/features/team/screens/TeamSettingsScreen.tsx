@@ -46,9 +46,14 @@ export function TeamSettingsScreen({ navigation }: any) {
   /*
    * 팀 나가기 — 팀 홈에서 옮겨 왔다.
    *
-   * 미납이 있으면 확인 문구에 같이 적는다. 나가면 team_members 행이 지워지고
-   * settlement_shares가 cascade로 따라가서, 안 낸 돈의 기록이 조용히 사라진다.
-   * 총무는 누가 얼마를 안 냈는지 알 방법이 없어진다 — 막지는 않되 말은 해준다.
+   * ⚠ **문구가 한 번 거짓이 됐던 자리다.** 예전에는 행을 지웠고 settlement_shares가
+   *   cascade로 따라가서 「기록도 함께 사라져요」가 참이었다. 2026-09-18에 소프트
+   *   삭제로 바꾸면서(left_at) **기록이 남게 됐는데 문구는 그대로였다** —
+   *   같은 문장이 정반대를 가리켰다(AGENTS.md 「주석은 결론이 아니라 전제를 적는다」).
+   *
+   * 지금 참인 것: 나가도 행은 left_at을 달고 남고, 정산 몫·참석 기록도 남는다.
+   * 미납도 남는다 — 나가는 것으로 회피되지 않는다. 그래서 **미납이 있으면
+   * 「사라진다」가 아니라 「남는다」고 말한다.** 막지는 않되 말은 해준다.
    *
    * 마지막 총무 가드는 여기서 다시 쓰지 않는다. teamStore.leaveTeam()이 던지고,
    * 그 문구를 그대로 보여준다 — 조건을 두 곳에 두면 언젠가 갈린다.
@@ -58,7 +63,7 @@ export function TeamSettingsScreen({ navigation }: any) {
     const unpaid = myUnpaidAmount(settlementCurrent, settlementPast, activeTeam.membershipId);
     const warn = unpaid > 0 ? `
 
-아직 내지 않은 회비 ${unpaid.toLocaleString()}원이 있어요. 나가면 그 기록도 함께 사라져요.` : '';
+아직 내지 않은 회비 ${unpaid.toLocaleString()}원이 있어요. 나가도 이 기록은 남아요.` : '';
     confirmAction({
       title: '팀 나가기',
       message: `${activeTeam.team.name}에서 나갈까요?${warn}`,

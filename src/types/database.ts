@@ -90,6 +90,8 @@ export interface Database {
           notify_new_match: boolean;
           notify_deadline: boolean;
           joined_at: string;
+          /* 탈퇴 시각. null이면 현재 멤버. 조회는 team_members_active 뷰를 쓴다 */
+          left_at: string | null;
         };
         Insert: {
           team_id: string;
@@ -511,6 +513,36 @@ export interface Database {
       };
     };
     Views: {
+      /*
+        현재 멤버만. `select * from team_members where left_at is null`.
+
+        ⚠ 행을 지우지 않는 이유는 CASCADE다 — settlement_shares·attendance_votes 등이
+          team_member_id를 물고 있어 지우면 정산 몫과 참석 기록이 함께 사라진다.
+        ⚠ **읽기 전용이다.** security_invoker 뷰라 UPDATE/DELETE는 테이블로 가야 하고,
+          나가기는 leave_team() RPC가 한다.
+      */
+      team_members_active: {
+        Row: {
+          id: string;
+          team_id: string;
+          user_id: string;
+          role: TeamRole;
+          skill_tag: SkillTag | null;
+          position: string | null;
+          skill_level: SkillLevel;
+          jersey_number: number | null;
+          notify_match: boolean;
+          notify_announcement: boolean;
+          notify_board: boolean;
+          notify_settlement: boolean;
+          notify_new_match: boolean;
+          notify_deadline: boolean;
+          joined_at: string;
+          /* 뷰의 조건이 `left_at is null`이라 여기서는 늘 null이다. 모양을 맞춰 둔다 */
+          left_at: string | null;
+        };
+        Relationships: [];
+      };
       team_member_stats: {
         Row: {
           team_member_id: string;
@@ -526,6 +558,11 @@ export interface Database {
       create_team: {
         Args: { p_name: string };
         Returns: Database['public']['Tables']['teams']['Row'];
+      };
+      leave_team: {
+        Args: { p_team_id: string };
+        /* { ok: true, disbanded: boolean }. 막히는 경우는 예외로 온다(P0001) */
+        Returns: { ok: boolean; disbanded: boolean };
       };
       join_team_by_invite: {
         Args: { p_invite_code: string };

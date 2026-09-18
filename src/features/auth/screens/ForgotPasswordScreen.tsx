@@ -108,16 +108,23 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
         <Pressable accessibilityRole="button" onPress={() => navigation.goBack()} hitSlop={8} style={styles.linkRow}>
           <Text style={styles.linkText}>간편 로그인으로 가입하셨나요? 로그인으로 돌아가기</Text>
         </Pressable>
+      </ScrollView>
+
       {/*
-        ⚠ **버튼이 ScrollView 안에 있어야 한다. 밖에 고정하면 키보드가 덮는다.**
+        ⚠ **버튼은 ScrollView 밖, KAV 안이다.**
 
-        전에는 </ScrollView> 뒤의 고정 footer였다. 안드로이드는 창을 adjustResize로
-        줄이지만 **고정 footer는 줄어든 창의 바닥에 그대로 붙어 키보드 아래로 들어간다** —
-        스크롤해도 footer는 안 움직이니 **닿을 방법이 없다.**
-        2026-09-17에 기기에서 확인했다(회원가입 화면에서 「가입하기」가 화면 밖).
+        세 번 자리를 옮긴 자리다(SignUpScreen과 같은 이력):
+          ① 원래     </ScrollView> 뒤의 고정 footer. behavior가 ios 분기라 **창이 안 줄어**
+                     키보드 아래로 들어갔고 스크롤해도 안 움직였다(2026-09-17).
+          ② 88d3130  ScrollView 안으로 넣었다. 닿기는 하는데 스크롤해야 보인다.
+          ③ 지금     다시 밖으로. 3ccf014에서 behavior="padding"으로 창이 실제로 줄게 됐으므로
+                     **줄어든 창의 마지막 형제 = 키보드 바로 위**다.
 
-        안으로 넣으면 스크롤이 버튼까지 데려온다. LoginScreen·ResetPasswordScreen이
-        원래 이 모양이었고, 키보드가 떠도 버튼이 키보드 위에 남는 것을 기기에서 확인했다.
+        ⚠ ①이 깨진 이유는 「밖에 있어서」가 아니라 **아무도 키보드를 안 따라가서**였다.
+
+        ⚠ **글꼴 배율 200%가 결정적이었다.** 1.0에서는 ②로도 통과했지만(여유 228px),
+          200% · 1080x1920에서 버튼이 잘려 **위 9px만 보였다**(2026-09-19 실측).
+          배율은 사용자가 접근성 설정으로 올리므로 우리가 안 건드려도 일어난다.
       */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
@@ -129,7 +136,6 @@ export function ForgotPasswordScreen({ navigation }: { navigation: any }) {
           <Text style={styles.ctaText}>{signingIn ? '보내는 중…' : sent ? '다시 보내기' : '재설정 메일 받기'}</Text>
         </Pressable>
       </View>
-      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

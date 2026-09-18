@@ -210,16 +210,6 @@ export function LoginScreen({ navigation }: { navigation: any }) {
           {/* 오류는 버튼 바로 위에 — 눌렀는데 아무 반응 없어 보이면 안 된다 */}
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canSubmit}
-            onPress={submit}
-            style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}
-          >
-            <GreenFill />
-            <Text style={styles.ctaText}>{signingIn ? '잠시만요…' : '로그인'}</Text>
-          </Pressable>
-
           {/* 보조 경로는 버튼이 아니라 텍스트 링크로 — 로그인 CTA와 경쟁하면 안 된다 */}
           <View style={styles.linkRow}>
             <Pressable accessibilityRole="button" onPress={() => go('ForgotPassword')} hitSlop={8}>
@@ -269,6 +259,31 @@ export function LoginScreen({ navigation }: { navigation: any }) {
 
         <Text style={styles.footNote}>가입하면 팀을 만들거나 초대 코드로 참가할 수 있어요</Text>
       </ScrollView>
+
+      {/*
+        ⚠ **버튼은 ScrollView 밖, KAV 안이다.** 창이 키보드 위로 줄면 그 마지막 형제가
+          키보드 바로 위에 선다(3ccf014에서 behavior="padding"으로 창이 실제로 줄게 됐다).
+
+        ⚠ **글꼴 배율 200%가 이걸 요구했다.** 1.0에서는 ScrollView 안에서도 통과했지만
+          (여유 44px), 200% · 1080x1920에서 버튼이 잘려 **위 15px만 보였다**(2026-09-19 실측).
+          배율은 사용자가 접근성 설정으로 올리므로 우리가 안 건드려도 일어난다.
+
+        ⚠ **이 화면만 순서가 바뀌었다.** 다른 폼은 버튼이 내용의 끝이라 밖으로 빼도
+          보이는 순서가 그대로인데, 여기는 버튼 뒤에 링크·구분선·소셜 셋·안내문이 있었다.
+          그래서 스크롤 내용의 **아래**에 버튼이 붙는다 — 키보드가 없을 때 소셜 로그인이
+          주 버튼보다 위에 온다. 키보드가 떴을 때 버튼에 닿는 것을 우선했다.
+      */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={!canSubmit}
+          onPress={submit}
+          style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}
+        >
+          <GreenFill />
+          <Text style={styles.ctaText}>{signingIn ? '잠시만요…' : '로그인'}</Text>
+        </Pressable>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -364,5 +379,7 @@ const makeStyles = (colors: Palette) =>
   socialMark: { fontSize: 22, fontWeight: '800' },
   socialLabel: { color: colors.textBody, fontSize: 11, fontWeight: '700' },
 
+  /* 버튼이 ScrollView 밖으로 나가면서 생긴 바. 스크롤 내용과 붙지 않게 위를 띄운다 */
+  footer: { paddingHorizontal: 24, paddingTop: 12 },
   footNote: { color: colors.textFaint, fontSize: 11, fontWeight: '600', textAlign: 'center' },
   });

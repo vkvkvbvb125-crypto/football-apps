@@ -67,16 +67,32 @@ export function ResetPasswordScreen() {
 
           {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canSubmit}
-            onPress={() => updatePassword(password)}
-            style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}
-          >
-            <Text style={styles.ctaText}>{signingIn ? '저장 중…' : '비밀번호 변경'}</Text>
-          </Pressable>
         </View>
       </ScrollView>
+
+      {/*
+        ⚠ **버튼은 ScrollView 밖, KAV 안이다. 다섯 폼이 같은 기준이다.**
+
+        창이 키보드 위로 줄면 그 마지막 형제가 키보드 바로 위에 선다
+        (3ccf014에서 behavior="padding"으로 창이 실제로 줄게 됐다).
+
+        ⚠ **글꼴 배율 200%가 이 기준을 강제했다.** 배율 1.0에서는 ScrollView 안에서도
+          통과하던 화면들이(Login +44 · Forgot +228) 200% · 1080x1920에서 잘려
+          각각 15px·9px만 보였다(2026-09-19 실측). 배율은 사용자가 접근성 설정으로
+          올리므로 **우리가 안 건드려도 일어난다.**
+        ⚠ 이 화면은 그 측정을 못 했다 — 재설정 링크가 있어야 닿는다. 같은 구조로
+          맞춰 두고, 착지 페이지가 생기면 그때 잰다(⑸ 기기 확인 목록).
+      */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={!canSubmit}
+          onPress={() => updatePassword(password)}
+          style={({ pressed }) => [styles.cta, !canSubmit && styles.ctaOff, pressed && canSubmit && styles.pressed]}
+        >
+          <Text style={styles.ctaText}>{signingIn ? '저장 중…' : '비밀번호 변경'}</Text>
+        </Pressable>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -112,5 +128,7 @@ const makeStyles = (colors: Palette) =>
     justifyContent: 'center',
   },
   ctaOff: { opacity: 0.4 },
+  /* 버튼이 ScrollView 밖으로 나가면서 생긴 바. 스크롤 내용과 붙지 않게 위를 띄운다 */
+  footer: { paddingHorizontal: 24, paddingTop: 12 },
   ctaText: { color: colors.bgRoot, fontSize: 15, fontWeight: '800' },
   });

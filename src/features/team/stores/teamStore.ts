@@ -77,6 +77,20 @@ interface TeamState {
    */
   loadError: 'failed' | 'timeout' | null;
   /**
+   * **이 팀에 더는 속하지 않는다**는 사실. null이면 정상.
+   *
+   * ⚠ `loadError`와 다르다. 저쪽은 「못 불러왔다」이고 이것은 **「불러왔는데 내가 없다」**다.
+   *   둘을 한 값으로 묶으면 네트워크 실패에 「내보내졌어요」가 뜬다.
+   *
+   * ⚠ **강퇴와 해체를 가르지 않는다.** 둘 다 「이 팀에 더는 속하지 않음」이고,
+   *   화면이 할 일도 같다 — 팀 선택으로 보내고 한 줄 알려 준다.
+   *   어느 쪽인지는 클라이언트가 알 방법이 없다(강퇴는 `left_at`, 해체는 팀 자체가
+   *   없어져서 조회가 비거나 막힌다).
+   */
+  removedFromTeam: boolean;
+  /** 안내를 한 번 보여주고 끈다 */
+  clearRemovedFromTeam: () => void;
+  /**
    * @param preferTeamId 이 팀을 활성으로 삼는다(있으면). 팀을 새로 만들거나 초대로
    *   막 가입했을 때 그 팀으로 들어가려고 쓴다.
    */
@@ -149,6 +163,7 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   loading: false,
   error: null,
   loadError: null,
+  removedFromTeam: false,
   loadMemberships: async (preferTeamId) => {
     /*
       ⚠ **loadError를 여기서 지우지 않는다. 성공했을 때만 지운다.**
@@ -257,6 +272,29 @@ export const useTeamStore = create<TeamState>((set, get) => ({
         fetchTeamMembers(activeTeam.team.id),
         fetchMemberNames(activeTeam.team.id),
       ]);
+      /*
+        ⚠ **여기가 「이 팀에 더는 속하지 않음」을 잡는 한 자리다.**
+
+          강퇴 → 내 행에 `left_at`이 찍혀 뷰(`team_members_active`)에서 빠진다
+          해체 → 팀이 없어져 조회가 비거나 막힌다
+
+        둘 다 **「불러왔는데 내가 없다」**로 나타난다. 그래서 한 경로로 본다.
+
+        ⚠ **실패와 구별된다.** 이 줄은 `await`가 성공한 뒤에만 돈다 —
+          네트워크가 끊겨 catch로 가면 아무 판정도 안 한다. 그게 중요하다:
+          실패에 「내보내졌어요」를 띄우면 그게 더 나쁜 거짓말이다.
+
+        ⚠ 왜 여기인가. 2026-09-19에 기기에서 보니 강퇴당한 사람이 **당겨서
+          새로고침하면 껍데기 홈**이 됐다 — 팀 이름이 사라지고 「경기 없음 ·
+          0건 · 0원」인데 여전히 홈 탭 안이었다. `refresh`가 `loadMemberships`를
+          안 부르기 때문인데, 부르게 고치면 새로고침마다 조회가 하나 는다.
+          `loadMembers`는 이미 모든 팀 화면이 부르고, **답에 이미 사실이 들어 있다.**
+      */
+      if (!members.some((m) => m.id === activeTeam.membershipId)) {
+        set({ removedFromTeam: true, activeTeam: null, members: [], memberNames: new Map() });
+        await get().loadMemberships();
+        return;
+      }
       set({ members, memberNames });
     } catch {
       // 멤버 목록은 부가 정보라 실패해도 조용히 무시
@@ -429,5 +467,15 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       set({ error: toUserMessage(err, { '42501': '총무만 할 수 있어요' }, 'removeMember') });
     }
   },
-  reset: () => set({ memberships: [], activeTeam: null, members: [], loaded: false, error: null, loadError: null }),
+  clearRemovedFromTeam: () => set({ removedFromTeam: false }),
+  reset: () =>
+    set({
+      memberships: [],
+      activeTeam: null,
+      members: [],
+      loaded: false,
+      error: null,
+      loadError: null,
+      removedFromTeam: false,
+    }),
 }));

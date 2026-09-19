@@ -21,6 +21,11 @@ const CODE_LENGTH = 8;
 export function TeamStartScreen() {
   const { colors, styles } = useThemed(makeStyles);
   const insets = useSafeAreaInsets();
+  const removedFromTeam = useTeamStore((s) => s.removedFromTeam);
+  const clearRemovedFromTeam = useTeamStore((s) => s.clearRemovedFromTeam);
+  /* ⚠ **화면을 떠날 때 끈다.** 한 번 보여주면 할 일을 다 한 안내다 —
+       안 끄면 다음에 팀을 만들려고 이 화면에 와도 「내보내졌어요」가 따라온다 */
+  useEffect(() => () => clearRemovedFromTeam(), [clearRemovedFromTeam]);
   const [pick, setPick] = useState<'create' | 'join' | null>(null);
   const [teamName, setTeamName] = useState('');
   const [code, setCode] = useState('');
@@ -111,6 +116,26 @@ export function TeamStartScreen() {
           <View style={styles.greetRow}>
             <Text style={styles.greet}>{userName}님, 반가워요</Text>
           </View>
+          {/*
+            ⚠ **여기 오는 길이 둘이다.** 가입 직후(팀이 아직 없음)와
+              **팀에서 빠진 뒤**(강퇴·해체)다. 후자는 사용자가 **아무것도 안 했는데**
+              화면이 바뀌므로 이유를 말해야 한다.
+
+            ⚠ 2026-09-19 전에는 말해 주기는커녕 **껍데기 홈**에 남았다 — 팀 이름이
+              사라지고 「경기 없음 · 0건 · 0원」인데 여전히 홈 탭 안이었다.
+              「내 데이터가 다 사라졌다」로 읽힌다.
+
+            ⚠ **강퇴인지 해체인지 적지 않는다.** 클라이언트가 알 방법이 없고,
+              둘 중 하나라고 단정하면 틀린 쪽에는 거짓말이 된다.
+          */}
+          {removedFromTeam && (
+            <View style={styles.removedNote}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.textDim} />
+              <Text style={styles.removedText}>
+                더 이상 이 팀의 멤버가 아니에요. 총무가 내보냈거나 팀이 해체되었어요.
+              </Text>
+            </View>
+          )}
           <Text style={styles.title}>
             마지막 단계예요{'\n'}
             <Text style={{ color: colors.green }}>팀을 선택해주세요</Text>
@@ -296,6 +321,16 @@ const makeStyles = (colors: Palette) =>
      ⚠ **아래 여백은 여기서 인라인으로 준다**(`insets.bottom + 16`). root(=KAV)에 두면
         위 주석대로 덮여서 사라진다. Login·SignUp·Forgot·ResetPassword가 모두 이 모양이다. */
   ctaBar: { paddingTop: 12 },
+  removedNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: colors.overlay,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  removedText: { flex: 1, color: colors.textDim, fontSize: 12, fontWeight: '600', lineHeight: 17 },
   signOutRow: { position: 'absolute', top: 8, right: 24 },
   signOutText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   greetRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

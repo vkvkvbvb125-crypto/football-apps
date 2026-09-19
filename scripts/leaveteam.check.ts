@@ -70,4 +70,54 @@ const store = read('src/features/team/stores/teamStore.ts');
 */
 assert.ok(/마지막 총무는 내보낼 수 없어요/.test(store), '내보내기 가드가 사라졌다');
 
+/* ── 혼자면 「해체」라고 말하는가 ──────────────────────────────────
+   2026-09-19에 기기에서 혼자인 팀을 나갔더니 팀이 사라졌는데, 확인 문구는
+   「kdtest0919에서 나갈까요?」 **하나뿐**이었다. 경기·참석·정산이 통째로 없어지는
+   동작인데 단순 탈퇴처럼 읽힌다.
+
+   ⚠ 남는 팀의 문구와 **정반대**라 더 나쁘다 — 거기서는 「나가도 이 기록은 남아요」가
+     참이다. 한 화면의 두 문장이 갈리므로 조건이 분명해야 한다.
+*/
+{
+  const screen = readFileSync(
+    new URL('../src/features/team/screens/TeamSettingsScreen.tsx', import.meta.url),
+    'utf8'
+  ).split('\r').join('');
+
+  const aloneLine = /const alone = ([^;]+);/.exec(screen);
+  assert.ok(aloneLine, 'TeamSettingsScreen에 「혼자인가」 판정이 없다 — 해체를 안 알린다');
+
+  assert.ok(
+    /activeMembers\.length === 1/.test(aloneLine[1]),
+    `「혼자인가」를 «${aloneLine[1].trim()}»로 잰다 — ` +
+      `**activeMembers.length === 1** 이어야 한다. ` +
+      `⚠ 로컬 members는 fetchMemberProfiles가 실패하면 조용히 []로 남아서, ` +
+      `조회 실패가 「팀 삭제」 문구로 둔갑한다. ` +
+      `⚠ <= 1도 안 된다 — 0은 「혼자」가 아니라 「아직 모른다」다`
+  );
+
+  assert.ok(
+    /const activeMembers = useTeamStore\(\(s\) => s\.members\)/.test(screen),
+    'activeMembers가 스토어(활성 멤버 뷰)에서 오지 않는다'
+  );
+
+  /*
+    문구가 두 가지를 말하는가: **사라진다 · 되돌릴 수 없다**
+
+    ⚠ **파일 전체에서 낱말을 찾으면 안 된다.** 처음에 `screen.includes('되돌릴 수 없')`로
+      썼더니 **6번 줄 머리말 주석**의 「되돌릴 수 없게」와 612번 줄의 「값이 지워진다」가
+      걸려서, 문구를 지워도 통과했다(변이가 빠져나갔다).
+      **해체 갈래의 문자열만 떠서 본다.**
+  */
+  const aloneMsg = /const message = alone\s*\n?\s*\?\s*`([\s\S]*?)`\s*\n?\s*:/.exec(screen);
+  assert.ok(aloneMsg, '해체 갈래의 문구를 못 떴다 — 모양이 바뀌었으면 이 검사도 고쳐라');
+  for (const word of ['지워', '되돌릴 수 없']) {
+    assert.ok(
+      aloneMsg[1].includes(word),
+      `해체 문구에 「${word}…」가 없다 — 무엇이 없어지는지와 되돌릴 수 없다는 것을 ` +
+        `둘 다 적어야 한다. 지금 문구: «${aloneMsg[1].replace(/\n+/g, ' ').trim()}»`
+    );
+  }
+}
+
 console.log('leaveteam ok — 나가기 규칙은 서버에 있고 클라이언트가 복제하지 않는다');

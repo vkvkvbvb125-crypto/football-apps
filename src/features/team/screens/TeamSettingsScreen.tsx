@@ -40,6 +40,13 @@ export function TeamSettingsScreen({ navigation }: any) {
   const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const leaveTeam = useTeamStore((s) => s.leaveTeam);
+  /*
+    ⚠ **아래 `members`(로컬 state)를 쓰지 마라.** 그건 `fetchMemberProfiles`가
+      채우는데 **실패해도 조용히 `[]`로 남는다**(「명단은 부가 정보」). 그걸로
+      「혼자인가」를 판단하면 **조회 실패가 「팀 삭제」 문구로 둔갑한다.**
+      스토어의 `members`는 팀과 같이 로드되는 활성 멤버 뷰다.
+  */
+  const activeMembers = useTeamStore((s) => s.members);
   const settlementCurrent = useSettlementStore((st) => st.current);
   const settlementPast = useSettlementStore((st) => st.past);
 
@@ -64,10 +71,39 @@ export function TeamSettingsScreen({ navigation }: any) {
     const warn = unpaid > 0 ? `
 
 아직 내지 않은 회비 ${unpaid.toLocaleString()}원이 있어요. 나가도 이 기록은 남아요.` : '';
+
+    /*
+      ⚠ **혼자면 나가기가 곧 해체다. 그 말을 해야 한다.**
+
+      `leave_team()`의 계약이 그렇다 — 혼자면 `teams`를 지우고 딸린 것은 CASCADE로
+      따라간다(scripts/leaveteam.check.ts 머리말의 규칙 표, 사용자가 승인해 실행한 SQL).
+      2026-09-19에 기기에서도 그렇게 됐다: kdtest3가 혼자인 팀에서 나가자 팀이
+      사라지고 TeamStart로 돌아왔다.
+
+      그런데 **확인 문구는 「나갈까요?」 하나뿐이었다.** 단순 탈퇴처럼 읽힌다 —
+      경기·정산이 통째로 없어지는 동작인데 그 말이 어디에도 없었다.
+
+      ⚠ 위 미납 문구와 **정반대**라는 점이 중요하다. 남는 팀에서는 「나가도 기록은
+        남아요」가 참이고, 해체에서는 **그 기록이 사라진다.** 한 화면에서 두 문장이
+        갈리므로 조건을 분명히 나눠 둔다.
+    */
+    /*
+      ⚠ **`=== 1`이다. `<= 1`이 아니다.** 0은 「혼자」가 아니라 **「아직 모른다」**다 —
+        아직 안 불러왔거나 조회가 실패한 상태다. 모를 때 「팀이 사라져요」로 올리면
+        **실패가 더 무서운 문구를 만든다.** 모르면 평소 문구로 간다(서버가 어차피
+        규칙을 들고 있어서, 혼자면 해체는 그대로 일어난다 — 말만 덜 한 것이다).
+    */
+    const alone = activeMembers.length === 1;
+    const message = alone
+      ? `나가면 ${activeTeam.team.name}이 사라져요.
+
+경기·참석·정산 기록이 모두 함께 지워지고, 되돌릴 수 없어요.`
+      : `${activeTeam.team.name}에서 나갈까요?${warn}`;
+
     confirmAction({
-      title: '팀 나가기',
-      message: `${activeTeam.team.name}에서 나갈까요?${warn}`,
-      confirmLabel: '나가기',
+      title: alone ? '팀이 사라져요' : '팀 나가기',
+      message,
+      confirmLabel: alone ? '팀 삭제' : '나가기',
       destructive: true,
     }).then((ok) => {
       if (!ok) return;

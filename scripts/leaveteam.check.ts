@@ -62,13 +62,20 @@ const store = read('src/features/team/stores/teamStore.ts');
   }
 }
 
-/* ── ② 내보내기(강퇴) 가드는 클라이언트에 남아 있어야 한다 ──────── */
-/*
-  ⚠ 나가기와 **다른 자리다.** 강퇴는 총무가 남을 사람을 고르는 동작이라 혼자인 경우가
-    없고, DELETE 정책(team_members_delete_admin)이 총무에게 열려 있어 조용히 실패하지도
-    않는다. 그래서 서버로 옮기지 않았다 — 옮길 이유가 없는 것을 옮기면 일만 는다.
+/* ── ② 내보내기(강퇴) 가드도 **클라이언트에 있으면 안 된다** ──────
+  ⚠ **여기 전에는 정반대가 적혀 있었다** — 「강퇴 가드는 클라이언트에 남아 있어야
+    한다」. 근거는 둘이었고 **둘 다 틀렸다**:
+
+      「혼자인 경우가 없다」           → 마지막 **총무**인 경우가 있다. 그게 규칙의 이유다
+      「DELETE 정책이 열려 있어        → 2026-09-19에 그 정책(team_members_delete_admin)을
+        조용히 실패하지 않는다」          **지웠다.** 전제가 사라졌다
+
+    그리고 더 큰 것을 놓쳤다: **서버에는 그 규칙이 아예 없었다.** 클라이언트에만
+    두 벌(teamStore·MemberListModal) 있었고 RLS는 「총무인가」만 봤다 —
+    **목록이 낡으면 총무 없는 팀이 만들어질 수 있었다.**
+
+  이제 `remove_member()` RPC가 든다. 클라이언트는 문구도 복제하지 않는다.
 */
-assert.ok(/마지막 총무는 내보낼 수 없어요/.test(store), '내보내기 가드가 사라졌다');
 
 /* ── 혼자면 「해체」라고 말하는가 ──────────────────────────────────
    2026-09-19에 기기에서 혼자인 팀을 나갔더니 팀이 사라졌는데, 확인 문구는
@@ -118,6 +125,79 @@ assert.ok(/마지막 총무는 내보낼 수 없어요/.test(store), '내보내�
         `둘 다 적어야 한다. 지금 문구: «${aloneMsg[1].replace(/\n+/g, ' ').trim()}»`
     );
   }
+}
+
+/* ── 강퇴도 같은 규칙이다: 서버가 들고 클라이언트가 복제하지 않는다 ─────
+   2026-09-19에 강퇴를 소프트 삭제로 바꿨다. 그 전에는 `team_members`를 하드
+   DELETE했고, `settlement_shares`가 `ON DELETE CASCADE`라 **미납 회비 기록이
+   함께 사라졌다.** 나가기는 9/18에 고쳤는데 이 경로만 남아 있었다.
+*/
+{
+  /*
+    ⚠ **주석을 걷고 본다.** 처음에 안 걷었더니 「전에는 `.delete()`였다」고 적은
+      **내 근거 주석**이 앵커에 걸려 FAIL이 났다. **네 번째** 밟은 덫이다
+      (scripts/lib/anchor.ts 「근거 주석이 앵커를 품는다」).
+  */
+  const strip = (t: string) =>
+    t
+      .split('\r')
+      .join('')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map((l) => l.replace(/\/\/.*$/, ''))
+      .join('\n');
+  const svc = strip(
+    readFileSync(new URL('../src/features/team/services/teamService.ts', import.meta.url), 'utf8')
+  );
+
+  /* ⑴ 하드 DELETE 경로가 없다 */
+  assert.ok(
+    !/from\('team_members'\)[\s\S]{0,40}\.delete\(\)/.test(svc),
+    `teamService가 team_members를 직접 DELETE한다 — settlement_shares 등이 ` +
+      `ON DELETE CASCADE라 **미납 회비 기록이 함께 사라진다.** remove_member RPC를 써라`
+  );
+
+  /* ⑵ RPC를 쓰고 P0001을 사용자 문구로 바꾼다 */
+  const fn = /export async function removeMember\([\s\S]*?\n\}/.exec(svc);
+  assert.ok(fn, 'teamService에 removeMember가 없다 — 이름이 바뀌었으면 이 검사도 고쳐라');
+  assert.ok(
+    /rpc\('remove_member'/.test(fn[0]),
+    'removeMember가 remove_member RPC를 안 쓴다'
+  );
+  assert.ok(
+    /P0001[\s\S]{0,80}UserFacingError/.test(fn[0]),
+    `removeMember가 P0001을 UserFacingError로 안 바꾼다 — 그러면 서버가 쓴 한국어가 ` +
+      `「문제가 생겼어요. 잠시 후 다시 시도해주세요」로 덮인다(영원히 안 되는 일인데)`
+  );
+
+  /* ⑶ 마지막 총무 문구가 클라이언트에 없다 — 두 벌이면 서버와 갈린다 */
+  const dup: string[] = [];
+  for (const rel of [
+    'src/features/team/stores/teamStore.ts',
+    'src/features/team/components/MemberListModal.tsx',
+  ]) {
+    /* ⚠ 주석은 뺀다 — 왜 두지 않는지를 적은 **내 주석**이 앵커에 걸린다 */
+    const code = strip(readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8'));
+    if (/마지막 총무는 내보낼 수 없어요/.test(code)) dup.push(rel);
+  }
+  assert.deepEqual(
+    dup,
+    [],
+    `클라이언트가 「마지막 총무는 내보낼 수 없어요」를 들고 있다 — 규칙은 ` +
+      `remove_member() RPC에 있다. 두 벌이면 서버 문구가 바뀔 때 갈린다:\n  ${dup.join('\n  ')}`
+  );
+
+  /* ⑷ 확인 문구가 「남는다」를 말한다 — 뜻이 정반대가 됐다 */
+  const modal = readFileSync(
+    new URL('../src/features/team/components/MemberListModal.tsx', import.meta.url), 'utf8'
+  ).split('\r').join('');
+  const msg = /message: `([\s\S]*?)`,/.exec(modal);
+  assert.ok(msg, '내보내기 확인 문구를 못 떴다 — 모양이 바뀌었으면 이 검사도 고쳐라');
+  assert.ok(
+    /남아요|남습니다/.test(msg[1]),
+    `내보내기 확인 문구가 「기록이 남는다」를 안 말한다. 전에는 실제로 **사라졌으므로** ` +
+      `총무가 반대로 알고 있을 수 있다. 지금 문구: «${msg[1].replace(/\n+/g, ' ').trim()}»`
+  );
 }
 
 console.log('leaveteam ok — 나가기 규칙은 서버에 있고 클라이언트가 복제하지 않는다');

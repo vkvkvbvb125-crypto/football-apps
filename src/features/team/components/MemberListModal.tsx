@@ -1,6 +1,6 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
-import { alertMessage, confirmAction } from '../../../components/Dialog';
+import { confirmAction } from '../../../components/Dialog';
 import { Ionicons } from '@expo/vector-icons';
 import type { SkillTag } from '../../../types/database';
 import type { TeamMemberWithProfile } from '../services/teamService';
@@ -43,17 +43,32 @@ export function MemberListModal({
   onRemove,
 }: MemberListModalProps) {
   const { colors, styles } = useThemed(makeStyles);
-  const adminCount = members.filter((m) => m.role === 'admin').length;
+  /*
+    ⚠ **마지막 총무 검사를 여기 두지 않는다.** 규칙은 `remove_member()` RPC가 든다.
+      전에는 여기와 `teamStore`에 **두 벌**이 있었고 서버에는 없었다 —
+      목록이 낡으면 총무 없는 팀이 만들어질 수 있었다.
 
+    ⚠ **맞바꿈을 적어 둔다.** 미리 막지 않으므로 총무는 확인까지 한 **뒤에**
+      「마지막 총무는…」을 본다. 미리 막는 편이 친절하지만, **낡은 목록으로
+      판단하는 위험**이 더 크다. 나가기에서 이미 같은 판단을 했다
+      (`leaveteam.check`: 「규칙은 서버에 있고 클라이언트가 복제하지 않는다」).
+  */
   const handleRemove = async (member: TeamMemberWithProfile) => {
-    if (member.role === 'admin' && adminCount <= 1) {
-      // 예전엔 Alert.alert만 불러서 웹에서는 아무것도 안 뜨고 조용히 무시됐다
-      alertMessage('내보낼 수 없어요', '마지막 총무는 내보낼 수 없어요. 먼저 다른 총무를 임명해주세요.');
-      return;
-    }
+    /*
+      ⚠ **문구의 뜻이 2026-09-19에 정반대가 됐다.** 전에는 강퇴가 하드 삭제라
+        그 사람의 정산 몫과 참석 기록이 **사라졌다**. 지금은 `left_at`만 찍혀
+        **남는다.** 그래서 적을 말도 반대다.
+
+      ⚠ 총무가 「내보내면 미납이 없어지나?」를 궁금해할 자리고, 지금까지는
+        **실제로 없어졌다.** 반대가 됐으니 말해야 한다.
+      ⚠ 팀 나가기 문구(「나가도 이 기록은 남아요」)와 **같은 말**을 쓴다 —
+        같은 사실을 두 말로 적지 않는다(AGENTS.md 「같은 사실은 같은 말로」).
+    */
     const ok = await confirmAction({
       title: '멤버 내보내기',
-      message: `${member.displayName}님을 팀에서 내보내시겠어요?`,
+      message: `${member.displayName}님을 팀에서 내보낼까요?
+
+지난 경기 참석 기록과 정산 몫은 그대로 남아요. 미납이 있으면 나가도 남습니다.`,
       confirmLabel: '내보내기',
       destructive: true,
     });

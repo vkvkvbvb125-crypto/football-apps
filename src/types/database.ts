@@ -569,6 +569,16 @@ export interface Database {
         Returns: Database['public']['Tables']['team_members']['Row'];
       };
       /**
+       * 총무의 강퇴. **행을 지우지 않고 `left_at`을 찍는다** — 지우면
+       * settlement_shares·attendance_votes가 CASCADE로 함께 사라진다.
+       * `role`도 `member`로 내린다(강퇴당한 총무가 초대 코드로 총무 복귀하는 것을 막는다).
+       * 막히는 경우는 예외로 온다(P0001): 총무 아님 · 나 자신 · 마지막 총무 · 이미 나감.
+       */
+      remove_member: {
+        Args: { p_team_member_id: string };
+        Returns: { ok: boolean };
+      };
+      /**
        * 탈퇴해도 되는지. 인자가 없고 auth.uid()만 본다 — 대상을 받으면 남의 미납
        * 건수를 물어볼 수 있다. 인증이 없으면 can_delete: false + reason: 'no_auth'.
        * 실제 모양은 accountService.DeletionStatus.

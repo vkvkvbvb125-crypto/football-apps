@@ -414,13 +414,14 @@ export const useTeamStore = create<TeamState>((set, get) => ({
       set({ error: toUserMessage(err, { '42501': '총무만 할 수 있어요' }, 'promoteToAdmin') });
     }
   },
+  /*
+    ⚠ **마지막 총무 검사를 여기 두지 마라.** 규칙은 `remove_member()` RPC가 든다.
+      전에는 여기와 `MemberListModal`에 **두 벌**이 있었고 서버에는 없었다 —
+      목록이 낡으면 총무 없는 팀이 만들어질 수 있었다.
+      나가기(`leaveTeam`)가 이미 같은 판단을 했고 `leaveteam.check`가 붙든다.
+    ⚠ 문구도 복제하지 않는다. 서버가 쓴 말을 그대로 보여준다 — 두 벌이면 갈린다.
+  */
   removeMember: async (teamMemberId) => {
-    const target = get().members.find((m) => m.id === teamMemberId);
-    const adminCount = get().members.filter((m) => m.role === 'admin').length;
-    if (target?.role === 'admin' && adminCount <= 1) {
-      set({ error: '마지막 총무는 내보낼 수 없어요. 먼저 다른 총무를 임명해주세요.' });
-      return;
-    }
     try {
       await removeMemberRequest(teamMemberId);
       await get().loadMembers();

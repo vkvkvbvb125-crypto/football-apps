@@ -306,8 +306,40 @@ export async function leaveTeam(teamId: string) {
   return data;
 }
 
-/** 총무의 강퇴. 본인 탈퇴는 leaveTeam을 쓴다 — 여기로는 조용히 실패한다 */
+/*
+  총무의 강퇴. 본인 탈퇴는 `leaveTeam`을 쓴다.
+
+  ── 왜 RPC인가 ────────────────────────────────────────────────────
+  ⚠ **전에는 `from('team_members').delete()`였다.** 그런데 `settlement_shares`·
+    `attendance_votes`·`team_assignments`·`poll_responses`·`waitlist`가
+    `team_member_id`를 `ON DELETE CASCADE`로 문다 — **강퇴 한 번에 그 사람의
+    미납 회비와 참석 기록이 통째로 사라졌다.** 나가기는 2026-09-18에 소프트
+    삭제로 바꿨는데 이 경로만 남아 있었다.
+
+  이제 `remove_member()`가 `left_at`을 찍는다(2026-09-19 실행). 규칙도 서버가 든다:
+
+      총무만 · 나 자신은 못 내보냄 · 마지막 총무는 못 내보냄 · 이미 나간 멤버는 거절
+      그리고 **강등** — `role`을 `member`로 내린다
+
+  ⚠ **강등이 왜 있나.** `join_team_by_invite`가 `left_at`을 비우면서 `role`은
+    그대로 둔다. 강등이 없으면 **강퇴당한 총무가 초대 코드만 알면 총무로 복귀한다.**
+    1.0은 재참여 자체는 막지 않는다(코드 재발급 기능이 없어 차단이 영구가 된다) —
+    대신 권한만 떨군다.
+
+  ⚠ **DELETE 정책은 지웠다**(`team_members_delete_admin`). 그래서 이 경로 말고
+    `team_members`를 지울 방법이 없다 — 남겨 두면 CASCADE 구멍이 그대로였다.
+*/
 export async function removeMember(teamMemberId: string) {
-  const { error } = await supabase.from('team_members').delete().eq('id', teamMemberId);
-  if (error) throw error;
+  const { data, error } = await supabase.rpc('remove_member', { p_team_member_id: teamMemberId });
+  /*
+    ⚠ `leaveTeam`과 **같은 변환**이다. 서버가 한국어로 쓴 P0001을 여기서만 연다 —
+      `toUserMessage`에 P0001을 통째로 열면 `join_team_by_invite`의 영어 개발자
+      문구(`invalid invite code`)까지 사용자에게 샌다.
+  */
+  if (error) {
+    throw (error as { code?: string }).code === 'P0001'
+      ? new UserFacingError(error.message)
+      : error;
+  }
+  return data;
 }

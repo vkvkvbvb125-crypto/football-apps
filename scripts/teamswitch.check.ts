@@ -100,11 +100,29 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
   }
 }
 
-// ── 6. 팀이 하나면 아무것도 안 바뀐다 ───────────────────────────────
+// ── 6. 팀이 하나여도 시트를 열 수 있다 ──────────────────────────────
+/*
+  ⚠ **여기 전에는 정반대가 적혀 있었다** — 「팀이 하나면 아무것도 안 바뀐다」,
+    근거는 「팀이 하나여도 제목이 눌린다 — 셰브론이 붙고 **빈 시트**가 열린다」였다.
+
+  ⚠ **그 근거가 틀렸다. 시트는 비어 있지 않다** — 바로 아래 ⑧이 그 시트에
+    「새 팀 만들기 / 초대 코드로 참여」가 있어야 한다고 **같은 파일에서** 못 박고 있다.
+    한 검사 안에서 두 항목이 서로 어긋나 있었다.
+
+  실제 결과는 출시 차단이었다(2026-09-19): 팀이 **정확히 하나**인 사용자는
+  시트를 열 길이 없어 **두 번째 팀에 영영 못 갔다.** 야홍 6명 전원이 그 상태였다.
+
+  ⓘ 전수 검사(제목 누름 · 초대 소비 · 확인 · 취소)는 `secondteam.check.ts`가 한다.
+    여기서는 이 화면의 모양만 본다.
+*/
 {
-  assert.ok(/hasMultipleTeams = memberships\.length > 1/.test(screen), '여러 팀 여부를 안 본다');
-  assert.ok(/onPressTitle=\{hasMultipleTeams \? \(\) => setTeamSwitchVisible\(true\) : undefined\}/.test(screen),
-    '팀이 하나여도 제목이 눌린다 — 셰브론이 붙고 빈 시트가 열린다');
+  const tag = /<TabHeader[^>]*onPressTitle=\{([^}]*)\}/.exec(screen);
+  assert.ok(tag, 'TeamHomeScreen이 TabHeader에 onPressTitle을 안 넘긴다');
+  assert.ok(
+    !/hasMultipleTeams|memberships\.length/.test(tag[1]),
+    `제목 누름이 팀 개수로 막혀 있다: «${tag[1].trim()}» — ` +
+      `시트 안에만 있는 「새 팀 만들기 / 초대 코드로 참여」에 못 닿는다`
+  );
 }
 
 // ── 7. 전환하면 내부 탭이 홈으로 돌아온다 ───────────────────────────
@@ -150,11 +168,27 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
 // ── 9. 팀 전환 시트가 연 새 경로가 막다른 길이 아닌가 ──────────────
 // 팀이 있는 상태에서 TeamStartScreen을 열 수 있게 되면서 두 경우가 실제로 닿는다.
 {
-  // 이미 속한 팀의 코드 — RPC가 on conflict do nothing이라 23505가 아니라 null이 온다.
-  // 예전 매핑('23505': '이미 가입한 팀이에요')은 한 번도 안 걸렸고 화면은 무반응이었다.
-  assert.ok(/if \(!joined\) \{[\s\S]{0,200}?이미 가입한 팀이에요/.test(store),
-    'RPC가 null을 줄 때(이미 멤버) 아무 말도 안 한다');
-  assert.ok(!/'23505': '이미 가입한 팀이에요'/.test(store),
+  /*
+    이미 속한 팀의 코드 — RPC가 on conflict의 where로 걸러 23505가 아니라 **null**이 온다.
+    예전 매핑('23505': '이미 가입한 팀이에요')은 한 번도 안 걸렸고 화면은 무반응이었다.
+
+    ⚠ **주석을 걷고 본다.** 2026-09-19에 문구를 「이미 참여 중인 팀이에요」로 바꾸면서
+      teamStore에 **왜 바꿨는지를 옛 문구와 함께** 적었다. 그랬더니 이 단언이
+      **그 주석에 걸려 통과했다** — 코드는 이미 바뀐 뒤였는데도.
+      근거를 주석에 적는 저장소라 이 덫을 **다섯 번째** 밟았다.
+
+    ⚠ 문구가 오류 어투이면 안 된다. 링크를 연 사람에게 이건 실패가 아니라 **이미 된 일**이다.
+  */
+  const storeCode = store
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(String.fromCharCode(10))
+    .map((l) => l.replace(/\/\/.*$/, ''))
+    .join(String.fromCharCode(10));
+  assert.ok(/if \(!joined\) \{[\s\S]{0,200}?이미 참여 중인 팀이에요/.test(storeCode),
+    'RPC가 null을 줄 때(이미 멤버) 아무 말도 안 하거나, 문구가 「이미 참여 중인 팀이에요」가 아니다');
+  assert.ok(!/이미 가입한 팀이에요/.test(storeCode),
+    '옛 문구 「이미 가입한 팀이에요」가 코드에 남아 있다 — 오류처럼 읽힌다');
+  assert.ok(!/'23505': '이미/.test(storeCode),
     "걸리지 않는 23505 매핑이 남아 있다 — 처리되는 것처럼 보인다");
 
   // 스택에 얹혔을 때 나갈 길

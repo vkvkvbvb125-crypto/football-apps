@@ -14,7 +14,6 @@ import { type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import { useTeamStore } from '../stores/teamStore';
 import { useAuthStore } from '../../auth/stores/authStore';
-import { usePendingInviteStore } from '../stores/pendingInviteStore';
 
 const CODE_LENGTH = 8;
 
@@ -38,8 +37,6 @@ export function TeamStartScreen() {
   const createTeam = useTeamStore((s) => s.createTeam);
   const joinTeam = useTeamStore((s) => s.joinTeam);
 
-  const pendingInviteCode = usePendingInviteStore((s) => s.code);
-  const clearPendingInvite = usePendingInviteStore((s) => s.clear);
 
   /*
    * 이 화면은 두 가지 자리에서 열린다.
@@ -63,13 +60,18 @@ export function TeamStartScreen() {
     }
   }, [activeTeamId]);
 
-  useEffect(() => {
-    if (pendingInviteCode) {
-      setPick('join');
-      setCode(pendingInviteCode);
-      clearPendingInvite();
-    }
-  }, [pendingInviteCode]);
+  /*
+    ⚠ **여기서 pendingInvite를 소비하지 않는다.** 전에는 이 화면이 유일한 소비처였고,
+      그래서 **팀이 있는 사용자가 초대 링크를 열면 코드가 조용히 버려졌다** —
+      `App.tsx`가 스토어에 넣는데 이 화면에 영영 안 오기 때문이다(출시 차단 ⑤).
+
+      이제 `RootNavigator`가 한 곳에서 소비한다. **두 곳에서 소비하면 경합한다** —
+      팀 없는 사용자는 이 화면이 먼저 그려져 여기서 지워 버리고, 확인 시트는
+      영영 안 뜬다. 그래서 이쪽을 뗐다.
+
+    ⓘ 잃은 것: 이 화면의 코드 칸에 **미리 채워 주던 편의**. 대신 확인 시트에서
+      바로 참여되므로 칸을 채울 일 자체가 없다.
+  */
 
   const userName = (session?.user.user_metadata as { full_name?: string } | undefined)?.full_name ?? '회원';
 

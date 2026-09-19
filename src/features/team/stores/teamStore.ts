@@ -324,7 +324,15 @@ export const useTeamStore = create<TeamState>((set, get) => ({
        * 있게 되면서 실제로 닿는다.
        */
       if (!joined) {
-        set({ error: '이미 가입한 팀이에요', loading: false });
+        /*
+          ⚠ **오류 어투가 아니다.** 링크를 연 사람에게 이건 실패가 아니라
+            **이미 된 일**이다. 「이미 가입한 팀이에요」는 무언가 잘못된 것처럼 읽힌다.
+          ⚠ **「그 팀으로 전환」은 못 한다.** RPC가 null만 주고 **어느 팀인지 안 알려준다.**
+            초대 코드로 팀을 찾으려면 `teams` SELECT가 필요한데 그 정책이
+            `is_team_member`라 코드만으로는 못 읽는다(설계 ㉮에서 SQL을 안 늘리기로 했다).
+            그래서 **말만** 사실에 맞게 적는다.
+        */
+        set({ error: '이미 참여 중인 팀이에요', loading: false });
         return;
       }
       await get().loadMemberships(joined.team_id);

@@ -96,7 +96,28 @@ export async function createTeam(name: string) {
 
 export async function joinTeamByInvite(inviteCode: string) {
   const { data, error } = await supabase.rpc('join_team_by_invite', { p_invite_code: inviteCode });
-  if (error) throw error;
+  /*
+    ⚠ **서버가 영어 개발자 문구를 던진다.** `join_team_by_invite`의
+      `raise exception 'invalid invite code'`는 P0001이라, 그대로 두면
+      `toUserMessage`가 기본 문구(「문제가 생겼어요. 잠시 후 다시 시도해주세요」)로
+      덮는다 — **사용자는 코드가 틀렸다는 것을 모르고**, 영원히 안 될 일을
+      다시 시도하라는 말을 듣는다.
+
+    ⚠ **P0001을 `dbError`에서 통째로 열면 안 된다**(`leaveTeam` 머리말 참고).
+      그래서 여기서만 연다. 다만 **문구가 영어인지 보고 가른다** —
+      서버가 한국어로 쓴 P0001은 사용자에게 보여주려고 쓴 것이라 그대로 통과시키고,
+      ASCII만 있는 것은 개발자 문구라 사람이 읽을 말로 바꾼다.
+      SQL 문구가 나중에 바뀌어도 이 규칙은 성립한다.
+  */
+  if (error) {
+    if ((error as { code?: string }).code === 'P0001') {
+      const developerText = !/[가-힣]/.test(error.message);
+      throw new UserFacingError(
+        developerText ? '초대 코드가 맞지 않아요. 다시 확인해주세요' : error.message
+      );
+    }
+    throw error;
+  }
   return data;
 }
 

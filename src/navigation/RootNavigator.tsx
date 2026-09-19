@@ -9,6 +9,8 @@ import { ForgotPasswordScreen } from '../features/auth/screens/ForgotPasswordScr
 import { ResetPasswordScreen } from '../features/auth/screens/ResetPasswordScreen';
 import { useTeamStore } from '../features/team/stores/teamStore';
 import { TeamStartScreen } from '../features/team/screens/TeamStartScreen';
+import { usePendingInviteStore } from '../features/team/stores/pendingInviteStore';
+import { confirmAction } from '../components/Dialog';
 import { MainTabNavigator } from './MainTabNavigator';
 import { TeamSettingsScreen } from '../features/team/screens/TeamSettingsScreen';
 import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen';
@@ -167,6 +169,55 @@ export function RootNavigator() {
       resetTeam();
     }
   }, [session?.user.id]);
+
+  /*
+    초대 링크를 **여기 한 곳에서** 소비한다.
+
+    ⚠ **왜 화면이 아니라 여기인가.** 전에는 `TeamStartScreen`이 유일한 소비처였다.
+      그 화면은 **팀이 없는 사람만** 지나므로, 팀이 있는 사용자가 초대 링크를 열면
+      `App.tsx`가 코드를 스토어에 넣고 **아무도 안 꺼냈다** — 조용히 버려졌다.
+      야홍 6명 전원이 팀 하나짜리라 초대를 받아도 쓸 수 없었다(출시 차단 ⑤).
+
+    ⚠ **세션이 생긴 뒤에만 소비한다.** 로그인 전에 링크를 열 수 있고, 그때 바로
+      쓰면 누구로 참여할지가 없다. 세션이 설 때까지 스토어에 **남겨 둔다** —
+      그래서 「로그인 전에 연 링크가 로그인 후에 소비된다」가 성립한다.
+
+    ⚠ **말없이 가입시키지 않는다.** 링크 한 번에 팀이 늘면 되돌리려면 나가기를
+      해야 하고, 나가기는 마지막 총무면 **막힌다**. 되돌리기 비용이 큰 동작은 묻는다.
+
+    ⚠ **팀 이름을 먼저 못 보여준다.** `teams`의 SELECT 정책이 `is_team_member`라
+      **멤버가 아니면 코드로도 못 읽는다.** 이름을 보여주려면 definer 함수가 필요한데,
+      1.0에서 SQL을 더 늘리지 않기로 했다(설계 ㉮). 참여 직후 이름이 바로 보인다.
+  */
+  const pendingInviteCode = usePendingInviteStore((s) => s.code);
+  const clearPendingInvite = usePendingInviteStore((s) => s.clear);
+  const joinTeam = useTeamStore((s) => s.joinTeam);
+
+  useEffect(() => {
+    if (!session || !pendingInviteCode) return;
+    let cancelled = false;
+    void (async () => {
+      const ok = await confirmAction({
+        title: '초대를 받았어요',
+        message: '초대 링크로 팀에 참여할까요?',
+        confirmLabel: '참여하기',
+        /* ⓘ 취소 문구는 기본값(「취소」)을 쓴다. 「나중에」로 바꾸려면 공용
+             confirmAction에 프롭을 더해야 하는데, **취소는 거절**이라는 이 자리의
+             판단과 기본 문구가 어긋나지 않는다 — 굳이 늘리지 않는다 */
+      });
+      if (cancelled) return;
+      /*
+        ⚠ **취소해도 지운다.** 남겨 두면 화면을 옮길 때마다 같은 물음이 다시 뜨고,
+          그건 거절을 못 받아들이는 것이다. **취소는 거절이고, 링크는 메시지에
+          그대로 남아 있다** — 마음이 바뀌면 다시 누르면 된다.
+      */
+      clearPendingInvite();
+      if (ok) await joinTeam(pendingInviteCode);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user.id, pendingInviteCode]);
 
   /*
    * 팀이 바뀌면 팀에 딸린 데이터를 즉시 비운다.

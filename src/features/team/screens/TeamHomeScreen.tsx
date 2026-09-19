@@ -83,8 +83,13 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const [teamSwitchVisible, setTeamSwitchVisible] = useState(false);
   const memberships = useTeamStore((s) => s.memberships);
   const setActiveTeam = useTeamStore((s) => s.setActiveTeam);
-  /* 팀이 하나면 고를 게 없다 — 셰브론도 시트도 없이 지금 동작 그대로다 */
-  const hasMultipleTeams = memberships.length > 1;
+  /*
+    ⚠ **이 자리에 「팀이 하나면 고를 게 없다 — 셰브론도 시트도 없다」고 적혀 있었다.
+      2026-09-19에 거짓이 됐다.** 팀이 하나여도 제목이 눌리고 시트가 열린다 —
+      「새 팀 만들기 / 초대 코드로 참여」가 그 시트 안에만 있어서, 막아 두면
+      두 번째 팀에 영영 못 갔다(출시 차단 ⑤).
+      고를 팀이 하나뿐이어도 **할 수 있는 일은 둘 더 있다.**
+  */
   const [copied, setCopied] = useState(false);
   /** 팀 탭 안의 네 화면. 총무·팀원 모두 같은 탭을 쓰고, 안에서 할 수 있는 일만 달라진다.
       route.params.tab으로 열 화면을 지정한다 — 탈퇴 안내의 「총무 넘기러 가기」와
@@ -469,7 +474,19 @@ export function TeamHomeScreen({ navigation, route }: any) {
   return (
     <ScreenGradient>
       {/* 팀 화면에서는 "팀"이라는 제목이 아무것도 알려주지 않는다 — 팀 이름을 제목으로 쓴다 */}
-      <TabHeader title={activeTeam.team.name} onPressTitle={hasMultipleTeams ? () => setTeamSwitchVisible(true) : undefined} />
+      {/*
+        ⚠ **`hasMultipleTeams`로 막지 않는다.** 전에는 팀이 둘 이상일 때만 제목이
+          눌렸는데, **「새 팀 만들기 / 초대 코드로 참여」가 이 시트 안에만 있다.**
+          그래서 팀이 정확히 하나인 사용자는 두 번째 팀에 **영영 못 갔다**
+          (야홍 6명 전원이 그 상태였다 — 출시 차단 ⑤).
+
+        ⚠ 옆의 **팀 이름 표시**(TabHeader:329 · HomeScreen:520)는 그대로 둔다.
+          그건 「어느 팀인지 밝힐 필요가 있나」라 **다른 질문**이다 — 팀이 하나면
+          밝힐 것이 없다. 같은 변수를 쓰고 있었을 뿐 같은 물음이 아니었다.
+
+        ⓘ 셰브론은 TabHeader가 `onPressTitle`을 받으면 알아서 붙인다.
+      */}
+      <TabHeader title={activeTeam.team.name} onPressTitle={() => setTeamSwitchVisible(true)} />
 
       {/* 팀 홈이 허브다 — 아래 격자에서 각 화면으로 들어가고, 들어가면 뒤로가기로 돌아온다.
           탭 바를 위에 상시로 두면 격자와 같은 곳으로 가는 입구가 둘이 된다. */}

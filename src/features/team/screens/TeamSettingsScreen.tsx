@@ -5,6 +5,9 @@
 // 실제로는 navigation.goBack()만 하고 아무것도 지우지 않는 가짜 버튼이었다 — 팀 삭제를
 // 되돌릴 수 없게 실제로 처리하려면 별도 RPC/cascade 설계가 필요해서 여기선 뺐다.
 import { useCallback, useEffect, useRef, useState } from 'react';
+/* ⚠ 여기 `m.name.slice(1)`이 있었다 — 「Reviewer」가 「eviewer」로 잘려 나왔다.
+   1e03755에서 세 자리를 고쳤는데 **이 자리를 빠뜨렸다**(「하나와 전부」) */
+import { initialOf } from '../initials';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -533,7 +536,7 @@ export function TeamSettingsScreen({ navigation }: any) {
             {members.map((m) => (
               <View key={m.id} style={styles.memberRow}>
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{m.name.slice(1)}</Text>
+                  <Text style={styles.avatarText}>{initialOf(m.name)}</Text>
                 </View>
                 <Text style={styles.memberName} numberOfLines={1}>
                   {m.name}

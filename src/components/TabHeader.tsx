@@ -152,7 +152,14 @@ export const NotificationBell = forwardRef<NotificationBellHandle>(function Noti
     removeNotification(id)
       .then(() => true)
       .catch((e) => {
-        alertMessage('삭제하지 못했어요', e instanceof Error ? e.message : '알림을 지우지 못했어요');
+        /*
+          ⚠ **오류 원문을 사용자에게 보이지 않는다.** `e.message`는 PostgREST·네트워크가
+            쓴 영어 개발자 문구라, 사용자는 읽어도 할 수 있는 일이 없다(서랍 3).
+            원문은 콘솔로 보내고 화면에는 **할 수 있는 일**을 적는다.
+          ⓘ 서랍 3은 이런 자리가 7곳이라고 적어 뒀는데, 재 보니 **여기 하나만** 남아 있었다.
+        */
+        console.warn('[removeNotification]', e);
+        alertMessage('삭제하지 못했어요', '잠시 후 다시 시도해주세요');
         return false;
       });
 

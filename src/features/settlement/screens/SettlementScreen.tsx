@@ -1031,7 +1031,9 @@ function SettlementDetailModal({
                   <Pressable
                     onPress={onSendMoney}
                     accessibilityRole="button"
-                    accessibilityLabel={sendAppName ? `${sendAppName}로 송금하기` : '송금할 앱 고르기'}
+                    /* ⚠ 앱 이름 뒤에 조사를 직접 붙이지 않는다 — 「Toss로」·「KB Pay로」처럼 로마자로
+                         끝나면 받침을 코드가 못 정한다. 「앱으로」는 이름이 무엇이든 맞다 */
+                    accessibilityLabel={sendAppName ? `${sendAppName} 앱으로 송금하기` : '송금할 앱 고르기'}
                     style={({ pressed }) => [styles.sendBtn, pressed && styles.pressed]}
                   >
             <GreenFill />

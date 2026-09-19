@@ -501,6 +501,7 @@ HomeScreen에 `remindNotVoted`가 이미 있었는데 **정의만 되고 아무�
 | **17** | **`FOREGROUND_SERVICE_MEDIA_PLAYBACK`을 유지할지 뺄지 (2026-09-16)** | ⚠ **유지하면 Play Console에 「포그라운드 서비스 사용 사유」를 신고해야 한다.** 2024년 8월부터 필수이고, 안 적으면 **반려된다.** 신고서에는 어떤 FGS 유형을 왜 쓰는지·사용자에게 어떤 이익인지·대안이 왜 안 되는지를 적어야 한다.<br>**지금 상태:** `expo-audio`가 끌고 온다. 앱은 그걸 **호루라기 소리 재생 하나**에만 쓴다(`TimerPanel.tsx:107` `useAudioPlayer(whistle.mp3)`). 녹음은 안 한다(`RECORD_AUDIO`는 이번에 차단했다).<br>⚠ **차단했다가 되돌렸다.** `blockedPermissions`에 넣었더니 요청 범위 밖이기도 했고, **호루라기가 그 권한에 기대고 있으면 소리가 죽는다.** 안 재보고 뺄 자리가 아니다.<br>**무엇을 재면 갈리나:** ⑴ `blockedPermissions`에 넣고 빌드 → 기기에서 **타이머 종료음이 실제로 나는가**(⚠ 서랍 2-b와 같은 조건 — 경기가 있어야 그 화면에 닿는다) ⑵ 소리가 나면 그대로 빼고 신고도 면제된다 ⑶ 소리가 죽으면 유지하고 콘솔에 사유를 적는다.<br>⚠ **앱이 백그라운드로 갈 때 소리를 이어 낼 필요가 없으면** FGS 자체가 불필요할 가능성이 높다 — 호루라기는 1초짜리 알림음이지 배경 재생이 아니다. 그래서 ⑵ 쪽이 유력하다 |
 | ~~**18**~~ | ~~**가입 폼에서 ANR**~~ — **환경 문제로 확정, 닫는다 (2026-09-17)** | ⚠ **앱 결함이 아니었다. 재현 조건을 갖춰서 재고 닫았다.**<br>**닫은 근거 — 환경을 정상으로 만들고 같은 절차를 돌렸다.** AVD를 RAM 4GB · VM heap 512MB로 올리고 **Cold Boot Now**로 띄웠다:<br>　`RAM 4.01GB · 여유 2.34GB` / `I/O wait 0%` / `idle 400/400%` / `load 0.65`<br>　(문제 때: `여유 133MB` / `iow 76%` / `load 33~50` / ANR이 난 것은 `com.android.phone`)<br>　→ **이름·이메일·비밀번호 입력이 한 번에 끝났고 ANR이 없었다.** 앱 ANR 로그도 없다.<br>　→ 비밀번호도 **정확히 12자**로 들어갔다(문제 때는 13자가 DEL 25번에도 안 지워졌다).<br><br>⚠ **곁다리로 같이 의심했던 「체크박스가 안 눌린다」도 앱 결함이 아니었다.** 환경이 깨끗한데도 재현돼서 별개 문제인 줄 알았는데, 재보니 **키보드가 그 자리를 덮고 있었다** — `dumpsys input_method`의 `mInputShown=true`였고, BACK으로 키보드만 내리고 같은 좌표를 누르니 **한 번에 눌렸다**(`가입하기 enabled=true`).<br>　**내 조작 문제였다.** uiautomator 덤프는 레이아웃 좌표를 주지 화면을 덮은 IME를 안 알려준다 — 「보이는 좌표」와 「누를 수 있는 좌표」가 다르다.<br>　⚠ 다음에 탭이 안 먹으면 **`dumpsys input_method \| grep mInputShown`부터** 본다. 앱을 의심하기 전에 키보드를 의심한다. |
 | **19** | **iOS의 `KeyboardAvoidingView` 분기 — 안드로이드 출시엔 무관 (2026-09-17)** | ⚠ **지금 고칠 것이 아니다.** 안드로이드만 출시하므로 이 분기는 한 번도 안 돈다. iOS를 시작할 때 꺼내는 항목이다.<br>**무엇인가:** 입력 폼 넷이 `behavior={Platform.OS === 'ios' ? 'padding' : undefined}`를 쓴다. **안드로이드에서는 `undefined`라 `KeyboardAvoidingView`가 아무 일도 안 한다** — 키보드 회피는 전적으로 매니페스트의 `windowSoftInputMode=adjustResize`가 한다(빌드 산출물에서 `0x10` 확인).<br>⚠ **그래서 「KeyboardAvoidingView가 있으니 괜찮겠지」가 함정이었다.** 2026-09-17에 제출 버튼이 키보드에 덮이는 결함(`88d3130`)을 찾을 때, 이 컴포넌트가 있다는 것이 오히려 판단을 늦췄다. 있는 것과 도는 것은 다르다.<br>**iOS에서 재야 할 것:** iOS에는 `adjustResize`가 없어서 **`behavior='padding'`이 유일한 회피 수단**이다. 그런데 지금 구조는 버튼을 `ScrollView` 안에 둔 것이라 padding과 겹칠 때 어떻게 되는지 안 봤다 — 이중으로 밀려 버튼이 화면 위로 튀어 오를 수 있다. ⚠ 맥이 없어 **iOS는 한 번도 못 돌려 봤다**(서랍 11번과 같은 제약).<br>**볼 화면:** SignUp · Login · ForgotPassword · ResetPassword · TeamStart 다섯. `keyboardform.check`가 구조는 붙들지만 **화면에 어떻게 보이는지는 못 본다.** |
+| **20** | **`SYSTEM_ALERT_WINDOW`이 매니페스트에 있는데 출처를 못 짚었다 (2026-09-19)** | ⚠ **당장 문제는 아니다.** `src/`에 요청하는 코드가 **0곳**이라 런타임 권한 창이 안 뜨고, 이건 특별 권한이라 설정에서 사용자가 직접 켜야만 동작한다. 앱은 쓰지 않는다.<br>**무엇인가:** 설치된 vc 10의 `dumpsys package com.kickday.app` → `requested permissions`에 `android.permission.SYSTEM_ALERT_WINDOW`이 있다.<br>**출처를 못 찾았다:** `node_modules`의 `AndroidManifest.xml` 전수 grep에서 유일한 적중이 `react-native/ReactAndroid/src/debug/AndroidManifest.xml`인데 **빌드는 debuggable이 아니다**(`flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]`). `.aar` 안의 이진 매니페스트도 전수로 열어봤지만 없다. → **Gradle이 끌어온 Maven 의존성**으로 보인다.<br>**어떻게 짚나:** EAS 빌드 로그의 **매니페스트 병합 리포트**(`app/build/outputs/logs/manifest-merger-*-report.txt`)를 봐야 한다. 로컬엔 `android/`가 없어서 `expo prebuild` 없이는 못 만든다.<br>⭐ **다시 볼 자리: Play 데이터 안전 양식.** 「다른 앱 위에 표시」는 사용자가 알아보는 권한이라 설명을 요구받을 수 있다. 그때까지 못 짚었으면 prebuild로 병합 리포트를 뽑는다. |
 
 ### Login 하단 여백 — 버튼을 내린 뒤 생긴 빈 칸 (2026-09-19)
 
@@ -2330,3 +2331,40 @@ APK 파일이 아니라 **설치된 패키지**에서 봤다(`dumpsys package co
 카카오·네이버·구글을 먼저 만나고 **주 버튼인 「로그인」을 마지막에** 만난다.
 이건 3ccf014에서 버튼을 ScrollView 밖으로 뺄 때 **의도적으로 택한 맞바꿈**이다
 (키보드가 떴을 때 버튼에 닿는 것을 우선했다). LoginScreen.tsx의 주석에 적혀 있다.
+
+### ⑤-① TeamStart 키보드 — **FAIL 8/8, 고쳤다 (2026-09-19)**
+
+2갈래(참여·만들기) × 2화면(2400·1920) × 2배율(1.0·2.0) = **여덟 조합 전부 FAIL.**
+잘림이 항상 **16px**로 같았다.
+
+    참여하기  [63,1381][1017,1517]  실제 하단 1533  키보드 1517  → 16px 아래
+    만들기    같음
+
+⚠ **키보드와 무관했다.** 키보드를 내리고 재도 같다:
+
+    키보드 내림  [63,1784][1017,1920]  실제 하단 1936  창 바닥 1920  → 16px 아래
+
+**원인:** `<KeyboardAvoidingView style={styles.root} behavior="padding">`인데
+`root`에 `paddingBottom: 34`가 있었다. RN은 이렇게 렌더한다:
+
+    style={StyleSheet.compose(style, {paddingBottom: bottomHeight})}
+    react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js:279
+
+`compose`는 **뒤가 이긴다.** 그래서 넘긴 style의 `paddingBottom`은
+**키보드가 없을 때도** `bottomHeight`(0)로 덮인다 — 34dp(89px)가 통째로 사라졌고,
+버튼은 창 바닥에 붙다 못해 16px 넘어갔다. **오류도 경고도 없다.**
+
+⚠ **이 결함은 9/18에 안 보였다.** 그때 `kbmeasure`가 **글자 노드**를 쟀기 때문이다.
+글자는 버튼 안에 가운데 정렬이라 잘림선 위에 있었고 「여유 58px」로 통과했다.
+**도구를 고치고 나서야 드러났다** — 가짜 통과가 하루를 갔다.
+
+⚠ 다른 네 폼은 `root`에 `paddingBottom`이 없었다(처음엔 SignUp·Forgot에도 있다고
+적었는데 **내 grep이 `-A3`으로 다음 스타일까지 읽은 탓**이었다. `head` 스타일의 값이다).
+
+**고친 것:** `root`에서 죽은 `paddingBottom: 34`를 빼고, 두 `ctaBar`에
+`paddingBottom: insets.bottom + 16`을 인라인으로 줬다 — 나머지 네 폼과 같은 모양.
+
+**붙든 것:** `keyboardform.check.ts` ⑷ — KAV의 style에 `paddingBottom`이 있으면 FAIL,
+제출 버튼 바에 `paddingBottom: insets.bottom`이 없으면 FAIL. 변이 4/4 잡힌다.
+
+⚠ **기기 재확인은 새 빌드가 필요하다.** vc 10에는 이 수정이 없다.

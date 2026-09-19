@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAvoidingView, ScrollView, Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { TextInput as RNTextInput } from 'react-native';
 import { Text, TextInput } from '../../../components/nativeText';
 import { ScreenGradient } from '../../../components/ScreenGradient';
@@ -19,6 +20,7 @@ const CODE_LENGTH = 8;
 
 export function TeamStartScreen() {
   const { colors, styles } = useThemed(makeStyles);
+  const insets = useSafeAreaInsets();
   const [pick, setPick] = useState<'create' | 'join' | null>(null);
   const [teamName, setTeamName] = useState('');
   const [code, setCode] = useState('');
@@ -227,7 +229,7 @@ export function TeamStartScreen() {
             안에 두면 닿을 방법 자체가 없다.
         */}
         {pick === 'join' ? (
-          <View style={styles.ctaBar}>
+          <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 16 }]}>
             <Pressable
               accessibilityRole="button"
               disabled={code.length < CODE_LENGTH || loading}
@@ -238,7 +240,7 @@ export function TeamStartScreen() {
             </Pressable>
           </View>
         ) : pick === 'create' ? (
-          <View style={styles.ctaBar}>
+          <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 16 }]}>
             <Pressable
               accessibilityRole="button"
               disabled={!teamName.trim() || loading}
@@ -279,11 +281,20 @@ export function TeamStartScreen() {
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
-  root: { flex: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 34 },
+  /* ⚠ **여기에 paddingBottom을 두지 마라 — KeyboardAvoidingView가 덮는다.**
+       behavior="padding"은 `StyleSheet.compose(style, {paddingBottom: bottomHeight})`로
+       렌더한다(react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js:279).
+       뒤가 이기므로 여기 적은 값은 **키보드가 없을 때도** 0으로 덮인다.
+       전에 `paddingBottom: 34`가 있었고 **한 번도 안 먹었다** — 그래서 버튼 하단이
+       창 바닥보다 16px 아래에 있었다(2026-09-19 실측, 키보드 유무와 무관).
+       아래 여백은 ctaBar에 인라인으로 준다. */
+  root: { flex: 1, paddingHorizontal: 24, paddingTop: 8 },
   /* gap은 스크롤 내용 쪽으로 옮겼다 — root에 두면 ScrollView 한 덩어리에만 걸린다.
      flexGrow로 내용이 짧아도 화면을 채워 아래 여백이 비지 않게 한다. */
   scrollBody: { flexGrow: 1, gap: 18, paddingBottom: 8 },
-  /* 버튼이 ScrollView 밖으로 나가면서 생긴 바. 스크롤 내용과 붙지 않게 위를 띄운다 */
+  /* 버튼이 ScrollView 밖으로 나가면서 생긴 바. 스크롤 내용과 붙지 않게 위를 띄운다.
+     ⚠ **아래 여백은 여기서 인라인으로 준다**(`insets.bottom + 16`). root(=KAV)에 두면
+        위 주석대로 덮여서 사라진다. Login·SignUp·Forgot·ResetPassword가 모두 이 모양이다. */
   ctaBar: { paddingTop: 12 },
   signOutRow: { position: 'absolute', top: 8, right: 24 },
   signOutText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },

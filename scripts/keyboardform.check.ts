@@ -135,6 +135,45 @@ for (const f of FORMS) {
         `창이 줄어도 그 버튼은 안 따라와서 키보드 아래에 남는다`
     );
   }
+
+  /*
+    ⑷ 아래 여백이 **KAV 스타일이 아니라 버튼 바에 인라인**으로 있는가.
+
+    ⚠ **KAV에 준 paddingBottom은 조용히 사라진다.** RN이 이렇게 렌더한다:
+
+        style={StyleSheet.compose(style, {paddingBottom: bottomHeight})}
+        (react-native/Libraries/Components/Keyboard/KeyboardAvoidingView.js:279)
+
+      뒤가 이기므로 넘긴 style의 paddingBottom은 **키보드가 없을 때도** 0으로 덮인다.
+      TeamStartScreen의 root에 `paddingBottom: 34`가 있었고 **한 번도 안 먹었다** —
+      그래서 「참여하기」·「만들기」의 하단이 창 바닥보다 **16px 아래**에 있었다
+      (2026-09-19 기기 실측, 2갈래 × 2화면크기 × 2배율 = 8회 전부 FAIL).
+
+    ⚠ **오류도 경고도 없다.** 스타일은 그냥 무시된다. 그리고 이 결함은
+      kbmeasure가 **글자 노드**를 재던 동안 보이지 않았다 — 글자는 버튼 안에
+      가운데 정렬이라 잘림선 위에 있었다. 도구를 고치고 나서야 드러났다.
+  */
+  const kavStyle = /style=\{\[?\s*styles\.([A-Za-z0-9_]+)/.exec(kavTag)?.[1];
+  assert.ok(kavStyle, `${name}의 KeyboardAvoidingView가 styles.*를 안 쓴다 — 이 검사도 고쳐라`);
+  const styleBody = new RegExp('\n  ' + kavStyle + ': \{[^}]*\}').exec(src)?.[0] ?? '';
+  assert.ok(
+    styleBody.length > 0,
+    `${name}에서 styles.${kavStyle}의 정의를 못 찾았다 — 한 줄 형태가 아니면 이 검사를 고쳐라`
+  );
+  assert.ok(
+    !/paddingBottom/.test(styleBody),
+    `${name}의 styles.${kavStyle}에 paddingBottom이 있다 — 이건 KeyboardAvoidingView가 ` +
+      `덮어써서 **한 번도 안 먹는다**(compose의 뒤가 이긴다). 아래 여백은 버튼 바에 ` +
+      `인라인으로 줘라: style={[styles.…, { paddingBottom: insets.bottom + 16 }]}`
+  );
+
+  /* ⑷-b 그 인라인 여백이 **버튼 쪽에** 실제로 있는가 (</ScrollView> 뒤) */
+  const insetAt = src.indexOf('paddingBottom: insets.bottom', close);
+  assert.ok(
+    insetAt > close && insetAt < kavClose,
+    `${name}의 제출 버튼 바에 paddingBottom: insets.bottom이 없다 — ` +
+      `버튼이 창 바닥(=키보드 상단)에 딱 붙거나 그 아래로 넘어간다`
+  );
 }
 
 console.log(

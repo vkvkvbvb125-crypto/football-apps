@@ -2368,3 +2368,73 @@ APK 파일이 아니라 **설치된 패키지**에서 봤다(`dumpsys package co
 제출 버튼 바에 `paddingBottom: insets.bottom`이 없으면 FAIL. 변이 4/4 잡힌다.
 
 ⚠ **기기 재확인은 새 빌드가 필요하다.** vc 10에는 이 수정이 없다.
+
+### ⑤-⑥ 초대 코드 입력 — PASS (2026-09-19)
+
+kdtest3로 TeamStart의 「초대 코드로 참여」를 열고 `ABCD1234` 입력:
+
+    8칸에 A B C D 1 2 3 4 가 각각 표시됨      ✓ 유령 글자 없음
+    DEL 한 번 → ABCD123 (7글자)               ✓
+    7글자에서 참여하기 enabled=false          ✓  8글자에서 true
+    칸을 누르면 키보드가 바로 뜬다             ✓ (0픽셀 숨은 입력이 아니다)
+
+### ⑤-⑦ 호루라기 — **FAIL. 화면을 끄면 소리가 안 난다** (2026-09-19)
+
+1분 쿼터를 시작하고 **화면을 끈 채 120초** 기다렸다(`mWakefulness=Asleep` 유지).
+
+    06:11:44   4쿼터 시작 · 화면 끔
+    06:12:44   쿼터가 끝났어야 할 시각 → **오디오 사건 0건**
+    06:13:44   120초 경과, 여전히 Asleep, 누적 오디오 사건 **0건**
+    06:13:57.199   Waking up from Asleep
+    06:13:57.231   requestAudioFocus  ← **깨운 지 32ms 뒤**
+    06:13:57.641   requestAudioFocus
+    06:13:57.908   AudioFlinger createTrack_l
+
+**호루라기는 쿼터가 끝날 때가 아니라 화면을 깨울 때 울린다.** 타이머가 화면이
+꺼진 동안 멈췄다가 깨어날 때 따라잡는 것으로 보인다.
+
+⚠ **처음 두 판은 「화면 끈 채 소리가 났다」로 잘못 읽었다.** 소리 난 시각이
+내가 화면을 깨운 시각과 겹쳤는데 그걸 안 맞춰 봤다. **깨우지 않고 기다리는**
+판을 돌려서야 갈렸다.
+
+⚠ **이것이 Play FGS 신고 내용의 전제를 무너뜨린다.** `FOREGROUND_SERVICE_MEDIA_PLAYBACK`을
+유지하기로 한 근거가 「화면이 꺼져도 종료음을 낸다」였는데, **실제로는 안 낸다.**
+판단이 필요한 자리다(고칠지 · 권한과 신고를 뺄지 · 신고 문구를 사실대로 고칠지).
+
+ⓘ `expo-audio`가 `androidx.media3`를 쓴다 — 세션 이름이
+`com.kickday.app/androidx.media3.session.id.ExpoAudioBasicMediaSession_…`다.
+`FOREGROUND_SERVICE_MEDIA_PLAYBACK`은 여기서 들어온다.
+
+### ⑤-④ 나가기 · 혼자인 팀 갈래 — 동작 PASS · **문구 FAIL** (2026-09-19)
+
+kdtest3가 혼자인 팀(kdtest0919)에서 「팀 나가기」:
+
+    동작    팀이 사라지고 TeamStart로 돌아왔다. 오류 없음           ✓
+    문구    「kdtest0919에서 나갈까요?」 **그뿐이다**                ✗
+
+⚠ **혼자인 팀은 나가기가 곧 해체인데 그 말이 없다.** 팀·경기·정산 기록이 전부
+없어지는 동작인데 문구는 단순 탈퇴처럼 읽힌다. ⓘ 시스템 기본 `Alert`이라
+테마도 안 따른다.
+
+⚠ 나머지 세 갈래(마지막 관리자 · 일반 팀원 · 미정산 경고)는 **두 번째 계정이
+있어야** 잰다.
+
+### ⚠ ANR 한 건 — 에뮬레이터 그래픽 스택 (2026-09-19)
+
+    ANR in com.kickday.app/.MainActivity
+    Reason: Input dispatching timed out … Waited 5009ms for KeyEvent
+
+`wm size reset`과 `wm density reset`을 **연달아** 친 직후다. CPU 내역이 앱을 안 가리킨다:
+
+    96% TOTAL: 1% user + 95% kernel
+    94%  graphics.composer3-service.ranchu     0% user + 94% kernel
+    93%  graphics.allocator@3.0-service.ranchu 0% user + 93% kernel
+    85%  com.kickday.app                     0.6% user + 85% kernel
+    83%  nexuslauncher                         0% user + 83% kernel
+
+**우리 프로세스의 user 시간이 0.6%**다 — 메인 스레드가 계산을 안 했다. 구글 런처까지
+같이 kernel에 묶였고, 100%에 가까운 둘은 에뮬레이터 가상 하드웨어(`ranchu`)다.
+단일 density 변경(420→480→reset)으로는 **재현 안 된다**(ESCAPE 281ms).
+서랍 18과 같은 결론이다.
+
+⚠ **절차:** `wm size reset`과 `wm density reset`을 연달아 치지 마라. 사이에 쉬어라.

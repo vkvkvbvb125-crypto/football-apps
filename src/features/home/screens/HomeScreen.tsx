@@ -53,7 +53,7 @@ import type { AnnouncementRow } from '../../announcements/services/announcements
 import { fetchMatchWeather, weatherEmoji, weatherLabel } from '../../attendance/services/weatherService';
 import { RosterSheet, type RosterMember } from '../../attendance/components/RosterSheet';
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
-import { isVotingOpen, votingLockNote, countableVotes } from '../../attendance/utils/voting';
+import { isVotingOpen, votingLockNote, countableVotes, isMatchRecord } from '../../attendance/utils/voting';
 import { resolveCapacity } from '../../attendance/utils/capacity';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 import { notVotedUserIds, remindVote } from '../../attendance/utils/remindVote';
@@ -1008,6 +1008,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
           members={rosterMembers}
           isAdmin={!!isAdmin}
           isLocked={!voteOpen}
+          /* 명단을 예정/완료로 가르는 그 함수와 같은 기준이다 — 두 번 만들지 않는다 */
+          isRecord={isMatchRecord(next)}
           lockNote={lockNote ?? undefined}
           /* 홈은 스토어 error를 구독하지 않는다 — 실패 문구는 시트가 자기 자리에 그린다 */
           onVote={(status) => vote(next.id, status)}

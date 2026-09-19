@@ -857,6 +857,8 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
         members={rosterMembers}
         isAdmin={isAdmin ?? false}
         isLocked={rosterMatch ? !isVotingOpen(rosterMatch) : false}
+        /* 명단을 예정/완료로 가르는 그 함수와 같은 기준이다 — 두 번 만들지 않는다 */
+        isRecord={rosterMatch ? isMatchRecord(rosterMatch) : false}
         lockNote={(rosterMatch && votingLockNote(rosterMatch, isAdmin ?? false)) ?? undefined}
         /* 던지는 것을 시트가 받아서 자기 자리에 그린다 — 위(:428)는 시트에 가려 안 보인다 */
         onVote={rosterMatch ? (status) => vote(rosterMatch.id, status) : undefined}

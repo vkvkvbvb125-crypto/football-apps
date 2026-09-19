@@ -84,6 +84,22 @@ interface Props {
   /** 막힌 이유. 문구는 votingLockNote가 만든다 — 여기서 새로 짓지 않는다 */
   lockNote?: string;
   /**
+   * **지나간 경기인가** — 「누가 왔었나」를 보는 자리인가.
+   *
+   * ⚠ 2026-09-19에 기기에서 **끝난 9/10 경기의 명단**에 「미투표 1명 독촉」과
+   *   「참석 여부 응답하기」가 떠 있었다. 바로 아래에 「종료된 경기예요」를 같이
+   *   적어 놓고서다. **끝난 경기에 투표를 권하고 독촉을 제안한다.**
+   *
+   * ⚠ `isLocked`로는 못 가른다. 그건 「지금 못 바꾼다」(마감·종료)이고 이건
+   *   「바꿀 이유가 없다」다 — 마감만 지난 예정 경기에서는 총무가 독촉할 수 있어야 한다.
+   *
+   * ⚠ **판정을 여기서 새로 만들지 않는다.** `isLocked`와 같은 규약으로
+   *   **호출자가 `isMatchRecord(match)`로 계산해 넘긴다**(utils/voting.ts).
+   *   명단을 예정/완료로 가르는 그 함수와 **같은 기준**이라야 한 경기가
+   *   한 시트 안에서 두 뜻이 되지 않는다.
+   */
+  isRecord?: boolean;
+  /**
    * 확정 시 호출. 실패하면 던진다.
    *
    * pending은 못 넘긴다 — 「아직 안 찍음」은 사람이 고를 수 있는 값이 아니라
@@ -140,6 +156,7 @@ export function RosterSheet({
   onPoke,
   onPokeAll,
   isLocked,
+  isRecord,
   lockNote,
   onVote,
 }: Props) {
@@ -536,7 +553,8 @@ export function RosterSheet({
                 {pokeNote.text}
               </Text>
             )}
-            {isAdmin && counts.pending > 0 && !!onPokeAll && (
+            {/* ⚠ 지나간 경기에는 독촉을 안 그린다 — 안 온 사람을 이제 와서 부를 수 없다 */}
+            {!isRecord && isAdmin && counts.pending > 0 && !!onPokeAll && (
               <Pressable
                 onPress={handlePokeAll}
                 disabled={poking}
@@ -560,7 +578,8 @@ export function RosterSheet({
             접힌 버튼은 아웃라인이다. 총무에게는 바로 위에 초록 「독촉」이 있어서,
             둘 다 초록이면 무엇이 주된 행동인지가 사라진다. 초록은 「확인」 하나뿐이다.
           */}
-          {!!onVote && (
+          {/* ⚠ 지나간 경기에는 내 응답도 안 그린다 — 끝난 경기의 참석 여부를 지금 고를 수 없다 */}
+          {!isRecord && !!onVote && (
             <View
               style={styles.myVote}
               onLayout={(e) => {

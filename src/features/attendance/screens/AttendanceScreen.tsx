@@ -52,7 +52,7 @@ import { ScheduleRow, resolveBadge } from '../components/ScheduleRow';
 import { CreateMatchSheet, type CreateMatchPayload, type VenueOption } from '../components/CreateMatchSheet';
 import { resolveCapacity } from '../utils/capacity';
 import { createResultLabel } from '../utils/createResult';
-import { isMatchRecord, isVotingOpen, votingLockNote } from '../utils/voting';
+import { isMatchRecord, isVotingOpen, votingLockNote, countableVotes } from '../utils/voting';
 import { notVotedUserIds, remindVote } from '../utils/remindVote';
 import { EMPTY_NOTIFY } from '../../notifications/services/pushService';
 import { upcomingFrom } from '../utils/upcoming';
@@ -135,6 +135,12 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
   const { colors, styles } = useThemed(makeStyles);
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
+  /*
+    현재 멤버의 id 집합. 집계에서 **나간 사람의 투표를 빼는 데** 쓴다
+    (countableVotes — utils/voting.ts). `members`는 `team_members_active` 뷰라
+    나간 사람이 애초에 없다.
+  */
+  const activeIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
   const memberNames = useTeamStore((s) => s.memberNames);
   const myUserId = useAuthStore((s) => s.session?.user.id);
   const bottomPad = useTabBarPadding();
@@ -533,7 +539,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 const isLocked = !isVotingOpen(selectedMatch);
                 const lockNote = votingLockNote(selectedMatch, isAdmin ?? false) ?? undefined;
                 const cap = resolveCapacity(
-                  selectedMatch.votes,
+                  countableVotes(selectedMatch, activeIds),
                   selectedMatch.capacity,
                   members.length,
                   activeTeam.membershipId
@@ -677,7 +683,7 @@ export function AttendanceScreen({ navigation, route }: BottomTabScreenProps<any
                 />
               ) : (
                 upcomingMatches.map((match) => {
-                  const cap = resolveCapacity(match.votes, match.capacity, members.length, activeTeam.membershipId);
+                  const cap = resolveCapacity(countableVotes(match, activeIds), match.capacity, members.length, activeTeam.membershipId);
                   const badge = resolveBadge({
                     confirmed: cap.attendCount,
                     capacity: match.capacity,

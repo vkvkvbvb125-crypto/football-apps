@@ -27,8 +27,20 @@ const util = read('src/features/attendance/utils/capacity.ts');
 // ── 1. 홈이 공용 계산을 쓴다 ────────────────────────────────────────
 {
   assert.ok(/import \{ resolveCapacity \}/.test(home), '홈이 resolveCapacity를 안 쓴다 — 손으로 세면 일정 화면과 값이 갈린다');
-  assert.ok(/resolveCapacity\(next\.votes, capacity, members\.length, activeTeam\.membershipId\)/.test(home),
-    '홈이 resolveCapacity를 부르지 않거나 인자가 다르다');
+  /*
+    ⚠ 첫 인자는 **`next.votes`가 아니라 `countableVotes(next, activeIds)`**다.
+      원본 votes를 넘기면 나간 사람의 투표가 섞여 홈과 명단 시트가 한 경기에
+      다른 숫자를 낸다 — 2026-09-19에 기기에서 실제로 그랬다.
+      첫 인자 자체는 `votecount.check.ts`가 전수로 붙든다. 여기서는
+      **나머지 세 인자가 일정 화면과 같은가**만 본다.
+  */
+  assert.ok(
+    /resolveCapacity\(\s*countableVotes\(next, activeIds\), capacity, members\.length, activeTeam\.membershipId\)/.test(
+      home
+    ),
+    '홈이 resolveCapacity를 부르지 않거나 인자가 다르다 — countableVotes(next, activeIds)로 감싸고 ' +
+      '나머지는 capacity · members.length · activeTeam.membershipId 여야 한다'
+  );
 
   // 손계산 회귀 — 값을 만드는 그 줄을 집어서 본다
   const counts = ['attendCount', 'absentCount', 'undecidedCount'];

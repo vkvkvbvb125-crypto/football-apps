@@ -43,6 +43,33 @@ export function isMatchRecord(
   return match.status === 'completed' || new Date(match.match_date) < now;
 }
 
+/*
+  집계에 셀 투표만 고른다 — **참석 명단(rosterMembers)과 같은 규칙이다.**
+
+    예정  「누가 오나」   → 현재 멤버의 투표만 센다
+    지난  「누가 왔었나」 → 투표한 사람 전부 센다 (나간 사람 포함)
+
+  ⚠ **왜 있나.** 2026-09-19에 같은 화면에 한 경기의 숫자가 둘로 나왔다.
+    Demo FC의 9/25 예정 경기에서 kdtest3가 나간 뒤:
+
+      홈 카드      참석 1 / 정원 12명 · 참석 1 · 미정 0 · 불참 0
+      명단 시트    전체 1 · 참석 0 · 불참 0 · 미투표 1
+
+    명단은 나간 사람을 뺐는데 **집계는 그 사람이 남기고 간 투표를 그대로 셌다.**
+    소프트 삭제로 바꿀 때 명단만 고치고 집계를 안 따라 고쳤다.
+
+  ⚠ **DB는 건드리지 않는다. 화면에서만 거른다** — 재참여하면
+    (`join_team_by_invite`가 `left_at`을 비운다) 다음 렌더부터 다시 센다.
+*/
+export function countableVotes<V extends { team_member_id: string }>(
+  match: { status: MatchStatus; match_date: string; votes: V[] },
+  activeIds: ReadonlySet<string>,
+  now = new Date()
+): V[] {
+  if (isMatchRecord(match, now)) return match.votes;
+  return match.votes.filter((v) => activeIds.has(v.team_member_id));
+}
+
 /** 지금 이 경기에 투표할 수 있는지 */
 export function isVotingOpen(match: VotableMatch, now = new Date()) {
   return match.status === 'open' && !isDeadlinePassed(match, now);

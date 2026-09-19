@@ -53,7 +53,7 @@ import type { AnnouncementRow } from '../../announcements/services/announcements
 import { fetchMatchWeather, weatherEmoji, weatherLabel } from '../../attendance/services/weatherService';
 import { RosterSheet, type RosterMember } from '../../attendance/components/RosterSheet';
 import type { MatchWithVotes } from '../../attendance/services/attendanceService';
-import { isVotingOpen, votingLockNote } from '../../attendance/utils/voting';
+import { isVotingOpen, votingLockNote, countableVotes } from '../../attendance/utils/voting';
 import { resolveCapacity } from '../../attendance/utils/capacity';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
 import { notVotedUserIds, remindVote } from '../../attendance/utils/remindVote';
@@ -258,6 +258,8 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const hasMultipleTeams = useTeamStore((s) => s.memberships.length > 1);
   const members = useTeamStore((s) => s.members);
+  /* 현재 멤버의 id 집합 — 집계에서 나간 사람의 투표를 빼는 데 쓴다(countableVotes) */
+  const activeIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
   const loadMembers = useTeamStore((s) => s.loadMembers);
   const myUserId = useAuthStore((s) => s.session?.user.id);
 
@@ -370,8 +372,13 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
    * (resolveCapacity의 attendCount는 min(참석, 정원)이다). 대기 순번도 없었다.
    */
   const capacity = next?.capacity ?? DEFAULT_CAPACITY;
+  /*
+    ⚠ **원본 votes를 그대로 넘기지 마라.** 나간 사람의 투표가 섞여서
+      같은 경기에 홈과 명단 시트가 다른 숫자를 낸다(2026-09-19에 실제로 그랬다).
+      countableVotes가 예정/완료를 갈라 명단과 같은 규칙으로 거른다.
+  */
   const cap = next
-    ? resolveCapacity(next.votes, capacity, members.length, activeTeam.membershipId)
+    ? resolveCapacity(countableVotes(next, activeIds), capacity, members.length, activeTeam.membershipId)
     : null;
   const attendCount = cap?.attendCount ?? 0;
   const absentCount = cap?.absentCount ?? 0;

@@ -51,7 +51,7 @@ import type { PlaceResult } from '../../attendance/services/placeService';
 import { font, radius, shadow, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import { clearTeamLogo, pickSquareImage, uploadTeamLogo } from '../../settings/services/avatarService';
-import { toUserMessage } from '../../../lib/dbError';
+import { toUserMessage, UserFacingError } from '../../../lib/dbError';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
@@ -118,6 +118,32 @@ export function TeamHomeScreen({ navigation, route }: any) {
        이미 effect로 받고 있다 — 훑어서 확인했고, 깨져 있던 것은 이 화면뿐이었다.)
     ⚠ 소비했으면 지운다. 남겨두면 홈 칸으로 옮겨도 다시 끌려온다.
   */
+  /*
+    공지·투표의 실패를 사용자에게 보여주는 **한 자리**.
+
+    ⚠ **스토어가 던지게 바꿨다**(attendanceStore.vote와 같은 모양) — 전에는
+      `set({ error })`만 했고 **그 error를 그리는 화면이 하나도 없었다.**
+      공지 작성이 실패해도 총무는 **올라간 줄 알았다**(2026-09-19 전수 훑기).
+      「같은 공지가 이미 있어요」 같은 문구가 한 번도 사람에게 안 갔다.
+
+    ⚠ 호출부마다 try/catch를 적지 않는다 — 여섯 자리라 하나는 빠뜨린다.
+      **부르는 방식을 이 함수 하나로 모은다.**
+  */
+  const runOrTell = (title: string, run: () => Promise<unknown>) => {
+    void run().catch((e) => {
+      /*
+        ⚠ **`e.message`를 그대로 쓰지 않는다.** 스토어가 던지는 것은
+          `toUserMessage`를 거친 한국어라 괜찮지만, **그 밖의 오류**(네트워크
+          TypeError 등)가 새면 영문 원문이 화면에 뜬다.
+          `UserFacingError`만 통과시키는 것이 저장소의 방식이다(lib/dbError.ts).
+        ⚠ 원문은 버리지 않고 콘솔에 남긴다 — 안 남기면 「사용자도 모르고
+          우리도 모르는」 실패가 된다(usererror.check ③).
+      */
+      console.warn('[TeamHome]', e);
+      alertMessage(title, e instanceof UserFacingError ? e.message : '잠시 후 다시 시도해주세요');
+    });
+  };
+
   const paramTab = route?.params?.tab as 'home' | 'members' | 'notices' | 'board' | undefined;
   useEffect(() => {
     if (!paramTab) return;
@@ -671,8 +697,10 @@ export function TeamHomeScreen({ navigation, route }: any) {
               onSelectAnnouncement={setSelectedAnnouncement}
               onEditAnnouncement={setEditingAnnouncement}
               onCreatePoll={() => setPollFormVisible(true)}
-              onVotePoll={votePoll}
-              onDeletePoll={deletePoll}
+              onVotePoll={(pollId, optionIndex) =>
+                runOrTell('투표하지 못했어요', () => votePoll(pollId, optionIndex))
+              }
+              onDeletePoll={(id) => runOrTell('투표를 삭제하지 못했어요', () => deletePoll(id))}
               confirm={confirm}
             />
           )}
@@ -687,8 +715,9 @@ export function TeamHomeScreen({ navigation, route }: any) {
         editing={editingAnnouncement}
         onClose={() => setFormVisible(false)}
         onSubmit={(input) => {
-          if (editingAnnouncement) updateAnnouncement(editingAnnouncement.id, input);
-          else createAnnouncement(input);
+          if (editingAnnouncement)
+            runOrTell('공지를 수정하지 못했어요', () => updateAnnouncement(editingAnnouncement.id, input));
+          else runOrTell('공지를 올리지 못했어요', () => createAnnouncement(input));
           setFormVisible(false);
         }}
       />
@@ -718,7 +747,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
         }}
         onDelete={(a) =>
           confirm('공지 삭제', '이 공지를 삭제하시겠어요?', () => {
-            deleteAnnouncement(a.id);
+            runOrTell('공지를 삭제하지 못했어요', () => deleteAnnouncement(a.id));
             setSelectedAnnouncement(null);
           })
         }
@@ -754,7 +783,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
         visible={pollFormVisible}
         onClose={() => setPollFormVisible(false)}
         onSubmit={(input) => {
-          createPoll(input);
+          runOrTell('투표를 만들지 못했어요', () => createPoll(input));
           setPollFormVisible(false);
         }}
       />

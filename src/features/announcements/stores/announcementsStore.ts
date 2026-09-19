@@ -14,7 +14,7 @@ import {
   fetchMyReadAnnouncementIds,
   type UpdateAnnouncementInput,
 } from '../services/announcementsService';
-import { toUserMessage } from '../../../lib/dbError';
+import { toUserMessage, UserFacingError } from '../../../lib/dbError';
 
 interface AnnouncementsState {
   announcements: AnnouncementRow[];
@@ -118,7 +118,16 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
         // 알림 전송 실패는 조용히 무시 (공지 작성 자체는 이미 성공)
       });
     } catch (err) {
-      set({ error: toUserMessage(err, { '23505': '같은 공지가 이미 있어요' }, 'createAnnouncement'), loading: false });
+      /*
+        ⚠ **적고 던진다.** `attendanceStore.vote`와 같은 모양이다
+          (`set({ error }); throw`). 적기만 하면 **아무도 안 보여준다** —
+          이 스토어의 `error`를 그리는 화면이 **하나도 없기 때문**이다
+          (2026-09-19 전수 훑기). 공지 작성이 실패해도 총무는 올라간 줄 알았다.
+        ⓘ 부르는 쪽(TeamHomeScreen)이 받아서 alertMessage로 그린다.
+      */
+      const message = toUserMessage(err, { '23505': '같은 공지가 이미 있어요' }, 'createAnnouncement');
+      set({ error: message, loading: false });
+      throw new UserFacingError(message);
     }
   },
   updateAnnouncement: async (id, input) => {
@@ -127,7 +136,16 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
       await updateAnnouncementRequest(id, input);
       await get().loadAnnouncements();
     } catch (err) {
-      set({ error: toUserMessage(err, {}, 'updateAnnouncement'), loading: false });
+      /*
+        ⚠ **적고 던진다.** `attendanceStore.vote`와 같은 모양이다
+          (`set({ error }); throw`). 적기만 하면 **아무도 안 보여준다** —
+          이 스토어의 `error`를 그리는 화면이 **하나도 없기 때문**이다
+          (2026-09-19 전수 훑기). 공지 작성이 실패해도 총무는 올라간 줄 알았다.
+        ⓘ 부르는 쪽(TeamHomeScreen)이 받아서 alertMessage로 그린다.
+      */
+      const message = toUserMessage(err, {}, 'updateAnnouncement');
+      set({ error: message, loading: false });
+      throw new UserFacingError(message);
     }
   },
   deleteAnnouncement: async (id) => {
@@ -136,7 +154,16 @@ export const useAnnouncementsStore = create<AnnouncementsState>((set, get) => ({
       await deleteAnnouncementRequest(id);
       await get().loadAnnouncements();
     } catch (err) {
-      set({ error: toUserMessage(err, {}, 'deleteAnnouncement'), loading: false });
+      /*
+        ⚠ **적고 던진다.** `attendanceStore.vote`와 같은 모양이다
+          (`set({ error }); throw`). 적기만 하면 **아무도 안 보여준다** —
+          이 스토어의 `error`를 그리는 화면이 **하나도 없기 때문**이다
+          (2026-09-19 전수 훑기). 공지 작성이 실패해도 총무는 올라간 줄 알았다.
+        ⓘ 부르는 쪽(TeamHomeScreen)이 받아서 alertMessage로 그린다.
+      */
+      const message = toUserMessage(err, {}, 'deleteAnnouncement');
+      set({ error: message, loading: false });
+      throw new UserFacingError(message);
     }
   },
 }));

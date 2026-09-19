@@ -7,7 +7,7 @@ import {
   fetchPolls,
   type PollWithResponses,
 } from '../services/pollsService';
-import { toUserMessage } from '../../../lib/dbError';
+import { toUserMessage, UserFacingError } from '../../../lib/dbError';
 
 interface PollsState {
   polls: PollWithResponses[];
@@ -46,7 +46,14 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       await createPollRequest({ ...input, teamId: activeTeam.team.id, authorId: activeTeam.membershipId });
       await get().loadPolls();
     } catch (err) {
-      set({ error: toUserMessage(err, { '23505': '같은 투표가 이미 있어요' }, 'createPoll'), loading: false });
+      /*
+        ⚠ **적고 던진다.** `attendanceStore.vote`와 같은 모양이다.
+          적기만 하면 아무도 안 보여준다 — 이 스토어의 `error`를 그리는 화면이
+          **하나도 없다**(2026-09-19 전수 훑기). 부르는 쪽이 받아서 그린다.
+      */
+      const message = toUserMessage(err, { '23505': '같은 투표가 이미 있어요' }, 'createPoll');
+      set({ error: message, loading: false });
+      throw new UserFacingError(message);
     }
   },
   deletePoll: async (id) => {
@@ -55,7 +62,14 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       await deletePollRequest(id);
       await get().loadPolls();
     } catch (err) {
-      set({ error: toUserMessage(err, {}, 'deletePoll'), loading: false });
+      /*
+        ⚠ **적고 던진다.** `attendanceStore.vote`와 같은 모양이다.
+          적기만 하면 아무도 안 보여준다 — 이 스토어의 `error`를 그리는 화면이
+          **하나도 없다**(2026-09-19 전수 훑기). 부르는 쪽이 받아서 그린다.
+      */
+      const message = toUserMessage(err, {}, 'deletePoll');
+      set({ error: message, loading: false });
+      throw new UserFacingError(message);
     }
   },
   vote: async (pollId, optionIndex) => {
@@ -65,7 +79,14 @@ export const usePollsStore = create<PollsState>((set, get) => ({
       await castPollVoteRequest(pollId, activeTeam.membershipId, optionIndex);
       await get().loadPolls();
     } catch (err) {
-      set({ error: toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote') });
+      /*
+        ⚠ **적고 던진다.** `attendanceStore.vote`와 같은 모양이다.
+          적기만 하면 아무도 안 보여준다 — 이 스토어의 `error`를 그리는 화면이
+          **하나도 없다**(2026-09-19 전수 훑기). 부르는 쪽이 받아서 그린다.
+      */
+      const message = toUserMessage(err, { '23505': '이미 투표하셨어요' }, 'vote');
+      set({ error: message });
+      throw new UserFacingError(message);
     }
   },
 }));

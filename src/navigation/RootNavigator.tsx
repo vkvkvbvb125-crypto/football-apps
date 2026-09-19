@@ -10,7 +10,7 @@ import { ResetPasswordScreen } from '../features/auth/screens/ResetPasswordScree
 import { useTeamStore } from '../features/team/stores/teamStore';
 import { TeamStartScreen } from '../features/team/screens/TeamStartScreen';
 import { usePendingInviteStore } from '../features/team/stores/pendingInviteStore';
-import { confirmAction } from '../components/Dialog';
+import { alertMessage, confirmAction } from '../components/Dialog';
 import { MainTabNavigator } from './MainTabNavigator';
 import { TeamSettingsScreen } from '../features/team/screens/TeamSettingsScreen';
 import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen';
@@ -212,7 +212,25 @@ export function RootNavigator() {
           그대로 남아 있다** — 마음이 바뀌면 다시 누르면 된다.
       */
       clearPendingInvite();
-      if (ok) await joinTeam(pendingInviteCode);
+      if (!ok) return;
+      await joinTeam(pendingInviteCode);
+      /*
+        ⚠ **결과를 여기서 보여줘야 한다.** `joinTeam`은 던지지 않고 스토어의
+          `error`에 적는데, **그걸 그리는 곳이 `TeamStartScreen` 하나뿐**이다.
+          이 경로는 그 화면을 안 지나므로 **문구가 세워지고 아무도 안 보여줬다** —
+          사용자는 「참여하기」를 누르고 **아무 일도 안 일어난 것**을 본다.
+          2026-09-19에 vc 13 기기 판정에서 잡았다(없는 코드·이미 멤버 둘 다 무반응).
+
+        ⚠ 제목을 「참여하지 못했어요」로 쓰면 안 된다 — 「이미 참여 중인 팀이에요」는
+          **실패가 아니라 이미 된 일**이다. 셋 다 맞는 중립 제목을 쓴다.
+        ⚠ 보여준 뒤 스토어를 비운다. 안 비우면 나중에 TeamStart에 들어갔을 때
+          지난 문구가 그 화면에 떠 있다.
+      */
+      const joinError = useTeamStore.getState().error;
+      if (joinError) {
+        alertMessage('초대 링크', joinError);
+        useTeamStore.setState({ error: null });
+      }
     })();
     return () => {
       cancelled = true;

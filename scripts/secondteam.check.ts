@@ -95,6 +95,25 @@ const read = (p: string) => strip(readFileSync(new URL(`../${p}`, import.meta.ur
     `취소한 경우에 코드가 남는다 — clearPendingInvite()가 「ok」 분기 안에 있으면 ` +
       `거절해도 화면을 옮길 때마다 같은 물음이 다시 뜬다. **취소는 거절이다**`
   );
+  /*
+    ⚠ **⑹ 결과를 보여주는가.** `joinTeam`은 **던지지 않고** 스토어의 `error`에 적는데,
+      그걸 그리는 곳이 **`TeamStartScreen` 하나뿐**이다. 이 경로는 그 화면을 안 지나므로
+      **문구가 세워지고 아무도 안 보여줬다** — 사용자는 「참여하기」를 누르고
+      **아무 일도 안 일어난 것**을 본다.
+
+      2026-09-19에 vc 13 기기 판정에서 잡았다. 없는 코드도, 이미 멤버인 팀도
+      **둘 다 무반응**이었다. 검사가 ⑴~⑸을 다 통과시키고도 못 본 자리다 —
+      「상태를 세운다」와 「사용자가 본다」는 다르다.
+  */
+  assert.ok(
+    /alertMessage\(/.test(body),
+    `참여 결과를 화면에 안 보여준다 — joinTeam은 던지지 않고 스토어 error에 적고, ` +
+      `그걸 그리는 곳은 TeamStartScreen뿐이라 이 경로에서는 **아무 일도 안 일어난 것처럼** 보인다`
+  );
+  assert.ok(
+    /setState\(\{ error: null \}\)/.test(body),
+    `보여준 뒤 스토어의 error를 안 비운다 — 나중에 TeamStart에 들어가면 지난 문구가 떠 있다`
+  );
 }
 
 console.log('secondteam ✓ 팀이 하나여도 시트를 열 수 있고 · 초대는 한 곳에서 묻고 소비한다');

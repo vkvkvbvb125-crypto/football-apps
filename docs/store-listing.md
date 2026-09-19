@@ -527,8 +527,15 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
            aapt2 dump xmltree <artifact> --file <manifest 경로> | grep -c "android.permission.$p\""
          done
 
-       → CAMERA · RECORD_AUDIO 가 **0이어야** 한다(app.json의 blockedPermissions)
+       → CAMERA · RECORD_AUDIO · **FOREGROUND_SERVICE_MEDIA_PLAYBACK** ·
+         **AD_ID** 가 **0이어야** 한다(app.json의 blockedPermissions)
+         ⚠ FGS_MEDIA_PLAYBACK은 2026-09-19에 추가로 막았다 — 화면이 꺼지면
+           호루라기가 안 울리는 것이 확인돼 **안 하는 일을 신고할 수 없어서**다
+           (「포그라운드 서비스 — 권한을 뺀다」 항목).
        → INTERNET · ACCESS_FINE_LOCATION · POST_NOTIFICATIONS 는 **1이어야** 한다
+       ⚠ `SYSTEM_ALERT_WINDOW`이 **1로 나온다.** 출처를 못 짚었다(서랍 20) —
+         `src/`에 요청하는 코드가 0곳이라 런타임엔 안 쓰이지만, 데이터 안전 양식에서
+         설명을 요구받을 수 있다. **놀라지 말고 서랍 20을 보라.**
        ⚠ 소스에서 막았다는 것만으로는 근거가 아니다 — 라이브러리가 병합 단계에서
          다시 넣을 수 있다. **산출물을 읽어야 한다.**
 
@@ -559,9 +566,14 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
 (`dumpsys package com.kickday.app` → `versionCode=10`). EAS가 빌드 뒤 파일도 10으로
 고쳐 놓는다 — 빌드 끝나면 `app.json`이 더러워지는 게 이 때문이다.
 
-  · 「vc 9로 걸어라」로 시작한 그 빌드의 **실제 산출물은 vc 10**이다
-    (md5 `7257efae9730a20478a9cf1b10cda03d`, 105,964,386 bytes).
-  · 그러므로 **AAB는 vc 11로 나온다.** 파일에 10이 적혀 있어도 그렇다.
+  · 「vc 9로 걸어라」로 시작한 그 빌드의 **실제 산출물은 vc 10**이었다
+    (md5 `7257efae9730a20478a9cf1b10cda03d`).
+  · ⚠ **그러므로 AAB의 번호는 「직전 빌드 + 1」이다.** 여기에 숫자를 박아 두면
+    APK를 한 번 더 뽑을 때마다 틀려진다 — 2026-09-19에 「AAB는 vc 11」이라고
+    적어 뒀는데 그날 안에 12·13이 나왔다. **적지 말고 그때 확인한다:**
+
+        npx eas build:list --platform android --limit 1 --json --non-interactive
+
   · ⚠ Play는 versionCode를 **되돌릴 수 없다.** 올라간 숫자는 그대로 간다 —
     내부 APK로 태운 번호도 사실상 못 쓴다고 보는 편이 안전하다.
 
@@ -572,7 +584,7 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
 | `production.buildType` | `app-bundle` | ✅ Play는 신규 앱에 AAB만 받는다 |
 | `production.environment` | `production` | ✅ **직접 적혀 있다.** `extends`는 이걸 안 물려준다 |
 | `autoIncrement` | `true` | ⚠ **빌드 전에** 올려서 찍는다 — 아래 |
-| `blockedPermissions` | CAMERA · RECORD_AUDIO | ✅ APK(vc 7)에서 실제로 빠진 것 확인함 |
+| `blockedPermissions` | CAMERA · RECORD_AUDIO · **FGS_MEDIA_PLAYBACK** | ✅ vc 12 설치본에서 셋 다 0으로 확인 |
 | 아이콘 512² · 피처 그래픽 1024×500 | `assets/store/` | ✅ |
 | 스크린샷 | 일곱 장 1080×2400 | ✅ |
 | package / version | `com.kickday.app` / `1.0.0` | ✅ |

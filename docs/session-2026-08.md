@@ -2261,3 +2261,72 @@ Claude가 대신 못 한다. 계정·결제·심사가 걸린 일이다.
 
 ⚠ 실기기 확인 결과가 나와야 「고칠 것이 더 있는지」가 정해진다.
   그전에 스토어 자산을 만들면 화면이 바뀌어 스크린샷을 다시 찍게 된다.
+
+## ⑸ 기기 확인 — vc 10 (2026-09-19)
+
+⚠ **빌드 번호는 9가 아니라 10이다.** `autoIncrement`가 빌드 전에 올려 찍는다
+(`app.json`은 9였다). md5 `7257efae9730a20478a9cf1b10cda03d`.
+
+### ⑨ 설치 결과 검사 — PASS
+
+APK 파일이 아니라 **설치된 패키지**에서 봤다(`dumpsys package com.kickday.app`).
+
+    flags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]    ← DEBUGGABLE 없다
+    CAMERA 0 · RECORD_AUDIO 0 · AD_ID 0 · READ_MEDIA_IMAGES 0
+    INTERNET ✓ · ACCESS_FINE_LOCATION ✓ · POST_NOTIFICATIONS ✓
+    FOREGROUND_SERVICE_MEDIA_PLAYBACK ✓
+
+⚠ `READ_MEDIA_IMAGES`가 0인 것은 맞다 — Android 13+의 **사진 선택 도구**는 권한이 필요 없다.
+
+⚠ **`SYSTEM_ALERT_WINDOW`이 들어 있다.** 출처를 못 짚었다:
+`node_modules`의 매니페스트에도(유일한 grep 적중은 react-native의 **debug** 매니페스트인데
+빌드는 debuggable이 아니다) `.aar` 안에도 없다 — Gradle이 끌어온 Maven 의존성으로 보인다.
+`src/`에 요청하는 코드는 0곳이라 런타임에 쓰이지 않는다. **병합 리포트 없이는 더 못 짚는다.**
+
+### ① 키보드 — 폼 5개 × 화면 2종 × 배율 2종
+
+⚠ **먼저 측정 도구가 틀렸다.** `kbmeasure.sh`가 **글자 노드**를 재고 있었다.
+글자는 버튼 안에 가운데 정렬로 들어 있어 위아래 여백만큼 작다:
+
+    글자  [484,1306][595,1365]   하단 1365   → 여유 152px 로 찍혔다
+    버튼  [63,1260][1017,1412]   하단 1412   → 실제 여유는 105px
+
+**47px 차이.** 글자만 보이고 버튼 아래가 키보드에 물린 상태를 통과로 읽는다.
+글자를 감싸는 **clickable 조상 중 가장 작은 것**으로 올라가게 고쳤다
+(`scripts/lib/btnbounds.py`). 고친 뒤의 숫자만 아래에 적는다.
+
+| 폼 | 1080x2400 ×1.0 | ×2.0 | 1080x1920 ×1.0 | ×2.0 |
+|---|---|---|---|---|
+| Login | PASS 105 | PASS 105 | PASS 105 | PASS 105 |
+| SignUp | PASS 105 | PASS 105 | PASS 105 | PASS 105 |
+| Forgot | PASS 105 | PASS 105 | PASS 105 | PASS 105 |
+| ResetPassword | ② 별도 | | | |
+| TeamStart | 로그인 필요 — 보류 | | | |
+
+⚠ **여유가 전부 105px로 같은 것이 우연이 아니다.** 버튼이 KAV의 마지막 형제라
+창 바닥에 붙고, 창 바닥 = 키보드 상단이다. 그러면 여유는 footer의
+`paddingBottom: insets.bottom + 16` 그 자체다 — 40dp × 2.625 = 105px.
+**폼·화면 크기·글꼴 배율과 무관한 구조적 값**이라 이 셋이 달라져도 안 변한다.
+그래서 이 측정이 확인하는 것은 사실상 **「버튼이 footer에 있는가」** 하나다
+(정적으로는 `keyboardform.check.ts`가 붙든다).
+
+⚠ 배율이 실제로 먹는지 따로 확인했다 — 링크 글자 높이 48px → 93px(1.94배).
+버튼 상자만 `height: 58` 고정이라 안 커진다. 200%에서 글자가 39.6dp이므로
+58dp 안에 아직 들어간다.
+
+### ⑧ Login 하단 여백 — 실측 449px
+
+1080x2400 · 배율 1.0 · 키보드 없음:
+
+    안내문 하단   1694
+    로그인 상단   2143
+    빈 공간       449px  ≈ 171dp  = 화면 높이의 18.7%
+
+원인은 결함이 아니라 **설계대로**다. `scroll: { flexGrow: 1, justifyContent: 'center' }`라
+내용이 스크롤 영역 가운데 놓이고, 버튼은 그 밖(footer)에 고정된다. 위쪽에도 비슷한
+여백이 있어 좌우로 깨져 보이지는 않는다.
+
+⚠ 눈에 띄는 쪽은 여백 자체보다 **차례**다. 위에서 아래로 읽으면
+카카오·네이버·구글을 먼저 만나고 **주 버튼인 「로그인」을 마지막에** 만난다.
+이건 3ccf014에서 버튼을 ScrollView 밖으로 뺄 때 **의도적으로 택한 맞바꿈**이다
+(키보드가 떴을 때 버튼에 닿는 것을 우선했다). LoginScreen.tsx의 주석에 적혀 있다.

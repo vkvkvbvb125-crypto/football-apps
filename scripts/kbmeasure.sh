@@ -78,15 +78,38 @@ adb exec-out cat //sdcard/kbm.xml > "$TMP/u.xml" 2>/dev/null
 [ -s "$TMP/u.xml" ] || { echo "FAIL  uiautomator 덤프를 못 받았다"; exit 1; }
 
 # 그 글자를 가진 노드의 bounds. 한 줄에 여러 노드가 오므로 노드 단위로 쪼갠다
-bounds=$(tr '>' '\n' < "$TMP/u.xml" | grep -F "text=\"$BTN\"" | grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | head -1)
-if [ -z "$bounds" ]; then
+label=$(tr '>' '\n' < "$TMP/u.xml" | grep -F "text=\"$BTN\"" | grep -oE 'bounds="\[-?[0-9]+,-?[0-9]+\]\[-?[0-9]+,-?[0-9]+\]"' | head -1)
+if [ -z "$label" ]; then
   echo "FAIL  화면에서 「$BTN」을 못 찾았다 — 글자가 바뀌었거나 그 화면이 아니다"
   echo "      지금 화면의 글자들:"
   grep -oE 'text="[^"]+"' "$TMP/u.xml" | sort -u | head -12 | sed 's/^/        /'
   exit 1
 fi
-btop=$(echo "$bounds" | sed -E 's/.*bounds="\[[0-9]+,([0-9]+)\].*/\1/')
-bbot=$(echo "$bounds" | sed -E 's/.*\]\[[0-9]+,([0-9]+)\]"$/\1/')
+
+# ⚠ **글자가 아니라 버튼을 잰다.** 글자 노드는 버튼 안에 **가운데 정렬로** 들어 있어
+#   위아래 여백만큼 작다. Login에서 실제로 갈렸다 (2026-09-19 실측):
+#
+#       글자  [484,1306][595,1365]   하단 1365   → 여유 152px 로 찍혔다
+#       버튼  [63,1260][1017,1412]   하단 1412   → 실제 여유는 105px
+#
+#   47px 차이다. **글자만 보이고 버튼 아래가 키보드에 물린 상태를 통과로 읽는다.**
+#   판정 기준이 「버튼 하단」이므로 글자를 감싸는 clickable 조상 중
+#   **가장 작은 것**으로 올라간다(scripts/lib/btnbounds.py).
+lx1=$(echo "$label" | sed -E 's/.*bounds="\[(-?[0-9]+),.*/\1/')
+ly1=$(echo "$label" | sed -E 's/.*bounds="\[-?[0-9]+,(-?[0-9]+)\].*/\1/')
+lx2=$(echo "$label" | sed -E 's/.*\]\[(-?[0-9]+),-?[0-9]+\]"$/\1/')
+ly2=$(echo "$label" | sed -E 's/.*\]\[-?[0-9]+,(-?[0-9]+)\]"$/\1/')
+
+# ⚠ **경로를 cygpath로 넘긴다.** python은 윈도 실행파일이라 Git Bash의 `/tmp/...`를
+#   못 읽는다. 평소엔 Git Bash가 알아서 바꿔주지만, 호출자가 `MSYS_NO_PATHCONV=1`을
+#   내보냈으면 그 변환이 꺼진다 — 2026-09-19에 실제로 그래서 죽었다.
+#   **호출자의 환경에 기대지 않는다.**
+xml_win=$(cygpath -w "$TMP/u.xml" 2>/dev/null || echo "$TMP/u.xml")
+bounds=$(python "$(dirname "$0")/lib/btnbounds.py" "$xml_win" "$lx1" "$ly1" "$lx2" "$ly2")
+[ -z "$bounds" ] && { echo "FAIL  버튼 bounds를 못 풀었다 — btnbounds.py를 확인해라"; exit 1; }
+
+btop=$(echo "$bounds" | sed -E 's/.*bounds="\[-?[0-9]+,(-?[0-9]+)\].*/\1/')
+bbot=$(echo "$bounds" | sed -E 's/.*\]\[-?[0-9]+,(-?[0-9]+)\]"$/\1/')
 
 # ⚠ **뒤집힌 bounds는 「화면 밖」이다.** uiautomator는 노드를 부모의 보이는 영역으로
 #   잘라내므로, 노드가 통째로 잘림선 아래면 y2가 y1보다 작게 나온다.

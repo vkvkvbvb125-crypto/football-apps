@@ -3146,3 +3146,84 @@ md5 `97be17f157b49a925ec366eb632facd6` · 105,968,234 bytes · `versionCode=13`
     10 가입 직후(팀 0개) 초대 링크 흐름
     11 TeamStart에서 pendingInvite 참조를 걷어낸 뒤 그 화면이 멀쩡한가
     12 현재 포메이션이 줄 간격만으로 읽히는가 (코트 SVG 판단용)
+
+## 훑기 — 「상태를 세우는데 아무도 안 보여준다」가 더 있나 (2026-09-19)
+
+joinTeam에서 그 모양을 겪고 전수로 봤다. **스토어가 `error`에 적는 곳**과
+**그 `error`를 화면이 그리는 곳**을 대조했다.
+
+| 스토어 | error 적음 | 그리는 곳 | 부르는 화면 | 판정 |
+|---|---|---|---|---|
+| **announcementsStore** | 4 + 로드 | **없음** | TabHeader · Home · TeamHome · RootNavigator | ⛔ **같은 모양** |
+| **pollsStore** | 4 + 로드 | **없음** | TeamHome | ⛔ **같은 모양** |
+| settlementStore | 2 | SettlementScreen | Home · Settlement · TeamHome · TeamSettings 외 | ⚠ 아래 |
+| attendanceStore | 12 | AttendanceScreen | 일곱 화면 | ✅ **throw도 한다** |
+| assignmentStore | 8 | AssignmentScreen | AssignmentScreen뿐 | ✅ 같은 화면 |
+| scoreStore | 3 | AssignmentScreen | AssignmentScreen뿐 | ✅ 같은 화면 |
+| teamStore | 17 | TeamStart · ProfileDetail · RootNavigator | 여럿 | ✅ joinTeam 구멍은 고쳤다 |
+
+### ⛔ 둘은 **그리는 곳이 아예 없다**
+
+    announcements   createAnnouncement · updateAnnouncement · deleteAnnouncement
+                    (그리고 loadAnnouncements 실패)
+    polls           createPoll · deletePoll · vote
+                    (그리고 loadPolls 실패)
+
+⚠ **호출부도 `alertMessage`를 안 쓴다** — 공지 작성이 실패하면 **아무 일도 안 일어난 것**처럼
+보이고, 총무는 공지가 올라간 줄 안다. `'23505': '같은 공지가 이미 있어요'` 같은
+**공들여 쓴 문구가 한 번도 사람에게 안 간다.**
+
+⚠ **joinTeam보다 나쁘다.** 거기는 그리는 화면이 하나라도 있었다.
+
+### ⚠ settlementStore — 같은 위험, 다만 지금은 안 터진다
+
+`error`를 세우는 둘이 **로드 실패**뿐이고, 그 화면(SettlementScreen)이 직접 로드한다.
+**쓰기 동작은 error를 안 쓰고 던진다**(`markPaid`·`confirmPaid`·`complete`).
+지금은 안전하지만 **쓰기에 `set({ error })`를 하나 더하는 순간 같은 구멍이 된다.**
+
+### ✅ attendanceStore가 답을 보여준다
+
+    set({ error: reason });
+    throw new Error(reason);    ← **둘 다 한다**
+
+스토어에 적고 **던지기도** 해서, 부르는 쪽이 자기 자리에 그릴 수 있다
+(`RosterSheet` 머리말: 「던지는 것을 시트가 받아서 자기 자리에 그린다」).
+**여러 화면에서 부르는 동작은 이 모양이어야 한다.**
+
+### 권고
+
+  ㉮ **announcements·polls를 「던지기」로 바꾼다** — attendanceStore와 같은 모양.
+     호출부(TeamHomeScreen)가 받아서 `alertMessage`로 그린다.
+     ⚠ 크기: 스토어 둘 + 호출부 한 화면. **M이 아니라 S**다.
+  ㉯ 검사로 붙든다 — 「`set({ error })`를 하는 스토어는 그 화면이 그리거나 던져야 한다」.
+     ⚠ 자동으로 판정하기 어렵다(어느 화면이 부르는지 정적으로 못 센다).
+     **최소한 「그리는 곳이 0인 스토어」는 잡을 수 있다.**
+
+⚠ **출시 전에 넣을지는 판단이 필요하다.** 기능이 죽은 것은 아니고(성공 경로는 돈다),
+실패했을 때 말을 안 하는 것이다. 다만 **공지·투표는 총무가 매주 쓰는 자리**다.
+
+### vc 13 — 7·10·11 추가 판정 (2026-09-19)
+
+| # | 판정 | 결과 |
+|---|---|---|
+| 7 | 나가기 문구의 조사 | **PASS** — 「나가면 **Demo FC 팀이** 사라져요」 |
+| — | 일반 팀원 나가기 문구 | **PASS** — 「초대시험팀**에서** 나갈까요?」(「에서」는 받침과 무관) |
+| 10 | 가입 직후(팀 0개) 초대 링크 | **PASS** — 확인 시트 → 참여 → 홈 |
+| 11 | TeamStart에서 pendingInvite를 걷어낸 뒤 | **PASS** — 「Tester3님, 반가워요」 + 두 카드 정상 |
+
+#### ⚠ 8 · 12 — 건너뛴다. 이유를 적는다
+
+**8 알림 삭제 실패 문구**
+실패를 만들려면 기내 모드로 끊고 그 순간에 삭제를 눌러야 하는데, 그 사이 다른
+스토어들도 같이 실패해서 **무엇이 무엇을 깨뜨렸는지 못 가린다.**
+⚠ **억지로 상황을 만들다 다른 걸 깨뜨리는 게 더 비싸다**(사용자 판단).
+코드는 한 줄이고 `console.warn` + 고정 문구라 **읽어서 확인 가능한 종류**다.
+
+**12 포메이션이 줄 간격만으로 읽히는가**
+⚠ **지금 데이터로는 못 잰다.** 포메이션은 **한 팀 5명 이상**일 때만 그려지는데
+(`FORMATIONS`에 5·6만 있다) Demo FC는 활성 1명이다.
+계정 4개를 더 만들고 참석 투표까지 넣어야 하는데, **그 비용이 판정값보다 크다.**
+
+⭐ **그래서 코트 SVG 판단의 전제가 아직 안 재졌다.** 포메이션 보드 설계의 ㉰는
+**「안 재본 것을 근거로 바꾸지 않는다」**에 걸려 **그대로 보류**다.
+재려면 **야홍 6명이 실제로 쓰는 것을 보는 편**이 맞다 — 출시 후 첫 경기가 그 자리다.

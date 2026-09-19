@@ -19,6 +19,8 @@ import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
 import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
+/* 사본을 두지 않는다 — 로마자 이름을 망가뜨리던 그 규칙이었다(team/initials.ts 참고) */
+import { initialOf } from '../../team/initials';
 import { ScoreboardPanel } from '../../timer/components/ScoreboardPanel';
 import { SoftTint } from '../../../components/BentoCard';
 import { liveMatchesFrom } from '../../attendance/utils/matchWindow';
@@ -43,9 +45,7 @@ const TOTAL_QUARTERS = 4;
 // 유예 3시간은 utils/matchWindow.ts에 있다 — 홈 화면과 값도 근거도 한 곳에서 본다.
 // 이 선을 넘긴 경기는 분배/타이머/스코어 대상에서 빠진다 — 2주 전 경기가 계속 떠 있던 원인.
 
-function initialOf(name: string) {
-  return name.length > 2 ? name.slice(1) : name;
-}
+
 
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const { colors, styles } = useThemed(makeStyles);

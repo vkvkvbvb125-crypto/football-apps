@@ -5,6 +5,9 @@
 // 명단이 길어질수록 좁은 시트에서 스크롤만 하게 되는데, 그때 화면을 다 쓰라고 만든 것이다.
 // 제스처 라이브러리를 새로 넣지 않고 내장 PanResponder를 쓴다 — 스냅 두 개짜리에 의존성을 늘릴 이유가 없다.
 import { useEffect, useMemo, useRef, useState } from 'react';
+/* ⚠ 여기 `m.name.slice(1)`이 있었다 — 길이 검사도 없어 「이수」가 「수」,
+   「Reviewer」가 「eviewer」가 됐다. 규칙은 한 곳에 둔다 */
+import { initialOf } from '../../team/initials';
 import {
   Animated,
   Modal,
@@ -461,7 +464,7 @@ export function RosterSheet({
                       style={[styles.avatar, m.status === 'attend' ? styles.avatarAttend : styles.avatarDefault]}
                     >
                       <Text style={[styles.avatarText, { color: m.status === 'attend' ? colors.green : colors.textMuted }]}>
-                        {m.name.slice(1)}
+                        {initialOf(m.name)}
                       </Text>
                     </View>
 

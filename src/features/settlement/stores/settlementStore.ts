@@ -37,6 +37,28 @@ export interface Settlement {
   /** 납부 기한 — 총무가 정했을 때만 값이 있다 (20260806 마이그레이션) */
   dueDate: string | null;
   shares: ShareRow[];
+  /**
+   * **실제로 걷는 금액** = 면제가 아닌 몫의 합. `totalAmount`와 다를 수 있다.
+   *
+   * ⚠ **둘은 다른 사실이다.** `totalAmount`는 총무가 **입력한** 경기 비용이고,
+   *   이건 **몫에 적힌 금액의 합**이다. 만든 뒤 사람이 빠지거나 면제가 붙으면
+   *   갈린다.
+   *
+   * ⚠ 2026-09-19에 기기에서 갈린 것을 봤다. Demo FC의 9/10 정산:
+   *
+   *       total_amount 20,000 · per_person 10,000 · surplus 0
+   *       → surplus = per_person × count − total 이므로 **2인으로 만들어졌다**
+   *       그런데 settlement_shares에 **행이 하나뿐**이다(10,000원, Tester3)
+   *
+   *   화면은 「참석 1명 · 1인당 10,000원」 아래에 「20,000원」을 찍었다.
+   *   1 × 10,000 ≠ 20,000인데 **아무도 안 본다** — 세 숫자가 서로 다른 출처라
+   *   모순이 그냥 통과한다.
+   *
+   * 그래서 **화면의 큰 금액은 이 값**을 쓴다. 그러면 「N명 × 1인당 M원 = 이 금액」이
+   * 늘 성립한다. `totalAmount`와 갈리면 **숨기지 않고 그 차이를 적는다** —
+   * 총무가 알아야 할 사실이다(돈이 비었다).
+   */
+  sharesTotal: number;
 }
 
 /**
@@ -132,6 +154,10 @@ const mapSettlement = (s: any, myMemberId: string): Settlement => ({
   createdAt: s.created_at,
   dueDate: s.due_date ?? null,
   shares: (s.settlement_shares ?? []).map((r: any) => mapShare(r, myMemberId)),
+  /* 면제는 안 걷는다 — 합에서 뺀다 */
+  sharesTotal: (s.settlement_shares ?? [])
+    .filter((r: any) => !r.exempt)
+    .reduce((sum: number, r: any) => sum + (r.amount ?? 0), 0),
 });
 
 // 컬럼을 하나하나 적으면 아직 마이그레이션 안 한 환경에서 그 컬럼 때문에 쿼리 전체가
@@ -201,6 +227,13 @@ export const useSettlementStore = create<State>((set, get) => ({
             // 나란히 놓였을 때 어긋나면 같은 경기인지 아닌지 알 수 없다
             title: `${d.getMonth() + 1}월 ${d.getDate()}일 경기`,
             where: whereLabel(m.match_date, m.location ?? null),
+            /*
+              ⚠ **여기서는 나간 사람의 투표를 빼지 않는다 — 그게 맞다.**
+                이 목록은 위 쿼리에서 `match_date < liveSince()`로 **지난 경기만**
+                골라 온 것이고, 지난 경기의 물음은 「누가 왔었나」다.
+                `countableVotes`(utils/voting.ts)가 완료 경기에 대해 하는 판단과 같다 —
+                예정 경기였다면 현재 멤버만 세야 한다. 여기에 그 필터를 넣지 마라.
+            */
             attendCount: (m.attendance_votes ?? []).filter((v: any) => v.status === 'attend').length,
             daysSince: Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)),
           };

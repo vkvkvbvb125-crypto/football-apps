@@ -1145,6 +1145,7 @@ function SettlementDetailModal({
               <SettlementProgressPanel
                 shares={settlement.shares}
                 totalAmount={settlement.totalAmount}
+                sharesTotal={settlement.sharesTotal}
                 perPerson={settlement.perPerson}
                 nameFor={(s) => s.guestName ?? nameFor(s.teamMemberId)}
                 isAdmin={isAdmin && isCurrent}

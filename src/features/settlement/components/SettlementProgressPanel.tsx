@@ -13,7 +13,13 @@ import type { ShareRow } from '../stores/settlementStore';
 
 interface Props {
   shares: ShareRow[];
+  /**
+   * 총무가 **입력한** 경기 비용. 큰 금액 자리에는 쓰지 않는다 — 아래 sharesTotal 참고.
+   * 둘이 갈리면 그 차이를 적어야 하므로 값 자체는 받는다.
+   */
   totalAmount: number;
+  /** 면제를 뺀 몫의 합 — **실제로 걷는 금액**. 이것이 큰 금액 자리에 온다 */
+  sharesTotal: number;
   perPerson: number;
   nameFor: (share: ShareRow) => string;
   /** 총무만 — 미완료 행을 눌러 입금 확인 대상으로 고른다 */
@@ -27,6 +33,7 @@ interface Props {
 export function SettlementProgressPanel({
   shares,
   totalAmount,
+  sharesTotal,
   perPerson,
   nameFor,
   isAdmin,
@@ -42,10 +49,31 @@ export function SettlementProgressPanel({
 
   return (
     <View style={styles.wrap}>
+      {/*
+        ⚠ **큰 금액은 `totalAmount`가 아니라 `sharesTotal`이다.**
+          전에는 `totalAmount`를 찍었는데, 그 아래 「1인당 M원」·옆의 「N명」과
+          **출처가 달라서 서로 안 맞을 수 있었다.** 2026-09-19에 기기에서 봤다:
+          「참석 1명 · 1인당 10,000원」 아래에 「20,000원」. 1 × 10,000 ≠ 20,000인데
+          세 숫자가 각자 다른 데서 와서 아무도 모순을 안 봤다.
+          몫의 합을 쓰면 「N명 × 1인당 M원 = 이 금액」이 늘 성립한다.
+      */}
       <View style={styles.amountRow}>
-        <Text style={styles.amountTotal}>{totalAmount.toLocaleString()}원</Text>
+        <Text style={styles.amountTotal}>{sharesTotal.toLocaleString()}원</Text>
         <Text style={styles.amountPer}>(1인당 {perPerson.toLocaleString()}원)</Text>
       </View>
+
+      {/*
+        ⚠ **갈리면 숨기지 않고 적는다.** 총무가 적은 경기 비용과 실제로 걷는 금액이
+          다르면 그만큼 **돈이 빈다.** 사람이 빠졌거나 면제가 붙은 것이라 총무가
+          알아야 판단할 수 있다. 조용히 맞는 것처럼 보이는 쪽이 더 나쁘다.
+      */}
+      {sharesTotal !== totalAmount && (
+        <Text style={styles.amountGap}>
+          총무가 적은 경기 비용은 {totalAmount.toLocaleString()}원이에요 (
+          {sharesTotal > totalAmount ? '+' : '−'}
+          {Math.abs(totalAmount - sharesTotal).toLocaleString()}원 차이)
+        </Text>
+      )}
 
       <View style={styles.ringWrap}>
         <ProgressRing pct={pct} size={104} />
@@ -154,6 +182,15 @@ const makeStyles = (colors: Palette) =>
   amountRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 7 },
   amountTotal: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.6, fontVariant: ['tabular-nums'] },
   amountPer: { color: colors.textDim, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  /* 경고가 아니라 사실 고지다 — 빨강 대신 흐린 글씨로, 다만 읽히게 */
+  amountGap: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 6,
+    fontVariant: ['tabular-nums'],
+  },
 
   ringWrap: { alignItems: 'center', gap: 8 },
   ringCount: { color: colors.textBody, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },

@@ -527,8 +527,12 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
            aapt2 dump xmltree <artifact> --file <manifest 경로> | grep -c "android.permission.$p\""
          done
 
-       → CAMERA · RECORD_AUDIO · **FOREGROUND_SERVICE_MEDIA_PLAYBACK** ·
-         **AD_ID** 가 **0이어야** 한다(app.json의 blockedPermissions)
+       → CAMERA · RECORD_AUDIO · **FOREGROUND_SERVICE_MEDIA_PLAYBACK** 이
+         **0이어야** 한다(app.json의 blockedPermissions)
+       → **AD_ID**도 **0이어야** 하는데 ⚠ **이유가 다르다** — 이건 막아서가 아니라
+         **아무도 안 넣어서**다. `blockedPermissions`에 AD_ID는 **없다.**
+         광고 라이브러리를 넣는 날(1.1, docs/admob.md) 자동으로 1이 된다 —
+         그때 **AD_ID를 blockedPermissions에 넣으면 광고가 안 돈다.** 헷갈리지 마라.
          ⚠ FGS_MEDIA_PLAYBACK은 2026-09-19에 추가로 막았다 — 화면이 꺼지면
            호루라기가 안 울리는 것이 확인돼 **안 하는 일을 신고할 수 없어서**다
            (「포그라운드 서비스 — 권한을 뺀다」 항목).
@@ -744,6 +748,8 @@ AAB가 나와도 아래가 없으면 트랙을 못 연다. **전부 사람 일�
     사용자 생성 콘텐츠(게시글 · 댓글 · 공지)
 
 ⚠ **광고 ID는 안 쓴다** — AD_ID 권한이 매니페스트에 **없는 것**을 빌드 산출물에서 확인했다.
+  ⚠ **1.0에 한해서다.** 1.1에서 AdMob을 붙이면 이 항목의 답이 **바뀐다** —
+    광고 ID 수집을 선언해야 하고 처리방침도 같이 고친다(docs/admob.md).
 ⚠ **위치는 「위치 권한 선언 양식」 대상이 아니다** — ACCESS_BACKGROUND_LOCATION이 없다.
   전경 위치만 쓰므로 콘솔 설명 한 줄이면 된다.
 

@@ -44,6 +44,7 @@ import { useAttendanceStore } from '../features/attendance/stores/attendanceStor
 import { usePollsStore } from '../features/polls/stores/pollsStore';
 import { useSettlementStore } from '../features/settlement/stores/settlementStore';
 import { useTeamStore } from '../features/team/stores/teamStore';
+import type { Position } from '../features/team/positions';
 import { useScoreStore } from '../features/timer/stores/scoreStore';
 
 const TEAM_ID = 'fx-team';
@@ -61,15 +62,24 @@ const at = (days: number, hhmm = '20:00') => {
 /* ── 멤버 여덟 ────────────────────────────────────────────────────
    포지션을 골고루 둔다 — 팀 분배 화면이 네 자리를 다 채워야 그럴듯하다.
    실력도 상·중·하가 섞여야 「균형을 맞춘다」가 보인다. */
-const M = [
-  { n: '김도현', p: 'pivo', s: 3, j: 10, r: 'admin' as const },
-  { n: '박준서', p: 'ala', s: 2, j: 7 },
-  { n: '이지훈', p: 'fixo', s: 3, j: 4 },
-  { n: '최민재', p: 'goleiro', s: 2, j: 1 },
-  { n: '정우성', p: 'ala', s: 1, j: 23 },
-  { n: '한서준', p: 'pivo', s: 2, j: 9 },
-  { n: '오현우', p: 'fixo', s: 1, j: 15 },
-  { n: '윤태경', p: 'ala', s: 3, j: 11 },
+/*
+  ⚠ **포지션은 대문자다. 타입으로 못 박은 이유가 있다.**
+    앱은 `nextPosition()`으로만 쓰고 그건 `POSITIONS`(전부 대문자)를 돈다 —
+    즉 **DB에 들어가는 값은 대문자뿐**이다. 그런데 여기엔 소문자로 적혀 있었다.
+    `toPosition()`이 대문자만 인정하므로 전부 null이 되어
+      · 포메이션이 선호 포지션을 무시하고 아무나 앉혔고
+      · 명단·프로필의 칩이 전부 「포지션 선택」으로 나왔다.
+    `p: Position`으로 적어 두면 소문자를 다시 쓰는 순간 tsc가 막는다.
+*/
+const M: { n: string; p: Position; s: 1 | 2 | 3; j: number; r?: 'admin' }[] = [
+  { n: '김도현', p: 'PIVO', s: 3, j: 10, r: 'admin' },
+  { n: '박준서', p: 'ALA', s: 2, j: 7 },
+  { n: '이지훈', p: 'FIXO', s: 3, j: 4 },
+  { n: '최민재', p: 'GOLEIRO', s: 2, j: 1 },
+  { n: '정우성', p: 'ALA', s: 1, j: 23 },
+  { n: '한서준', p: 'PIVO', s: 2, j: 9 },
+  { n: '오현우', p: 'FIXO', s: 1, j: 15 },
+  { n: '윤태경', p: 'ALA', s: 3, j: 11 },
 ];
 
 const members = M.map((m, i) => ({
@@ -377,6 +387,14 @@ export function applyScreenshotFixtures(): boolean {
     memberships: [membership],
     activeTeam: membership,
     members: members as never,
+    /*
+      ⚠ **`members`만으로는 이름이 안 나온다.** 2026-09-18(`c142635`)에
+        `AssignmentScreen.nameFor`가 `members`가 아니라 **`memberNames` Map**을 보게
+        바뀌었다(나간 사람 이름도 살리려고). 여기를 안 채워 두면 팀 분배 화면의
+        선수 이름이 전부 **「멤버」**로 나온다 — 실력 태그는 멀쩡해서 눈치채기 어렵다.
+        2026-09-22에 포메이션을 찍다가 발견했다.
+    */
+    memberNames: new Map(members.map((m) => [m.id, m.displayName])),
     loaded: true,
     loading: false,
     error: null,

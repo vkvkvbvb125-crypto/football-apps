@@ -805,6 +805,93 @@ AAB가 나와도 아래가 없으면 트랙을 못 연다. **전부 사람 일�
 
 ---
 
+## 로컬 빌드 — WSL에서 `eas build --local` (2026-09-23 실측)
+
+**EAS 클라우드 할당량과 무관하게 APK/AAB를 뽑는 길이다.** 클라우드 산출물과 같은 것이
+나오는 것을 **대조해서 확인했다**(아래 「대조 결과」).
+
+### ⚠ 먼저 — 윈도에서는 안 된다
+
+```
+eas build --local --platform android
+  → Unsupported platform, macOS or Linux is required to build apps for Android
+```
+
+끝까지 돌려서 받은 오류다. **WSL2 안에서 돌린다.**
+
+### 한 번만 하는 준비 (WSL Ubuntu, sudo 없이 사용자 영역)
+
+⚠ `sudo`는 암호를 물어 못 쓴다. 전부 홈 디렉터리에 깐다.
+⚠ `unzip`이 **없다.** cmdline-tools는 `python3`의 `zipfile`로 풀고 `chmod +x`를 해야 한다.
+
+    node    nvm v0.40.3 → node 22            (~/.nvm)
+    JDK 17  Temurin 타르볼                    (~/tools/jdk17)
+    SDK     commandlinetools-linux-13114758  (~/Android/Sdk)
+            sdkmanager --licenses 수락 후
+            platform-tools · platforms;android-36 · build-tools;36.0.0
+    NDK     ndk;27.1.12297006  (2.0G)
+
+⚠ **NDK는 설치 뒤 `source.properties`가 있는지 반드시 확인해라.** 처음에 절반만 깔렸고
+  그때 gradle이 `[CXX1101] NDK ... did not have a source.properties file`로 죽었다.
+  디렉터리가 있는 것과 제대로 깔린 것은 다르다.
+
+환경은 `~/kdenv.sh` 한 파일에 모아 두고 명령마다 `. ~/kdenv.sh`로 읽는다 —
+우분투 기본 `~/.bashrc`는 비대화형 셸에서 **맨 앞에서 return** 하므로
+`bash -lc`로는 nvm이 안 잡힌다.
+
+### 빌드 절차
+
+    ① node scripts/buildready.mjs          (윈도, 커밋된 상태 확인)
+    ② WSL:  git clone -b <브랜치> /mnt/c/dev/football/app ~/kickday
+            corepack prepare pnpm@11.13.1 --activate
+            pnpm install --frozen-lockfile
+            cp /mnt/c/Users/my/.expo/state.json ~/.expo/state.json   (EAS 로그인 승계)
+    ③ WSL:  EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1             EAS_LOCAL_BUILD_SKIP_CLEANUP=1             npx eas-cli@23.0.0 build --local --platform android               --profile preview --non-interactive --output ~/kickday-preview.apk
+    ④ 번들 환경변수 grep + aapt2 검사 (아래)
+
+⚠ **`git clone`으로 넣는다 — 복사하지 마라.** EAS가 커밋된 상태만 올리는 것과 같아지고,
+  `.env`가 안 딸려 오므로 **값이 EAS environment에서 왔다는 것이 증명된다.**
+
+⚠ **`EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP=1`이 필요하다.** 로컬 러너는 `expo doctor`가
+  실패하면 빌드를 끊는다. 지금 4건이 실패한다 — 서랍 26 참조. 스위치로 넘기는 것이지
+  없어진 것이 아니다.
+
+⚠ **gradle 캐시가 깨지면 `rm -rf ~/.gradle`**. 이번에 두 번 걸렸다
+  (`immutable workspace ... have been modified`, `Could not read workspace metadata`).
+  `caches`만 지우는 것으로는 모자랐다. 통째로 지우면 바로 통과한다.
+  ⚠ 빌드 도중 WSL이 읽기 전용으로 떨어지면 이 상태가 된다. 그때는
+  `wsl --shutdown` 뒤 다시 띄우면 살아난다(손실 없었다).
+
+### 검사 — 번들 환경변수
+
+APK에서 `assets/index.android.bundle`을 꺼내(python3 `zipfile`) 값을 센다.
+⚠ Hermes라 **UTF-8과 UTF-16LE 둘 다** 봐야 한다(`docs/session-2026-08.md` 「번들 grep 세 겹」).
+
+### 검사 — aapt2
+
+    aapt2 dump badging <apk>       → package/versionCode/targetSdk
+    aapt2 dump permissions <apk>   → 권한 목록
+
+**있으면 안 되는 것:** `AD_ID` · `FOREGROUND_SERVICE_MEDIA_PLAYBACK` · `CAMERA` · `RECORD_AUDIO`.
+
+### 대조 결과 — 로컬 vc14 ↔ 클라우드 vc13 (2026-09-23)
+
+| 항목 | 로컬(WSL) | 클라우드 | |
+|---|---|---|---|
+| 번들 | Hermes · 3,985,964B | Hermes · 3,984,512B | — |
+| `SUPABASE_URL` · `ANON_KEY` · `KAKAO_MAPS_JS_KEY` · `NAVER_CLIENT_ID` | 각 1건 | 각 1건 | 같다 |
+| `KAKAO_REST_API_KEY` | 0건 | **0건** | ⚠ 둘 다 0 — grep이 못 잡는 것이지 결함이 아니다 |
+| 권한 | 32개 | 32개 | **diff 없음** |
+| `AD_ID`·`FGS_MEDIA_PLAYBACK`·`CAMERA`·`RECORD_AUDIO` | 0 | 0 | 같다 |
+
+⭐ **`eas build --local`은 EAS의 `environment`를 읽는다.** 증명: WSL 클론에 `.env`가
+**없는데**(`.env.example`만 있다) 번들에 값이 들어 있다. 출처가 EAS `production`뿐이다.
+
+⚠ **versionCode는 `app.json`에서 온다**(지금 14). `preview`에는 `autoIncrement`가 없어
+  **원격 번호를 태우지 않는다.** `production`으로 뽑을 때는 얘기가 다르다 —
+  `autoIncrement`가 빌드 **전에** 올리고 실패해도 안 돌아온다.
+
+
 ## ⚠ 스토어에 올리기 **전에** 끝나야 하는 것 — 문구가 거짓이 되는 자리
 
 긴 설명의 두 문장은 **코드가 맞아도 한 단계가 남아 있다.** 스토어 문구는 사용자가

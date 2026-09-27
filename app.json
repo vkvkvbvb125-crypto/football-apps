@@ -132,5 +132,8 @@
       }
     },
     "owner": "qiawns00"
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-8655981738970005~5129291257"
   }
 }

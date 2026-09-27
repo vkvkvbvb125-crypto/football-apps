@@ -84,10 +84,16 @@ assert.deepEqual(
   ⚠ 서랍 25가 이것이었다 — 못 그리는 인원수에서 블록이 통째로 사라져
     「그런 기능이 있는지조차 모른다」가 됐다.
 */
-for (const n of [0, 1, 2, 3, 8, 9, 14]) {
+for (const n of [1, 2, 3, 8, 9, 14]) {
   const hint = formationHint(n);
   assert.ok(hint && hint.text.length > 0, `${n}명일 때 안내 문구가 없다 — 화면이 조용히 빈다`);
 }
+/*
+  ⚠ **0명은 예외다 — 말을 걸면 안 된다.** 아직 나누기 전이라는 뜻이고,
+    화면에는 이미 「비어 있음」과 「전체 팀원으로 분배」가 있다. 안내까지 넣었더니
+    경기마다 두 줄씩(A팀·B팀) 쌓여 화면이 덮였다(2026-09-28 기기에서 봤다).
+*/
+assert.equal(formationHint(0), null, '0명에는 안내를 그리지 않는다 — 아직 안 나눈 것이지 적은 것이 아니다');
 for (const n of keys) {
   assert.equal(formationHint(n), null, `${n}명은 그릴 수 있는데 안내가 나온다`);
   assert.ok(formationsFor(n), `${n}명 후보를 못 가져온다`);

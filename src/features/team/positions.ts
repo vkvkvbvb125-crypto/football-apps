@@ -132,6 +132,14 @@ export function formationsFor(playerCount: number): Formation[] | null {
  */
 export function formationHint(playerCount: number): { text: string; adminOnly: boolean } | null {
   if (formationsFor(playerCount)) return null;
+  /*
+    ⚠ **0명에는 말을 걸지 않는다.** 2026-09-28 기기에서 보니 아직 나누기 전인
+      경기마다 A팀·B팀에 **같은 문구가 두 번** 떴고, 살아 있는 경기가 여럿이라
+      화면이 안내로 덮였다. 0명은 「아직 안 나눴다」는 뜻이고 그건 바로 위의
+      「비어 있음」과 「전체 팀원으로 분배」가 이미 말한다.
+      **1~3명일 때만 「4명부터」가 말이 된다** — 나눴는데 적은 것이다.
+  */
+  if (playerCount <= 0) return null;
   if (playerCount >= 8) {
     return { text: `${playerCount}명은 포메이션을 그릴 수 없어요 · 팀을 더 나누면 보여드려요`, adminOnly: true };
   }

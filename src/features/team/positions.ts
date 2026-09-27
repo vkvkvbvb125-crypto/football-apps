@@ -64,17 +64,76 @@ export function toPosition(value: string | null | undefined): Position | null {
   return value && (POSITIONS as readonly string[]).includes(value) ? (value as Position) : null;
 }
 
+export interface Formation {
+  /** ⚠ **골키퍼를 뺀** 필드 배치다. 「2-2-1」은 필드 5명이고 팀은 6명이다 */
+  label: string;
+  /** 우리 골대 → 상대 골대 순서. 전부 합치면 **골키퍼 포함** 팀 인원이다 */
+  rows: Position[][];
+}
+
 /**
- * 인원수별 포메이션 — 각 줄이 골대 쪽에서 상대 골대 쪽으로 한 줄씩이다.
+ * 팀 인원별 포메이션 후보.
  *
- * 5명은 1-2-1(골키퍼 포함), 6명은 2-2-1. 풋살 표준 배치를 그대로 쓴다.
- * 그 밖의 인원수는 포메이션을 그리지 않는다 — 억지로 배치하면 실제 경기와 안 맞는다.
+ * ── ⚠ 표기 규칙 — 이것부터 읽어라 ────────────────────────────────
+ *
+ *     키(4·5·6·7)  = 팀 인원 **골키퍼 포함**
+ *     label        = 골키퍼를 **뺀** 필드 배치
+ *
+ *   그래서 **label의 숫자 합 + 1 = 키**다. 6번 키의 「2-2-1」은 2+2+1=5,
+ *   거기에 골키퍼 하나를 더해 6이다.
+ *
+ * ⚠ **이 규칙을 안 정하고 4명을 추가하면 사고가 난다.** 「2-2」가 4명(GK+3)인지
+ *   5명(GK+4)인지 갈리지 않기 때문이다. 화면 헤더도 「6명 · 골키퍼 포함」에서
+ *   **「골키퍼 1 · 필드 5」**로 바꿨다 — 그래야 배지 숫자와 헤더 숫자가
+ *   **서로 검산된다.** `formation.check.ts`가 이 산수를 붙든다.
+ *
+ * ⚠ **4~7만 있다.** 3명 이하는 배치랄 것이 없고(골키퍼+2), 8명 이상은
+ *   풋살이 아니다. 그 밖의 인원수에서는 화면이 **안내를 그린다** —
+ *   전에는 아무것도 안 그려서 기능이 있는 줄도 몰랐다(서랍 25).
+ *
+ * ⚠ **각 배열의 맨 앞이 기본값이다.** 5·6의 기본값은 예전 값 그대로 뒀다 —
+ *   기존 화면이 안 바뀌어야 한다.
  */
-export const FORMATIONS: Record<number, { label: string; rows: Position[][] }> = {
-  5: { label: '1-2-1', rows: [['GOLEIRO'], ['FIXO'], ['ALA', 'ALA'], ['PIVO']] },
-  6: { label: '2-2-1', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['ALA', 'ALA'], ['PIVO']] },
+export const FORMATIONS: Record<number, Formation[]> = {
+  4: [
+    { label: '1-1-1', rows: [['GOLEIRO'], ['FIXO'], ['ALA'], ['PIVO']] },
+    { label: '2-1', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['PIVO']] },
+    { label: '1-2', rows: [['GOLEIRO'], ['FIXO'], ['ALA', 'ALA']] },
+  ],
+  5: [
+    { label: '1-2-1', rows: [['GOLEIRO'], ['FIXO'], ['ALA', 'ALA'], ['PIVO']] },
+    { label: '2-2', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['ALA', 'ALA']] },
+    { label: '3-1', rows: [['GOLEIRO'], ['FIXO', 'FIXO', 'FIXO'], ['PIVO']] },
+  ],
+  6: [
+    { label: '2-2-1', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['ALA', 'ALA'], ['PIVO']] },
+    { label: '1-3-1', rows: [['GOLEIRO'], ['FIXO'], ['ALA', 'ALA', 'ALA'], ['PIVO']] },
+    { label: '2-1-2', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['ALA'], ['PIVO', 'PIVO']] },
+  ],
+  7: [
+    { label: '2-2-2', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['ALA', 'ALA'], ['PIVO', 'PIVO']] },
+    { label: '3-2-1', rows: [['GOLEIRO'], ['FIXO', 'FIXO', 'FIXO'], ['ALA', 'ALA'], ['PIVO']] },
+    { label: '2-3-1', rows: [['GOLEIRO'], ['FIXO', 'FIXO'], ['ALA', 'ALA', 'ALA'], ['PIVO']] },
+  ],
 };
 
-export function formationFor(playerCount: number) {
+/** 그 인원수의 후보들. 없으면 null — 부르는 쪽이 안내를 그린다 */
+export function formationsFor(playerCount: number): Formation[] | null {
   return FORMATIONS[playerCount] ?? null;
+}
+
+/**
+ * 포메이션을 못 그리는 인원수에 **무슨 말을 할까.**
+ *
+ * ⚠ **두 경우의 답이 다르다.**
+ *   · 많을 때  — 팀을 더 나누면 된다. **총무만 할 수 있는 일**이라 총무에게만 보인다
+ *   · 적을 때  — 나누는 것이 답이 아니다. 그냥 **아직 이르다**는 설명이고,
+ *     할 일이 없으므로 팀원에게도 보인다
+ */
+export function formationHint(playerCount: number): { text: string; adminOnly: boolean } | null {
+  if (formationsFor(playerCount)) return null;
+  if (playerCount >= 8) {
+    return { text: `${playerCount}명은 포메이션을 그릴 수 없어요 · 팀을 더 나누면 보여드려요`, adminOnly: true };
+  }
+  return { text: '4명부터 포메이션을 보여드려요', adminOnly: false };
 }

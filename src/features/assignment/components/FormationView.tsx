@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { radius, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
-import { POSITION_INFO, formationFor, toPosition, type Position } from '../../team/positions';
+import { POSITION_INFO, toPosition, type Formation, type Position } from '../../team/positions';
 
 export interface FormationPlayer {
   id: string;
@@ -32,10 +32,12 @@ export function assignToFormation(players: FormationPlayer[], slots: Position[])
   return slots.map((slot) => ({ slot, player: remaining.length ? take(slot) : null }));
 }
 
-export function FormationView({ players }: { players: FormationPlayer[] }) {
+/*
+  ⚠ **어느 포메이션을 그릴지는 이 컴포넌트가 안 정한다.** 부르는 쪽(AssignmentScreen)이
+    고른 것을 넘긴다 — 선택이 화면 상태이기 때문이다(저장하지 않는다).
+*/
+export function FormationView({ players, formation }: { players: FormationPlayer[]; formation: Formation }) {
   const { colors, styles } = useThemed(makeStyles);
-  const formation = formationFor(players.length);
-  if (!formation) return null;
 
   // rows는 우리 골대 → 상대 골대 순서다. 화면은 상대 골대가 위라 뒤집어 그린다.
   const slots = formation.rows.flat();
@@ -46,8 +48,11 @@ export function FormationView({ players }: { players: FormationPlayer[] }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
+        {/* ⚠ 배지가 **골키퍼를 뺀** 배치라(「2-2-1」=5) 헤더도 갈라서 적는다.
+            전에는 「6명 · 골키퍼 포함」이었는데 2+2+1=5와 6이 나란히 놓여
+            읽는 사람이 하나를 잃어버렸다(positions.ts 표기 규칙). */}
         <Text style={styles.headText}>
-          {players.length}명 · 골키퍼 포함
+          골키퍼 1 · 필드 {players.length - 1}
         </Text>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{formation.label}</Text>

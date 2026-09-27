@@ -13,7 +13,7 @@ import { TabHeader } from '../../../components/TabHeader';
 import { radius, shadow, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import { FormationView } from '../components/FormationView';
-import { formationFor } from '../../team/positions';
+import { formationHint, formationsFor } from '../../team/positions';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
@@ -50,6 +50,17 @@ const TOTAL_QUARTERS = 4;
 export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const { colors, styles } = useThemed(makeStyles);
   const [view, setView] = useState<View3>('assign');
+  /*
+    고른 포메이션 — **화면 상태다. 저장하지 않는다.**
+
+    키는 `${경기id}:${그룹}`이다. 경기가 여럿 보이고(liveMatches 전부를 그린다)
+    그룹도 여럿이라, 하나만 두면 A팀을 바꿨는데 B팀이 같이 바뀐다.
+
+    ⚠ **저장을 안 하는 것이 설계다.** 저장하면 team_assignments 옆에 컬럼이 늘고
+      마이그레이션이 생긴다 — 화면 안에서 바꿔 보는 것만으로 「누가 어디」는 풀린다.
+      나갔다 오면 기본값으로 돌아가는 것도 그래서 의도된 동작이다.
+  */
+  const [formationPick, setFormationPick] = useState<Record<string, number>>({});
 
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
@@ -414,11 +425,56 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                         표준 배치가 없어 억지로 그리면 실제 경기와 안 맞는다. */}
                     {labels.map((group) => {
                       const list = mine.filter((a) => a.group_label === group);
-                      if (!formationFor(list.length)) return null;
+                      const options = formationsFor(list.length);
+
+                      /*
+                        ⚠ **못 그릴 때 아무것도 안 그리던 것이 서랍 25였다.**
+                          참석 14명을 2팀으로 나누면(7+7) 총무는 포메이션을 한 번도
+                          못 보고, 그런 기능이 있는지조차 몰랐다. 이제는 말을 한다.
+                      */
+                      if (!options) {
+                        const hint = formationHint(list.length);
+                        if (!hint || (hint.adminOnly && !isAdmin)) return null;
+                        return (
+                          <View key={`formation-${group}`} style={styles.formationBlock}>
+                            <Text style={styles.formationTitle}>{group}팀 포메이션</Text>
+                            <View style={styles.formationHint}>
+                              <Text style={styles.formationHintText}>{hint.text}</Text>
+                            </View>
+                          </View>
+                        );
+                      }
+
+                      const key = `${match.id}:${group}`;
+                      const picked = formationPick[key] ?? 0;
                       return (
                         <View key={`formation-${group}`} style={styles.formationBlock}>
                           <Text style={styles.formationTitle}>{group}팀 포메이션</Text>
+                          {/* 후보가 하나뿐이면 고를 것이 없다 — 칩 줄을 안 그린다 */}
+                          {options.length > 1 && (
+                            <View style={styles.formationChips}>
+                              {options.map((opt, i) => (
+                                <Pressable
+                                  key={opt.label}
+                                  onPress={() => setFormationPick((prev) => ({ ...prev, [key]: i }))}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected: i === picked }}
+                                  accessibilityLabel={`${group}팀 포메이션 ${opt.label}`}
+                                  style={({ pressed }) => [
+                                    styles.formationChip,
+                                    i === picked && styles.formationChipOn,
+                                    pressed && styles.pressed,
+                                  ]}
+                                >
+                                  <Text style={[styles.formationChipText, i === picked && styles.formationChipTextOn]}>
+                                    {opt.label}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </View>
+                          )}
                           <FormationView
+                            formation={options[picked] ?? options[0]}
                             players={list.map((a) => ({
                               id: a.team_member_id,
                               name: nameFor(a.team_member_id),
@@ -543,6 +599,36 @@ const makeStyles = (colors: Palette) =>
 
   formationBlock: { marginTop: 14, gap: 8 },
   formationTitle: { color: colors.textStrong, fontSize: 12, fontWeight: '800' },
+
+  /* 못 그리는 인원수에 말을 거는 자리. 카드가 아니라 **한 줄**이다 —
+     여기에 카드를 두면 광고나 빈 상태처럼 화면 한 칸을 차지한다 */
+  formationHint: {
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  formationHintText: { color: colors.textDim, fontSize: 12, fontWeight: '600', lineHeight: 18 },
+
+  formationChips: { flexDirection: 'row', gap: 6 },
+  formationChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.chip,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
+  },
+  formationChipOn: { borderColor: colors.green, backgroundColor: colors.greenTint },
+  formationChipText: {
+    color: colors.textDim,
+    fontSize: 11,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  formationChipTextOn: { color: colors.green },
   groups: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   groupCol: {
     flexBasis: '47%',

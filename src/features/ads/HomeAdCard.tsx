@@ -70,7 +70,14 @@ export function HomeAdCard() {
   if (!ad) return null;
 
   return (
-    <NativeAdView nativeAd={ad} style={styles.card}>
+    /*
+      ⚠ **껍데기는 평범한 View가 갖는다.** NativeAdView는 네이티브 뷰라
+        `borderRadius`가 안 먹었다 — 2026-09-27 기기에서 모서리가 각지게 나왔고
+        다크에서는 테두리도 안 보였다. 카드로 안 읽히고 **덜 만든 것처럼** 보인다.
+        네이티브 쪽에는 레이아웃만 주고 면·테두리·모서리는 우리가 그린다.
+    */
+    <View style={styles.card}>
+      <NativeAdView nativeAd={ad} style={styles.inner}>
       <View style={styles.head}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>광고</Text>
@@ -115,7 +122,8 @@ export function HomeAdCard() {
           </View>
         </NativeAsset>
       )}
-    </NativeAdView>
+      </NativeAdView>
+    </View>
   );
 }
 
@@ -125,11 +133,14 @@ const makeStyles = (colors: Palette) =>
     card: {
       borderRadius: radius.card,
       borderWidth: 1,
-      borderColor: colors.borderSoft,
+      /* ⚠ borderSoft는 다크에서 안 보였다. 우리 카드와 **다른** 테두리여야지
+         **없는** 테두리여선 안 된다 */
+      borderColor: colors.border,
       backgroundColor: colors.cardAlt,
+      overflow: 'hidden',
       padding: 14,
-      gap: 10,
     },
+    inner: { gap: 10 },
     head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     /* 「광고」 배지 — 우리 초록을 안 쓴다. 초록은 우리 것이라는 신호다 */
     badge: {

@@ -28,6 +28,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Text } from '../../../components/nativeText';
+import { HomeAdCard } from '../../ads/HomeAdCard';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -976,6 +977,20 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
             </Pressable>
           ))}
+
+        {/*
+          광고 — **홈의 맨 끝이다.**
+
+          ⚠ 「최근 공지 아래」로 정했지만(docs/admob.md ③) 공지 카드 **바로 밑**이 아니라
+            스크롤의 **마지막**에 둔다. 사이에 TIP·초대 카드가 조건부로 끼는데,
+            그것들은 처음 쓰는 총무에게 길을 알려주는 칸이다 — 광고가 그 앞에 서면
+            **광고가 안내를 밀어낸다.** 「목적을 앞지르는 자리는 만들지 않는다」가
+            애초에 이 자리를 고른 이유다.
+
+          ⚠ 못 받으면 HomeAdCard가 스스로 null을 돌려준다 — 여기서 분기하지 마라.
+            분기를 두 곳에 두면 한쪽만 고쳐지는 날이 온다.
+        */}
+        <HomeAdCard />
       </ScrollView>
 
       {/* 공지 목록 모달은 걷어냈다 — 홈의 공지를 누르면 알림 패널이 열리고,

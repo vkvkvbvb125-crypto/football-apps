@@ -118,7 +118,13 @@
           }
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-8655981738970005~5129291257"
+        }
+      ]
     ],
     "extra": {
       "eas": {

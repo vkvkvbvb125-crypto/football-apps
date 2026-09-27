@@ -385,7 +385,43 @@ Play 목록에서는 앞 2~3장만 보이고 7번은 상세로 들어온 사람 
 | Messages → Other in-app messages | 공지 · 게시글 · 댓글 | ✔ | ✖ | 앱 기능 | 선택 | |
 | App activity → Other actions | 참석 응답 · 팀 분배 결과 · 정산 금액/입금 여부 | ✔ | ✖ | 앱 기능 | **필수** | 앱의 본체다 |
 | Device or other IDs | 푸시 알림 토큰 | ✔ | **Expo** | 앱 기능(알림) | 선택 | 알림을 끄면 안 쓴다 |
-| App info and performance | **없음** | ✖ | ✖ | | | 광고 식별자·분석 도구를 안 쓴다 |
+| **Device or other IDs** | **광고 ID(AAID)** | ✔ | **Google** | **광고 또는 마케팅** | 선택 | 2026-09-27 광고 도입. 단말 설정에서 맞춤 광고를 끌 수 있다 |
+| App info and performance | **없음** | ✖ | ✖ | | | 분석 도구를 안 쓴다. ⚠ **광고 식별자는 위 줄로 옮겼다**(2026-09-27) |
+
+### ⚠ 광고 도입으로 바뀐 것 — 2026-09-27
+
+**「광고 식별자를 안 쓴다」가 거짓이 됐다.** `terms.ts` 다섯 자리를 이미 고쳤고
+(수집 항목·이용 목적·처리 위탁·국외 이전·제3자), `web/privacy`도 재생성했다.
+`ads.check.ts`가 그 문장이 되살아나면 FAIL을 낸다.
+
+**Play 양식에서 바꿀 것:**
+
+    Device or other IDs → 광고 ID
+      수집  예
+      공유  예 (Google)
+      목적  광고 또는 마케팅
+      필수  아니요 (단말 설정에서 맞춤 광고 끄기 가능)
+
+**스토어 등재에서 바꿀 것:** 「이 앱에 광고가 포함되어 있습니다」 **체크**.
+⚠ 안 하면 정책 위반이다 — 광고가 있는데 없다고 신고한 것이 된다.
+
+**`app-ads.txt`** — `web/app-ads.txt`에 넣었다(`google.com, pub-8655981738970005, DIRECT, f08c47fec0942fa0`).
+⚠ **배포는 사용자**(`npx wrangler deploy`)이고 **구글 크롤링에 하루 이상** 걸린다.
+  광고를 켜기 전에 올라가 있어야 한다.
+
+### ⚠ 권한이 32 → 36개가 됐다 (2026-09-27 실측)
+
+광고 라이브러리가 **넷**을 끌고 온다:
+
+    com.google.android.gms.permission.AD_ID        ← 광고 ID. 이것이 광고의 전제다
+    android.permission.ACCESS_ADSERVICES_AD_ID     ┐
+    android.permission.ACCESS_ADSERVICES_ATTRIBUTION│ 안드로이드 Privacy Sandbox
+    android.permission.ACCESS_ADSERVICES_TOPICS    ┘
+
+⚠ **`ACCESS_ADSERVICES_*` 셋은 내가 넣은 것이 아니다** — GMA SDK의 매니페스트가
+  병합돼 들어온다. 데이터 안전 양식에서 따로 묻는 항목은 아니지만,
+  **「광고 ID 수집」을 신고하는 근거가 이 넷**이라는 것을 알고 있어야 한다.
+  신고를 안 한 채 이 권한들이 들어 있으면 그게 불일치로 잡힌다.
 
 ### ⚠ 위치 — 「수집」으로 신고할지 정해야 한다
 
@@ -529,10 +565,11 @@ git이 추적하지 않으므로 **EAS에 업로드되지 않는다.** 서버에
 
        → CAMERA · RECORD_AUDIO · **FOREGROUND_SERVICE_MEDIA_PLAYBACK** 이
          **0이어야** 한다(app.json의 blockedPermissions)
-       → **AD_ID**도 **0이어야** 하는데 ⚠ **이유가 다르다** — 이건 막아서가 아니라
-         **아무도 안 넣어서**다. `blockedPermissions`에 AD_ID는 **없다.**
-         광고 라이브러리를 넣는 날(1.1, docs/admob.md) 자동으로 1이 된다 —
-         그때 **AD_ID를 blockedPermissions에 넣으면 광고가 안 돈다.** 헷갈리지 마라.
+       → ⚠ **AD_ID는 이제 `1`이어야 한다 — 2026-09-27에 뒤집혔다.**
+         전에는 0이 정상이었다(막아서가 아니라 아무도 안 넣어서). 광고 라이브러리가
+         들어오면서 자동으로 1이 됐다. **0이면 광고가 안 도는 것**이다.
+         **AD_ID를 `blockedPermissions`에 넣지 마라** — 넣으면 광고가 죽는다.
+         같이 들어온 `ACCESS_ADSERVICES_*` 셋도 정상이다(위 「권한이 32 → 36개」).
          ⚠ FGS_MEDIA_PLAYBACK은 2026-09-19에 추가로 막았다 — 화면이 꺼지면
            호루라기가 안 울리는 것이 확인돼 **안 하는 일을 신고할 수 없어서**다
            (「포그라운드 서비스 — 권한을 뺀다」 항목).
@@ -618,8 +655,9 @@ EAS 빌드 한도가 10/1에 초기화된다. **그날 할 일을 순서대로 �
 #### 그다음 — APK에서 하던 검사를 그대로 돌린다
 
   · **권한** — 위 「② 산출물에서 권한 확인」의 `aapt2 dump xmltree`.
-    기대값: CAMERA · RECORD_AUDIO · FGS_MEDIA_PLAYBACK · AD_ID = **0**,
-    INTERNET · ACCESS_FINE_LOCATION · POST_NOTIFICATIONS = **1**.
+    기대값: CAMERA · RECORD_AUDIO · FGS_MEDIA_PLAYBACK = **0**,
+    INTERNET · ACCESS_FINE_LOCATION · POST_NOTIFICATIONS · **AD_ID** = **1**.
+    ⚠ AD_ID 기대값은 2026-09-27에 **0에서 1로 뒤집혔다**(광고 도입).
     ⚠ `SYSTEM_ALERT_WINDOW`은 **1로 나온다**(서랍 20) — 놀라지 마라.
   · **번들 환경변수** — Supabase URL·anon key가 실려 있는가.
     ⚠ 한글 문구로 찾을 때는 **UTF-16LE로도** 찾는다(Hermes).
@@ -775,7 +813,8 @@ AAB가 나와도 아래가 없으면 트랙을 못 연다. **전부 사람 일�
     이메일 · 이름(display_name) · 프로필 사진 · 대략적 위치 · 푸시 토큰
     사용자 생성 콘텐츠(게시글 · 댓글 · 공지)
 
-⚠ **광고 ID는 안 쓴다** — AD_ID 권한이 매니페스트에 **없는 것**을 빌드 산출물에서 확인했다.
+⚠ ~~**광고 ID는 안 쓴다**~~ — **2026-09-27에 뒤집혔다.** 광고를 붙이면서 AD_ID가 들어왔다.
+  아래는 그 전 기록이다. ~~AD_ID 권한이 매니페스트에 **없는 것**을 빌드~~ 산출물에서 확인했다.
   ⚠ **1.0에 한해서다.** 1.1에서 AdMob을 붙이면 이 항목의 답이 **바뀐다** —
     광고 ID 수집을 선언해야 하고 처리방침도 같이 고친다(docs/admob.md).
 ⚠ **위치는 「위치 권한 선언 양식」 대상이 아니다** — ACCESS_BACKGROUND_LOCATION이 없다.
@@ -872,7 +911,11 @@ APK에서 `assets/index.android.bundle`을 꺼내(python3 `zipfile`) 값을 센�
     aapt2 dump badging <apk>       → package/versionCode/targetSdk
     aapt2 dump permissions <apk>   → 권한 목록
 
-**있으면 안 되는 것:** `AD_ID` · `FOREGROUND_SERVICE_MEDIA_PLAYBACK` · `CAMERA` · `RECORD_AUDIO`.
+**있으면 안 되는 것:** `FOREGROUND_SERVICE_MEDIA_PLAYBACK` · `CAMERA` · `RECORD_AUDIO`.
+
+⚠ **`AD_ID`는 이제 `1`이어야 한다 — 기대값이 뒤집혔다(2026-09-27).**
+  전에는 0이 정상이었다(아무도 안 넣어서). 광고를 붙인 뒤로는 **0이면 광고가 안 도는 것**이다.
+  습관적으로 `blockedPermissions`에 AD_ID를 넣지 마라 — 넣으면 광고가 죽는다.
 
 ### 대조 결과 — 로컬 vc14 ↔ 클라우드 vc13 (2026-09-23)
 

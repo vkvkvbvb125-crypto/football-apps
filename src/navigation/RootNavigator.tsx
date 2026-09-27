@@ -15,6 +15,7 @@ import { MainTabNavigator } from './MainTabNavigator';
 import { TeamSettingsScreen } from '../features/team/screens/TeamSettingsScreen';
 import { MySettingsScreen } from '../features/settings/screens/MySettingsScreen';
 import { ProfileDetailScreen } from '../features/settings/screens/ProfileDetailScreen';
+import { FormationScreen } from '../features/assignment/screens/FormationScreen';
 import { NotificationSettingsScreen } from '../features/settings/screens/NotificationSettingsScreen';
 import { TermsScreen } from '../features/settings/screens/TermsScreen';
 import { ThemeSettingsScreen } from '../features/settings/screens/ThemeSettingsScreen';
@@ -352,6 +353,8 @@ export function RootNavigator() {
             <Stack.Screen name="TeamSettings" component={TeamSettingsScreen} />
             <Stack.Screen name="MySettings" component={MySettingsScreen} />
             <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
+            {/* 팀 분배 카드의 팀 헤더를 탭하면 열린다 — params는 { matchId, group } */}
+            <Stack.Screen name="Formation" component={FormationScreen} />
             <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
             <Stack.Screen name="Terms" component={TermsScreen} />
             <Stack.Screen name="ThemeSettings" component={ThemeSettingsScreen} />

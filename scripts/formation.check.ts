@@ -107,18 +107,70 @@ for (const n of keys) {
 assert.equal(formationHint(8)?.adminOnly, true, `8명 안내는 총무 전용이어야 한다 — 팀 나누기는 총무만 한다`);
 assert.equal(formationHint(3)?.adminOnly, false, `3명 안내는 모두에게 보여야 한다 — 나누는 것이 답이 아니라 할 일이 없다`);
 
-/* ── ⑷ 화면이 안내를 삼키지 않는가 ──────────────────────────────── */
-const screen = strip(readFileSync('src/features/assignment/screens/AssignmentScreen.tsx', 'utf8'));
+/* ── ⑷ 상세 화면이 안내를 삼키지 않는가 ────────────────────────── */
+/*
+  ⚠ 2026-09-28에 **자리가 옮겨졌다.** 안내는 이제 분배 카드가 아니라
+    포메이션 상세 화면이 그린다. 단언도 같이 옮긴다 — 안 옮기면 옛 파일을 보며
+    통과해 버리고, 정작 새 화면이 조용히 비어도 모른다.
+*/
+const detail = strip(readFileSync('src/features/assignment/screens/FormationScreen.tsx', 'utf8'));
 assert.ok(
-  /formationHint\(/.test(screen),
-  `AssignmentScreen이 formationHint를 안 쓴다 — 범위 밖에서 다시 조용히 비게 된다(서랍 25)`
+  /formationHint\(/.test(detail),
+  `FormationScreen이 formationHint를 안 쓴다 — 범위 밖에서 다시 조용히 비게 된다(서랍 25)`
 );
 
-/* ── ⑸ 헤더 표기 ────────────────────────────────────────────────── */
-const view = strip(readFileSync('src/features/assignment/components/FormationView.tsx', 'utf8'));
+/* ── ⑹ 고르는 자리는 **한 곳**이다 ──────────────────────────────── */
+/*
+  칩(조작)이 분배 카드에도 있으면 선택 상태가 둘로 갈리고 어느 쪽이 진짜인지 모른다.
+  카드에는 **읽기 전용 배지**만 둔다.
+*/
+const card = strip(readFileSync('src/features/assignment/screens/AssignmentScreen.tsx', 'utf8'));
+assert.ok(
+  !/=>\s*s\.pick\b/.test(card),
+  `AssignmentScreen이 포메이션 **고르기 동작을 구독한다**. 고르는 자리는 FormationScreen ` +
+    `하나여야 한다 — 두 곳에 두면 선택 상태가 갈리고 어느 쪽이 진짜인지 모른다`
+);
+assert.ok(
+  /formationKey\(/.test(card),
+  `AssignmentScreen이 읽기 전용 배지를 안 그린다 — 그러면 포메이션을 발견할 길이 없다(서랍 25)`
+);
+
+/* ── ⑺ 코트가 강조색 초록을 쓰지 않는가 ────────────────────────── */
+/*
+  ⚠ 스펙 §02 「모든 배경에 Green 금지」. 코트 면이 채도 높은 초록이면
+    강조해야 할 CTA·활성 탭·**선택된 칩**의 초록이 바탕에 섞인다.
+    코트는 greenTrack(가라앉은 초록) + greenLine(옅은 선)으로만 그린다.
+*/
+const field = strip(readFileSync('src/features/assignment/components/FormationView.tsx', 'utf8'));
+/*
+  ⚠ **면만 본다.** §02는 「모든 **배경**에 Green 금지」다. 칩의 「나」 표시처럼
+    점으로 찍는 강조는 앱 전체가 초록으로 통일돼 있어(playerRowMe) 그것까지 막으면
+    오히려 어긋난다. 막아야 할 것은 **코트 면이 채도 높은 초록이 되는 것**이다 —
+    그러면 CTA·활성 탭·선택된 칩의 초록이 바탕에 섞인다.
+*/
+const loudBg = [...field.matchAll(/backgroundColor:\s*colors\.(green|greenBright|greenCore|greenGlow)\b/g)].map(
+  (m) => m[0]
+);
+assert.deepEqual(
+  loudBg,
+  [],
+  `코트 면에 강조색 초록을 썼다(스펙 §02: 모든 배경에 Green 금지). ` +
+    `면은 greenTrack, 선은 greenLine이다:\n  ` + loudBg.join('\n  ')
+);
+assert.ok(
+  /backgroundColor:\s*colors\.greenTrack\b/.test(field),
+  `코트 면이 greenTrack이 아니다 — 가라앉은 초록이어야 선수 이름과 강조색이 산다`
+);
+
+/* ── ⑸ 상세 화면의 헤더 표기 ───────────────────────────────────── */
+/*
+  ⚠ 전에는 「6명 · 골키퍼 포함」이라 배지(2-2-1=5)와 숫자가 안 맞아
+    읽는 사람이 하나를 잃었다. 「골키퍼 1 · 필드 N」이면 두 숫자가 서로 검산된다.
+*/
+const view = strip(readFileSync('src/features/assignment/screens/FormationScreen.tsx', 'utf8'));
 assert.ok(
   /골키퍼 1 · 필드/.test(view),
-  `FormationView 헤더가 「골키퍼 1 · 필드 N」이 아니다`
+  `FormationScreen 헤더가 「골키퍼 1 · 필드 N」이 아니다`
 );
 assert.ok(
   !/명 · 골키퍼 포함/.test(view),

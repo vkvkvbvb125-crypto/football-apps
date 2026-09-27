@@ -12,11 +12,11 @@ import { useScoreStore } from '../../timer/stores/scoreStore';
 import { TabHeader } from '../../../components/TabHeader';
 import { radius, shadow, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
-import { FormationView } from '../components/FormationView';
-import { formationHint, formationsFor } from '../../team/positions';
+import { formationsFor } from '../../team/positions';
 import { useTeamStore } from '../../team/stores/teamStore';
 import { useAttendanceStore } from '../../attendance/stores/attendanceStore';
 import { useAssignmentStore } from '../stores/assignmentStore';
+import { formationKey, useFormationPickStore } from '../stores/formationPickStore';
 import { groupLabelsFor } from '../services/assignmentService';
 import { TimerPanel } from '../../timer/components/TimerPanel';
 /* 사본을 두지 않는다 — 로마자 이름을 망가뜨리던 그 규칙이었다(team/initials.ts 참고) */
@@ -51,16 +51,10 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
   const { colors, styles } = useThemed(makeStyles);
   const [view, setView] = useState<View3>('assign');
   /*
-    고른 포메이션 — **화면 상태다. 저장하지 않는다.**
-
-    키는 `${경기id}:${그룹}`이다. 경기가 여럿 보이고(liveMatches 전부를 그린다)
-    그룹도 여럿이라, 하나만 두면 A팀을 바꿨는데 B팀이 같이 바뀐다.
-
-    ⚠ **저장을 안 하는 것이 설계다.** 저장하면 team_assignments 옆에 컬럼이 늘고
-      마이그레이션이 생긴다 — 화면 안에서 바꿔 보는 것만으로 「누가 어디」는 풀린다.
-      나갔다 오면 기본값으로 돌아가는 것도 그래서 의도된 동작이다.
+    고른 포메이션 — **여기서는 읽기만 한다.** 고르는 곳은 상세 화면이고,
+    값은 스토어에 있다(formationPickStore). 한 값을 두 화면이 보기 때문이다.
   */
-  const [formationPick, setFormationPick] = useState<Record<string, number>>({});
+  const formationPicks = useFormationPickStore((s) => s.picks);
 
   const activeTeam = useTeamStore((s) => s.activeTeam);
   const members = useTeamStore((s) => s.members);
@@ -352,22 +346,48 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                           <View key={group} style={styles.groupCol}>
                             {/* 카드 면의 결 — 정산 카드와 같은 값·같은 방향. 목록에서 조명이 하나로 읽힌다 */}
                             <SoftTint tone="green" radius={radius.card} />
-                            <View style={[styles.groupHead, { backgroundColor: `${tint}17` }]}>
+                            {/*
+                              헤더 전체가 **포메이션 상세로 가는 표적**이다(2026-09-28).
+                              여기엔 원래 아무 동작이 없어서 이름 탭(「다음 팀으로 이동」)과
+                              충돌이 없다. 표적이 카드 폭 절반이라 작지도 않다.
+
+                              ⚠ **휴지통을 헤더 밖으로 뺐다.** RN이 자식 Pressable을 먼저
+                                먹는 것은 맞지만 **손가락은 경계를 정확히 안 누른다** —
+                                되돌릴 수 없는 삭제를 오탭 위험이 있는 자리에 두지 않는다.
+                                지금은 카드 **아래**에 따로 선다.
+                            */}
+                            <Pressable
+                              onPress={() =>
+                                navigation.navigate('Formation', { matchId: match.id, group })
+                              }
+                              disabled={list.length === 0}
+                              accessibilityRole={list.length > 0 ? 'button' : undefined}
+                              accessibilityLabel={
+                                list.length > 0 ? `${group}팀 포메이션 보기, ${list.length}명` : undefined
+                              }
+                              style={({ pressed }) => [
+                                styles.groupHead,
+                                { backgroundColor: `${tint}17` },
+                                pressed && list.length > 0 && styles.pressed,
+                              ]}
+                            >
                               <Text style={[styles.groupTitle, { color: tint }]}>{group}팀</Text>
                               <Text style={[styles.groupCount, { color: tint }]}>{list.length}명</Text>
-                              {isAdmin && isLast && labels.length > 2 && (
-                                // 13px 아이콘 + hitSlop 8 = 약 29px으로 화면에서 가장 작은 표적이었다.
-                                // 되돌리기 없는 삭제라 오히려 가장 넉넉해야 한다.
-                                <Pressable
-                                  onPress={() => removeLastGroup(match.id)}
-                                  hitSlop={14}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`${group}팀 삭제`}
-                                >
-                                  <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
-                                </Pressable>
+                              {/*
+                                읽기 전용 배지 — 조작이 아니다. 이것이 없으면 포메이션을
+                                발견할 길이 없어 서랍 25의 「조용히 사라진다」가 되돌아온다.
+                              */}
+                              {list.length > 0 && (
+                                <>
+                                  <Text style={styles.groupFormation}>
+                                    {formationsFor(list.length)?.[
+                                      formationPicks[formationKey(match.id, group)] ?? 0
+                                    ]?.label ?? '–'}
+                                  </Text>
+                                  <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                                </>
                               )}
-                            </View>
+                            </Pressable>
 
                             <View style={styles.groupBody}>
                               {list.length === 0 ? (
@@ -415,75 +435,24 @@ export function AssignmentScreen({ navigation }: BottomTabScreenProps<any>) {
                                 })
                               )}
                             </View>
+
+                            {/* ⚠ 되돌릴 수 없는 삭제다. 헤더 표적과 **떨어뜨려** 둔다 */}
+                            {isAdmin && isLast && labels.length > 2 && (
+                              <Pressable
+                                onPress={() => removeLastGroup(match.id)}
+                                hitSlop={14}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${group}팀 삭제`}
+                                style={({ pressed }) => [styles.groupRemove, pressed && styles.pressed]}
+                              >
+                                <Ionicons name="trash-outline" size={15} color={colors.textMuted} />
+                                <Text style={styles.groupRemoveText}>팀 삭제</Text>
+                              </Pressable>
+                            )}
                           </View>
                         );
                       })}
                     </View>
-
-                    {/* 포메이션 — 팀이 갈린 직후가 "누가 어디 서지"를 묻는 순간이다.
-                        5·6명일 때만 그린다(features/team/positions.ts). 그 밖의 인원수는
-                        표준 배치가 없어 억지로 그리면 실제 경기와 안 맞는다. */}
-                    {labels.map((group) => {
-                      const list = mine.filter((a) => a.group_label === group);
-                      const options = formationsFor(list.length);
-
-                      /*
-                        ⚠ **못 그릴 때 아무것도 안 그리던 것이 서랍 25였다.**
-                          참석 14명을 2팀으로 나누면(7+7) 총무는 포메이션을 한 번도
-                          못 보고, 그런 기능이 있는지조차 몰랐다. 이제는 말을 한다.
-                      */
-                      if (!options) {
-                        const hint = formationHint(list.length);
-                        if (!hint || (hint.adminOnly && !isAdmin)) return null;
-                        return (
-                          <View key={`formation-${group}`} style={styles.formationBlock}>
-                            <Text style={styles.formationTitle}>{group}팀 포메이션</Text>
-                            <View style={styles.formationHint}>
-                              <Text style={styles.formationHintText}>{hint.text}</Text>
-                            </View>
-                          </View>
-                        );
-                      }
-
-                      const key = `${match.id}:${group}`;
-                      const picked = formationPick[key] ?? 0;
-                      return (
-                        <View key={`formation-${group}`} style={styles.formationBlock}>
-                          <Text style={styles.formationTitle}>{group}팀 포메이션</Text>
-                          {/* 후보가 하나뿐이면 고를 것이 없다 — 칩 줄을 안 그린다 */}
-                          {options.length > 1 && (
-                            <View style={styles.formationChips}>
-                              {options.map((opt, i) => (
-                                <Pressable
-                                  key={opt.label}
-                                  onPress={() => setFormationPick((prev) => ({ ...prev, [key]: i }))}
-                                  accessibilityRole="button"
-                                  accessibilityState={{ selected: i === picked }}
-                                  accessibilityLabel={`${group}팀 포메이션 ${opt.label}`}
-                                  style={({ pressed }) => [
-                                    styles.formationChip,
-                                    i === picked && styles.formationChipOn,
-                                    pressed && styles.pressed,
-                                  ]}
-                                >
-                                  <Text style={[styles.formationChipText, i === picked && styles.formationChipTextOn]}>
-                                    {opt.label}
-                                  </Text>
-                                </Pressable>
-                              ))}
-                            </View>
-                          )}
-                          <FormationView
-                            formation={options[picked] ?? options[0]}
-                            players={list.map((a) => ({
-                              id: a.team_member_id,
-                              name: nameFor(a.team_member_id),
-                              position: memberOf(a.team_member_id)?.position ?? null,
-                            }))}
-                          />
-                        </View>
-                      );
-                    })}
 
                     {isAdmin && (
                       <View style={styles.cardFoot}>
@@ -650,6 +619,24 @@ const makeStyles = (colors: Palette) =>
   },
   groupTitle: { fontSize: 13, fontWeight: '800', flex: 1 },
   groupCount: { fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  /* 읽기 전용 배지 — 조작이 아니라서 팀 색을 안 쓴다(누를 수 있어 보이면 안 된다) */
+  groupFormation: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  /* ⚠ 헤더 표적과 떨어뜨린 삭제 버튼. 되돌릴 수 없으니 오탭 자리에 두지 않는다 */
+  groupRemove: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  groupRemoveText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
   /*
    * minHeight: 96이 있었다. "빈 팀도 높이를 유지해야 옆 팀과 어긋나지 않는다"는 이유였는데,
    * groups가 flexDirection:'row'라 기본 alignItems가 stretch다 — 한 줄 안의 칸들은

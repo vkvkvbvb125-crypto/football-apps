@@ -31,9 +31,11 @@ interface Props {
   teamId: string;
   myUserId: string;
   isAdmin: boolean;
+  /** 알림에서 넘어온 글 — 그 카드를 펴 준다(TeamHomeScreen이 route.params에서 꺼내 내린다) */
+  openPostId?: string;
 }
 
-export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
+export function BoardPanel({ teamId, myUserId, isAdmin, openPostId }: Props) {
   const { colors, styles } = useThemed(makeStyles);
   // PostCard가 작성자 이름·사진을 여기서 찾는다 (글에 박힌 값은 불러온 시점의 복사본)
   const members = useTeamStore((s) => s.members);
@@ -69,7 +71,7 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
    * 중복을 없애야 같은 사람이 두 번 울리지 않는다.
    * 알림 실패는 삼킨다. 글은 이미 올라갔고, 실패한 것처럼 보이면 안 된다.
    */
-  const notifyMentions = (body: string) => {
+  const notifyMentions = (body: string, postId: string) => {
     const ids = mentionedIds(body);
     if (ids.length === 0) return;
     const everyone = ids.includes(EVERYONE);
@@ -90,7 +92,9 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
       preview,
       undefined,
       targets,
-      'mention'
+      'mention',
+      /* 알림이 이 글을 지목한다 — createPost가 .select()로 돌려준 id다 */
+      { postId }
     ).catch(() => {});
   };
 
@@ -99,11 +103,11 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
     if (!body) return;
     setPosting(true);
     try {
-      await createPost({ teamId, authorId: myUserId, category: draftCategory, body });
+      const postId = await createPost({ teamId, authorId: myUserId, category: draftCategory, body });
       setDraft('');
       setComposing(false);
       await load();
-      notifyMentions(body);
+      notifyMentions(body, postId);
     } catch {
       alertMessage('실패', '글을 올리지 못했어요');
     } finally {
@@ -165,6 +169,15 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
       alertMessage('실패', post.isPinned ? '고정을 풀지 못했어요' : '고정하지 못했어요');
     }
   };
+
+  /*
+    ⚠ **알림에서 왔으면 분류 필터를 되돌린다.** 안 되돌리면 목표 글이 `visible`에서
+      빠져 카드가 **아예 안 그려진다** — 알림을 눌렀는데 아무 일도 안 나는 모양이고,
+      화면에 오류가 안 보여서 이 기능에서 제일 조용히 깨질 자리다.
+  */
+  useEffect(() => {
+    if (openPostId) setFilter(null);
+  }, [openPostId]);
 
   const visible = filter ? posts.filter((p) => p.category === filter) : posts;
 
@@ -256,6 +269,9 @@ export function BoardPanel({ teamId, myUserId, isAdmin }: Props) {
             members={members}
             myUserId={myUserId}
             isAdmin={isAdmin}
+            /* 알림이 지목한 글이면 펴서 보여준다. 못 찾으면 아무 카드도 안 펴지고
+               목록만 남는다 — 공지가 같은 자리에서 그렇게 한다(TeamHomeScreen) */
+            autoOpen={p.id === openPostId}
             onToggleLike={handleLike}
             onDelete={handleDelete}
             onEdit={handleEdit}

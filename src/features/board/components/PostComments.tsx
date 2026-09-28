@@ -96,7 +96,9 @@ export function PostComments({
           preview,
           undefined,
           targets,
-          'comment'
+          'comment',
+          /* 댓글은 id가 이미 손에 있다 — .select()가 필요 없는 쪽이다 */
+          { postId }
         ).catch(
           () => {}
         );

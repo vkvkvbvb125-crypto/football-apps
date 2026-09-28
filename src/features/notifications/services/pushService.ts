@@ -184,14 +184,19 @@ export async function notifyTeam(
       id를 받아 온다. 이 저장소에 insert().select() 전례가 없어서 기기에서 재봤다:
       전체 행이 그대로 돌아온다(announcements_select 정책이 팀원에게 열려 있다).
 
-    ⚠ mention·comment에는 target이 없다. 글 상세 화면이 존재하지 않아 목적지가
-      **게시판 목록**이고, 목록에는 id가 필요 없다 — routeFor가 tab만 싣는다.
+    ⚠ mention·comment는 **postId**를 싣는다(2026-09-29). 글 상세 화면은 여전히
+      없지만, 목록에서 **그 카드를 펴는** 것으로 지목이 된다(BoardPanel의 openPostId).
+      id 출처가 둘로 다르다: comment는 PostComments가 이미 postId를 들고 있고,
+      mention은 createPost가 `.select('id')`로 돌려준 값이다.
+
+    ⚠ **Edge Function은 안 고쳤다.** notify-team이 `{ kind, ...(target ?? {}) }`로
+      target을 통째로 펴서 싣는다 — 키를 열거하지 않아 새 키가 그냥 실린다.
 
     ⚠ 위치로 붙였다. 여기까지 인자가 여섯이고 여덟 호출이 전부 여섯을 넘긴다 —
       세어서 확인했다. 개수가 자리마다 다르면 일곱째를 붙일 때 여섯째 자리에
       undefined를 채워야 하고, 그걸 놓치면 kind가 target 자리로 조용히 들어간다.
   */
-  target?: { matchDate?: string; settlementId?: string; announcementId?: string }
+  target?: { matchDate?: string; settlementId?: string; announcementId?: string; postId?: string }
 ): Promise<NotifyResult> {
   const { data, error } = await supabase.functions.invoke('notify-team', {
     body: { teamId, title, body, excludeUserId, userIds, kind, target },

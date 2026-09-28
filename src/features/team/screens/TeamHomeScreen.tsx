@@ -252,13 +252,32 @@ export function TeamHomeScreen({ navigation, route }: any) {
       「없어졌어요」를 띄우지 않는다. 정산이 같은 자리에서 그렇게 하고, 목록에 그
       공지가 없다는 것이 이미 답이다.
   */
-  const openAnnouncementId = route?.params?.openAnnouncementId as string | undefined;
+  /* ⚠ 표기를 AttendanceScreen·SettlementScreen과 맞춘다 — deeplink.check ③이
+       **양쪽 파일에서 같은 문자열**을 찾아 이름이 갈리는 것을 막는다 */
+  const openAnnouncementId = (route?.params as { openAnnouncementId?: string } | undefined)
+    ?.openAnnouncementId;
   const [pendingAnnouncementId, setPendingAnnouncementId] = useState<string | null>(null);
   useEffect(() => {
     if (!openAnnouncementId) return;
     setPendingAnnouncementId(openAnnouncementId);
     navigation.setParams({ openAnnouncementId: undefined });
   }, [openAnnouncementId]);
+
+  /*
+    언급·댓글 알림에서 넘어왔다 — 게시판에서 **그 글 카드를 편다.**
+
+    ⚠ 공지와 달리 여기서는 **id를 들고만 있는다.** 목록을 가진 것이 BoardPanel이라
+      「찾았는가」를 이 화면이 알 수 없다. 못 찾으면 아무 카드도 안 펴지고 목록만
+      남는다 — 공지가 위에서 하는 것과 같은 결말이고, 「없어졌어요」는 안 띄운다.
+    ⚠ params는 바로 지운다. 안 지우면 탭을 옮겼다 올 때마다 같은 카드가 다시 펴진다.
+  */
+  const openPostId = (route?.params as { openPostId?: string } | undefined)?.openPostId;
+  const [pendingPostId, setPendingPostId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!openPostId) return;
+    setPendingPostId(openPostId);
+    navigation.setParams({ openPostId: undefined });
+  }, [openPostId]);
   useEffect(() => {
     if (!pendingAnnouncementId || !announcementsLoaded) return;
     const found = announcements.find((a) => a.id === pendingAnnouncementId);
@@ -652,7 +671,12 @@ export function TeamHomeScreen({ navigation, route }: any) {
             크다」고 적어 뒀는데 그 판단이 값을 했다 — 되살리는 데 든 것이 주석 두 줄이다.
           */}
           {tab === 'board' && !!myUserId && (
-            <TeamBoardTab teamId={activeTeam.team.id} myUserId={myUserId} isAdmin={isAdmin} />
+            <TeamBoardTab
+              teamId={activeTeam.team.id}
+              myUserId={myUserId}
+              isAdmin={isAdmin}
+              openPostId={pendingPostId ?? undefined}
+            />
           )}
 
 

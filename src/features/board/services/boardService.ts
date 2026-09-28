@@ -128,14 +128,29 @@ export async function createPost(input: {
   body: string;
   imageUrl?: string | null;
 }) {
-  const { error } = await supabase.from('posts').insert({
-    team_id: input.teamId,
-    author_id: input.authorId,
-    category: input.category,
-    body: input.body,
-    image_url: input.imageUrl ?? null,
-  });
+  /*
+    ⚠ **`.select()`가 붙어 있는 이유는 알림이다.** 언급 알림이 「그 글」을 지목하려면
+      방금 만든 행의 id가 손에 있어야 한다(notificationRoute.ts 2단계).
+      insert만 하면 id가 안 돌아오고, 알림은 게시판 목록까지만 간다.
+
+    ⚠ **정책을 확인하고 붙였다(2026-09-29).** `posts_select`의 using이
+      `posts_insert`의 with check와 같은 조건(팀원인가)이라, 넣을 수 있으면 읽을 수도
+      있다 — 프로덕션에서 BZERO_TMP에 한 줄 넣어 재고 지웠다(전체 행이 돌아왔다).
+      정책이 좁았다면 insert는 되고 select만 막혀 **글쓰기가 통째로 실패**했을 자리다.
+  */
+  const { data, error } = await supabase
+    .from('posts')
+    .insert({
+      team_id: input.teamId,
+      author_id: input.authorId,
+      category: input.category,
+      body: input.body,
+      image_url: input.imageUrl ?? null,
+    })
+    .select('id')
+    .single();
   if (error) throw error;
+  return data.id as string;
 }
 
 export async function deletePost(postId: string) {

@@ -3,7 +3,7 @@
 // 데이터는 BoardPanel이 소유한다. 이 컴포넌트는 그리고, 눌린 것을 위로 넘긴다.
 // 작성자 이름·사진은 members에서 찾는다 — 글에 박힌 값은 불러온 시점의 복사본이라
 // 프로필을 바꿔도 안 따라온다 (resolveAuthor 참고).
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from '../../../components/nativeText';
@@ -22,6 +22,8 @@ interface PostCardProps {
   members: { userId: string; displayName: string; avatarUrl: string | null }[];
   myUserId: string;
   isAdmin: boolean;
+  /** 알림에서 지목된 글 — 본문과 댓글을 펴 준다(BoardPanel이 정한다) */
+  autoOpen?: boolean;
   onToggleLike: (post: Post) => void;
   onDelete: (post: Post) => void;
   /** 실패하면 던진다 — 카드가 편집 모드를 유지해서 쓴 걸 날리지 않는다 */
@@ -34,6 +36,7 @@ export function PostCard({
   members,
   myUserId,
   isAdmin,
+  autoOpen,
   onToggleLike,
   onDelete,
   onEdit,
@@ -60,6 +63,20 @@ export function PostCard({
   };
 
   const [showComments, setShowComments] = useState(false);
+
+  /*
+    알림에서 이 글로 왔다 — 본문과 댓글을 펴 준다.
+
+    ⚠ **스크롤은 안 한다.** BoardPanel은 조상 ScrollView 안의 posts.map이라
+      FlatList가 아니고, 밀려면 measureLayout을 붙여야 한다. 카드가 펴지면 그
+      카드만 길어지므로 **펴진 것 자체가 표시**다. 값이 붙으면 그때 민다.
+    ⚠ 한 번만 편다. 이후 사용자가 접으면 접힌 채로 둔다 — 다시 펴면 못 접는다.
+  */
+  useEffect(() => {
+    if (!autoOpen) return;
+    setExpanded(true);
+    setShowComments(true);
+  }, [autoOpen]);
   /** 서버에서 다시 안 읽고 화면의 개수만 맞춘다 */
   const [commentDelta, setCommentDelta] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);

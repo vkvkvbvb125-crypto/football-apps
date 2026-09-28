@@ -34,10 +34,28 @@ describe('routeFor — 갈 곳이 있을 때', () => {
     });
   });
 
-  it('언급·댓글은 게시판 칸까지 간다 — 그 글로 스크롤하지 않는다', () => {
+  it('언급·댓글은 게시판 칸을 열고 그 글을 편다', () => {
     for (const kind of ['mention', 'comment']) {
-      expect(routeFor({ kind })).toEqual({ screen: 'Team', params: { tab: 'board' } });
+      expect(routeFor({ kind, postId: 'post-1' })).toEqual({
+        screen: 'Team',
+        params: { tab: 'board', openPostId: 'post-1' },
+      });
     }
+  });
+
+  /*
+    ⚠ 공지와 글은 **다른 키**를 쓴다. 한쪽 키를 다른 kind에 실어도 무시돼야 한다 —
+      섞이면 게시판 칸을 열고 공지 id로 카드를 찾는 꼴이 된다.
+  */
+  it('공지 id와 글 id는 안 섞인다', () => {
+    expect(routeFor({ kind: 'mention', announcementId: 'ann-1' })).toEqual({
+      screen: 'Team',
+      params: { tab: 'board' },
+    });
+    expect(routeFor({ kind: 'announcement', postId: 'post-1' })).toEqual({
+      screen: 'Team',
+      params: { tab: 'notices' },
+    });
   });
 
   it('파라미터가 비면 탭까지만 간다 — 값이 없다고 라우팅을 버리지 않는다', () => {
@@ -54,6 +72,11 @@ describe('routeFor — 갈 곳이 있을 때', () => {
       screen: 'Team',
       params: { tab: 'notices' },
     });
+    /* 글도 같다 — 2단계 전에 나간 언급·댓글 알림에는 postId가 없다 */
+    for (const kind of ['mention', 'comment']) {
+      expect(routeFor({ kind })).toEqual({ screen: 'Team', params: { tab: 'board' } });
+      expect(routeFor({ kind, postId: '' })).toEqual({ screen: 'Team', params: { tab: 'board' } });
+    }
   });
 });
 

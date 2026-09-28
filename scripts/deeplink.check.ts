@@ -64,10 +64,18 @@ for (const [file, needle] of TARGETS) {
 const route = read('src/features/notifications/notificationRoute.ts');
 const attendance = read('src/features/attendance/screens/AttendanceScreen.tsx');
 const settlement = read('src/features/settlement/screens/SettlementScreen.tsx');
+const teamHome = read('src/features/team/screens/TeamHomeScreen.tsx');
 
+/*
+  ⚠ **2026-09-29에 두 쌍이 늘었다.** 공지(`openAnnouncementId`)는 2단계에서
+    이미 붙어 있었는데 **여기에 쌍이 안 들어와 있었다** — 검사가 둘만 지키는 동안
+    셋째는 아무도 안 보고 있었다. 글(`openPostId`)을 붙이면서 같이 넣는다.
+*/
 for (const [name, dest, destFile] of [
   ['focusDate', attendance, 'AttendanceScreen'],
   ['openSettlementId', settlement, 'SettlementScreen'],
+  ['openAnnouncementId', teamHome, 'TeamHomeScreen'],
+  ['openPostId', teamHome, 'TeamHomeScreen'],
 ] as const) {
   ok(route.includes(name), `routeFor가 ${name}를 안 만든다`);
   /*
@@ -107,6 +115,49 @@ const notifBlock = (() => {
 ok(notifBlock !== '', '알림 useEffect를 못 찾았다');
 ok(!/session/.test(notifBlock),
    'App.tsx의 알림 처리에 세션 조건이 붙었다 — cold start를 다시 놓치게 된다');
+
+// ── ⑤ 글 지목이 끝까지 닿는가 ──
+/*
+  ⚠ **③만으로는 부족한 자리다.** 이름이 맞아도 id가 아예 없거나, 있어도 그 카드가
+    안 그려지면 알림은 게시판 목록까지만 간다 — 화면에 오류가 안 보여서 조용하다.
+    끝까지 닿으려면 조각 셋이 다 있어야 하고, 셋 다 다른 파일에 있다.
+*/
+const boardSvc = read('src/features/board/services/boardService.ts');
+/*
+  createPost가 id를 안 돌려주면 언급 알림에 실을 것이 없다.
+
+  ⚠ **함수 안으로 좁혀서 본다.** 처음엔 파일 전체에 `insert(…)…select(`를 걸었는데
+    `[\s\S]*?`가 함수 경계를 넘어 **다른 함수의 insert와 뒤쪽 select가 짝지어졌다** —
+    .select()를 지우는 변이가 통과했다(2026-09-29). 이 저장소가 정규식으로 여러 번
+    당한 자리다. 함수 하나를 잘라내서 그 안만 센다.
+*/
+const createPostBody = (() => {
+  const at = boardSvc.indexOf('export async function createPost');
+  if (at < 0) return '';
+  const next = boardSvc.indexOf('export ', at + 10);
+  return boardSvc.slice(at, next < 0 ? boardSvc.length : next);
+})();
+ok(createPostBody !== '', 'boardService에서 createPost를 못 찾았다');
+ok(createPostBody.includes('.select('),
+   "boardService.createPost에 .select()가 없다 — 새 글의 id가 안 돌아와 언급 알림이 " +
+   '그 글을 못 지목한다');
+
+const panel = read('src/features/board/components/BoardPanel.tsx');
+ok(/openPostId/.test(panel), 'BoardPanel이 openPostId를 안 받는다');
+ok(/autoOpen=/.test(panel), 'BoardPanel이 PostCard에 autoOpen을 안 내린다 — 카드가 안 펴진다');
+/*
+  ⚠ **분류 필터를 되돌리는가.** 필터가 걸린 채로 다른 분류의 글 알림을 누르면
+    목표 글이 visible에서 빠져 **카드가 아예 안 그려진다.** 눌렀는데 아무 일도
+    안 나는 모양이라 이 기능에서 제일 조용히 깨질 자리다.
+  ⚠ 부정이 아니라 존재 단언이지만, 지우면 화면이 멀쩡해 보이므로 변이로 확인했다.
+*/
+ok(/if \(openPostId\) setFilter\(null\)/.test(panel),
+   'BoardPanel이 openPostId를 받고도 분류 필터를 안 되돌린다 — 다른 분류가 걸려 있으면 ' +
+   '목표 글이 목록에서 빠져 아무 카드도 안 펴진다');
+
+const card = read('src/features/board/components/PostCard.tsx');
+ok(/autoOpen/.test(card), 'PostCard가 autoOpen을 안 본다');
+ok(/setShowComments\(true\)/.test(card), 'PostCard가 autoOpen에 댓글을 안 편다');
 
 // 소비하는 쪽
 const tabs = read('src/navigation/MainTabNavigator.tsx');

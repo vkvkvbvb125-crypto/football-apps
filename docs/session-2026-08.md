@@ -255,7 +255,7 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
 | **16** | 팀 조회 12초 상한을 기기에서 못 봤다 | S — `global.fetch` 주입이 필요해 **릴리스 빌드로는 못 잰다** |
 | **20** | `SYSTEM_ALERT_WINDOW` 출처 불명 | ⚠ **데이터 안전 양식 때 다시 볼 자리** |
 | ~~**5-b**~~ | ~~독촉 버튼 나머지~~ | ✅ **끝났다 (2026-09-28)** · 서버 쿨다운 3시간(`notify_cooldown` + `notify-team`)이 이미 있었다. ⚠ 여기 적힌 「S」가 상세(마이그레이션 필요)와도, 실제(이미 끝남)와도 달랐다 |
-| **1**(딥링크) | 알림 딥링크 2단계 | M |
+| **1**(딥링크) | 알림 딥링크 2단계 — **공지는 끝, 글만 남음** | S~M |
 | ~~**AdMob**~~ | ~~**광고 붙이기 — 1.1**~~ ✅ **붙였다 (2026-09-27, A1)** · `docs/admob.md`. **홈 「최근 공지」 아래 네이티브 카드 하나**(2026-09-21에 배너에서 바꿨다 — 배너 단위는 삭제). ⚠ **정산·회비·송금엔 안 넣는다** — 금액을 입력·확인하는 자리라 오탭이 광고 클릭이 되고, 회비 앱에서 「그 돈으로 장사한다」는 오해가 가장 비싸다. ⚠ **전면·앱 오프닝·보상형 전면은 안 넣는다**(흐름을 끊는다). 보상형은 **총무용 유료 기능이 생기면** 「광고 보고 하루 열기」로 — **유료 기능이 먼저다.** ⚠ **AD_ID는 「차단 해제」할 게 없다** — 지금 0인 건 막아서가 아니라 아무도 안 넣어서다. 라이브러리를 넣으면 자동으로 1이 되고, 습관적으로 blockedPermissions에 더하면 **광고가 안 돈다.** ⚠ 네이티브는 **우리 카드처럼 보이므로 「광고」 표시가 반드시 보여야 한다.** ⚠ 코드보다 **데이터 안전 양식·처리방침·app-ads.txt**가 오래 걸린다(크롤링에 하루 이상). | M — 네이티브 모듈이라 **EAS 빌드가 필요**하다 |
 
 ### 🧊 더 뒤 / 조건부
@@ -311,7 +311,7 @@ constraint」를 앱이 고장난 것으로 읽는다. `lib/dbError.ts`가 아�
 
 | | 무엇 | 크기 |
 |---|---|---|
-| **1** | ~~**알림 딥링크**~~ → **1단계 끝(2026-08-31). 2단계가 남았다** — 아래 별도 항목 | — |
+| **1** | ~~**알림 딥링크**~~ → **1단계 끝(2026-08-31). 2단계는 공지만 끝났고 글이 남았다(2026-09-29 재측정)** — 아래 별도 항목 | — |
 | ~~**2**~~ | ~~**접근성.** `<Pressable>` 301개 중 role이 붙은 것이 166개~~ — **끝났다. 닫는다 (2026-09-28)** | ⚠ **서랍이 낡았다.** 「남은 135곳」이 적힌 채로 **이미 다 붙었다.**<br>**잰 값:** `<Pressable>` **304개** · `accessibilityRole` **299개** · `a11y.check` → **role 없음 0(상한 0)**.<br>직접 센 6개는 전부 정당한 면제였다 — 다섯은 모달 **배경 삼킴**(`accessible={false}`로 명시), 하나는 여러 줄 태그라 거친 파서가 잘린 것(`TimerPanel:366`에 `accessibilityRole="button"`이 있다).<br>⭐ **검사가 상한 0으로 붙들고 있다** — 새 `Pressable`에 role을 빼면 그 자리에서 FAIL이다. 사람이 세어 지킬 일이 아니게 됐다.<br>⚠ **아이콘 전용 버튼의 `accessibilityLabel`도 같은 검사가 본다**(상한 0). |
 | ~~**3**~~ | ~~**오류 원문 노출 7곳**~~ — **닫는다 (2026-09-19)** · 재 보니 **한 곳만** 남아 있었다(TabHeader의 알림 삭제). 그 사이 다른 작업들이 걷어냈다. 고치고 `usererror.check`가 붙든다. 아래는 원래 기록이다: ~~오류 원문 노출 7곳.~~ `alertMessage('…', err.message)` 꼴. 사용자가 Postgres 메시지를 본다.<br>⚠ 서랍의 「services/\*.ts는 안 봤다」는 **틀린 진단이었다.** 거기 `error.message`는 2건뿐이고 둘 다 `console.warn`이라 안 보인다. 진짜 자리는 **화면**이다 | 소 |
 | ~~**5**~~ | ~~**독촉 버튼 셋**~~ — **5-a·5-b 둘 다 끝났다. 닫는다 (2026-09-28)** | 5-a는 2026-09-02(`9b21349`). **5-b도 이미 고쳐져 있었다** — 서랍이 낡았다.<br>**서버 쿨다운이 있다:** `supabase/migrations/20260911_notify_cooldown.sql`의 `notify_cooldown` 테이블 + `notify-team/index.ts`의 `COOLDOWN_MINUTES { settlement: 180, deadline: 180 }`(3시간). 화면에도 `SettlementScreen:1208 disabled={reminding}`.<br>⭐ 상세 항목이 남겨 둔 **정할 것 셋**(어디에 기록·무엇을 키로·얼마나)이 **전부 정해져 구현**돼 있다. 마이그레이션 머리말에 근거까지 적혀 있다 — 「투표는 votes 행이 막아준다」는 틀리고 **settlement와 deadline 둘 다 건다**, `notifications`를 재활용하면 **막으려던 사람이 막는 것을 지울 수 있다**(삭제 정책).<br>⚠ **요약표에는 「5-b 독촉 버튼 나머지 · S」로 남아 있었다.** 그 한 줄만 보면 작은 화면 작업으로 읽히는데 상세는 **마이그레이션이 딸린 일**이라고 말한다 — 둘 다 실제와 달랐다. 머리말의 「꺼내기 전에」가 이 사건에서 나왔다. |
@@ -516,38 +516,122 @@ HomeScreen에 `remindNotVoted`가 이미 있었는데 **정의만 되고 아무�
   · 새 시도를 하기 전에 위 표의 여덟 개와 겹치는지 본다.
   · 「단계를 더 잘게」 계열(①②④⑦)은 **전부 같은 벽에 부딪힌다.** 색 공간이다.
 
-#### 알림 딥링크 2단계 — 공지·글 **상세**까지
+#### 알림 딥링크 2단계 — **공지는 끝, 글만 남았다**
 
-1단계에서 셋(`announcement`·`mention`·`comment`)은 **팀 탭까지만** 간다.
-⚠ **이건 임시다.** 「공지가 올라왔어요」를 누르면 팀 탭이 열리지만 그 공지가
-저절로 펴지지는 않는다. 지금보다는 낫고(전에는 마지막에 보던 화면에 떨어졌다),
-제대로는 아니다.
+⚠ **2026-09-29에 다시 쟀다. 아래 「막고 있는 것 둘」은 공지에 대해서는 이미 틀린 글이었다.**
+1단계 뒤 어느 시점에 공지 쪽이 통째로 붙었는데 이 항목이 안 따라왔다.
+서랍 머리말의 규칙(요약표·상세를 믿지 말고 꺼낼 때 다시 재라)이 또 값을 했다.
 
-막고 있는 것은 둘이고 성격이 다르다:
+**공지 — 끝났다.** 네 조각이 전부 있다:
 
-**⑴ id가 손에 없다.** 둘 다 `insert()`에 `.select()`가 없어 만든 행의 id가
-안 돌아온다.
+| 조각 | 실제 | 자리 |
+|---|---|---|
+| id를 손에 쥔다 | ✅ `.select('id').single()` | `announcementsService.createAnnouncement` |
+| 알림에 싣는다 | ✅ `target.announcementId` | `notifyTeam` 7번째 인자 |
+| 라우팅이 옮긴다 | ✅ `{ tab: 'notices', openAnnouncementId: id }` | `notificationRoute.ts:109` |
+| 화면이 받아서 편다 | ✅ 받아서 `pendingAnnouncementId`에 재워두고, 목록이 오면 모달을 연다 | `TeamHomeScreen.tsx:255-267` |
 
-  announcementsService.createAnnouncement   `insert({…})` → `.select('id').single()`
-  boardService.createPost                   같음
+  ⓘ `insert().select()`가 이 저장소에 전례가 없어서 **기기에서 재고 붙였다** —
+    `announcements_select` 정책이 팀원에게 열려 있어 전체 행이 그대로 돌아온다.
 
-  ⓘ 경기 둘도 같은 모양인데 거긴 문제가 안 됐다 — 일정 화면이 id가 아니라
-    날짜를 받아서다. 여긴 그런 우회로가 없다.
+**글(게시판) — 남았다.** 같은 네 조각 중 **앞의 둘도, 뒤의 둘도 없다:**
 
-**⑵ 상세를 밖에서 열 수 없다.** 지역 상태로만 열린다:
+| 조각 | 실제 |
+|---|---|
+| id를 손에 쥔다 | ❌ `boardService.createPost:131` — `const { error } = await supabase.from('posts').insert({…})` |
+| 알림에 싣는다 | ❌ `notifyTeam`의 `target` 타입에 `postId`가 없다 |
+| 라우팅이 옮긴다 | ❌ `routeFor`가 mention·comment에 `{ tab: 'board' }`만 싣는다(:111) |
+| 화면이 받아서 편다 | ❌ `openPostId` 참조가 저장소 전체에 **0개** |
 
-  공지 상세  `AnnouncementDetailModal` — HomeScreen·TeamHomeScreen이 각자
-             `useState`로 연다. route 파라미터가 없다
-  글 상세    `PostComments` — `PostCard` 안에 인라인으로 펴진다.
-             글 하나를 지목해 열 방법이 없다
+##### 글 쪽이 공지보다 어려운 진짜 이유
 
-  ⚠ ⑵가 ⑴보다 크다. `.select()`는 한 줄이지만, 상세를 밖에서 열려면
-    `TeamHomeScreen`에 `openAnnouncementId`/`openPostId` 파라미터를 만들고
-    그 값을 자식(탭·리스트·카드)까지 내려보내야 한다. 공지는 **두 화면**이
-    같은 모달을 각자 열고 있어서 어느 쪽을 정본으로 삼을지도 정해야 한다.
+⑴이 아니라 **⑵다.** `.select()`는 공지와 똑같이 한 줄이고, `comment` 알림은
+`.select()`조차 필요 없다 — `PostComments`가 이미 `postId`를 들고 있다.
+어려운 것은 **목적지의 모양**이다:
 
-붙일 때 검사도 같이 늘린다 — `deeplink.check`의 ③(파라미터 이름을 양쪽에서
-맞추는 단언)에 두 쌍이 더 붙는다.
+    공지 상세   `AnnouncementDetailModal` — **모달**이다. 부모가 행 하나를 쥐여주면 뜬다.
+                그래서 「밖에서 지목」이 `useState` 하나로 끝났다.
+    글 상세     `PostComments` — **`PostCard` 안에 인라인으로 펴진다.**
+                여는 상태(`showComments`)가 **카드마다 따로** 있고 부모가 못 본다.
+                `BoardPanel`은 `visible.map`으로 카드를 늘어놓을 뿐이다.
+
+  ⚠ 그래서 「글 하나를 지목한다」는 **목적지를 하나 더 만드느냐, 카드에 신호를
+    내려보내느냐**의 설계 판단이고, 공지에는 그 판단이 없었다.
+
+⚠ 붙일 때 `deeplink.check` ③도 같이 늘린다. **지금 ③은 두 쌍뿐이다**
+(`focusDate`·`openSettlementId`) — **공지가 끝났는데 `openAnnouncementId` 쌍이 안 붙었다.**
+글을 붙일 때 **두 쌍**(`openAnnouncementId`·`openPostId`)을 같이 넣는다.
+
+ⓘ **Edge Function은 안 건드려도 된다.** `notify-team/index.ts:202`가
+`{ kind, ...(target ?? {}) }`로 target을 통째로 펴서 싣는다 — 키를 열거하지 않는다.
+`postId`를 새 키로 넣어도 **재배포가 필요 없다.**
+
+##### 붙였다 (2026-09-29, ㉮ 갈래)
+
+**정책부터 쟀다.** `posts_select`의 using이 `posts_insert`의 with check와 **같은 조건**
+(그 팀의 team_members인가)이라 넣을 수 있으면 읽을 수도 있다. 저장소 마이그레이션은
+원격 이력이 비어 있어 근거가 못 되므로 **프로덕션에서 실물로 쟀다** — kdtest3로
+로그인해 BZERO_TMP에 한 줄 넣고(`Prefer: return=representation`) **전체 행 8열이
+그대로 돌아왔다**(http 201). 바로 지웠다(http 204, 남은 글 0).
+
+  ⚠ 정책이 좁았다면 insert는 되고 select만 막혀 **글쓰기가 통째로 실패**했을 자리다.
+    `.select()`는 한 줄이지만 확인 없이 붙이면 제일 비싼 한 줄이 된다.
+
+신호가 내려가는 길:
+
+    routeFor → openPostId → TeamHomeScreen → TeamBoardTab → BoardPanel → PostCard(autoOpen)
+
+| 자리 | 한 일 |
+|---|---|
+| `boardService.createPost` | `.select('id').single()` — id를 돌려준다 |
+| `BoardPanel.handlePost` | 그 id를 `notifyMentions(body, postId)`로 넘긴다 |
+| `PostComments` | `{ postId }`를 싣는다 — **`.select()`가 필요 없다**(이미 들고 있다) |
+| `notifyTeam` | `target`에 `postId?` 추가. **Edge Function은 안 고쳤다** |
+| `routeFor` | mention·comment → `{ tab: 'board', openPostId }` (id 없으면 종전대로) |
+| `TeamHomeScreen` | 읽고 → 재워두고 → `setParams(undefined)`. 공지와 같은 모양 |
+| `BoardPanel` | `openPostId`가 오면 **분류 필터를 되돌리고** 그 카드에 `autoOpen` |
+| `PostCard` | `autoOpen`이면 본문과 댓글을 편다. **스크롤은 안 한다** |
+
+⚠ **제일 조용히 깨질 자리는 분류 필터였다.** 필터가 「질문」에 걸린 채 「자유」 글
+알림을 누르면 목표 글이 `visible`에서 빠져 **카드가 아예 안 그려진다** — 눌렀는데
+아무 일도 안 나고, 화면에 오류가 안 보인다. `setFilter(null)`로 되돌린다.
+
+⚠ **검사에서 ⓐ가 통과해서 잡았다.** 처음 쓴 `/\.insert\([\s\S]*?\.select\(/`가
+**함수 경계를 넘어** 다른 함수의 `insert(`와 뒤쪽 `select(`를 짝지었다 —
+`.select()`를 지워도 통과했다. `createPost` 함수만 잘라내서 그 안을 센다.
+이 저장소가 정규식으로 당한 것이 이번이 처음이 아니다.
+
+##### 검사
+
+`deeplink.check` ③에 **두 쌍**을 넣었다. ⚠ **공지는 2단계에서 이미 끝났는데 쌍이
+안 들어와 있었다** — 검사가 둘(`focusDate`·`openSettlementId`)만 지키는 동안
+`openAnnouncementId`는 아무도 안 보고 있었다. `TeamHomeScreen`의 표기도
+`(route?.params as { openAnnouncementId?: string })`로 맞췄다.
+
+⑤(글 지목이 끝까지 닿는가)를 새로 넣었다 — `createPost`의 `.select(`,
+`BoardPanel`의 `openPostId`·`autoOpen`·필터 되돌리기, `PostCard`의 `setShowComments`.
+**여섯 변이 전부 FAIL로 확인했다**(⑤의 첫 단언은 위 ⓐ를 고친 뒤 다시 확인).
+
+##### 남은 판정
+
+**A (푸시 없음) — 끝났다.** `routeFor` 단위 시험 12개(id를 싣는가 · id가 없으면
+종전대로인가 · **공지 id와 글 id가 안 섞이는가**) · `deeplink.check` 네 쌍 + ⑤.
+
+⚠ **화면 쪽은 A로 못 밟는다.** React Navigation `linking` 설정이 없어
+`adb am start`로 팀 탭에 들어갈 URL이 아예 없다 — 외부 진입구는
+`App.tsx:142`의 알림 응답 하나뿐이다. 앞서 「A = 딥링크로」라고 갈라 둔 것은
+정산·초대에만 해당했다.
+
+**B (푸시 필요) — BZERO_TMP에서만.** reviewer + kdtest3:
+
+| | 무엇 | 왜 |
+|---|---|---|
+| ① | kdtest3가 reviewer를 언급 → reviewer가 알림 탭 | **그 카드가 펴지는가** |
+| ② | 필터를 「질문」에 두고 「자유」 글 알림 탭 | **필터가 풀리고 펴지는가** — 제일 조용한 자리 |
+| ③ | 글을 지운 뒤 같은 알림 탭 | **목록만 남는가**(「없어졌어요」를 안 띄운다) |
+| ④ | 앱을 죽인 뒤 알림 탭 | cold start 경로 |
+
+⚠ **야홍 팀에는 어떤 경우에도 푸시를 보내지 않는다.** B가 끝나면 BZERO_TMP를 지운다.
 
 ### 확인 필요
 

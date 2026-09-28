@@ -19,8 +19,11 @@ interface Props {
   teamId: string;
   myUserId: string;
   isAdmin: boolean;
+  /** 언급·댓글 알림에서 넘어온 글 — 그 카드를 펴 준다 */
+  openPostId?: string;
 }
 
-export function TeamBoardTab({ teamId, myUserId, isAdmin }: Props) {
-  return <BoardPanel teamId={teamId} myUserId={myUserId} isAdmin={isAdmin} />;
+export function TeamBoardTab({ teamId, myUserId, isAdmin, openPostId }: Props) {
+  // 한 줄로 둔다 — boardalive.check가 `return <BoardPanel`을 찾는다(꺼진 시절의 모양이 return null이었다)
+  return <BoardPanel teamId={teamId} myUserId={myUserId} isAdmin={isAdmin} openPostId={openPostId} />;
 }

@@ -951,6 +951,31 @@ eas build --local --platform android
   ⚠ 빌드 도중 WSL이 읽기 전용으로 떨어지면 이 상태가 된다. 그때는
   `wsl --shutdown` 뒤 다시 띄우면 살아난다(손실 없었다).
 
+### ⚠ 권한은 `scripts/apkperm.sh`로 센다 — 맨손 `aapt2`로 세지 마라
+
+**2026-09-29에 「권한 총수 0 · AD_ID 0」을 받았다.** 숫자만 보면 「광고 권한이 안 붙었다」는
+판정인데, 실제로는 `$ANDROID_HOME`이 비어 `/build-tools/36.0.0/aapt2`를 실행하려다
+실패한 것이었다. **없는 도구가 0을 만들었고, 0은 그럴듯했다.**
+
+    bash scripts/apkperm.sh ~/kickday-screenshot.apk
+
+그 스크립트는 **셋 중 하나라도 어긋나면 숫자를 안 찍고 `exit 1`** 한다:
+
+    ① aapt2를 못 찾음   ② APK를 못 찾음   ③ 권한이 0건
+
+⚠ **③이 핵심이다.** 이 앱은 최소 INTERNET을 갖는다 — 0은 물리적으로 불가능하므로
+「권한이 없다」가 아니라 **「못 읽었다」**다. 세 갈래 다 돌려서 확인했다(각각 exit 1).
+
+⚠ **Git Bash에서 WSL 스크립트를 부를 때는 `MSYS_NO_PATHCONV=1`이 필요하다.**
+안 붙이면 `/mnt/c/...`를 윈도 경로로 바꿔 버려 **파일을 못 찾는다**:
+
+    MSYS_NO_PATHCONV=1 wsl.exe bash /mnt/c/dev/football/app/scripts/apkperm.sh <apk>
+
+⚠ 그리고 `wsl.exe -- bash -lc '...'` 안에서 `$ANDROID_HOME` 같은 변수를 쓰면
+**빈 값으로 나오는 일이 있었다.** 인용 층이 셋(Git Bash → wsl.exe → bash)이라
+어디서 새는지 매번 다르다 — **스크립트 파일로 만들어서 파일 경로로 부르는 것**이
+이 저장소에서 반복해 확인된 유일하게 안정적인 방법이다.
+
 ### 검사 — 번들 환경변수
 
 APK에서 `assets/index.android.bundle`을 꺼내(python3 `zipfile`) 값을 센다.

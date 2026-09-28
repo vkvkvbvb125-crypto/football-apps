@@ -147,8 +147,9 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.greenLine,
       borderWidth: 2,
     },
-    goalTop: { top: 0, borderBottomWidth: 2, borderTopWidth: 0 },
-    goalBottom: { bottom: 0, borderTopWidth: 2, borderBottomWidth: 0 },
+    /* ⚠ 0에 두면 둥근 모서리에 잘린다(overflow:hidden) — 안쪽으로 들인다 */
+    goalTop: { top: 6, borderBottomWidth: 2, borderTopWidth: 0 },
+    goalBottom: { bottom: 6, borderTopWidth: 2, borderBottomWidth: 0 },
     box: {
       position: 'absolute',
       left: '22%',
@@ -157,8 +158,8 @@ const makeStyles = (colors: Palette) =>
       borderColor: colors.greenLine,
       borderWidth: 1,
     },
-    boxTop: { top: 0, borderTopWidth: 0 },
-    boxBottom: { bottom: 0, borderBottomWidth: 0 },
+    boxTop: { top: 6, borderTopWidth: 0 },
+    boxBottom: { bottom: 6, borderBottomWidth: 0 },
     halfLine: {
       position: 'absolute',
       left: 0,

@@ -80,8 +80,13 @@ export function FormationScreen() {
             </Text>
           )}
         </View>
+        {/*
+          ⚠ **포메이션을 그릴 때만 적는다.** 1명짜리 팀에 「골키퍼 1 · 필드 0」이
+            찍혔다(2026-09-28 기기) — 자리를 못 나눈 상태인데 골키퍼가 있다고 말한 셈이다.
+            범위 밖에서는 인원만 적는다.
+        */}
         <Text style={styles.headCount}>
-          {players.length > 0 ? `골키퍼 1 · 필드 ${players.length - 1}` : ''}
+          {options ? `골키퍼 1 · 필드 ${players.length - 1}` : players.length > 0 ? `${players.length}명` : ''}
         </Text>
       </View>
 

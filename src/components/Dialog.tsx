@@ -4,8 +4,20 @@
 // `Platform.OS === 'web' ? window.confirm(...) : Alert.alert(...)` 분기를 손으로 썼는데,
 // 웹 쪽은 브라우저 크롬 창이라 "localhost:8082 내용:" 같은 머리말이 붙고 앱과 따로 논다.
 //
-// 분기를 이 파일 하나로 모은다. 네이티브는 그대로 Alert를 쓰고(네이티브에선 그게 맞는 답이다),
-// 웹에서는 앱 톤에 맞는 모달을 띄운다.
+// 분기를 이 파일 하나로 모은다.
+//
+// ── ⚠ 2026-09-29: 네이티브도 커스텀으로 바꿨다 (서랍 23) ─────────
+// 전에는 네이티브에서 시스템 `Alert`를 썼다. 그게 **앱 테마가 아니라 시스템 테마**를
+// 따라서, 앱은 다크인데 대화상자만 **흰색**으로 떴다.
+//
+// ⚠ **바꾸기 전에 제일 위험한 것부터 쟀다 — 「Modal 위에 뜨는가」.**
+//   시스템 Alert은 OS 창이라 다른 Modal 위에도 떴다. 커스텀은 그냥 RN Modal이라
+//   **중첩 Modal**이 되는데, 안드로이드에서 그건 알려진 함정이다.
+//   `MemberListModal` 안에서 강퇴 확인을 띄워 **실제로 뜨는 것을 봤다**
+//   (2026-09-29, 기기). 안 떴으면 이 변경 자체를 접을 참이었다.
+//
+// ⚠ **한 앱에 두 종류를 섞지 않는다.** 「이 자리만 Alert」 같은 예외를 두면
+//   사용자는 같은 앱에서 다른 대화상자를 보게 된다. 그게 흰 대화상자보다 나쁘다.
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './nativeText';
@@ -26,6 +38,8 @@ interface DialogRequest {
 let push: ((req: DialogRequest) => void) | null = null;
 
 function request(req: Omit<DialogRequest, 'resolve'>): Promise<boolean> {
+  /* ④ 탐침(2026-09-29) — 호스트가 붙어 있으면 플랫폼과 무관하게 커스텀으로 간다 */
+  if (push) return new Promise((resolve) => push!({ ...req, resolve }));
   if (Platform.OS !== 'web') {
     return new Promise((resolve) => {
       if (!req.cancelable) {
@@ -88,7 +102,6 @@ export function DialogHost() {
   const [queue, setQueue] = useState<DialogRequest[]>([]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
     // 밀린 것을 덮어쓰지 않고 쌓는다 — 덮어쓰면 앞 요청의 promise가 영영 안 풀려서
     // 그걸 기다리던 코드가 그대로 멈춘다
     push = (req) => setQueue((q) => [...q, req]);
@@ -96,8 +109,6 @@ export function DialogHost() {
       push = null;
     };
   }, []);
-
-  if (Platform.OS !== 'web') return null;
 
   const current = queue[0];
   if (!current) return null;
@@ -107,10 +118,30 @@ export function DialogHost() {
     setQueue((q) => q.slice(1));
   };
 
+  /*
+    ⚠ **바깥(스크림) 탭과 뒤로가기는 규칙이 다르다.**
+
+      알림·확인   바깥 탭으로 닫힌다 → 취소로 resolve
+      파괴적      바깥 탭으로 **안 닫는다** — 손이 스치면 지워지는 일을 만들지 않는다
+      뒤로가기    **셋 다 닫힌다** → 취소로 resolve
+
+    ⚠ 파괴적도 뒤로가기는 막지 않는다. 막으면 `await confirmAction(...)`이 영영 안
+      풀려서 **부르던 화면이 그대로 멈춘다** — 지워지는 것보다 나쁘다.
+      「닫히는 모든 길은 반드시 resolve한다」가 이 파일의 규칙이다.
+  */
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => close(false)}>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
+      <Pressable
+        style={styles.backdrop}
+        onPress={current.destructive ? undefined : () => close(false)}
+        accessible={false}
+      >
+        {/*
+          ⚠ **카드도 Pressable이다.** 안 그러면 카드를 누른 것이 스크림까지 내려가
+            내용을 읽으려고 짚었을 뿐인데 대화상자가 닫힌다. RN은 자식이 먼저 먹는다.
+            `accessible={false}`라 스크린리더에는 버튼으로 안 읽힌다.
+        */}
+        <Pressable style={styles.card} onPress={() => {}} accessible={false}>
           <Text style={styles.title}>{current.title}</Text>
           {!!current.message && <Text style={styles.message}>{current.message}</Text>}
 
@@ -138,8 +169,8 @@ export function DialogHost() {
               </Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

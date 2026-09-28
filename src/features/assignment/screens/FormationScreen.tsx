@@ -98,6 +98,12 @@ export function FormationScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          /*
+            ⚠ **`flexGrow: 0`이 없으면 세로로 늘어나 화면을 먹는다.**
+              가로 ScrollView도 flex 자식이라 남는 높이를 다 가져간다 —
+              2026-09-28 기기에서 칩 줄이 화면 절반을 차지하고 코트가 잘렸다.
+          */
+          style={styles.chipsBar}
           contentContainerStyle={styles.chips}
         >
           {options.map((opt, i) => (
@@ -149,7 +155,8 @@ const makeStyles = (colors: Palette) =>
     headerSub: { color: colors.textDim, fontSize: 12, fontWeight: '600', marginTop: 2 },
     headCount: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
 
-    chips: { paddingHorizontal: 20, paddingBottom: 10, gap: 6 },
+    chipsBar: { flexGrow: 0, flexShrink: 0 },
+    chips: { paddingHorizontal: 20, paddingBottom: 10, gap: 6, alignItems: 'center' },
     chip: {
       paddingHorizontal: 12,
       paddingVertical: 7,

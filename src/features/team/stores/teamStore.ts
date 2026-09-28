@@ -13,6 +13,7 @@ import {
   updateMemberPosition as updateMemberPositionRequest,
   updateMemberJersey as updateMemberJerseyRequest,
   updateTeamSlogan as updateTeamSloganRequest,
+  rotateInviteCode as rotateInviteCodeRequest,
   updateNotifyPref as updateNotifyPrefRequest,
   type NotifyPrefColumn,
   updateTeamHomeLocation as updateTeamHomeLocationRequest,
@@ -110,6 +111,8 @@ interface TeamState {
   promoteToAdmin: (teamMemberId: string) => Promise<void>;
   removeMember: (teamMemberId: string) => Promise<void>;
   leaveTeam: () => Promise<void>;
+  /** 초대 코드 재발급. 새 코드를 돌려준다 — 실패하면 null */
+  rotateInviteCode: () => Promise<string | null>;
   updateNotifyPref: (teamMemberId: string, column: NotifyPrefColumn, value: boolean) => Promise<void>;
   reset: () => void;
 }
@@ -388,6 +391,27 @@ export const useTeamStore = create<TeamState>((set, get) => ({
     } catch (err) {
       set({ error: toUserMessage(err, {}, 'updateTeamProfile') });
       return false;
+    }
+  },
+  /*
+    초대 코드 재발급.
+
+    ⚠ **지금까지 뿌린 코드와 링크가 전부 죽는다** — 아직 안 들어온 정상 초대자까지다.
+      재참여 차단은 `removed_at`이 하므로 이건 필수가 아니다. 쓰는 자리는
+      **강퇴당한 사람이 다른 계정으로 들어올 때**다.
+    ⚠ 끝나면 멤버십을 다시 읽는다 — 안 읽으면 화면이 옛 코드를 계속 보여주고,
+      총무가 그 코드를 공유한다.
+  */
+  rotateInviteCode: async () => {
+    const activeTeam = get().activeTeam;
+    if (!activeTeam) return null;
+    try {
+      const code = await rotateInviteCodeRequest(activeTeam.team.id);
+      await get().loadMemberships(activeTeam.team.id);
+      return code;
+    } catch (err) {
+      set({ error: toUserMessage(err, {}, 'rotateInviteCode') });
+      return null;
     }
   },
   updateSlogan: async (slogan) => {

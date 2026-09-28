@@ -72,6 +72,7 @@ export function TeamHomeScreen({ navigation, route }: any) {
   const updateSlogan = useTeamStore((s) => s.updateSlogan);
   const promoteToAdmin = useTeamStore((s) => s.promoteToAdmin);
   const removeMember = useTeamStore((s) => s.removeMember);
+  const rotateInviteCode = useTeamStore((s) => s.rotateInviteCode);
   const updateNotifyPref = useTeamStore((s) => s.updateNotifyPref);
   const loadMemberships = useTeamStore((s) => s.loadMemberships);
   const matches = useAttendanceStore((s) => s.matches);
@@ -782,6 +783,8 @@ export function TeamHomeScreen({ navigation, route }: any) {
         teamName={activeTeam.team.name}
         inviteCode={activeTeam.team.invite_code}
         inviteUrl={inviteUrl}
+        isAdmin={isAdmin}
+        onRotate={rotateInviteCode}
       />
       <TeamSwitchSheet
         visible={teamSwitchVisible}
@@ -797,6 +800,8 @@ export function TeamHomeScreen({ navigation, route }: any) {
         members={members}
         selfMemberId={activeTeam.membershipId}
         isAdmin={isAdmin}
+        teamId={activeTeam.team.id}
+        inviteCode={activeTeam.team.invite_code}
         onClose={() => setMemberListVisible(false)}
         onChangeSkillTag={updateMemberSkillTag}
         onChangePosition={updateMemberPosition}

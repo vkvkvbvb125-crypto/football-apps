@@ -92,6 +92,15 @@ export interface Database {
           joined_at: string;
           /* 탈퇴 시각. null이면 현재 멤버. 조회는 team_members_active 뷰를 쓴다 */
           left_at: string | null;
+          /*
+            강퇴 표식 — **`left_at`만으로는 자진 탈퇴와 강퇴를 못 가른다**(둘 다 left_at만 찍는다).
+            `removed_at`이 **판정 근거**고(재참여 차단이 이걸 본다), `removed_by`는 표시용이다.
+            ⚠ `leave_team()`이 자진 탈퇴 때 둘을 **비운다** — 되돌아왔다가 스스로 나간 사람이
+              옛 removed_at 때문에 차단되면 안 된다.
+          */
+          removed_at: string | null;
+          /* 내보낸 총무. 그 계정이 지워지면 null이 되지만 removed_at은 남는다 */
+          removed_by: string | null;
         };
         Insert: {
           team_id: string;
@@ -543,6 +552,29 @@ export interface Database {
         };
         Relationships: [];
       };
+      /*
+        내보낸 멤버만. `select … from team_members where removed_at is not null`.
+
+        ⚠ **이 뷰는 총무만 읽게 막지 않는다.** security_invoker라 team_members_select
+          (`is_team_member`)가 그대로 걸리고, 그건 「그 팀의 현재 멤버면 읽는다」다 —
+          **팀원도 읽을 수 있다.** 총무 전용은 **화면이 가른다**(MemberListModal).
+          뷰가 막아준다고 오해하지 마라. 노출 범위는 지금과 같다: 팀원은 이미
+          team_members의 나간 사람 행을 읽을 수 있었다.
+        ⚠ 읽기 전용이다. 되돌리기는 restore_member() RPC가 한다.
+      */
+      team_members_removed: {
+        Row: {
+          id: string;
+          team_id: string;
+          user_id: string;
+          role: TeamRole;
+          joined_at: string;
+          left_at: string | null;
+          removed_at: string;
+          removed_by: string | null;
+        };
+        Relationships: [];
+      };
       team_member_stats: {
         Row: {
           team_member_id: string;
@@ -577,6 +609,25 @@ export interface Database {
       remove_member: {
         Args: { p_team_member_id: string };
         Returns: { ok: boolean };
+      };
+      /**
+       * 강퇴 되돌리기. **표식(`removed_at`·`removed_by`)만 지우고 팀에 되돌리지는 않는다** —
+       * 본인이 초대 코드로 들어온다. 총무가 남의 계정을 팀에 밀어 넣는 모양을 안 만든다.
+       * ⚠ 그래서 되돌린 뒤 **현재 초대 코드를 알려줘야 한다**(재발급했으면 옛 코드는 죽었다).
+       * 막히는 경우는 P0001: 총무 아님 · 내보낸 멤버가 아님.
+       */
+      restore_member: {
+        Args: { p_team_member_id: string };
+        Returns: { ok: boolean };
+      };
+      /**
+       * 초대 코드 재발급. **지금까지 뿌린 코드와 링크가 전부 죽는다** — 아직 안 들어온
+       * 정상 초대자까지 포함이다. 차단은 `removed_at`이 하고, 이건 강퇴당한 사람이
+       * **다른 계정**으로 들어오는 것을 막을 때 쓴다. UNIQUE라 충돌하면 서버가 다시 뽑는다.
+       */
+      rotate_invite_code: {
+        Args: { p_team_id: string };
+        Returns: string;
       };
       /**
        * 탈퇴해도 되는지. 인자가 없고 auth.uid()만 본다 — 대상을 받으면 남의 미납

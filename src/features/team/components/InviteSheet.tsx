@@ -34,6 +34,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Modal, Pressable, Share, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../../../components/nativeText';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { radius, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 
@@ -45,12 +46,16 @@ interface Props {
   inviteCode: string;
   /** invite-redirect 함수 URL. QR에 담기는 문자열이자 공유 링크다 */
   inviteUrl: string;
+  /** 총무만 코드를 재발급할 수 있다 */
+  isAdmin: boolean;
+  /** 재발급. 새 코드를 돌려주고, 실패하면 null */
+  onRotate: () => Promise<string | null>;
 }
 
 /** QR은 대비가 전부다 — 다크 배경 위에 그대로 그리면 카메라가 못 읽는다 */
 const QR_SIZE = 188;
 
-export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl }: Props) {
+export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl, isAdmin, onRotate }: Props) {
   const { colors, styles } = useThemed(makeStyles);
   const [copied, setCopied] = useState<'code' | 'link' | null>(null);
 
@@ -135,6 +140,35 @@ export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl 
             >
               <Text style={styles.secondaryText}>{copied === 'link' ? '링크를 복사했어요' : '링크 복사'}</Text>
             </Pressable>
+
+            {/*
+              ⚠ **총무에게만.** 그리고 파괴적으로 묻는다 — 누르면 **지금까지 뿌린 코드와
+                링크가 전부 죽는다.** 아직 안 들어온 정상 초대자까지 포함이라,
+                「내보낸 사람을 막는다」만 생각하고 누르면 멀쩡한 초대가 같이 끊긴다.
+              ⚠ 재참여 차단 자체는 `removed_at`이 이미 한다. 여기는 **다른 계정으로
+                들어오는 경우**를 막는 자리다 — 문구에 그 말을 적는다.
+            */}
+            {isAdmin && (
+              <Pressable
+                onPress={async () => {
+                  const ok = await confirmAction({
+                    title: '초대 코드 재발급',
+                    message: `새 코드를 만들면 지금까지 보낸 코드와 링크는 모두 쓸 수 없게 돼요.
+
+내보낸 사람은 이미 다시 들어올 수 없어요. 그 사람이 다른 계정으로 들어오는 것까지 막고 싶을 때만 바꾸세요.`,
+                    confirmLabel: '재발급',
+                    destructive: true,
+                  });
+                  if (!ok) return;
+                  const next = await onRotate();
+                  if (next) alertMessage('새 코드를 만들었어요', '새 코드로 다시 초대해주세요.');
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.rotate, pressed && styles.pressed]}
+              >
+                <Text style={styles.rotateText}>초대 코드 재발급</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -144,6 +178,9 @@ export function InviteSheet({ visible, onClose, teamName, inviteCode, inviteUrl 
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
+    /* 파괴적이라 눈에 덜 띄게 둔다 — 아래에, 테두리 없이 */
+    rotate: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 12 },
+    rotateText: { color: colors.textDim, fontSize: 12, fontWeight: '700' },
   overlay: { flex: 1, backgroundColor: colors.scrim },
   overlayTap: { flex: 1 },
   sheet: {

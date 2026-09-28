@@ -191,7 +191,21 @@ const store = read('src/features/team/stores/teamStore.ts');
   const modal = readFileSync(
     new URL('../src/features/team/components/MemberListModal.tsx', import.meta.url), 'utf8'
   ).split('\r').join('');
-  const msg = /message: `([\s\S]*?)`,/.exec(modal);
+  /*
+    ⚠ **handleRemove 본문만 본다.** 전에는 파일에서 **첫** `message:`를 떴는데,
+      2026-09-29에 같은 파일에 되돌리기 확인(handleRestore)이 생기면서 **그쪽이
+      첫 번째가 됐다** — 내보내기 문구는 멀쩡한데 FAIL이 났다.
+      같은 날 kickblock·deeplink에서도 같은 덫에 걸렸다: **위치로 찾지 말고
+      함수 경계로 잘라라.**
+  */
+  const removeBody = (() => {
+    const at = modal.indexOf('const handleRemove');
+    if (at < 0) return '';
+    const next = modal.indexOf('return (', at);
+    return modal.slice(at, next < 0 ? modal.length : next);
+  })();
+  assert.ok(removeBody !== '', 'MemberListModal에서 handleRemove를 못 찾았다');
+  const msg = /message: `([\s\S]*?)`,/.exec(removeBody);
   assert.ok(msg, '내보내기 확인 문구를 못 떴다 — 모양이 바뀌었으면 이 검사도 고쳐라');
   assert.ok(
     /남아요|남습니다/.test(msg[1]),

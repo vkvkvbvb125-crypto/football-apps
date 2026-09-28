@@ -21,6 +21,16 @@ import { UserFacingError } from '../../../lib/dbError';
   ⚠ `from('team_members')`로 직접 조회하면 `memberview.check`가 FAIL을 낸다.
 */
 export const ACTIVE_MEMBERS = 'team_members_active';
+
+/*
+  내보낸 멤버만 보는 뷰. 총무가 되돌리는 화면이 쓴다.
+
+  ⚠ **이 뷰는 총무만 읽게 막지 않는다.** security_invoker라 `team_members_select`
+    (`is_team_member`)가 그대로 걸리고, 그건 「그 팀의 현재 멤버면 읽는다」다 —
+    **팀원도 읽을 수 있다.** 총무 전용은 **화면이 가른다**(MemberListModal).
+    뷰가 막아준다고 오해하지 마라.
+*/
+export const REMOVED_MEMBERS = 'team_members_removed';
 import type { Database } from '../../../types/database';
 
 type TeamMemberRow = Database['public']['Tables']['team_members']['Row'];
@@ -244,6 +254,82 @@ export async function fetchTeamMembers(teamId: string): Promise<TeamMemberWithPr
       dominantFoot: profile?.dominant_foot ?? null,
     };
   });
+}
+
+/** 내보낸 멤버 한 사람 — 되돌리기 목록에 필요한 것만 담는다 */
+export interface RemovedMember {
+  /** team_members.id — restore_member에 넘기는 값 */
+  id: string;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  /** 내보낸 시각(ISO) */
+  removedAt: string;
+}
+
+/**
+ * 내보낸 멤버 목록. **총무 화면에서만 부른다**(위 REMOVED_MEMBERS 머리말 참고 —
+ * 막는 것은 뷰가 아니라 화면이다).
+ */
+export async function fetchRemovedMembers(teamId: string): Promise<RemovedMember[]> {
+  const { data: rows, error } = await supabase
+    .from(REMOVED_MEMBERS)
+    .select('*')
+    .eq('team_id', teamId)
+    .order('removed_at', { ascending: false });
+  if (error) throw error;
+  if (!rows || rows.length === 0) return [];
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('id', rows.map((r) => r.user_id));
+  if (profilesError) throw profilesError;
+
+  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.user_id,
+    /* 이름의 대체 표시는 앱 전체가 「멤버」다 — 여기만 다르면 한 사람이 두 이름이 된다 */
+    displayName: byId.get(r.user_id)?.display_name ?? '멤버',
+    avatarUrl: byId.get(r.user_id)?.avatar_url ?? null,
+    removedAt: r.removed_at,
+  }));
+}
+
+/**
+ * 강퇴 되돌리기. **표식만 지우고 팀에 되돌리지는 않는다** — 본인이 초대 코드로 들어온다.
+ *
+ * ⚠ 그래서 **되돌린 뒤에는 현재 초대 코드를 알려줘야 한다.** 총무가 코드를 재발급했으면
+ *   그 사람이 들고 있는 옛 코드는 죽어 있어서, 되돌려 놓고도 「왜 못 들어오지」가 된다.
+ *   화면(MemberListModal)이 되돌린 자리에서 바로 코드를 보여주고 공유하게 한다.
+ */
+export async function restoreMember(teamMemberId: string) {
+  const { data, error } = await supabase.rpc('restore_member', { p_team_member_id: teamMemberId });
+  /* `leaveTeam`·`removeMember`와 같은 변환 — 서버가 한국어로 쓴 P0001만 연다 */
+  if (error) {
+    throw (error as { code?: string }).code === 'P0001'
+      ? new UserFacingError(error.message)
+      : error;
+  }
+  return data;
+}
+
+/**
+ * 초대 코드 재발급. 새 코드를 돌려준다.
+ *
+ * ⚠ **지금까지 뿌린 코드와 링크가 전부 죽는다** — 아직 안 들어온 정상 초대자까지다.
+ *   재참여 차단은 `removed_at`이 하므로 이건 필수가 아니다. 쓰는 자리는
+ *   **강퇴당한 사람이 다른 계정으로 들어올 때**다.
+ */
+export async function rotateInviteCode(teamId: string) {
+  const { data, error } = await supabase.rpc('rotate_invite_code', { p_team_id: teamId });
+  if (error) {
+    throw (error as { code?: string }).code === 'P0001'
+      ? new UserFacingError(error.message)
+      : error;
+  }
+  return data as string;
 }
 
 export async function updateMemberSkillTag(teamMemberId: string, skillTag: TeamMemberRow['skill_tag']) {

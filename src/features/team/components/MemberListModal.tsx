@@ -1,9 +1,17 @@
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Text } from '../../../components/nativeText';
-import { confirmAction } from '../../../components/Dialog';
+import { alertMessage, confirmAction } from '../../../components/Dialog';
 import { Ionicons } from '@expo/vector-icons';
 import type { SkillTag } from '../../../types/database';
-import type { TeamMemberWithProfile } from '../services/teamService';
+import {
+  fetchRemovedMembers,
+  restoreMember,
+  type RemovedMember,
+  type TeamMemberWithProfile,
+} from '../services/teamService';
+import { toUserMessage } from '../../../lib/dbError';
 import { nextPosition, positionLabel, toPosition, type Position } from '../positions';
 import { type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
@@ -24,6 +32,10 @@ interface MemberListModalProps {
   members: TeamMemberWithProfile[];
   selfMemberId: string;
   isAdmin: boolean;
+  /** 내보낸 멤버 목록을 불러오는 데 쓴다 */
+  teamId: string;
+  /** 되돌린 사람에게 알려줄 **현재** 초대 코드. 재발급했으면 옛 코드는 죽어 있다 */
+  inviteCode: string;
   onClose: () => void;
   onChangeSkillTag: (teamMemberId: string, skillTag: SkillTag | null) => void;
   onChangePosition: (teamMemberId: string, position: Position | null) => void;
@@ -36,6 +48,8 @@ export function MemberListModal({
   members,
   selfMemberId,
   isAdmin,
+  teamId,
+  inviteCode,
   onClose,
   onChangeSkillTag,
   onChangePosition,
@@ -53,6 +67,58 @@ export function MemberListModal({
       판단하는 위험**이 더 크다. 나가기에서 이미 같은 판단을 했다
       (`leaveteam.check`: 「규칙은 서버에 있고 클라이언트가 복제하지 않는다」).
   */
+  /*
+    내보낸 멤버 — **총무일 때만 불러온다.**
+
+    ⚠ **뷰가 막아주지 않는다.** `team_members_removed`는 security_invoker라
+      `team_members_select`(= `is_team_member`)만 걸린다 — **팀원도 읽을 수 있다.**
+      총무 전용은 여기, 화면이 가르는 것이다. 다음 사람이 「뷰가 막아준다」고
+      오해하지 않게 적어 둔다(teamService의 REMOVED_MEMBERS 머리말과 같은 말).
+  */
+  const [removed, setRemoved] = useState<RemovedMember[]>([]);
+  useEffect(() => {
+    if (!visible || !isAdmin) return;
+    let alive = true;
+    fetchRemovedMembers(teamId)
+      .then((rows) => alive && setRemoved(rows))
+      /* 목록을 못 불러와도 멤버 목록은 남는다 — 아래 구역만 안 그려진다 */
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [visible, isAdmin, teamId]);
+
+  const codeDisplay = inviteCode.replace(/(.{4})(?=.)/g, '$1-');
+
+  /*
+    ⚠ **되돌려도 팀에 다시 들어가지는 않는다.** 표식만 지우고, 본인이 초대 코드로
+      들어온다. 그래서 **되돌린 자리에서 코드를 같이 알려준다** — 총무가 코드를
+      재발급했으면 그 사람이 들고 있는 옛 코드는 죽어 있어서, 안 알려주면
+      되돌려 놓고도 「왜 못 들어오지」가 된다.
+  */
+  const handleRestore = async (member: RemovedMember) => {
+    const ok = await confirmAction({
+      title: '되돌리기',
+      message: `${member.displayName}님이 다시 들어올 수 있게 할까요?
+
+바로 팀에 들어오지는 않아요. 아래 초대 코드를 알려주세요.`,
+      confirmLabel: '되돌리기',
+      destructive: false,
+    });
+    if (!ok) return;
+    try {
+      await restoreMember(member.id);
+      setRemoved((prev) => prev.filter((r) => r.id !== member.id));
+      await Clipboard.setStringAsync(inviteCode);
+      alertMessage(
+        '되돌렸어요',
+        `${member.displayName}님에게 초대 코드 ${codeDisplay}를 알려주세요. 코드를 복사해 뒀어요.`
+      );
+    } catch (e) {
+      alertMessage('실패', toUserMessage(e));
+    }
+  };
+
   const handleRemove = async (member: TeamMemberWithProfile) => {
     /*
       ⚠ **문구의 뜻이 2026-09-19에 정반대가 됐다.** 전에는 강퇴가 하드 삭제라
@@ -70,7 +136,9 @@ export function MemberListModal({
       title: '멤버 내보내기',
       message: `${member.displayName}님을 팀에서 내보낼까요?
 
-지난 경기 참석 기록과 정산 몫은 그대로 남아요. 미납 회비도 사라지지 않습니다.`,
+지난 경기 참석 기록과 정산 몫은 그대로 남아요. 미납 회비도 사라지지 않습니다.
+
+내보낸 뒤에는 초대 코드를 알아도 다시 들어올 수 없어요. 되돌리려면 멤버 목록 아래에서 하면 돼요.`,
       confirmLabel: '내보내기',
       destructive: true,
     });
@@ -160,6 +228,49 @@ export function MemberListModal({
               </View>
             );
           })}
+
+          {/*
+            내보낸 멤버 — **총무에게만** 그린다. 비어 있으면 구역 자체를 안 그린다:
+            대부분의 팀에는 내보낸 사람이 없고, 빈 구역은 할 일이 있는 것처럼 보인다.
+          */}
+          {isAdmin && removed.length > 0 && (
+            <View style={styles.removedSection}>
+              <Text style={styles.removedTitle}>내보낸 멤버 ({removed.length})</Text>
+              <Text style={styles.removedHint}>
+                되돌려도 바로 들어오지는 않아요. 아래 초대 코드를 알려주세요.
+              </Text>
+              <Pressable
+                onPress={() => void Clipboard.setStringAsync(inviteCode)}
+                accessibilityRole="button"
+                accessibilityLabel={`초대 코드 ${inviteCode} 복사`}
+                style={({ pressed }) => [styles.removedCode, pressed && styles.pressedOpacity]}
+              >
+                <Text style={styles.removedCodeLabel}>초대 코드</Text>
+                <Text style={styles.removedCodeText} selectable>
+                  {codeDisplay}
+                </Text>
+                <Ionicons name="copy-outline" size={14} color={colors.textDim} />
+              </Pressable>
+
+              {removed.map((r) => (
+                <View key={r.id} style={styles.removedRow}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{r.displayName.slice(0, 1)}</Text>
+                  </View>
+                  <Text style={styles.removedName} numberOfLines={1}>
+                    {r.displayName}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.actionButton, pressed && styles.pressedOpacity]}
+                    onPress={() => handleRestore(r)}
+                  >
+                    <Text style={styles.actionButtonText}>되돌리기</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>
@@ -168,6 +279,30 @@ export function MemberListModal({
 
 const makeStyles = (colors: Palette) =>
   StyleSheet.create({
+  removedSection: { marginTop: 22, gap: 8 },
+  removedTitle: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  removedHint: { color: colors.textDim, fontSize: 12, fontWeight: '500', lineHeight: 17 },
+  removedCode: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardAlt,
+  },
+  removedCodeLabel: { color: colors.textDim, fontSize: 11, fontWeight: '700' },
+  removedCodeText: {
+    color: colors.textStrong,
+    fontSize: 13,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  removedRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  removedName: { flex: 1, minWidth: 0, color: colors.text, fontSize: 14, fontWeight: '600' },
   root: {
     flex: 1,
     backgroundColor: colors.card,

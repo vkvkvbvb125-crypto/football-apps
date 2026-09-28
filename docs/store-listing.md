@@ -951,6 +951,33 @@ eas build --local --platform android
   ⚠ 빌드 도중 WSL이 읽기 전용으로 떨어지면 이 상태가 된다. 그때는
   `wsl --shutdown` 뒤 다시 띄우면 살아난다(손실 없었다).
 
+### ⚠ 스크린샷 빌드는 **세션이 먼저 있어야 한다** — 새로 설치하고 로그인하면 영영 스피너다
+
+2026-09-29에 걸렸다. 새로 설치 → 로그인 → **60초 넘게 스피너**에서 안 넘어갔다.
+12초 상한도 안 걸린다. 원인은 `RootNavigator.tsx:163-170`이다:
+
+    if (session) loadMemberships();   // 픽스처가 NOOP으로 바꿔 둔 함수다
+    else         resetTeam();         // ← 로그인 **전에** 픽스처를 지운다
+
+순서가 이렇게 된다:
+
+    ① App 마운트 → applyScreenshotFixtures()가 스토어를 채우고 loaded: true,
+                   loadMemberships를 **NOOP으로 바꾼다**
+    ② 아직 세션이 없다 → resetTeam()이 **픽스처를 지운다**(loaded: false)
+    ③ 로그인 → loadMemberships() → **NOOP이라 아무것도 안 한다** → loaded는 영영 false
+
+**넘어가는 법: 로그인한 뒤 앱을 재시작한다.** 세션이 저장돼 있으면 ②의 else 갈래를
+안 타므로 픽스처가 살아남는다.
+
+    adb shell am force-stop com.kickday.app
+    adb shell am start -n com.kickday.app/.MainActivity
+
+⚠ 찍기 전에 **온보딩 투어(1/5)**가 뜬다. 「건너뛰기」를 먼저 누른다.
+
+⚠ `adb shell input text`로 비밀번호를 넣을 때 `!`가 **떨어지거나 뒤에 공백이 붙었다.**
+`'...'`로 감싸 보내고, **눈 아이콘을 먼저 켜서 무엇이 들어갔는지 보면서** 한다.
+안 보고 누르면 「이메일 또는 비밀번호가 맞지 않아요」만 보고 원인을 모른다.
+
 ### ⚠ 권한은 `scripts/apkperm.sh`로 센다 — 맨손 `aapt2`로 세지 마라
 
 **2026-09-29에 「권한 총수 0 · AD_ID 0」을 받았다.** 숫자만 보면 「광고 권한이 안 붙었다」는

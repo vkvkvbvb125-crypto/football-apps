@@ -14,10 +14,6 @@ import { font, radius, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import type { Attendee } from './CreateSettlementSheet';
 
-function initialOf(name: string) {
-  return name.trim().slice(0, 2) || '?';
-}
-
 interface Props {
   visible: boolean;
   onClose: () => void;
@@ -82,7 +78,15 @@ export function SettleTargetsSheet({ visible, onClose, matchLabel, targets, from
                 {targets.map((t, i) => (
                   <View key={t.id} style={[styles.row, i > 0 && styles.rowLine]}>
                     <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{initialOf(t.name)}</Text>
+                      {/*
+                        ⚠ **첫 글자 하나다.** 여기는 이름이 **바로 옆에 붙어 있는**
+                          훑기 자리라 이니셜이 사람을 특정할 필요가 없다
+                          (features/team/initials.ts의 가름).
+                        ⚠ 전에는 이 파일이 `initialOf`라는 **지역 함수**로 두 글자를
+                          잘랐다 — 근거가 안 적혀 있었고, import해 쓰는 같은 이름의
+                          함수(성 떼기)와 헷갈렸다. 둘 다 없앴다.
+                      */}
+                      <Text style={styles.avatarText}>{t.name.trim().slice(0, 1) || '?'}</Text>
                     </View>
                     <Text style={styles.name} numberOfLines={1}>
                       {t.name}

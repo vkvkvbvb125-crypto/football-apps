@@ -21,20 +21,3 @@ export function initialOf(name: string) {
   if (!/^[가-힣]/.test(n)) return n.slice(0, 1).toUpperCase() || '?';
   return n.length > 2 ? n.slice(1) : n;
 }
-/**
- * 아바타 한 칸에 넣는 한 글자.
- *
- * initialOf와 따로 둔다. 그쪽은 이름을 알아보게 하는 것이고(내 행·멤버 목록처럼
- * 이름이 옆에 없거나 큰 칸), 이쪽은 겹쳐 놓는 작은 칸이라 목적이 다르다.
- *
- * 겹침 줄에서 두 글자는 글자 줄로 읽힌다. 재 봤다 — Noto Sans KR 800 12px에서 두
- * 글자가 22.1px인데, 지름 36에 25% 겹치면 한 칸에 보이는 폭이 27px다. 글자가 보이는
- * 폭의 82%를 채워서 인접한 칸의 글자끼리 거의 맞닿는다. 눈이 원이 아니라 글자에서
- * 끊으니 「겹치지 않은 이름 태그」로 보인다.
- *
- * 첫 글자를 쓴다. 이니셜은 첫 글자라는 뜻이고, 이 줄은 사람을 특정하는 자리가 아니다 —
- * 누가 있는지 훑는 자리이고 특정은 멤버 목록이 한다. 그래서 성이 겹쳐도 괜찮다.
- */
-export function avatarLetterOf(name: string) {
-  return name.trim().slice(0, 1) || '?';
-}

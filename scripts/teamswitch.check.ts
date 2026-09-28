@@ -4,7 +4,7 @@
 // 화면으로는 안 보인다 — 팀이 하나뿐인 계정에서는 무엇을 망가뜨려도 똑같이 돈다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { onlyMatch } from './lib/anchor.ts';
+import { bodyFrom, onlyMatch } from './lib/anchor.ts';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const store = read('src/features/team/stores/teamStore.ts');
@@ -31,11 +31,20 @@ const start = read('src/features/team/screens/TeamStartScreen.tsx');
 // ── 2. setActiveTeam이 소속 밖의 팀을 받지 않는다 ───────────────────
 {
   assert.ok(store.includes('setActiveTeam:'), 'setActiveTeam이 없다');
-  // 구현부만 잘라 본다. 끝을 이름으로 잡으면 안 된다 — 같은 이름이 위쪽 인터페이스
-  // 선언에도 있어서 시작보다 앞의 위치가 잡히고, 슬라이스가 빈 문자열이 된다.
-  const from = store.indexOf('setActiveTeam: (teamId)');
-  assert.notEqual(from, -1, 'setActiveTeam 구현부를 못 찾음');
-  const body = store.slice(from, from + 1200);
+  /*
+    구현부만 잘라 본다. 끝을 이름으로 잡으면 안 된다 — 같은 이름이 위쪽 인터페이스
+    선언에도 있어서 시작보다 앞의 위치가 잡히고, 슬라이스가 빈 문자열이 된다.
+
+    ⚠ **전에는 `slice(from, from + 1200)`이었다. 그게 결함이었다.**
+      구현부는 **734자**라 창이 466자 넘어가 이웃 `loadMembers`를 함께 봤다.
+      그래서 `setActiveTeam`의 early `return;`을 지워도 — 아래 단언이 이름으로
+      겨눈 바로 그 결함인데 — 이웃의 `if (!activeTeam) return;`이 게으른 span을
+      만족시켜 **PASS했다.** 2026-09-29에 변이로 확인하고 고쳤다.
+      **다음 액션 경계까지** 자른다(anchor.ts의 bodyFrom).
+  */
+  const body = bodyFrom(store, 'setActiveTeam: (teamId)', 'setActiveTeam 구현부', [
+    /\n  [A-Za-z][A-Za-z0-9]*: (async )?\(/,
+  ]);
   assert.ok(/memberships\.find\(\(m\) => m\.team\.id === teamId\)/.test(body), '소속 여부를 확인하지 않는다');
   assert.ok(/console\.warn/.test(body), '소속되지 않은 팀을 조용히 무시한다 — 경고가 없다');
   assert.ok(/if \(!next\) \{[\s\S]*?return;/.test(body), '소속되지 않은 팀인데 그대로 진행한다');

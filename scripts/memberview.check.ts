@@ -41,6 +41,7 @@
 */
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { bodyFrom } from './lib/anchor.ts';
 
 const root = new URL('../', import.meta.url);
 const read = (p: string) => readFileSync(new URL(p, root), 'utf8').split('\r').join('');
@@ -81,13 +82,17 @@ const NAME_COLUMNS = ['id', 'user_id'];
     const src = strip(read(f));
     /*
       `from('team_members')` 뒤에 `.select(`가 오는 것만 잡는다.
-      ⚠ 같은 줄일 수도 있고 여러 줄로 이어질 수도 있어 뒤 300자를 본다 —
-        `.update(`나 `.delete()`가 먼저 오면 쓰기라 넘어간다.
+      `.update(`나 `.delete()`가 먼저 오면 쓰기라 넘어간다.
+
+      ⚠ **전에는 뒤 300자를 봤다.** 체인이 길어지면 `.select(`가 창 밖으로 밀려
+        **쓰기로 오인해 넘어간다** — 조용히 놓치는 방향이다.
+        **문장 경계(`;`)까지** 자른다(2026-09-29 훑기).
     */
     const re = /\.from\('team_members'\)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(src)) !== null) {
-      const after = src.slice(m.index, m.index + 300);
+      const semi = src.indexOf(';', m.index);
+      const after = src.slice(m.index, semi < 0 ? src.length : semi);
       const sel = after.indexOf('.select(');
       const wr = Math.min(
         ...[after.indexOf('.update('), after.indexOf('.delete('), after.indexOf('.insert(')]
@@ -111,7 +116,13 @@ const NAME_COLUMNS = ['id', 'user_id'];
 /* ── ⑴-b 예외 파일이 이름만 읽는가 ───────────────────────────────── */
 {
   const src = strip(read(NAME_SERVICE));
-  const sel = src.match(/\.from\('team_members'\)[\s\S]{0,120}?\.select\('([^']*)'\)/);
+  /*
+    ⚠ **전에는 첫 match만 봤다.** 이 파일에 `from('team_members')`가 둘이 되는 날
+      앞의 것만 보고 통과한다 — 뒤에서 role·skill_tag를 읽어도 모른다.
+      `onlyIndexOf`로 **앵커가 하나임을 먼저 못 박고**, 거기서 문장 끝까지 자른다.
+  */
+  const selBody = bodyFrom(src, ".from('team_members')", `${NAME_SERVICE}의 조회`, [';']);
+  const sel = /\.select\('([^']*)'\)/.exec(selBody);
   assert.ok(sel, `${NAME_SERVICE}가 team_members를 select하지 않는다 — 이 파일의 존재 이유다`);
   const cols = sel[1].split(',').map((c) => c.trim()).filter(Boolean);
   const extra = cols.filter((c) => !NAME_COLUMNS.includes(c));

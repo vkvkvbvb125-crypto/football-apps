@@ -7,6 +7,7 @@
 // 실행해서 잡을 수도 없다 — 실제로 계정을 지워야 확인되는 코드다. 그래서 소스를 본다.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { bodyFrom } from './lib/anchor.ts';
 
 const src = readFileSync(new URL('../supabase/functions/delete-account/index.ts', import.meta.url), 'utf8');
 const at = (needle: string, what: string) => {
@@ -85,9 +86,23 @@ const at = (needle: string, what: string) => {
   const anon = at('SUPABASE_ANON_KEY', 'anon key');
   assert.ok(/if \(!url \|\| !anonKey\)/.test(src), 'anon key가 없을 때 서지 않는다');
   const rpc = at('/rest/v1/rpc/account_deletion_status', '판정 RPC 호출');
-  const call = src.slice(rpc - 400, rpc + 400);
+  /*
+    ⚠ **전에는 `slice(rpc - 400, rpc + 400)` 창 하나로 둘을 다 봤다.**
+      긍정 단언은 못 찾으면 FAIL이라 안전한 방향이었지만, **부정 단언이 창 안에
+      있는 것**은 제일 나쁜 조합이다 — 창 밖에서 service_role로 부르면 안 보인다.
+      둘을 갈랐다(2026-09-29 훑기):
+        긍정  fetch 호출 **본문 안**에서 본다  (경계로 자른다)
+        부정  **파일 전체**에서 본다          (창을 아예 없앤다 — 더 강하다)
+  */
+  const call = bodyFrom(src, '/rest/v1/rpc/account_deletion_status', '판정 RPC 호출', [
+    '\n    if (',
+    '\n    const ',
+  ]);
   assert.ok(call.includes('apikey: anonKey'), '판정 RPC를 anon key로 안 부른다');
-  assert.ok(!/apikey:\s*(serviceRole|.*SERVICE_ROLE)/.test(call), '판정 RPC를 service_role로 부른다');
+  assert.ok(
+    !/apikey:\s*(serviceRole|.*SERVICE_ROLE)/.test(src),
+    '이 함수 어딘가에서 service_role을 apikey로 쓴다 — 판정이 「전원 삭제 가능」이 된다'
+  );
   assert.ok(anon < rpc, 'anon key 확인이 RPC 호출보다 뒤에 있다');
 }
 

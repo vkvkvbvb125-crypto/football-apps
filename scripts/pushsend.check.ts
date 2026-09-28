@@ -20,6 +20,7 @@
 */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { nextIs } from './lib/anchor.ts';
 
 /* 이스케이프를 쓰지 않는다 — 이 저장소에서 문자열이 셸을 두 번 지나가며 열 번 넘게 샜다 */
 const BS = String.fromCharCode(92);
@@ -100,7 +101,12 @@ for (const f of all) {
       else if (src[i] === ')') { depth -= 1; if (depth === 0) break; }
     }
     const line = src.slice(0, m.index!).split(NL).length;
-    const swallowed = src.slice(i, i + 12).includes('.catch(');
+    /*
+      ⚠ **전에는 `slice(i, i + 12)`였다.** 닫는 괄호 뒤에 줄바꿈과 들여쓰기가 들어오면
+        `.catch(`가 12자 밖으로 밀려 **안 붙은 것으로 읽힌다** — 포맷만 바뀌어도
+        판정이 뒤집힌다. 묻는 것은 「몇 자 안에 있나」가 아니라 **「바로 붙었나」**다.
+    */
+    const swallowed = nextIs(src, i + 1, '.catch(');
     /* 앞의 공백을 걷어낸 마지막 낱말 — await·return이면 결과를 넘기는 자리다 */
     const before = src.slice(0, m.index!).trimEnd();
     const handed = /\b(await|return)$/.test(before);

@@ -832,3 +832,79 @@ export const onlyMatch = (src: string, re: RegExp, what: string) => {
   assert.equal(hits.length, 1, `${what}: 매치가 ${hits.length}개다(1개여야 한다) — ${re.source.slice(0, 50)}`);
   return hits[0];
 };
+
+/**
+ * 앵커부터 **다음 경계까지** 자른다. 고정 길이로 자르지 마라.
+ *
+ * ── 왜 이게 있나 ──────────────────────────────────────────────────
+ * 2026-09-29 하루에 검사가 **다섯 번** 틀렸고 원인이 전부 같았다:
+ * **창을 글자 수로 잡아서 이웃을 함께 봤다.** 증상이 고약하다 —
+ * 검사는 **통과하고**, 겨눈 결함만 안 보인다.
+ *
+ *   teamswitch   `slice(from, from + 1200)`인데 구현부는 734자였다. 466자가
+ *                이웃 `loadMembers`를 삼켰고, `setActiveTeam`의 early return을
+ *                지워도 이웃의 `return;`이 단언을 만족시켰다. **변이로 확인했다.**
+ *   kickblock    `slice(at, at + 600)`이 다음 함수의 P0001 변환을 대신 봤다.
+ *   deeplink     `[\s\S]*?`가 다른 함수의 `insert(`와 뒤쪽 `select(`를 짝지었다.
+ *
+ * `onlyIndexOf`가 「앵커가 둘일 때 앞의 것을 집는」 고장을 막듯, 이건
+ * 「창이 이웃을 삼키는」 고장을 막는다. 둘 다 같은 병의 다른 얼굴이다.
+ *
+ * ⚠ `stops`는 **부르는 쪽이 정한다.** 경계는 대상마다 다르다 —
+ *   최상위 함수면 `'\nexport '`, zustand 액션이면 `/\n  \w+: \(/`.
+ *   기본값을 두면 「대충 맞겠지」로 쓰게 되고 그게 이 버그의 씨앗이다.
+ *
+ * ⚠ 앵커는 `onlyIndexOf`를 지난다 — 둘 이상이면 시끄럽게 실패한다.
+ */
+export const bodyFrom = (
+  src: string,
+  start: string,
+  what: string,
+  stops: (string | RegExp)[]
+) => {
+  const at = onlyIndexOf(src, start, what);
+  const from = at + start.length;
+  const ends = stops
+    .map((stop) => {
+      if (typeof stop === 'string') return src.indexOf(stop, from);
+      const re = new RegExp(stop.source, stop.flags.includes('g') ? stop.flags : stop.flags + 'g');
+      re.lastIndex = from;
+      return re.exec(src)?.index ?? -1;
+    })
+    .filter((i) => i >= 0);
+  return src.slice(at, ends.length ? Math.min(...ends) : src.length);
+};
+
+/**
+ * `open`에서 시작해 **짝이 맞는 `close`까지** 자른다.
+ *
+ * 경계가 「다음 무엇」이 아니라 **괄호의 짝**일 때 쓴다 — JSX 속성값
+ * `onPressTitle={() => f()}`을 `[^}]*`로 뜨면 **안쪽 `}`에서 잘린다.**
+ * 그러면 남은 조각에 대고 단언하게 되고, 그건 무엇을 넣어도 통과하는 단언이다.
+ *
+ * 여는 괄호를 못 찾거나 짝이 안 맞으면 `null`이다 — 조용히 짧은 조각을
+ * 돌려주지 않는다. **잘못된 통과보다 시끄러운 실패가 낫다.**
+ */
+export const balancedFrom = (src: string, from: number, open: string, close: string) => {
+  const start = src.indexOf(open, from);
+  if (start < 0) return null;
+  let depth = 0;
+  for (let i = start; i < src.length; i += 1) {
+    if (src[i] === open) depth += 1;
+    else if (src[i] === close) {
+      depth -= 1;
+      if (depth === 0) return src.slice(start, i + 1);
+    }
+  }
+  return null;
+};
+
+/**
+ * `from`부터 **공백만 건너뛰고** 바로 그 글자가 오는가.
+ *
+ * 「닫는 괄호 **직후**에 `.catch(`가 붙었는가」처럼 **붙어 있음**을 묻는 자리다.
+ * 글자 수 창(`slice(i, i + 12)`)으로 물으면 줄바꿈과 들여쓰기가 들어오는 순간
+ * 창을 넘어가 **안 붙은 것으로 읽힌다** — 포맷이 바뀌면 판정이 뒤집힌다.
+ */
+export const nextIs = (src: string, from: number, needle: string) =>
+  src.slice(from).trimStart().startsWith(needle);

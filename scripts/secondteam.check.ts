@@ -25,6 +25,7 @@
 */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { balancedFrom } from './lib/anchor.ts';
 
 const strip = (t: string) =>
   t
@@ -40,11 +41,18 @@ const read = (p: string) => strip(readFileSync(new URL(`../${p}`, import.meta.ur
 /* ── ⑴ 팀이 하나여도 제목이 눌린다 ──────────────────────────────── */
 {
   const screen = read('src/features/team/screens/TeamHomeScreen.tsx');
-  const tag = /<TabHeader[^>]*onPressTitle=\{([^}]*)\}/.exec(screen);
-  assert.ok(tag, 'TeamHomeScreen이 TabHeader에 onPressTitle을 안 넘긴다 — 팀 전환 시트를 열 길이 없다');
+  /*
+    ⚠ **전에는 `onPressTitle=\{([^}]*)\}`였다.** 화살표 본문에 `}`가 하나라도 있으면
+      (객체 리터럴, 중첩 화살표) **안쪽에서 잘려** 남은 조각에 단언하게 된다 —
+      무엇을 넣어도 통과하는 단언이 된다. **짝이 맞는 `}`까지** 뜬다(2026-09-29 훑기).
+  */
+  const propAt = screen.indexOf('onPressTitle=');
+  assert.notEqual(propAt, -1, 'TeamHomeScreen이 TabHeader에 onPressTitle을 안 넘긴다 — 팀 전환 시트를 열 길이 없다');
+  const body = balancedFrom(screen, propAt, '{', '}');
+  assert.ok(body, 'onPressTitle의 중괄호 짝이 안 맞는다 — 모양이 바뀌었으면 이 검사도 고쳐라');
   assert.ok(
-    !/hasMultipleTeams|memberships\.length/.test(tag[1]),
-    `제목 누름이 팀 개수로 막혀 있다: «${tag[1].trim()}» — ` +
+    !/hasMultipleTeams|memberships\.length/.test(body),
+    `제목 누름이 팀 개수로 막혀 있다: «${body.trim()}» — ` +
       `「새 팀 만들기 / 초대 코드로 참여」가 그 시트 안에만 있어서 ` +
       `팀이 하나인 사용자는 두 번째 팀에 **영영 못 간다**`
   );

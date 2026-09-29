@@ -215,6 +215,8 @@ export function TeamHomeScreen({ navigation, route }: any) {
 
   const announcements = useAnnouncementsStore((s) => s.announcements);
   const announcementsLoaded = useAnnouncementsStore((s) => s.loaded);
+  /** 다시 읽는 중인가 — 딥링크가 옛 목록을 보고 포기하지 않게 한다(아래 효과) */
+  const announcementsLoading = useAnnouncementsStore((s) => s.loading);
   const loadAnnouncements = useAnnouncementsStore((s) => s.loadAnnouncements);
   const myReadIds = useAnnouncementsStore((s) => s.myReadIds);
   const loadMyReads = useAnnouncementsStore((s) => s.loadMyReads);
@@ -300,12 +302,26 @@ export function TeamHomeScreen({ navigation, route }: any) {
     setPendingPostId(openPostId);
     navigation.setParams({ openPostId: undefined });
   }, [openPostId]);
+  /*
+    ⚠ **다시 읽는 동안에는 포기하지 않는다.** `announcementsLoaded`는 **한 번이라도**
+      읽었으면 true라, 위에서 `loadAnnouncements()`를 걸어 두고도 이 효과가
+      **옛 배열로 즉시** 돌아 「못 찾음」으로 접었다 — 그리고 목록이 갱신됐을 땐
+      pending이 이미 null이었다. 2026-09-30 기기에서 봤다: 목록엔 새 공지가
+      보이는데 모달만 안 떴다.
+      `loading`이 도는 동안에는 기다린다. **그게 끝나고도 없으면** 그때 접는다
+      (지워진 공지 — 「없어졌어요」는 안 띄운다. 목록에 없다는 것이 이미 답이다).
+  */
   useEffect(() => {
     if (!pendingAnnouncementId || !announcementsLoaded) return;
     const found = announcements.find((a) => a.id === pendingAnnouncementId);
-    if (found) setSelectedAnnouncement(found);
+    if (found) {
+      setSelectedAnnouncement(found);
+      setPendingAnnouncementId(null);
+      return;
+    }
+    if (announcementsLoading) return;
     setPendingAnnouncementId(null);
-  }, [pendingAnnouncementId, announcementsLoaded, announcements]);
+  }, [pendingAnnouncementId, announcementsLoaded, announcementsLoading, announcements]);
 
 
   const polls = usePollsStore((s) => s.polls);

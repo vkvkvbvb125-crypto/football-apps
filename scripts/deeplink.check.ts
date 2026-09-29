@@ -208,6 +208,20 @@ const openPostBody = (() => {
      'BoardPanel이 openPostId를 받고도 목록을 다시 안 읽는다 — 이미 마운트돼 있으면 ' +
      '방금 올라온 글이 목록에 없어 펼 카드가 없다');
 }
+/*
+  ⚠ **다시 읽는 동안 포기하면 안 된다.** `announcementsLoaded`는 한 번이라도 읽었으면
+    true라, 재조회를 걸어 두고도 조회 효과가 **옛 배열로 즉시** 돌아 접어 버린다 —
+    목록엔 새 공지가 보이는데 모달만 안 떴다(2026-09-30 기기).
+    `loading`이 도는 동안에는 기다려야 한다.
+*/
+{
+  /* ⚠ 변수 선언만 보면 안 된다 — 가드를 지워도 선언은 남아 통과한다(2026-09-30 변이). */
+  const at = teamHome.indexOf('const found = announcements.find');
+  const body = at >= 0 ? teamHome.slice(at, at + 300) : '';
+  ok(/if \(announcementsLoading\) return;/.test(body),
+     'TeamHomeScreen의 공지 조회가 재조회 중인지(loading)를 안 본다 — 옛 목록을 보고 ' +
+     '포기해서 목록엔 새 공지가 보이는데 모달만 안 뜬다');
+}
 {
   const at = teamHome.indexOf('setPendingAnnouncementId(openAnnouncementId)');
   const body = at >= 0 ? teamHome.slice(at, at + 400) : '';

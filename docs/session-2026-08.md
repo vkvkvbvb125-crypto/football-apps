@@ -3252,6 +3252,62 @@ BZERO_TMP에서 kdtest3이 보내는 푸시를 **앱과 똑같은 순서**로 RE
 `routeFor`는 순수 함수라 단위 시험 12개가 통과하고, 검사도 통과한다.
 **화면에 무엇이 들어왔는지 보여주는 빌드**가 있어야 한다.
 
+### 근인 — 찾았고 고쳤다 (2026-09-29)
+
+진단 빌드가 다섯 지점을 한 번에 찍었다. **㉮가 아니었다:**
+
+    0  take() 불림          response 있음
+    1  raw content.data     {"kind":"new_match"}          ← data는 정확히 온다
+    1b content 전체 키       ["title","dataString","body","data"]
+    2  routeFor 결과         {"screen":"Attendance"}
+    3  store에 들어간 값      {"screen":"Attendance"}
+    4  MainTabNavigator      {"screen":"Attendance"}
+    4b navigate 인자         ["Attendance", undefined]
+    4c navigate 호출됨       throw 없음
+    5  실제 화면             **홈 그대로**
+
+**경로가 전부 맞는데 마지막에서 안 닿는다.**
+
+`MainTabNavigator`는 `Stack.Screen name="Main"` **안**에 있다. 그래서
+`useNavigation()`이 주는 것은 **스택의** navigation이고,
+Attendance·Settlement·Team은 이 컴포넌트가 **렌더하는** Tab.Navigator의 이름 —
+즉 **아래쪽**이다. React Navigation은 **위로만** 거슬러 찾으므로 그 이름은
+아무 데도 안 닿고 **예외도 안 난다.**
+
+**고친 것:** 두 자리를 중첩 형태로. **`popTo('Main', { screen, params })`**
+
+⚠ `navigate('Main', …)`가 아니라 `popTo`다. `tour.check`가 `navigate('Main')`을 막는다 —
+그 호출은 **Main을 하나 더 밀어** 마운트 상태를 잃는다(`MySettingsScreen`이 그 사고를 냈다).
+**게이트가 잡아 줬다** — 고쳐 놓고 커밋하려다 `tour`에서 끊겼고, 검사를 헐겁게 하는 대신
+저장소가 이미 쓰는 관용구(`MySettingsScreen:157`)로 맞췄다.
+
+    :176  정산 딥링크   (이것도 한 번도 동작한 적이 없다)
+    :193  알림 딥링크
+
+⚠ **훑어서 둘뿐인 것을 확인했다.** 탭 이름으로 navigate 하는 곳이 저장소에 17곳인데,
+나머지 15곳은 **탭 안의 화면**(HomeScreen·AttendanceScreen 등)이라 거기서 얻는
+navigation이 탭의 것이라 **맞는 코드**다. 틀린 자리는 **탭을 렌더하는 파일**뿐이었다.
+`LoginScreen:135`의 변수 호출도 인증 스택 형제라 정상이다.
+
+### ⚠ 검사가 **못 잡은** 게 아니라 **볼 수 없는** 종류였다
+
+이 결함은 **글자가 전부 맞았다.** `routeFor`가 옳은 값을 만들고, 목적지가 그 이름을
+갖고 있고, `deeplink.check` ③의 짝 맞추기도 통과했다. 단위 시험 12개도 통과했다.
+**틀린 것은 런타임의 내비게이터 트리 위치**였고, 그건 파일 안의 글자에 안 적혀 있다.
+
+    검사가 보는 것   이 파일에 이 문자열이 있는가
+    이 결함          그 문자열이 **어느 트리 위치에서** 불리는가
+
+⚠ **새로 넣은 `deeplink.check` ⑥이 막는 것은 「이 모양」 하나뿐이다.**
+「글자는 맞는데 런타임에 안 닿는다」라는 **종류**의 다음 결함은 또 못 잡는다.
+그 종류를 잡는 것은 **기기에서 밟는 것**뿐이다 — 그래서 「끝」의 근거에
+**화면을 본 적이 있는가**를 반드시 적는다(위 훑기 목록).
+
+⚠ ⑥도 **처음엔 헐거웠다.** 탭 이름 리터럴 목록으로 셌더니 알림 쪽이
+`navigate(pendingNotification.screen, …)`처럼 **변수**라 안 걸렸고, 옛 모양으로
+되돌리는 변이가 통과했다. 규칙을 뒤집어 **「이 파일의 모든 navigate는 'Main'이어야 한다」**로
+바꿨다 — 그러면 리터럴이든 변수든 전부 걸린다. 변이 둘 다 FAIL 확인.
+
 ### ⚠ 같이 알게 된 것 — `am force-stop`으로는 콜드 스타트를 못 잰다
 
 강제 종료한 앱은 안드로이드가 **stopped 상태**로 두어 **FCM을 안 내려보낸다.**

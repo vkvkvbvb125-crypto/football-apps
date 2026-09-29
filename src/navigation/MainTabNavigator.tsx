@@ -166,6 +166,35 @@ export function MainTabNavigator() {
   const myMembershipId = useTeamStore((s) => s.activeTeam?.membershipId);
   const hasUnpaid = myUnpaidAmount(settlementCurrent, settlementPast, myMembershipId) > 0;
 
+  /*
+    ── ⚠ 이 파일에서는 **탭 이름을 바로 부르면 안 된다** ─────────────
+
+    이 컴포넌트는 `Stack.Screen name="Main"` **안**에 있다. 그래서 `useNavigation()`이
+    돌려주는 것은 **스택의** navigation이고, Attendance·Settlement·Team은
+    이 컴포넌트가 **렌더하는** Tab.Navigator의 이름 — 즉 **아래쪽**이다.
+    React Navigation은 **위로만** 거슬러 찾으므로 그 이름은 아무 데도 안 닿는다.
+    **예외도 안 난다 — 조용히 끝난다.**
+
+    ⚠ **2026-09-29에 기기에서 처음 밟고 알았다.** 그 전까지 알림 딥링크도
+      정산 딥링크도 **한 번도 동작한 적이 없다.** 진단 빌드가 이렇게 찍었다:
+
+        4b navigate 인자    ["Attendance", undefined]
+        4c navigate 호출됨   throw 없음
+        5  실제 화면         홈 그대로
+
+    ⚠ **다른 화면들은 멀쩡하다.** HomeScreen·AttendanceScreen 같은 곳은
+      Tab.Navigator **안**이라 거기서 얻는 navigation이 탭의 것이다.
+      틀린 것은 **탭을 렌더하는 이 파일**뿐이었다(2026-09-29에 17곳을 훑어 확인).
+
+    그래서 **중첩 형태**로 부른다. 그런데 `navigate('Main', …)`는 안 된다 —
+    `tour.check`가 막는다: 그 호출은 **Main을 하나 더 밀어** 마운트 상태를 잃는다
+    (`MySettingsScreen`이 실제로 그 사고를 냈다). 저장소의 관용구는 **`popTo`**다:
+
+        navigation.popTo('Main', { screen, params })
+
+    이미 있는 Main으로 되돌아가면서 파라미터만 넘긴다. 스택이 안 늘어난다.
+    `deeplink.check` ⑥이 이 파일의 navigate가 'Main'을 거치는지 본다.
+  */
   const pendingSettlementId = usePendingSettlementStore((s) => s.id);
   const clearPendingSettlement = usePendingSettlementStore((s) => s.clear);
 
@@ -173,7 +202,10 @@ export function MainTabNavigator() {
   // 이제 정산 탭으로 보내고 해당 정산을 연다. 소비했으면 바로 비운다(뒤로 갔다 오면 또 열린다).
   useEffect(() => {
     if (!pendingSettlementId) return;
-    navigation.navigate('Settlement', { openSettlementId: pendingSettlementId });
+    navigation.popTo('Main', {
+      screen: 'Settlement',
+      params: { openSettlementId: pendingSettlementId },
+    });
     clearPendingSettlement();
   }, [pendingSettlementId]);
 
@@ -190,7 +222,10 @@ export function MainTabNavigator() {
   */
   useEffect(() => {
     if (!pendingNotification) return;
-    navigation.navigate(pendingNotification.screen, pendingNotification.params);
+    navigation.popTo('Main', {
+      screen: pendingNotification.screen,
+      params: pendingNotification.params,
+    });
     clearPendingNotification();
   }, [pendingNotification]);
 

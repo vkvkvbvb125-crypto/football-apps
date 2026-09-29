@@ -159,8 +159,58 @@ const card = read('src/features/board/components/PostCard.tsx');
 ok(/autoOpen/.test(card), 'PostCard가 autoOpen을 안 본다');
 ok(/setShowComments\(true\)/.test(card), 'PostCard가 autoOpen에 댓글을 안 편다');
 
-// 소비하는 쪽
+// ── ⑥ 탭을 열 때 **탭 이름을 바로 부르지 않는가** ──
+/*
+  ⚠ **이 결함은 검사가 볼 수 없는 종류였다.** 글자는 전부 맞았다 —
+    `routeFor`가 `{screen:'Attendance'}`를 만들고, 목적지가 그 이름을 갖고 있고,
+    ③의 짝 맞추기도 통과했다. 그런데 **런타임에 안 닿았다.**
+
+    `MainTabNavigator`는 `Stack.Screen name="Main"` 안에 있다. 그래서
+    `useNavigation()`이 주는 것은 **스택의** navigation이고, 탭 이름은 그보다
+    **아래쪽**이다. React Navigation은 위로만 찾으므로 아무 데도 안 닿고,
+    **예외도 안 난다.** 2026-09-29에 기기에서 처음 밟고서야 알았다 —
+    그때까지 알림·정산 딥링크가 **한 번도 동작한 적이 없다.**
+
+  ⚠ **이 단언이 막는 것은 「이 모양」 하나뿐이다.** 같은 종류
+    (「글자는 맞는데 런타임에 안 닿는다」)의 다음 결함은 또 못 잡는다.
+    검사는 화면을 못 본다 — 그 경계를 서랍에 적어 뒀다.
+
+  ⚠ **다른 파일은 안 본다.** HomeScreen 같은 탭 **안**의 화면은 탭 navigation을
+    얻으므로 `navigate('Attendance')`가 맞는 코드다. 틀린 자리는 **탭을 렌더하는
+    그 파일**뿐이다.
+*/
 const tabs = read('src/navigation/MainTabNavigator.tsx');
+/*
+  ⚠ **탭 이름 목록으로 세지 마라.** 처음엔 ['Home','Attendance',…]를 리터럴로 찾았는데,
+    알림 쪽은 `navigate(pendingNotification.screen, …)`처럼 **변수**라 안 걸렸다 —
+    옛 모양으로 되돌리는 변이가 그대로 통과했다(2026-09-29).
+    규칙을 뒤집어서 센다: **이 파일의 모든 navigate는 'Main'이어야 한다.**
+    그러면 리터럴이든 변수든 전부 걸린다.
+*/
+/*
+  ⚠ **`navigate`와 `popTo` 둘 다 본다.** 실제로 쓰는 것은 `popTo`다 —
+    `navigate('Main', …)`는 `tour.check`가 막는다(Main을 하나 더 밀어 마운트 상태를
+    잃는다; `MySettingsScreen`이 그 사고를 냈다). 검사가 한쪽만 보면 다른 쪽으로
+    옛 모양이 되살아난다.
+*/
+const badNav: string[] = [];
+for (const fn of ['navigation.navigate(', 'navigation.popTo(']) {
+  for (let i = tabs.indexOf(fn); i >= 0; i = tabs.indexOf(fn, i + 1)) {
+    const after = tabs.slice(i + fn.length, i + fn.length + 8);
+    if (!after.startsWith("'Main'")) {
+      badNav.push(tabs.slice(i, i + 60).split(String.fromCharCode(10))[0]);
+    }
+  }
+}
+ok(badNav.length === 0,
+   'MainTabNavigator의 화면 이동이 ' + "'Main'" + '을 안 거친다:' + NL + '  ' + badNav.join(NL + '  ') + NL +
+   "  여기서 얻는 navigation은 **스택의 것**이라 탭 이름에 안 닿는다(예외도 안 난다). " +
+   "popTo('Main', { screen, params }) 형태로 불러라");
+/* 반대쪽도 본다 — 중첩 형태가 실제로 있는가. 없으면 딥링크가 통째로 사라진 것이다 */
+ok(tabs.includes("popTo('Main', {"),
+   "MainTabNavigator에 popTo('Main', { screen … })가 없다 — 알림·정산 딥링크가 탭을 못 연다");
+
+// 소비하는 쪽
 ok(/usePendingNotificationStore/.test(tabs), 'MainTabNavigator가 대기 중인 알림을 안 꺼낸다');
 ok(/clearPendingNotification\(\)/.test(tabs),
    '소비 후 안 비운다 — 탭을 옮겼다 오면 같은 화면이 또 열린다');

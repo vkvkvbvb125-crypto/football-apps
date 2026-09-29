@@ -4,6 +4,7 @@
 // 한 번에 모아 와서 화면에서 합친다.
 import { supabase } from '../../../lib/supabase';
 import { sortPosts } from '../utils/sort';
+import { toPlainText } from '../../../lib/mentions';
 
 export type PostCategory = 'free' | 'review' | 'question';
 
@@ -315,7 +316,13 @@ export async function fetchRecentPosts(
         그대로 제목이 되는데, 문단으로 시작하는 글이면 잘린 문장이 제목 자리에 온다.
         그래도 「제목 없음」보다는 낫다 — 무엇에 관한 글인지의 단서가 거기 있다.
     */
-    firstLine: (r.body ?? '').split('\n')[0].trim() || '(내용 없음)',
+    /*
+      ⚠ **toPlainText를 거친다.** 안 거치면 `@[Reviewer](9aa8d544-…)`가 **그대로** 찍힌다 —
+        2026-09-29에 기기에서 봤다. 이 저장소가 **같은 사고를 이미 한 번** 겪었다:
+        알림 문구가 잠금화면에 원문을 찍어 announcementsStore에서 감쌌다(mentions.ts 머리말).
+        그때 한 자리가 남았고 이번이 그 자리다.
+    */
+    firstLine: toPlainText((r.body ?? '').split('\n')[0]).trim() || '(내용 없음)',
     authorName: nameByUserId.get(r.author_id) ?? '멤버',
     createdAt: r.created_at,
     imageUrl: r.image_url,

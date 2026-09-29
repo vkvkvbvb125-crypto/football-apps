@@ -21,6 +21,7 @@ import { font, radius, shadow, type Palette } from '../../../theme';
 import { useThemed } from '../../../lib/useThemed';
 import type { AnnouncementRow } from '../../announcements/services/announcementsService';
 import type { PollWithResponses } from '../../polls/services/pollsService';
+import { toPlainText } from '../../../lib/mentions';
 
 interface Props {
   announcements: AnnouncementRow[];
@@ -111,8 +112,9 @@ export function TeamNoticesTab({
                     {a.title}
                   </Text>
                 </View>
+                {/* ⚠ toPlainText — 안 거치면 멘션 원문이 그대로 찍힌다(boardService 주석) */}
                 <Text style={styles.pinnedBody} numberOfLines={3}>
-                  {a.body}
+                  {toPlainText(a.body)}
                 </Text>
               </Pressable>
             ))}
@@ -138,7 +140,7 @@ export function TeamNoticesTab({
                     {a.title}
                   </Text>
                   <Text style={styles.noticeBody} numberOfLines={1}>
-                    {a.body}
+                    {toPlainText(a.body)}
                   </Text>
                 </View>
               </Pressable>

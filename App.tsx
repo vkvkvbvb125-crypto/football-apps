@@ -136,6 +136,28 @@ export default function App() {
     addNotificationResponseReceivedListener  앱이 살아 있을 때 누른 경우
     둘 다 갈 곳만 담아두고, 꺼내는 것은 준비가 끝난 MainTabNavigator다.
   */
+  /*
+    ── ⚠ 콜드 스타트는 **훅**으로 받는다. 동기 호출로는 못 받는다 ──────
+
+    전에는 `take(Notifications.getLastNotificationResponse())` 한 줄이었다.
+    **그게 콜드 스타트에서 늘 null이었다.** 2026-09-29에 기기에서 봤다 —
+    앱을 `am kill`로 없앤 뒤 푸시가 깨우고 탭했는데 20초를 기다려도 홈이었다.
+
+    근거는 SDK 문서에 그대로 있다. `useLastNotificationResponse`는 셋을 돌려준다:
+
+        undefined   **아직 무엇을 돌려줄지 모른다**   ← 콜드 스타트의 그 구간
+        null        응답이 없다
+        response    응답이 있다
+
+    동기 버전은 그 「아직 모르는」 시점에 불려 **null을 받고 끝난다.**
+    훅은 정해지면 다시 흘러온다 — 그래서 콜드 스타트가 잡힌다.
+
+    ⚠ **리스너는 남긴다.** 훅은 「마지막 응답」이라 앱이 떠 있는 동안의 탭도
+      대개 흘러오지만, 그 경로는 기기에서 **이미 확인된 것**이라 빼지 않는다.
+      둘 다 같은 intent를 세울 뿐이고 MainTabNavigator가 한 번 쓰고 비운다.
+  */
+  const lastResponse = Notifications.useLastNotificationResponse();
+
   useEffect(() => {
     const take = (response: Notifications.NotificationResponse | null) => {
       if (!response) return;
@@ -156,11 +178,11 @@ export default function App() {
       Notifications.clearLastNotificationResponse();
     };
 
-    // 동기 버전을 쓴다 — …Async 쌍은 이 SDK에서 deprecated다
-    take(Notifications.getLastNotificationResponse());
+    /* undefined(아직 모름)·null(없음)은 그냥 넘긴다 — take가 걸러낸다 */
+    take(lastResponse ?? null);
     const sub = Notifications.addNotificationResponseReceivedListener(take);
     return () => sub.remove();
-  }, []);
+  }, [lastResponse]);
 
   /*
     ── 「준비」가 무엇인가 ─────────────────────────────────────────

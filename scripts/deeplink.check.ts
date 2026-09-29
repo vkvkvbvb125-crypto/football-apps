@@ -95,8 +95,19 @@ for (const [name, dest, destFile] of [
   복원보다 먼저 와서 리스너가 붙기도 전에 지나간다.
 */
 const app = read('App.tsx');
-ok(/getLastNotificationResponse\(\)/.test(app),
-   'App.tsx가 cold start 응답을 안 읽는다 — 앱이 죽어 있을 때 누른 알림을 놓친다');
+/*
+  ⚠ **동기 `getLastNotificationResponse()`를 요구하면 안 된다. 그게 결함이었다.**
+    콜드 스타트에서 **늘 null**이었다 — SDK 문서가 말하는 그대로다:
+    훅은 `undefined`(아직 무엇을 돌려줄지 모른다) → 정해지면 값. 동기 버전은
+    그 「아직 모르는」 구간에 불려 null을 받고 끝난다.
+    2026-09-29에 기기에서 봤다(am kill 뒤 푸시로 깨워 탭 → 20초 기다려도 홈).
+  ⚠ 그래서 **훅을 요구한다.** 동기 버전으로 되돌아가면 여기서 FAIL이다.
+*/
+ok(/useLastNotificationResponse\(\)/.test(app),
+   'App.tsx가 useLastNotificationResponse를 안 쓴다 — 동기 getLastNotificationResponse는 ' +
+   '콜드 스타트에서 늘 null이라 앱이 죽어 있을 때 누른 알림을 놓친다');
+ok(!/getLastNotificationResponse\(\)/.test(app),
+   'App.tsx가 동기 getLastNotificationResponse()로 되돌아갔다 — 콜드 스타트를 다시 놓친다');
 ok(/addNotificationResponseReceivedListener/.test(app),
    'App.tsx가 실행 중 응답을 안 읽는다');
 ok(/clearLastNotificationResponse\(\)/.test(app),
@@ -107,7 +118,8 @@ ok(/clearLastNotificationResponse\(\)/.test(app),
 */
 const NL = String.fromCharCode(10);
 const notifBlock = (() => {
-  const at = app.indexOf('getLastNotificationResponse');
+  /* 앵커를 훅에서 리스너로 옮겼다 — 동기 호출이 사라졌으므로 */
+  const at = app.indexOf('addNotificationResponseReceivedListener');
   if (at < 0) return '';
   const from = app.lastIndexOf('useEffect', at);
   return from < 0 ? '' : app.slice(from, at);
@@ -180,7 +192,35 @@ ok(/autoOpen=/.test(panel), 'BoardPanel이 PostCard에 autoOpen을 안 내린다
     안 나는 모양이라 이 기능에서 제일 조용히 깨질 자리다.
   ⚠ 부정이 아니라 존재 단언이지만, 지우면 화면이 멀쩡해 보이므로 변이로 확인했다.
 */
-ok(/if \(openPostId\) setFilter\(null\)/.test(panel),
+/*
+  ⚠ **목록을 다시 읽는가.** 이게 빠져 있었다 — 패널이 **이미 마운트돼 있으면**
+    `load()`가 다시 안 돌아 **방금 올라온 글이 목록에 없다.** 필터를 풀어도 펼 카드가
+    없다(2026-09-29 기기, B② 판정). 공지도 같은 병이라 아래에서 같이 본다.
+    **알림은 늘 「방금 생긴 것」을 가리킨다.**
+*/
+const openPostBody = (() => {
+  const at = panel.indexOf('if (!openPostId) return;');
+  return at >= 0 ? panel.slice(at, at + 200) : '';
+})();
+{
+  const body = openPostBody;
+  ok(body.includes('load()'),
+     'BoardPanel이 openPostId를 받고도 목록을 다시 안 읽는다 — 이미 마운트돼 있으면 ' +
+     '방금 올라온 글이 목록에 없어 펼 카드가 없다');
+}
+{
+  const at = teamHome.indexOf('setPendingAnnouncementId(openAnnouncementId)');
+  const body = at >= 0 ? teamHome.slice(at, at + 400) : '';
+  ok(body.includes('loadAnnouncements()'),
+     'TeamHomeScreen이 openAnnouncementId를 받고도 공지 목록을 다시 안 읽는다 — ' +
+     '공지 알림은 공지를 **만드는 순간** 나가므로 앱이 떠 있는 사용자의 목록엔 그 공지가 없다');
+}
+/*
+  ⚠ **같은 효과 블록 안에서 본다.** 파일 전체에 `setFilter(null)`을 걸었더니
+    다른 자리(분류 칩을 다시 누르면 전체로 돌아가는 곳)가 대신 통과시켰다 —
+    되돌리기를 지우는 변이가 새어 나갔다(2026-09-30). 또 「위치로 잘랐다」다.
+*/
+ok(openPostBody.includes('setFilter(null)'),
    'BoardPanel이 openPostId를 받고도 분류 필터를 안 되돌린다 — 다른 분류가 걸려 있으면 ' +
    '목표 글이 목록에서 빠져 아무 카드도 안 펴진다');
 

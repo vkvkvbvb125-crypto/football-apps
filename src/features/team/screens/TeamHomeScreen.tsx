@@ -274,6 +274,14 @@ export function TeamHomeScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!openAnnouncementId) return;
     setPendingAnnouncementId(openAnnouncementId);
+    /*
+      ⚠ **목록을 다시 읽는다.** 이게 빠져 있었다. `loadAnnouncements()`는 팀이 바뀔 때만
+        도는데, **공지 알림은 공지를 만드는 순간 나간다** — 앱이 떠 있는 사용자의
+        목록에는 그 공지가 **없다.** 그러면 아래 효과가 못 찾고 조용히 접는다.
+        2026-09-29 기기에서 봤다: 공지 칸은 열리는데 「등록된 공지가 없어요」였고,
+        앱을 재시작하고 나서야 모달이 떴다(B 판정 ②).
+    */
+    void loadAnnouncements();
     navigation.setParams({ openAnnouncementId: undefined });
   }, [openAnnouncementId]);
 

@@ -23,6 +23,7 @@ import {
   type PostComment,
 } from '../services/boardService';
 import { notifyTargets } from '../utils/notifyTargets';
+import { toPlainText } from '../../../lib/mentions';
 
 
 interface PostCommentsProps {
@@ -149,7 +150,8 @@ export function PostComments({
                   <Text style={styles.name}>{author.name}</Text>
                   <Text style={styles.time}>{relativeTime(c.createdAt)}</Text>
                 </View>
-                <Text style={styles.body}>{c.body}</Text>
+                {/* ⚠ 댓글에도 @멘션이 들어온다 — toPlainText를 거친다(boardService 주석) */}
+                <Text style={styles.body}>{toPlainText(c.body)}</Text>
               </View>
               {/* RLS와 같은 규칙 — 화면에서 보이는 것과 서버가 허용하는 것이 어긋나지 않는다 */}
               {canDelete && (

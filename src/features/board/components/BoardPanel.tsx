@@ -171,12 +171,22 @@ export function BoardPanel({ teamId, myUserId, isAdmin, openPostId }: Props) {
   };
 
   /*
-    ⚠ **알림에서 왔으면 분류 필터를 되돌린다.** 안 되돌리면 목표 글이 `visible`에서
-      빠져 카드가 **아예 안 그려진다** — 알림을 눌렀는데 아무 일도 안 나는 모양이고,
-      화면에 오류가 안 보여서 이 기능에서 제일 조용히 깨질 자리다.
+    알림에서 왔다 — **둘을 같이** 한다.
+
+    ⚠ **⑴ 분류 필터를 되돌린다.** 안 되돌리면 목표 글이 `visible`에서 빠져 카드가
+      **아예 안 그려진다** — 알림을 눌렀는데 아무 일도 안 나는 모양이고,
+      화면에 오류가 안 보여서 조용히 깨질 자리다.
+
+    ⚠ **⑵ 목록을 다시 읽는다.** 이게 빠져 있었다. 이 패널이 **이미 마운트돼 있으면**
+      `load()`가 다시 안 돌아서 **방금 올라온 글이 목록에 없다** — 필터를 풀어도
+      펼 카드가 없다. 2026-09-29 기기에서 봤다(B② 판정).
+      ①·⑦이 됐던 것은 그때 이 패널이 **새로 마운트**됐기 때문이지 이 경로가
+      맞아서가 아니었다. **알림은 늘 「방금 생긴 것」을 가리킨다** — 다시 읽어야 한다.
   */
   useEffect(() => {
-    if (openPostId) setFilter(null);
+    if (!openPostId) return;
+    setFilter(null);
+    void load();
   }, [openPostId]);
 
   const visible = filter ? posts.filter((p) => p.category === filter) : posts;

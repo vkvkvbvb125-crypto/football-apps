@@ -6,7 +6,7 @@
 //    (독립 "팀 엠블럼 설정" 카드 + "초대 코드" 카드를 없앴다 → 총무 화면에서 카드 2개 감소)
 // 2) 다른 탭과 동일하게 TabHeader를 붙였다 — 기존 marginTop:60 하드코딩 제거.
 // 3) 로그아웃은 배너 안이 아니라 화면 맨 아래로 (파괴적 액션은 상단에 두지 않는다).
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/nativeText';
 import { Ionicons } from '@expo/vector-icons';
@@ -152,9 +152,22 @@ export function TeamHomeScreen({ navigation, route }: any) {
     navigation.setParams({ tab: undefined });
   }, [paramTab]);
 
-  /* 팀을 바꾸면 홈으로 되돌린다. 멤버 탭에 서서 팀을 바꾸면 제목만 바뀐 채
-     「멤버 관리」에 남아, 방금 무엇이 바뀐 건지 안 보인다 */
+  /*
+    팀을 **바꾸면** 홈으로 되돌린다. 멤버 탭에 서서 팀을 바꾸면 제목만 바뀐 채
+    「멤버 관리」에 남아, 방금 무엇이 바뀐 건지 안 보인다.
+
+    ⚠ **첫 마운트에는 돌면 안 된다.** 전에는 의존성만 보고 마운트에도 돌았고,
+      그때 **바로 위의 `paramTab` 효과가 세운 탭을 덮었다** — 효과는 선언 순서대로
+      돌아서 `setTab(paramTab)` 다음에 `setTab('home')`이 이겼다.
+      결과: **알림으로 들어온 첫 진입이 늘 팀 홈에 떨어졌다.**
+      이미 마운트된 상태에서는 이 효과가 다시 안 돌아 멀쩡했으므로,
+      **앱을 새로 열고 알림을 누르는 가장 흔한 경로에서만** 틀렸다.
+      2026-09-29에 기기에서 밟고 잡았다(B 판정).
+  */
+  const lastTeamId = useRef(activeTeam?.team.id);
   useEffect(() => {
+    if (lastTeamId.current === activeTeam?.team.id) return;
+    lastTeamId.current = activeTeam?.team.id;
     setTab('home');
   }, [activeTeam?.team.id]);
   // 정기 일정은 teams가 아니라 team_settings에 있다 — 배열이라 「매주 화·목」이 되고,

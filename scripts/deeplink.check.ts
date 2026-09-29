@@ -116,6 +116,35 @@ ok(notifBlock !== '', '알림 useEffect를 못 찾았다');
 ok(!/session/.test(notifBlock),
    'App.tsx의 알림 처리에 세션 조건이 붙었다 — cold start를 다시 놓치게 된다');
 
+// ── ⑦ 탭 되돌리기가 **첫 마운트에 돌면 안 된다** ──
+/*
+  ⚠ **⑥을 고치자마자 그 아래에서 나온 두 번째 결함이다.** 탭 전환이 되기 시작하니
+    비로소 보였다 — 알림으로 들어온 **첫 진입**이 늘 팀 홈에 떨어졌다.
+
+    `TeamHomeScreen`에는 효과가 둘 있다:
+        setTab(paramTab)   ← 알림이 지정한 탭
+        setTab('home')     ← 팀을 **바꿨을 때** 되돌리기
+    효과는 **선언 순서대로** 돌아서 마운트 때 뒤엣것이 이긴다.
+    이미 마운트된 상태에서는 뒤엣것이 다시 안 돌아 **멀쩡했다** —
+    그래서 「앱을 새로 열고 알림을 누르는」 가장 흔한 경로에서만 틀렸다.
+
+  ⚠ **이것도 ⑥과 같은 종류다**(글자는 맞고 런타임 순서가 틀렸다).
+    여기서 붙드는 것은 **「직전 팀 id와 견주는 가드가 있는가」** 하나뿐이다.
+*/
+const teamScreen = read('src/features/team/screens/TeamHomeScreen.tsx');
+const resetAt = teamScreen.indexOf("setTab('home')");
+ok(resetAt >= 0, 'TeamHomeScreen에 팀 전환 시 홈으로 되돌리는 자리가 없다');
+{
+  /* 그 호출이 들어 있는 효과 블록만 잘라 본다 — 파일 전체를 보면 위쪽 선언이 대신 통과시킨다 */
+  const from = teamScreen.lastIndexOf('useEffect(', resetAt);
+  const block = from >= 0 ? teamScreen.slice(from, resetAt) : '';
+  ok(
+    block.includes('lastTeamId.current') && block.includes('return'),
+    "TeamHomeScreen의 setTab('home')이 첫 마운트에도 돈다 — 바로 위 효과가 세운 " +
+      '탭(알림이 지정한 탭)을 덮는다. 직전 팀 id와 견줘서 **바뀐 경우에만** 되돌려라'
+  );
+}
+
 // ── ⑤ 글 지목이 끝까지 닿는가 ──
 /*
   ⚠ **③만으로는 부족한 자리다.** 이름이 맞아도 id가 아예 없거나, 있어도 그 카드가

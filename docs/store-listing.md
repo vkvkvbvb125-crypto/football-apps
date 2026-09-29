@@ -951,6 +951,36 @@ eas build --local --platform android
   ⚠ 빌드 도중 WSL이 읽기 전용으로 떨어지면 이 상태가 된다. 그때는
   `wsl --shutdown` 뒤 다시 띄우면 살아난다(손실 없었다).
 
+### ⚠ AAB 때 반드시 같이 하는 것 — `SYSTEM_ALERT_WINDOW` 제거
+
+**결정: AAB에서 같이 넣는다**(2026-09-29). 지금 넣으면 매니페스트가 바뀌어
+확인 빌드가 한 번 더 필요한데, 다음 빌드가 어차피 AAB라 그때 하면 한 번을 아낀다.
+
+`app.json`의 `android.blockedPermissions`에 한 줄 더한다:
+
+    "android.permission.SYSTEM_ALERT_WINDOW"
+
+**근거는 병합 보고서다**(서랍 20): 이 권한은 Expo 기본 템플릿이 넣은 것이고
+(`withAndroidBaseMods.js`, 주석이 「OPTIONAL — REMOVE WHATEVER YOU DO NOT NEED」),
+**어떤 라이브러리도 요구하지 않는다**(`MERGED from [...]` 줄이 0개).
+지렛대가 듣는 것도 확인했다 — `CAMERA`·`RECORD_AUDIO`가 보고서엔 있는데 APK엔 없다.
+
+**AAB에서 확인할 것:**
+
+| | 무엇 | 기대 |
+|---|---|---|
+| ⑴ | 권한 총수 | **36 → 35** |
+| ⑵ | `SYSTEM_ALERT_WINDOW` | **0건** |
+| ⑶ | ⚠ **대화상자 13곳이 전부 정상인가** | 뜬다 · 버튼이 듣는다 · 뒤로가기로 닫힌다 |
+
+⚠ **⑶을 빼먹지 마라.** 「다른 앱 위에 표시를 쓰는 자리가 없다」는 **판단**이지
+측정이 아니다 — 막아 봐야 안다. 특히 **C에서 시스템 Alert을 커스텀 Modal로 바꾼 직후**라
+그 변경과 이 제거가 같은 곳에서 만난다. 둘 중 무엇이 깨뜨렸는지 못 가리는 상황을 만들지 마라:
+**AAB를 뽑기 전에 이 권한만 뺀 APK로 대화상자를 먼저 밟는 편이 안전하다.**
+
+⚠ 권한은 `scripts/apkperm.sh`로 센다. AAB는 `dump permissions`가 안 먹으므로
+`aapt2 dump xmltree <aab> --file base/manifest/AndroidManifest.xml`를 쓴다(아래 ② 참고).
+
 ### ⚠ 스크린샷 빌드는 **세션이 먼저 있어야 한다** — 새로 설치하고 로그인하면 영영 스피너다
 
 2026-09-29에 걸렸다. 새로 설치 → 로그인 → **60초 넘게 스피너**에서 안 넘어갔다.

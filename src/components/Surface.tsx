@@ -190,6 +190,7 @@ export function StatTile({
   icon,
   accent,
   tone = 'green',
+  muted,
   hint,
   onPressHint,
 }: {
@@ -214,6 +215,17 @@ export function StatTile({
    */
   tone?: 'green' | 'danger';
   /**
+   * 값이 **아직 없을 때** — 숫자 대신 짧은 안내를 작게 적는다.
+   *
+   * ⚠ 「-」는 **고장으로 읽힌다.** 참여율은 경기를 치르기 전에는 낼 수 없는 값인데
+   *   큰 글씨로 「-」만 있으면 「못 불러왔다」로 보인다(2026-09-30 지적).
+   * ⚠ **공용 `formatRate`는 안 건드린다.** 그건 멤버 줄처럼 좁은 자리에서도 쓰이고
+   *   거기서는 「-」가 맞다. 큰 타일에서만 말을 바꾼다.
+   * ⚠ 안내는 **작게** 적는다. 큰 글씨로 적으면 숫자 자리의 무게를 그대로 가져가
+   *   옆 타일의 진짜 숫자와 나란히 비교되는 것처럼 보인다.
+   */
+  muted?: boolean;
+  /**
    * 값 옆에 붙는 ⓘ — 선택이다.
    *
    * 레퍼런스가 「참여율 67% ⓘ」로 값과 같은 줄에 둔다. 예전엔 격자 아래 별도 줄로
@@ -232,7 +244,11 @@ export function StatTile({
       </View>
       <View style={styles.statValueRow}>
         <Text
-          style={[styles.statValue, accent && { color: tone === 'danger' ? colors.danger : colors.green }]}
+          style={[
+            styles.statValue,
+            !muted && accent && { color: tone === 'danger' ? colors.danger : colors.green },
+            muted && styles.statValueMuted,
+          ]}
           numberOfLines={1}
         >
           {value}
@@ -354,4 +370,6 @@ const makeStyles = (colors: Palette) =>
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel: { ...font.micro, color: colors.textMuted, fontWeight: '700' },
   statValue: { ...font.title, ...font.num, color: colors.text },
+  /* 값이 아직 없을 때 — 숫자 자리를 안 차지하도록 작고 물러난 색으로 */
+  statValueMuted: { ...font.micro, color: colors.textDim, fontWeight: '700' },
   });

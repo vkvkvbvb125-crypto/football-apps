@@ -798,7 +798,13 @@ export function HomeScreen({ navigation }: BottomTabScreenProps<any>) {
               같은 팀에서 값이 갈리지 않는다.
             */}
             <Card tier="bento" style={{ flex: 1 }}>
-              <StatTile label="이번 달 참석률" value={formatRate(teamRate)} accent={(teamRate.rate ?? 0) >= 0.7} />
+              {/* 값이 없을 때는 「-」 대신 말로 — 팀 홈의 참여율 타일과 같은 이유다 */}
+              <StatTile
+                label="이번 달 참석률"
+                value={teamRate.rate == null ? '경기 후 표시' : formatRate(teamRate)}
+                muted={teamRate.rate == null}
+                accent={(teamRate.rate ?? 0) >= 0.7}
+              />
             </Card>
           </StatRow>
         </View>

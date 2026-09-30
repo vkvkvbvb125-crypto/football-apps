@@ -342,7 +342,15 @@ export function TeamHomeTab({
             {/* 로고 오른쪽엔 이름만 — 긴 팀명이 지표를 밀어내지 않게 지표는 아래 전체 폭으로 뺐다 */}
             <View style={styles.bannerBody}>
               <View style={styles.teamNameRow}>
-                <Text style={[styles.teamName, { flexShrink: 1 }]} numberOfLines={1}>
+                {/*
+                  ⚠ **두 줄까지 허용한다.** 한 줄이면 「강남 수요풋살 클럽 FC」가
+                    「강남 수요풋살…」로 잘린다 — 같은 행에 역할 뱃지와 「팀 설정 ›」이
+                    붙어 있어 **이름이 먼저 줄어든다**(flexShrink).
+                    행을 나누는 방법도 있지만 그래도 한 줄에 14자쯤이라 긴 이름은 또 잘린다.
+                    세로로 늘리는 쪽이 용량이 더 크다(두 줄이면 스무 자 넘게 들어간다).
+                  ⚠ 짧은 이름에는 **아무 변화가 없다** — 한 줄이면 그대로 한 줄이다.
+                */}
+                <Text style={[styles.teamName, { flexShrink: 1 }]} numberOfLines={2}>
                   {activeTeam.team.name}
                 </Text>
                 {/* 내 역할 — 팀 화면 어디에도 「나는 여기서 무엇인가」가 없었다.
@@ -549,9 +557,15 @@ export function TeamHomeTab({
         checkmark 계열도 아니다. 앱에서 그건 「했다」는 동작 완료를 뜻해서
         지표 칸에 쓰면 이미 끝난 일로 읽힌다.
       */}
+      {/*
+        ⚠ 경기를 치르기 전에는 **낼 수 없는 값**이다. 큰 글씨로 「-」만 두면
+          「못 불러왔다」로 읽힌다 — 그래서 말로 적는다(muted: 작게 물러나게).
+          공용 formatRate는 안 건드린다: 멤버 줄처럼 좁은 자리에서는 「-」가 맞다.
+      */}
       <StatTile
         label="참여율"
-        value={formatRate(teamRate)}
+        value={teamRate.rate == null ? '경기 후 표시' : formatRate(teamRate)}
+        muted={teamRate.rate == null}
         icon="stats-chart-outline"
         accent
         hint
@@ -789,7 +803,8 @@ export function TeamHomeTab({
                       </View>
                       {/* 없으면 「-」다. 「없음」이라고 쓰면 값의 자리에 문장이 들어와
                           옆 두 칸의 숫자와 높이가 안 맞는다 */}
-                      <Text style={styles.monthValue}>{nextMatchDateLabel ?? '-'}</Text>
+                      {/* 「-」는 고장으로 읽힌다 — 예정이 없다는 사실을 말로 적는다 */}
+                      <Text style={styles.monthValue}>{nextMatchDateLabel ?? '예정 없음'}</Text>
                       <Text style={styles.monthSub} numberOfLines={1}>
                         {nextMatchPlaceLabel ?? '예정 없음'}
                       </Text>
@@ -1193,7 +1208,14 @@ const makeStyles = (colors: Palette) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  teamName: { color: colors.text, fontSize: 21, fontWeight: '800', letterSpacing: -0.4 },
+  /* ⚠ lineHeight를 적는다 — 두 줄이 될 수 있는데 기본 간격이면 줄이 붙어 읽힌다 */
+  teamName: {
+    color: colors.text,
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+  },
   teamMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   slogan: { color: colors.textBody, fontSize: 12, fontWeight: '600' },
   sloganRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

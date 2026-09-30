@@ -293,8 +293,32 @@ ok(badNav.length === 0,
 ok(tabs.includes("popTo('Main', {"),
    "MainTabNavigator에 popTo('Main', { screen … })가 없다 — 알림·정산 딥링크가 탭을 못 연다");
 
+// ── ⑨ 투어가 도는 동안 딥링크를 소비하지 않는가 ──
+/*
+  투어는 단계마다 탭을 옮긴다(`onNavigate(step.screen)`). 그 사이에 딥링크를
+  소비하면 **투어가 곧바로 덮어쓴다** — 알림을 눌렀는데 홈에 떨어진다.
+  2026-09-30에 기기에서 봤다: 새로 설치·로그인 직후(투어 1/5) 언급 알림을 탭하면
+  홈이고, 투어를 끝내고 같은 시험을 하면 게시판으로 갔다. **두 번 밟아 갈랐다.**
+
+  ⚠ 건너뛰기도 같은 자리로 덮인다 — 끝까지 보기든 건너뛰기든 TourProvider의
+    `close()`를 지나 `running`이 null이 되고, 그러면 소비 효과가 다시 돈다.
+*/
+const tourP = read('src/features/tour/TourProvider.tsx');
+ok(tourP.includes('running: TourRole | null;'),
+   'TourProvider가 running을 컨텍스트로 안 내보낸다 — 딥링크가 투어 중인지 알 수 없다');
+ok(tourP.includes('value={{ register, start, running }}'),
+   'TourProvider가 running을 value에 안 싣는다');
+
 // 소비하는 쪽
 ok(/usePendingNotificationStore/.test(tabs), 'MainTabNavigator가 대기 중인 알림을 안 꺼낸다');
+{
+  /* 소비 효과 안에서 본다 — 변수 선언만 보면 가드를 지워도 통과한다 */
+  const at = tabs.indexOf('if (!pendingNotification) return;');
+  const body = at >= 0 ? tabs.slice(Math.max(0, at - 120), at) : '';
+  ok(body.includes('if (tourRunning) return;'),
+     'MainTabNavigator가 투어 중에도 딥링크를 소비한다 — 투어가 단계마다 탭을 옮기므로 ' +
+     '곧바로 덮어쓴다(알림을 눌렀는데 홈에 떨어진다)');
+}
 ok(/clearPendingNotification\(\)/.test(tabs),
    '소비 후 안 비운다 — 탭을 옮겼다 오면 같은 화면이 또 열린다');
 

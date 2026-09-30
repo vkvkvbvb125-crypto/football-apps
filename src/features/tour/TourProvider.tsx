@@ -25,9 +25,20 @@ interface Ctx {
   register: (name: TourTarget, node: View | null) => void;
   /** 이 역할의 코스를 처음부터 시작한다 */
   start: (role: TourRole) => void;
+  /**
+   * 지금 투어가 도는가 — 도는 동안은 **탭을 투어가 몬다.**
+   *
+   * ⚠ 이걸 밖으로 내보내는 이유는 **알림 딥링크와 부딪히기 때문**이다.
+   *   투어는 단계마다 `onNavigate(step.screen)`으로 탭을 옮기는데, 그 사이에
+   *   알림을 눌러 들어오면 딥링크가 세운 탭을 투어가 **덮는다.**
+   *   2026-09-30에 기기에서 봤다: 새로 설치·로그인 직후(투어 1/5) 언급 알림을
+   *   탭하면 홈에 떨어지고, 투어를 끝내고 같은 시험을 하면 게시판으로 갔다.
+   *   그래서 `MainTabNavigator`가 이 값을 보고 **투어가 끝날 때까지 기다린다.**
+   */
+  running: TourRole | null;
 }
 
-const TourCtx = createContext<Ctx>({ register: () => {}, start: () => {} });
+const TourCtx = createContext<Ctx>({ register: () => {}, start: () => {}, running: null });
 
 /** 화면이 쓰는 것 — 이 ref를 짚을 요소에 달면 끝이다 */
 export function useTourTarget(name: TourTarget) {
@@ -179,7 +190,7 @@ export function TourProvider({
   }, [index, steps.length, close]);
 
   return (
-    <TourCtx.Provider value={{ register, start }}>
+    <TourCtx.Provider value={{ register, start, running }}>
       {children}
       {/*
         ⚠ **`ready`를 이 조건에 넣지 마라.** 넣으면 단계마다 Modal이 언마운트/리마운트되고,

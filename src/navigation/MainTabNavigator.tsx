@@ -25,6 +25,7 @@ import { SettlementScreen } from '../features/settlement/screens/SettlementScree
 import { TeamHomeScreen } from '../features/team/screens/TeamHomeScreen';
 import { useTourTarget } from '../features/tour/TourProvider';
 import type { TourTarget } from '../features/tour/steps';
+import { useTour } from '../features/tour/TourProvider';
 
 const Tab = createBottomTabNavigator();
 
@@ -209,6 +210,8 @@ export function MainTabNavigator() {
     clearPendingSettlement();
   }, [pendingSettlementId]);
 
+  /** 투어가 도는 동안은 탭을 투어가 몬다 — 딥링크는 기다린다(아래 효과) */
+  const { running: tourRunning } = useTour();
   const pendingNotification = usePendingNotificationStore((s) => s.intent);
   const clearPendingNotification = usePendingNotificationStore((s) => s.clear);
 
@@ -220,14 +223,26 @@ export function MainTabNavigator() {
       이 컴포넌트는 로그인이 끝나야 마운트되므로, 사용자가 로그인하는 순간
       원래 가려던 화면이 열린다. 알림을 놓치는 것보다 낫고, 홈으로 보내는 것보다도 낫다.
   */
+  /*
+    ⚠ **투어가 도는 동안에는 소비하지 않는다.** 투어는 단계마다 탭을 옮기므로
+      여기서 딥링크를 소비하면 **투어가 곧바로 덮어쓴다** — 알림을 눌렀는데
+      홈에 떨어진다(2026-09-30 기기). 담아 두었다가 투어가 끝나면 그때 연다.
+
+    ⚠ **건너뛰기도 같이 덮인다.** 끝까지 보기든 건너뛰기든 둘 다 TourProvider의
+      `close()`를 지나 `running`이 null이 되고, 그러면 이 효과가 다시 돈다.
+
+    ⚠ 담아 두는 것이 이미 이 저장소의 방식이다 — `pendingNotificationStore`가
+      「로그인 전에 도착한 알림」을 그렇게 다룬다. 기다리는 이유가 하나 는 것뿐이다.
+  */
   useEffect(() => {
+    if (tourRunning) return;
     if (!pendingNotification) return;
     navigation.popTo('Main', {
       screen: pendingNotification.screen,
       params: pendingNotification.params,
     });
     clearPendingNotification();
-  }, [pendingNotification]);
+  }, [pendingNotification, tourRunning]);
 
   return (
     <Tab.Navigator
